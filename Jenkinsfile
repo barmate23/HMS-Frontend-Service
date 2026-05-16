@@ -14,20 +14,6 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
-            steps {
-                sh 'npm ci'
-            }
-        }
-
-        stage('Test & Lint') {
-            steps {
-                echo 'Skipping test phase for now...'
-                // If you want to enable testing, add tests command here:
-                // sh 'npm run test -- --watch=false --browsers=ChromeHeadless'
-            }
-        }
-
         stage('Docker Build') {
             steps {
                 script {

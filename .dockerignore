@@ -4,10 +4,7 @@ dist
 .gitignore
 .editorconfig
 .vscode
-Dockerfile
-.dockerignore
 Jenkinsfile
-nginx.conf
 README.md
 e2e
 coverage

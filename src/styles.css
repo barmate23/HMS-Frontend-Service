@@ -1,0 +1,129 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons+Round');
+
+:root {
+  /* Updated Midnight & Azure Palette (Premium HMS) */
+  --primary-color: #0F172A; /* Midnight Navy */
+  --primary-light: #F8FAFC;
+  --primary-border: #E2E8F0;
+  --accent-color: #38BDF8; /* Azure Blue */
+  --accent-light: #E0F2FE;
+  --danger-color: #F43F5E;
+  --success-color: #10B981;
+
+  /* Surface Palette */
+  --surface-50: #F8FAFC;
+  --surface-100: #F1F5F9;
+  --surface-200: #E2E8F0;
+  --surface-300: #CBD5E1;
+  --surface-400: #94A3B8;
+  --surface-500: #64748B;
+  --surface-600: #475569;
+  --surface-700: #334155;
+  --surface-800: #1E293B;
+  --surface-900: #0F172A;
+
+  /* Legacy Mapping for compatibility with existing components */
+  --text-white: #ffffff;
+  --text-muted: var(--surface-400);
+  --bg-light: var(--surface-100);
+  --border-color: var(--surface-200);
+
+  /* Layout Variables */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+  --topbar-height: 48px;
+  
+  --font-sans: "Poppins", sans-serif;
+  --font-poppins: "Poppins", sans-serif;
+  --font-inter: "Inter", sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 75%; /* 12px base */
+  height: 100vh !important;
+  overflow: hidden !important;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--surface-100);
+  color: var(--surface-700);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100vh !important;
+  width: 100vw !important;
+  overflow: hidden !important; /* Force no outer scroll */
+  margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-poppins);
+  font-weight: 600;
+  color: var(--surface-900);
+  letter-spacing: -0.025em;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-300);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--surface-400);
+}
+
+/* Utility Classes similar to the reference project */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.6875rem;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.btn-primary {
+  background-color: var(--accent-color);
+  color: var(--primary-color);
+}
+
+.btn-primary:hover {
+  background-color: #7dd3fc; /* Lighter Azure */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
+}
+
+.tag {
+  display: inline-flex;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}

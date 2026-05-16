@@ -1,0 +1,125 @@
+<div class="layout-wrapper" [class.collapsed]="isCollapsed()">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-container">
+        <div class="logo-box">
+          <span class="material-icons-round">bed</span>
+        </div>
+        <span class="logo-text" *ngIf="!isCollapsed()">HMS Cloud</span>
+      </div>
+      <button class="menu-toggle" (click)="toggleSidebar()">
+        <span class="material-icons-round">menu</span>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <ng-container *ngFor="let item of navItems">
+        
+        <!-- Standard Item -->
+        <a *ngIf="!item.children"
+           [routerLink]="item.route" 
+           routerLinkActive="active" 
+           class="nav-item">
+          <span class="material-icons-round">{{item.icon}}</span>
+          <span class="nav-label" *ngIf="!isCollapsed()">{{item.label}}</span>
+        </a>
+
+        <!-- Parent Item (Submenu) -->
+        <div class="nav-group" *ngIf="item.children">
+          <div class="nav-item has-submenu" (click)="toggleSubmenu(item)" [class.expanded]="item.expanded">
+            <span class="material-icons-round">{{item.icon}}</span>
+            <span class="nav-label" *ngIf="!isCollapsed()">{{item.label}}</span>
+            <span class="material-icons-round expand-icon" *ngIf="!isCollapsed()">
+              {{ item.expanded ? 'expand_less' : 'expand_more' }}
+            </span>
+          </div>
+          
+          <!-- Submenu Children -->
+          <div class="submenu-container" *ngIf="item.expanded && !isCollapsed()">
+            <a *ngFor="let child of item.children"
+               [routerLink]="child.route" 
+               routerLinkActive="active" 
+               class="nav-item submenu-item">
+              <span class="material-icons-round">{{child.icon}}</span>
+              <span class="nav-label">{{child.label}}</span>
+            </a>
+          </div>
+        </div>
+
+      </ng-container>
+    </nav>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="main-area">
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <div class="top-bar-left">
+      </div>
+
+      <div class="top-bar-center">
+      </div>
+
+      <div class="top-bar-right">
+        <div class="business-info">
+          <div class="date-time">
+            <span class="day">Monday, May 11, 2026</span>
+            <span class="shift-info">
+              <span class="material-icons-round">wb_sunny</span>
+              MORNING SHIFT
+            </span>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="icon-btn" title="Notifications">
+            <span class="material-icons-round">notifications</span>
+            <span class="dot"></span>
+          </button>
+          <div class="user-pill">
+            <span class="user-initials">AB</span>
+            
+            <!-- Beautiful Profile Dropdown -->
+            <div class="user-dropdown-menu">
+              <div class="dropdown-header">
+                <div class="dropdown-avatar">AB</div>
+                <div class="dropdown-user-info">
+                  <div class="dropdown-name">Alexander Bennett</div>
+                  <div class="dropdown-email">alex.bennett&#64;hmscloud.com</div>
+                </div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-body">
+                <div class="dropdown-item">
+                  <span class="material-icons-round">person</span>
+                  <div class="item-content">
+                    <span class="item-label">My Profile</span>
+                    <span class="item-sub">Front Office Manager</span>
+                  </div>
+                </div>
+                <div class="dropdown-item">
+                  <span class="material-icons-round">settings</span>
+                  <div class="item-content">
+                    <span class="item-label">Account Settings</span>
+                    <span class="item-sub">Security & Preferences</span>
+                  </div>
+                </div>
+              </div>
+              <div class="dropdown-footer">
+                <button class="dropdown-logout">
+                  <span class="material-icons-round">logout</span>
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="page-content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

@@ -1,0 +1,332 @@
+<div class="arrivals-page">
+  <!-- Top Navigation -->
+  <nav class="sticky-nav">
+    <div class="nav-left">
+      <div class="title-group">
+        <span class="nav-title">Today's Arrivals</span>
+        <span class="nav-subtitle">{{ currentDate | date:'fullDate' }}</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <div class="search-box">
+        <span class="material-icons-round">search</span>
+        <input type="text" placeholder="Search guests or booking ref...">
+      </div>
+      <button class="btn-outline">
+        <span class="material-icons-round">refresh</span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon pending"><span class="material-icons-round">flight_land</span></div>
+        <div class="stat-details">
+          <span class="stat-value">{{ pendingArrivals }}</span>
+          <span class="stat-label">Pending Arrivals</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon checked-in"><span class="material-icons-round">how_to_reg</span></div>
+        <div class="stat-details">
+          <span class="stat-value">{{ checkedIn }}</span>
+          <span class="stat-label">Checked In</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon total"><span class="material-icons-round">groups</span></div>
+        <div class="stat-details">
+          <span class="stat-value">{{ totalArrivals }}</span>
+          <span class="stat-label">Total Expected</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrivals Table -->
+    <div class="modern-card">
+      <div class="card-header">
+        <h2 class="card-title">Arrival List</h2>
+        <div class="header-actions">
+          <select class="filter-select"><option>All Status</option><option>Pending</option><option>Checked In</option></select>
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <table class="premium-table">
+          <thead>
+            <tr>
+              <th>GUEST NAME</th>
+              <th>BOOKING REF</th>
+              <th>ROOM TYPE</th>
+              <th>ETA</th>
+              <th>BALANCE</th>
+              <th>STATUS</th>
+              <th>ACTION</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let guest of arrivals" [class.is-checked-in]="guest.status === 'Checked In'">
+              <td>
+                <div class="guest-info">
+                  <div class="avatar">{{ guest.name.charAt(0) }}</div>
+                  <div class="name-block">
+                    <div class="name-row">
+                      <span class="guest-name">{{ guest.name }}</span>
+                      <span class="vip-badge" *ngIf="guest.isVip">VIP</span>
+                    </div>
+                    <span class="nights">{{ guest.nights }} Night(s)</span>
+                  </div>
+                </div>
+              </td>
+              <td><span class="mono-text">{{ guest.bookingRef }}</span></td>
+              <td><span class="room-type">{{ guest.roomType }}</span></td>
+              <td>
+                <div class="time-badge">
+                  <span class="material-icons-round">schedule</span>
+                  {{ guest.expectedTime }}
+                </div>
+              </td>
+              <td>
+                <span class="amount-due" [class.paid]="guest.amountDue === 0">
+                  {{ guest.amountDue === 0 ? 'Fully Paid' : '₹' + guest.amountDue }}
+                </span>
+              </td>
+              <td>
+                <span class="status-badge" [ngClass]="guest.status === 'Pending' ? 'pending' : 'checked-in'">
+                  {{ guest.status }}
+                </span>
+              </td>
+              <td>
+                <button class="btn-action checkin" *ngIf="guest.status === 'Pending'" (click)="checkIn(guest)">
+                  <span class="material-icons-round">login</span> Check-In
+                </button>
+                <button class="btn-action view" *ngIf="guest.status === 'Checked In'" (click)="openFolio(guest)">
+                  <span class="material-icons-round">visibility</span> View Folio
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================
+     CHECK-IN MODAL
+     ================================================================ -->
+<div class="modal-overlay" *ngIf="checkInModalOpen" (click)="closeCheckInModal()">
+  <div class="ci-modal" (click)="$event.stopPropagation()">
+    
+    <div class="ci-header">
+      <div class="ci-title">
+        <span class="material-icons-round">login</span>
+        <div>
+          <h2>Complete Check-In</h2>
+          <p>{{ selectedGuestForCheckIn?.bookingRef }}</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="closeCheckInModal()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="ci-body" *ngIf="selectedGuestForCheckIn">
+      
+      <!-- Guest Info Summary -->
+      <div class="ci-guest-summary">
+        <div class="ci-avatar">{{ selectedGuestForCheckIn.name.charAt(0) }}</div>
+        <div class="ci-summary-details">
+          <h3>{{ selectedGuestForCheckIn.name }} <span class="vip-badge" *ngIf="selectedGuestForCheckIn.isVip">VIP</span></h3>
+          <p><span class="material-icons-round" style="font-size:12px;vertical-align:middle;margin-right:4px;">phone</span>{{ selectedGuestForCheckIn.phone }}</p>
+        </div>
+      </div>
+
+      <!-- Detailed Booking Info -->
+      <div class="ci-booking-details">
+        <div class="bd-item">
+          <span>Check-in Date</span>
+          <strong>{{ selectedGuestForCheckIn.checkInDate }}</strong>
+        </div>
+        <div class="bd-item">
+          <span>Expected Arrival</span>
+          <strong>{{ selectedGuestForCheckIn.expectedTime }}</strong>
+        </div>
+        <div class="bd-item">
+          <span>Nights</span>
+          <strong>{{ selectedGuestForCheckIn.nights }} Night(s)</strong>
+        </div>
+        <div class="bd-item">
+          <span>Room Type</span>
+          <strong>{{ selectedGuestForCheckIn.roomType }} ({{ selectedGuestForCheckIn.roomTypeId }})</strong>
+        </div>
+        <div class="bd-item">
+          <span>Occupancy</span>
+          <strong>{{ selectedGuestForCheckIn.pax }}</strong>
+        </div>
+        <div class="bd-item">
+          <span>Rate Plan</span>
+          <strong>{{ selectedGuestForCheckIn.plan }}</strong>
+        </div>
+        <div class="bd-item">
+          <span>Source</span>
+          <strong>{{ selectedGuestForCheckIn.source }}</strong>
+        </div>
+        <div class="bd-item">
+          <span>Total Est. Bill</span>
+          <strong>₹{{ selectedGuestForCheckIn.totalAmount }}</strong>
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <!-- Room Assignment -->
+        <div class="ci-input-group">
+          <label>Assign Room Number *</label>
+          <div class="ci-input-icon">
+            <span class="material-icons-round">meeting_room</span>
+            <input type="text" [(ngModel)]="assignedRoomNumber" placeholder="e.g. 204">
+          </div>
+        </div>
+
+        <!-- Identity verification placeholder -->
+        <div class="ci-input-group">
+          <label>ID Verification</label>
+          <select>
+            <option>Passport Verified</option>
+            <option>Aadhar Card Verified</option>
+            <option>Pending Verification</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Payment / Balance Section -->
+      <div class="ci-balance-section" *ngIf="selectedGuestForCheckIn.amountDue > 0">
+        <div class="ci-balance-header">
+          <span class="material-icons-round">account_balance_wallet</span>
+          <span>Balance Due at Check-In</span>
+          <strong>₹{{ selectedGuestForCheckIn.amountDue }}</strong>
+        </div>
+        
+        <div class="ci-form-grid mt-3">
+          <div class="ci-input-group">
+            <label>Payment Method</label>
+            <select [(ngModel)]="paymentMethod">
+              <option>Credit Card</option>
+              <option>Cash</option>
+              <option>UPI</option>
+              <option>Bill to Company</option>
+            </select>
+          </div>
+          <div class="ci-input-group">
+            <label>Amount to Settle</label>
+            <input type="number" [value]="selectedGuestForCheckIn.amountDue" disabled>
+          </div>
+        </div>
+      </div>
+      
+      <div class="ci-balance-section fully-paid" *ngIf="selectedGuestForCheckIn.amountDue === 0">
+        <span class="material-icons-round">check_circle</span>
+        <span>Booking is Fully Paid</span>
+      </div>
+
+    </div>
+
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" (click)="closeCheckInModal()">Cancel</button>
+      <button class="ci-btn-confirm" (click)="confirmCheckIn()" [disabled]="!assignedRoomNumber">
+        <span class="material-icons-round">how_to_reg</span> Complete Check-In
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================
+     VIEW FOLIO MODAL
+     ================================================================ -->
+<div class="modal-overlay" *ngIf="folioModalOpen" (click)="closeFolio()">
+  <div class="ci-modal folio-modal" (click)="$event.stopPropagation()">
+    
+    <div class="ci-header folio-header">
+      <div class="ci-title">
+        <span class="material-icons-round">receipt_long</span>
+        <div>
+          <h2>Guest Folio</h2>
+          <p>{{ selectedGuestForFolio?.bookingRef }}</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="closeFolio()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="ci-body" *ngIf="selectedGuestForFolio">
+      
+      <!-- Guest Info Summary -->
+      <div class="ci-guest-summary folio-guest-summary">
+        <div class="ci-avatar">{{ selectedGuestForFolio.name.charAt(0) }}</div>
+        <div class="ci-summary-details">
+          <h3>{{ selectedGuestForFolio.name }} <span class="vip-badge" *ngIf="selectedGuestForFolio.isVip">VIP</span></h3>
+          <p><span class="material-icons-round" style="font-size:12px;vertical-align:middle;margin-right:4px;">phone</span>{{ selectedGuestForFolio.phone || '+1 555-0198' }}</p>
+        </div>
+        <div class="folio-room-badge">
+          <span>ROOM</span>
+          <strong>{{ selectedGuestForFolio.id === '2' ? '104' : (selectedGuestForFolio.id === '5' ? '204' : 'TBD') }}</strong>
+        </div>
+      </div>
+
+      <!-- Ledger / Billing Table -->
+      <div class="folio-ledger">
+        <div class="ledger-header">
+          <span>Date</span>
+          <span>Description</span>
+          <span style="text-align:right">Charges</span>
+          <span style="text-align:right">Payments</span>
+        </div>
+        <div class="ledger-body">
+          <div class="ledger-row">
+            <span>{{ selectedGuestForFolio.checkInDate }}</span>
+            <span>Room Charge ({{ selectedGuestForFolio.roomType }})</span>
+            <span style="text-align:right">₹{{ selectedGuestForFolio.totalAmount }}</span>
+            <span style="text-align:right">-</span>
+          </div>
+          <div class="ledger-row">
+            <span>{{ selectedGuestForFolio.checkInDate }}</span>
+            <span>GST (18%)</span>
+            <span style="text-align:right">₹{{ (selectedGuestForFolio.totalAmount * 0.18).toFixed(0) }}</span>
+            <span style="text-align:right">-</span>
+          </div>
+          <div class="ledger-row payment">
+            <span>{{ selectedGuestForFolio.checkInDate }}</span>
+            <span>Advance Payment (Credit Card)</span>
+            <span style="text-align:right">-</span>
+            <span style="text-align:right">₹{{ selectedGuestForFolio.totalAmount + (selectedGuestForFolio.totalAmount * 0.18) }}</span>
+          </div>
+        </div>
+        <div class="ledger-footer">
+          <div class="ledger-total">
+            <span>Total Charges: <strong>₹{{ selectedGuestForFolio.totalAmount + (selectedGuestForFolio.totalAmount * 0.18) }}</strong></span>
+            <span>Total Payments: <strong>₹{{ selectedGuestForFolio.totalAmount + (selectedGuestForFolio.totalAmount * 0.18) }}</strong></span>
+          </div>
+          <div class="ledger-balance">
+            <span>Current Balance</span>
+            <strong class="paid">₹0</strong>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" (click)="closeFolio()">Close</button>
+      <button class="ci-btn-confirm" style="background: var(--surface-800);">
+        <span class="material-icons-round">print</span> Print Folio
+      </button>
+    </div>
+
+  </div>
+</div>

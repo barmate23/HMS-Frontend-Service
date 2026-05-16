@@ -1,0 +1,334 @@
+<div class="reservation-container">
+  <!-- Combined Compact Header -->
+  <div class="compact-header">
+    <div class="header-left">
+      <div class="search-input">
+        <span class="material-icons-round">search</span>
+        <input type="text" placeholder="Search guest, email, ID...">
+      </div>
+      
+      <div class="header-filters">
+        <div class="filter-dropdown">
+          <span>All Status</span>
+          <span class="material-icons-round">expand_more</span>
+        </div>
+        
+        <!-- Date Range Trigger Button -->
+        <div class="date-range-picker" (click)="toggleCalendar($event)" id="date-range-btn">
+          <span class="material-icons-round">calendar_today</span>
+          <span>{{dateRangeLabel}}</span>
+        </div>
+
+        <!-- Calendar Dropdown (sibling, not child) -->
+        <div class="calendar-dropdown" *ngIf="showCalendar()" (click)="$event.stopPropagation()">
+          
+          <!-- Selection Mode Header -->
+          <div class="selection-header">
+            <div class="selection-box" 
+                 [class.active]="selectingMode() === 'START'"
+                 (click)="setSelectingMode('START', $event)">
+              <span class="label">CHECK-IN</span>
+              <span class="value">{{rangeStart() ? (rangeStart() | date:'EEE, MMM d') : 'Select Date'}}</span>
+            </div>
+            <div class="selection-arrow">
+              <span class="material-icons-round">arrow_forward</span>
+            </div>
+            <div class="selection-box" 
+                 [class.active]="selectingMode() === 'END'"
+                 (click)="setSelectingMode('END', $event)">
+              <span class="label">CHECK-OUT</span>
+              <span class="value">{{rangeEnd() ? (rangeEnd() | date:'EEE, MMM d') : 'Select Date'}}</span>
+            </div>
+          </div>
+
+          <!-- Year Picker Mode -->
+          <div class="year-grid" *ngIf="showYearPicker()">
+            <div class="year-picker-header">Select Year</div>
+            <div class="year-cells">
+              <div *ngFor="let y of yearRange()"
+                   class="year-cell"
+                   [class.active-year]="y === calendarMonth().getFullYear()"
+                   (click)="selectYear(y)">{{y}}</div>
+            </div>
+          </div>
+
+          <!-- Calendar Month View -->
+          <ng-container *ngIf="!showYearPicker()">
+            <div class="cal-months">
+              <!-- Current Month -->
+              <div class="cal-month">
+                <div class="cal-nav">
+                  <button class="cal-nav-btn" (click)="prevMonth()">
+                    <span class="material-icons-round">chevron_left</span>
+                  </button>
+                  <span class="cal-month-label">
+                    {{currentMonthName()}}
+                    <span class="cal-year-btn" (click)="showYearPicker.set(true)">
+                      {{calendarMonth().getFullYear()}}
+                      <span class="material-icons-round" style="font-size: 14px; margin-left: 2px">expand_more</span>
+                    </span>
+                  </span>
+                  <button class="cal-nav-btn" (click)="nextMonth()">
+                    <span class="material-icons-round">chevron_right</span>
+                  </button>
+                </div>
+                <div class="cal-grid">
+                  <div class="cal-dow" *ngFor="let d of weekDays">{{d}}</div>
+                  <ng-container *ngFor="let week of calendarDays">
+                    <div *ngFor="let day of week"
+                         class="cal-day"
+                         [class.empty]="!day"
+                         [class.today]="isToday(day)"
+                         [class.range-start]="isRangeStart(day)"
+                         [class.range-end]="isRangeEnd(day)"
+                         [class.in-range]="isInRange(day)"
+                         (click)="onDayClick(day, $event)"
+                         (mouseenter)="hoverDate.set(day)"
+                         (mouseleave)="hoverDate.set(null)">
+                      {{day ? day.getDate() : ''}}
+                    </div>
+                  </ng-container>
+                </div>
+              </div>
+
+              <div class="cal-month">
+                <div class="cal-nav">
+                  <span class="cal-month-label">
+                    {{nextMonthName()}}
+                    <span class="cal-year-btn" (click)="showYearPicker.set(true)">
+                      {{nextMonthYear()}}
+                      <span class="material-icons-round" style="font-size: 14px; margin-left: 2px">expand_more</span>
+                    </span>
+                  </span>
+                </div>
+                <div class="cal-grid">
+                  <div class="cal-dow" *ngFor="let d of weekDays">{{d}}</div>
+                  <ng-container *ngFor="let week of nextCalendarDays">
+                    <div *ngFor="let day of week"
+                         class="cal-day"
+                         [class.empty]="!day"
+                         [class.today]="isToday(day)"
+                         [class.range-start]="isRangeStart(day)"
+                         [class.range-end]="isRangeEnd(day)"
+                         [class.in-range]="isInRange(day)"
+                         (click)="onDayClick(day, $event)"
+                         (mouseenter)="hoverDate.set(day)"
+                         (mouseleave)="hoverDate.set(null)">
+                      {{day ? day.getDate() : ''}}
+                    </div>
+                  </ng-container>
+                </div>
+              </div>
+            </div>
+
+            <div class="cal-footer">
+              <span class="cal-selection-hint">{{selectingMode() === 'START' ? 'Select Check-in Date' : 'Select Check-out Date'}}</span>
+              <button class="cal-clear-btn" (click)="clearDates()">Clear</button>
+              <button class="cal-apply-btn" (click)="applyDates()">Apply</button>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="view-toggles">
+        <button [class.active]="viewMode() === 'LIST'" (click)="setView('LIST')">
+          <span class="material-icons-round">list</span>
+          LIST
+        </button>
+        <button [class.active]="viewMode() === 'MAP'" (click)="setView('MAP')">
+          <span class="material-icons-round">map</span>
+          MAP
+        </button>
+      </div>
+      <button class="primary-btn" routerLink="/new-booking">
+        <span class="material-icons-round">add</span>
+        NEW BOOKING
+      </button>
+    </div>
+  </div>
+
+  <!-- Views Content -->
+  <div class="view-content">
+    
+    <!-- List View -->
+    <div class="list-view" *ngIf="viewMode() === 'LIST'">
+      <table class="reservation-table">
+        <thead>
+          <tr>
+            <th>
+              <div class="header-content">
+                <span class="material-icons-round guest-icon">person</span>
+                GUEST DETAILS
+              </div>
+            </th>
+            <th>
+              <div class="header-content">
+                <span class="material-icons-round room-icon">bed</span>
+                ROOM & PLAN
+              </div>
+            </th>
+            <th>
+              <div class="header-content">
+                <span class="material-icons-round stay-icon">calendar_today</span>
+                STAY PERIOD
+              </div>
+            </th>
+            <th>
+              <div class="header-content">
+                <span class="material-icons-round status-icon">verified</span>
+                STATUS
+              </div>
+            </th>
+            <th>
+              <div class="header-content">
+                <span class="material-icons-round billing-icon">payments</span>
+                BILLING
+              </div>
+            </th>
+            <th>
+              <div class="header-content">
+                <span class="material-icons-round actions-icon">settings</span>
+                ACTIONS
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let res of reservations()">
+            <td>
+              <div class="guest-cell">
+                <div class="guest-avatar">{{getInitials(res.guestName)}}</div>
+                <div class="guest-details">
+                  <div class="guest-name-row">
+                    <span class="guest-name">{{res.guestName}}</span>
+                    <span class="tag repeat" *ngIf="res.repeat">REPEAT</span>
+                    <span class="tag vip" *ngIf="res.vip">VIP</span>
+                    <span class="tag new" *ngIf="res.new">NEW</span>
+                  </div>
+                  <div class="guest-mobile">
+                    <span class="material-icons-round">phone_iphone</span>
+                    {{res.guestPhone}}
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="room-cell">
+                <span class="room-number">Room {{res.roomNumber}}</span>
+                <span class="room-info">{{res.roomType}} • {{res.plan}}</span>
+              </div>
+            </td>
+            <td>
+              <div class="stay-cell">
+                <span class="stay-dates">{{res.checkIn}} - {{res.checkOut}}</span>
+                <span class="stay-info">3 NIGHTS • 2A, 0C</span>
+              </div>
+            </td>
+            <td>
+              <span class="status-pill" [ngClass]="res.status.toLowerCase()">
+                {{res.status}}
+              </span>
+            </td>
+            <td>
+              <div class="billing-cell">
+                <span class="amount">₹{{res.billingAmount}}</span>
+                <span class="paid" *ngIf="res.paidAmount > 0">PAID: ₹{{res.paidAmount}}</span>
+              </div>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button class="action-btn edit" title="Edit Booking">
+                  <span class="material-icons-round">edit</span>
+                </button>
+                <button class="action-btn checkin" title="Check-in">
+                  <span class="material-icons-round">login</span>
+                </button>
+                <button class="action-btn checkout" title="Check-out">
+                  <span class="material-icons-round">logout</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+
+    <!-- Map View (Room Rack) -->
+    <div class="map-view" *ngIf="viewMode() === 'MAP'">
+      <div class="map-layout">
+        <!-- Floor Sidebar -->
+        <div class="floor-sidebar">
+          <div class="floor-item" 
+               *ngFor="let floor of floors" 
+               [class.active]="selectedFloor() === floor"
+               (click)="setFloor(floor)">
+            <div class="floor-main">
+              <span class="material-icons floor-icon">&#xea40;</span>
+              <span class="f-num">{{floor.split(' ')[1]}}</span>
+            </div>
+            <span class="f-label">FLOOR</span>
+          </div>
+        </div>
+
+        <!-- Room Grid -->
+        <div class="room-rack-content">
+          <div class="rack-header">
+            <h3>{{selectedFloor()}} Layout</h3>
+            <div class="rack-legend">
+              <div class="legend-item"><span class="dot available"></span> AVAILABLE</div>
+              <div class="legend-item"><span class="dot occupied"></span> OCCUPIED</div>
+              <div class="legend-item"><span class="dot dirty"></span> DIRTY</div>
+              <div class="legend-item"><span class="dot maintenance"></span> SERVICE</div>
+            </div>
+          </div>
+
+          <!-- DEFINITIVE SCROLLABLE BOX -->
+          <div class="grid-viewport">
+            <div class="room-grid">
+              <div *ngFor="let room of filteredRooms()" 
+                   class="room-tile" 
+                   [ngClass]="room.status">
+                <div class="tile-status-bar"></div>
+                
+                <div class="tile-header">
+                  <span class="r-num">{{room.number}}</span>
+                  <span class="r-type">{{room.type}}</span>
+                </div>
+
+                <div class="tile-body">
+                  <div class="guest-row" *ngIf="room.guest">
+                    <i class="material-icons-round">person</i>
+                    <span class="guest-name">{{room.guest}}</span>
+                  </div>
+                  <div class="status-row">
+                    <span class="status-text">{{room.status | uppercase}}</span>
+                  </div>
+                </div>
+
+                <div class="tile-actions">
+                  <button class="action-btn btn-edit" title="Edit">
+                    <i class="material-icons-round">&#xe3c9;</i>
+                  </button>
+                  <button class="action-btn btn-in" title="Check In">
+                    <i class="material-icons-round">&#xea77;</i>
+                  </button>
+                  <button class="action-btn btn-out" title="Check Out">
+                    <i class="material-icons-round">&#xe9ba;</i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="floating-fab">
+  <span class="material-icons-round">bolt</span>
+</div>

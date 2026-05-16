@@ -1,0 +1,724 @@
+<div class="booking-page">
+  <!-- Top Navigation -->
+  <nav class="sticky-nav">
+    <div class="nav-left">
+      <button class="icon-btn back-btn">
+        <span class="material-icons-round">arrow_back</span>
+      </button>
+      <div class="title-group">
+        <span class="nav-title">New Booking</span>
+        <span class="nav-subtitle">Create a new reservation</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <button class="btn-outline" (click)="saveDraft()">
+        <span class="material-icons-round">save</span>
+        SAVE DRAFT
+      </button>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <div class="two-column-layout">
+
+      <!-- LEFT COLUMN -->
+      <div class="form-column">
+
+        <!-- Guest Information -->
+        <div class="modern-card">
+          <div class="card-header">
+            <div class="header-title">
+              <span class="material-icons-round">person</span>
+              <h2>Guest Information</h2>
+            </div>
+            <div class="header-actions">
+              <button class="btn-text success" (click)="openCreateGuest()">Create Guest</button>
+              <button class="btn-text primary" (click)="openSearchGuest()">Search Guest</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="grid-3">
+              <div class="input-group">
+                <label>Title</label>
+                <select [ngModel]="guestData().title" (ngModelChange)="updateGuestField('title', $event)">
+                  <option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option>
+                </select>
+              </div>
+              <div class="input-group span-2">
+                <label>Guest Full Name</label>
+                <div class="input-with-icon">
+                  <input type="text" placeholder="Enter full name" [ngModel]="guestData().fullName" (ngModelChange)="updateGuestField('fullName', $event)">
+                  <span class="material-icons-round">search</span>
+                </div>
+              </div>
+            </div>
+            <div class="grid-3 mt-3">
+              <div class="input-group">
+                <label>Country Code</label>
+                <select [ngModel]="guestData().phoneCode" (ngModelChange)="updateGuestField('phoneCode', $event)">
+                  <option>+91 (India)</option><option>+1 (USA)</option>
+                </select>
+              </div>
+              <div class="input-group span-2">
+                <label>Phone Number</label>
+                <input type="tel" placeholder="Phone number" [ngModel]="guestData().phone" (ngModelChange)="updateGuestField('phone', $event)">
+              </div>
+            </div>
+            <div class="grid-2 mt-3">
+              <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" placeholder="email@example.com" [ngModel]="guestData().email" (ngModelChange)="updateGuestField('email', $event)">
+              </div>
+              <div class="input-group">
+                <label>Country</label>
+                <select [ngModel]="guestData().country" (ngModelChange)="updateGuestField('country', $event)">
+                  <option>India</option><option>USA</option>
+                </select>
+              </div>
+            </div>
+            <div class="input-group full mt-3">
+              <label>Address</label>
+              <div class="address-grid">
+                <input type="text" placeholder="Address Line 1" class="span-2" [ngModel]="guestData().address1" (ngModelChange)="updateGuestField('address1', $event)">
+                <input type="text" placeholder="Address Line 2" class="span-2" [ngModel]="guestData().address2" (ngModelChange)="updateGuestField('address2', $event)">
+                <input type="text" placeholder="City" [ngModel]="guestData().city" (ngModelChange)="updateGuestField('city', $event)">
+                <input type="text" placeholder="State" [ngModel]="guestData().state" (ngModelChange)="updateGuestField('state', $event)">
+                <input type="text" placeholder="Post Code" [ngModel]="guestData().zip" (ngModelChange)="updateGuestField('zip', $event)">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Identity & Additional Info -->
+        <div class="modern-card">
+          <div class="card-header">
+            <div class="header-title">
+              <span class="material-icons-round">badge</span>
+              <h2>Identity &amp; Additional Info</h2>
+            </div>
+            <div class="checkbox-group">
+              <input type="checkbox" id="vip-check" [ngModel]="guestData().vip" (ngModelChange)="updateGuestField('vip', $event)">
+              <label for="vip-check" class="vip-label">VIP Guest</label>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="grid-3">
+              <div class="input-group">
+                <label>Nationality</label>
+                <select [ngModel]="guestData().nationality" (ngModelChange)="updateGuestField('nationality', $event)">
+                  <option value="">Select</option><option>Indian</option><option>American</option>
+                </select>
+              </div>
+              <div class="input-group">
+                <label>Gender</label>
+                <select [ngModel]="guestData().gender" (ngModelChange)="updateGuestField('gender', $event)">
+                  <option value="">Select</option><option>Male</option><option>Female</option>
+                </select>
+              </div>
+              <div class="input-group">
+                <label>Date of Birth</label>
+                <input type="date" [ngModel]="guestData().dob" (ngModelChange)="updateGuestField('dob', $event)">
+              </div>
+            </div>
+            <div class="grid-2 mt-3">
+              <div class="input-group">
+                <label>Identity Proof</label>
+                <select [ngModel]="guestData().idProof" (ngModelChange)="updateGuestField('idProof', $event)">
+                  <option>Aadhar Card</option><option>Passport</option><option>Driving License</option>
+                </select>
+              </div>
+              <div class="input-group">
+                <label>ID Number</label>
+                <input type="text" placeholder="Enter ID Number" [ngModel]="guestData().idNumber" (ngModelChange)="updateGuestField('idNumber', $event)">
+              </div>
+            </div>
+            <div class="input-group full mt-3">
+              <label>Guest Notes</label>
+              <textarea placeholder="e.g. Dietary preferences, special requirements" [ngModel]="guestData().notes" (ngModelChange)="updateGuestField('notes', $event)"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stay Information -->
+        <div class="modern-card">
+          <div class="card-header">
+            <div class="header-title">
+              <span class="material-icons-round">date_range</span>
+              <h2>Stay Information</h2>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="grid-2">
+              <div class="input-group">
+                <label>Arrival</label>
+                <div class="datetime-grid">
+                  <input type="date" [ngModel]="checkIn()" (ngModelChange)="checkIn.set($event)">
+                  <input type="time" value="14:00">
+                </div>
+              </div>
+              <div class="input-group">
+                <label>Departure</label>
+                <div class="datetime-grid">
+                  <input type="date" [ngModel]="checkOut()" (ngModelChange)="checkOut.set($event)">
+                  <input type="time" value="11:00">
+                </div>
+              </div>
+            </div>
+            <div class="grid-3 mt-3">
+              <div class="input-group">
+                <label>Nights</label>
+                <input type="number" [value]="nights()" readonly class="disabled-input">
+              </div>
+              <div class="input-group"><label>Guests</label><input type="number" value="2"></div>
+              <div class="input-group">
+                <label>Status</label>
+                <select><option>Confirmed</option><option>Tentative</option></select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================
+             ROOM & PLAN SELECTION
+             ============================================================ -->
+        <div class="modern-card room-selection-card">
+          <div class="card-header">
+            <div class="header-title">
+              <span class="material-icons-round">meeting_room</span>
+              <h2>Room &amp; Plan Selection</h2>
+            </div>
+            <!-- View Toggle -->
+            <div class="view-toggle-group">
+              <button class="view-toggle-btn active" id="toggle-list">
+                <span class="material-icons-round">format_list_bulleted</span> List View
+              </button>
+              <button class="view-toggle-btn" id="toggle-map" (click)="openMapModal()">
+                <span class="material-icons-round">map</span> Floor Map
+              </button>
+            </div>
+          </div>
+
+          <!-- LIST VIEW (always shown in card) -->
+          <div class="card-body">
+
+            <!-- Room Type Filter -->
+            <div class="section-label">Filter by Room Type</div>
+            <div class="room-type-chips">
+              <button class="rt-chip" *ngFor="let rt of roomTypes"
+                      [class.active]="selectedRoomType() === rt.id"
+                      (click)="selectRoomType(rt.id)">
+                <span class="material-icons-round">{{ rt.icon }}</span>
+                <span class="rt-name">{{ rt.label }}</span>
+                <span class="rt-count">{{ availableCountFor(rt.id) }}</span>
+              </button>
+            </div>
+
+            <!-- Available Rooms List -->
+            <div class="section-row mt-3">
+              <div class="section-label mb-0">Available Rooms</div>
+              <span class="avail-badge">{{ filteredRooms().length }} available</span>
+              <button class="open-map-hint" (click)="openMapModal()">
+                <span class="material-icons-round">map</span> View on Floor Map
+              </button>
+            </div>
+
+            <div class="room-list-grid mt-2">
+              <div class="room-list-item" *ngFor="let room of filteredRooms()"
+                   [class.selected]="selectedRoom()?.id === room.id"
+                   (click)="selectRoom(room)" [id]="'room-' + room.id">
+                <div class="rli-number">{{ room.number }}</div>
+                <div class="rli-info">
+                  <span class="rli-type">{{ room.type }}</span>
+                  <span class="rli-meta">Floor {{ room.floor }} &bull; {{ room.view }} View &bull; {{ room.beds }}</span>
+                </div>
+                <div class="rli-rate">{{ formatINR(room.rate) }}<small>/night</small></div>
+                <div class="rli-check" *ngIf="selectedRoom()?.id === room.id">
+                  <span class="material-icons-round">check_circle</span>
+                </div>
+              </div>
+              <div class="empty-state" *ngIf="filteredRooms().length === 0">
+                <span class="material-icons-round">search_off</span>
+                <p>No available rooms for this type</p>
+              </div>
+            </div>
+
+            <!-- Rate Plan Selector -->
+            <div class="section-label mt-3">Rate Plan</div>
+            <div class="plan-grid">
+              <div class="plan-card" *ngFor="let plan of ratePlans"
+                   [class.active]="selectedPlan() === plan.id"
+                   (click)="selectPlan(plan.id)" [id]="'plan-' + plan.id">
+                <div class="plan-top">
+                  <span class="material-icons-round">{{ plan.icon }}</span>
+                  <span class="plan-badge">{{ plan.shortLabel }}</span>
+                </div>
+                <div class="plan-name">{{ plan.label }}</div>
+                <div class="plan-desc">{{ plan.desc }}</div>
+                <div class="plan-price" *ngIf="plan.extra > 0">+{{ formatINR(plan.extra) }}/night</div>
+                <div class="plan-price included" *ngIf="plan.extra === 0">Room Rate Only</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Billing Profile -->
+        <div class="modern-card">
+          <div class="card-header">
+            <div class="header-title">
+              <span class="material-icons-round">receipt_long</span>
+              <h2>Billing Profile</h2>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="grid-2">
+              <div class="input-group">
+                <label>Billing Mode</label>
+                <select><option>Guest</option><option>Company</option></select>
+              </div>
+              <div class="input-group"><label>GST Number</label><input type="text" placeholder="Tax Identification"></div>
+            </div>
+            <div class="grid-2 mt-3">
+              <div class="input-group">
+                <label>Organisation</label>
+                <div class="input-with-icon">
+                  <input type="text" placeholder="Select Organisation">
+                  <span class="material-icons-round">business</span>
+                </div>
+                <a href="#" class="field-link">Create new organisation</a>
+              </div>
+              <div class="input-group">
+                <label>Travel Agent</label>
+                <select><option>Select Agent</option></select>
+                <a href="#" class="field-link">Add new travel agent</a>
+              </div>
+            </div>
+            <div class="grid-3 mt-3">
+              <div class="input-group">
+                <label>Business Source</label>
+                <select><option>Direct</option><option>OTA</option></select>
+              </div>
+              <div class="input-group">
+                <label>Market Segment</label>
+                <select><option>Corporate</option><option>Leisure</option></select>
+              </div>
+              <div class="input-group"><label>Booking Ref.</label><input type="text" placeholder="Reference ID"></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /form-column -->
+
+      <!-- RIGHT COLUMN: Summary -->
+      <div class="summary-column">
+        <div class="premium-summary-card sticky-card">
+
+          <div class="summary-hero">
+            <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800" alt="Hotel Room">
+            <div class="hero-overlay">
+              <span class="status-badge">AVAILABLE</span>
+              <div class="hero-text">
+                <h3>{{ selectedRoom() ? selectedRoom()!.type + ' Room ' + selectedRoom()!.number : 'Select a Room' }}</h3>
+                <p>{{ nights() }} Night{{ nights() !== 1 ? 's' : '' }} &bull; {{ selectedRoom() ? selectedRoom()!.view + ' View' : 'Choose from map or list' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Selected Room Info Pill -->
+          <div class="room-info-pill" *ngIf="selectedRoom()">
+            <div class="rip-item">
+              <span class="material-icons-round">meeting_room</span>
+              <span>Room {{ selectedRoom()!.number }}</span>
+            </div>
+            <div class="rip-divider"></div>
+            <div class="rip-item">
+              <span class="material-icons-round">layers</span>
+              <span>Floor {{ selectedRoom()!.floor }}</span>
+            </div>
+            <div class="rip-divider"></div>
+            <div class="rip-item">
+              <span class="material-icons-round">king_bed</span>
+              <span>{{ selectedRoom()!.beds }}</span>
+            </div>
+          </div>
+
+          <!-- Plan pill -->
+          <div class="plan-info-pill" *ngIf="selectedPlan()">
+            <span class="material-icons-round">restaurant_menu</span>
+            <span><strong>{{ selectedPlanDetails().shortLabel }}</strong> — {{ selectedPlanDetails().desc }}</span>
+          </div>
+
+          <div class="summary-body">
+            <h4 class="summary-title">Billing Summary</h4>
+
+            <div class="summary-line">
+              <span>Room ({{ nights() }} Night{{ nights() !== 1 ? 's' : '' }})</span>
+              <span>{{ formatINR((selectedRoom()?.rate ?? 5000) * nights()) }}</span>
+            </div>
+            <div class="summary-line" *ngIf="selectedPlanDetails().extra > 0">
+              <span>{{ selectedPlanDetails().shortLabel }} Plan Add-on</span>
+              <span>{{ formatINR(selectedPlanDetails().extra * nights()) }}</span>
+            </div>
+            <div class="summary-line">
+              <span>Taxes &amp; Fees (12%)</span>
+              <span>{{ formatINR(taxAmount()) }}</span>
+            </div>
+
+            <div class="summary-total">
+              <div class="total-text">
+                <span>Total Amount to Pay</span>
+                <span class="currency">INR</span>
+              </div>
+              <div class="total-amount">{{ formatINR(grandTotal()) }}</div>
+            </div>
+
+            <!-- Add-ons -->
+            <div class="quick-addons">
+              <span class="addon-chip active">Breakfast +₹500</span>
+              <span class="addon-chip">Airport Pickup +₹1200</span>
+              <span class="addon-chip">Extra Bed +₹800</span>
+            </div>
+
+            <div class="summary-actions">
+              <button class="btn-premium">CONFIRM BOOKING</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     FULLSCREEN FLOOR MAP MODAL
+     ================================================================ -->
+<div class="fmap-overlay" *ngIf="mapModalOpen()" (click)="closeMapModal()">
+  <div class="fmap-modal" (click)="$event.stopPropagation()">
+
+    <!-- Modal Header -->
+    <div class="fmap-header">
+      <div class="fmap-title">
+        <span class="material-icons-round">apartment</span>
+        <div>
+          <h2>Floor Map Explorer</h2>
+          <p>Hover or click an available room to see details &amp; select</p>
+        </div>
+      </div>
+      <div class="fmap-header-actions">
+        <div class="fmap-legend">
+          <span class="fleg available"><span class="fleg-dot"></span>Available</span>
+          <span class="fleg occupied"><span class="fleg-dot"></span>Occupied</span>
+          <span class="fleg reserved"><span class="fleg-dot"></span>Reserved</span>
+          <span class="fleg maintenance"><span class="fleg-dot"></span>Maintenance</span>
+        </div>
+        <button class="fmap-close-btn" (click)="closeMapModal()">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Body: 3-column layout -->
+    <div class="fmap-body">
+
+      <!-- LEFT: Vertical Floor Tabs + Stats -->
+      <div class="fmap-floors">
+        <div class="fmap-floors-title">FLOORS</div>
+        <button class="fmap-floor-tab" *ngFor="let fl of floors"
+                [class.active]="selectedFloor() === fl.number"
+                (click)="selectFloor(fl.number)">
+          <span class="fft-num">{{ fl.number }}</span>
+          <div class="fft-info">
+            <span class="fft-label">{{ fl.label }}</span>
+            <span class="fft-avail">{{ availableCountFor('ALL') }} avail</span>
+          </div>
+          <span class="material-icons-round fft-arrow">chevron_right</span>
+        </button>
+
+        <!-- Floor Stats -->
+        <div class="fmap-stats">
+          <div class="fstat-title">Floor {{ selectedFloor() }} Stats</div>
+          <div class="fstat-row">
+            <div class="fstat available">
+              <span>{{ floorStats().available }}</span><small>Available</small>
+            </div>
+            <div class="fstat occupied">
+              <span>{{ floorStats().occupied }}</span><small>Occupied</small>
+            </div>
+          </div>
+          <div class="fstat-row">
+            <div class="fstat reserved">
+              <span>{{ floorStats().reserved }}</span><small>Reserved</small>
+            </div>
+            <div class="fstat maintenance">
+              <span>{{ floorStats().maintenance }}</span><small>Maint.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER: Large Interactive Room Grid -->
+      <div class="fmap-center">
+        <div class="fmap-floor-label">
+          <span class="material-icons-round">layers</span>
+          Floor {{ selectedFloor() }}
+          <span class="fmap-room-count">{{ currentFloorRooms().length }} Rooms</span>
+        </div>
+        <div class="fmap-corridor">
+          <span class="fcorr-line"></span>
+          <span class="fcorr-text">CORRIDOR</span>
+          <span class="fcorr-line"></span>
+        </div>
+        <div class="fmap-grid">
+          <div class="fmap-room-card"
+               *ngFor="let room of currentFloorRooms()"
+               [class.available]="room.status === 'Available'"
+               [class.occupied]="room.status === 'Occupied'"
+               [class.reserved]="room.status === 'Reserved'"
+               [class.maintenance]="room.status === 'Maintenance'"
+               [class.fmap-selected]="selectedRoom()?.id === room.id"
+               [class.fmap-clickable]="room.status === 'Available'"
+               (click)="selectRoom(room)"
+               (mouseenter)="hoverRoom(room)"
+               (mouseleave)="hoverRoom(null)">
+            <div class="fmrc-number">{{ room.number }}</div>
+            <div class="fmrc-type">{{ room.type }}</div>
+            <div class="fmrc-beds">{{ room.beds }}</div>
+            <div class="fmrc-view">{{ room.view }} View</div>
+            <span class="material-icons-round fmrc-icon">
+              {{ room.status === 'Available' ? 'check_circle' :
+                 room.status === 'Occupied'  ? 'do_not_disturb_on' :
+                 room.status === 'Reserved'  ? 'schedule' : 'build' }}
+            </span>
+            <div class="fmrc-rate" *ngIf="room.status === 'Available'">
+              {{ formatINR(room.rate) }}<small>/night</small>
+            </div>
+            <div class="fmrc-status-label" *ngIf="room.status !== 'Available'">{{ room.status }}</div>
+            <div class="fmrc-selected-badge" *ngIf="selectedRoom()?.id === room.id">
+              <span class="material-icons-round">done</span> Selected
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Room Detail Panel -->
+      <div class="fmap-detail-panel">
+        <ng-container *ngIf="modalActiveRoom(); else noRoomTpl">
+          <div class="fdp-header">
+            <div class="fdp-room-badge">Room {{ modalActiveRoom()!.number }}</div>
+            <div class="fdp-status" [class]="'fdps-' + modalActiveRoom()!.status.toLowerCase()">
+              {{ modalActiveRoom()!.status }}
+            </div>
+          </div>
+          <div class="fdp-type">{{ modalActiveRoom()!.type }}</div>
+
+          <div class="fdp-meta-grid">
+            <div class="fdp-meta-item">
+              <span class="material-icons-round">layers</span>
+              <div><small>Floor</small><strong>{{ modalActiveRoom()!.floor }}</strong></div>
+            </div>
+            <div class="fdp-meta-item">
+              <span class="material-icons-round">king_bed</span>
+              <div><small>Beds</small><strong>{{ modalActiveRoom()!.beds }}</strong></div>
+            </div>
+            <div class="fdp-meta-item">
+              <span class="material-icons-round">landscape</span>
+              <div><small>View</small><strong>{{ modalActiveRoom()!.view }}</strong></div>
+            </div>
+            <div class="fdp-meta-item">
+              <span class="material-icons-round">sell</span>
+              <div><small>Code</small><strong>{{ modalActiveRoom()!.typeShort }}</strong></div>
+            </div>
+          </div>
+
+          <div class="fdp-rate">
+            <span class="fdp-rate-label">Base Rate / Night</span>
+            <span class="fdp-rate-value">{{ formatINR(modalActiveRoom()!.rate) }}</span>
+          </div>
+          <div class="fdp-plan-note" *ngIf="selectedPlanDetails().extra > 0">
+            <span class="material-icons-round">add_circle_outline</span>
+            {{ selectedPlanDetails().shortLabel }} Plan: +{{ formatINR(selectedPlanDetails().extra) }}/night
+          </div>
+          <div class="fdp-total" *ngIf="modalActiveRoom()!.status === 'Available'">
+            <span>Est. Total ({{ nights() }} night{{ nights() !== 1 ? 's' : '' }})</span>
+            <span class="fdp-total-val">{{ formatINR((modalActiveRoom()!.rate + selectedPlanDetails().extra) * nights()) }}</span>
+          </div>
+
+          <button class="fdp-select-btn"
+                  *ngIf="modalActiveRoom()!.status === 'Available' && selectedRoom()?.id !== modalActiveRoom()!.id"
+                  (click)="selectRoom(modalActiveRoom()!)">
+            <span class="material-icons-round">check_circle</span>
+            Select This Room
+          </button>
+          <button class="fdp-confirm-btn"
+                  *ngIf="selectedRoom()?.id === modalActiveRoom()!.id"
+                  (click)="confirmModalRoom()">
+            <span class="material-icons-round">done_all</span>
+            Confirm &amp; Close
+          </button>
+          <button class="fdp-unavail-btn" *ngIf="modalActiveRoom()!.status !== 'Available'" disabled>
+            <span class="material-icons-round">block</span>
+            Not Available
+          </button>
+        </ng-container>
+
+        <ng-template #noRoomTpl>
+          <div class="fdp-empty">
+            <span class="material-icons-round">touch_app</span>
+            <p>Hover or click a room to view details</p>
+          </div>
+        </ng-template>
+      </div>
+
+    </div><!-- /fmap-body -->
+
+    <!-- Modal Footer -->
+    <div class="fmap-footer">
+      <div class="fmf-selected" *ngIf="selectedRoom()">
+        <span class="material-icons-round">hotel</span>
+        Room <strong>{{ selectedRoom()!.number }}</strong> — {{ selectedRoom()!.type }} — {{ formatINR(selectedRoom()!.rate) }}/night
+      </div>
+      <div class="fmf-selected empty" *ngIf="!selectedRoom()">
+        <span class="material-icons-round">info_outline</span>
+        No room selected yet
+      </div>
+      <div class="fmf-actions">
+        <button class="fmf-cancel" (click)="closeMapModal()">Cancel</button>
+        <button class="fmf-confirm" [disabled]="!selectedRoom()" (click)="confirmModalRoom()">
+          <span class="material-icons-round">check</span>
+          Confirm Selection
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /fmap-modal -->
+</div><!-- /fmap-overlay -->
+
+<!-- ================================================================
+     SEARCH GUEST MODAL
+     ================================================================ -->
+<div class="fmap-overlay" *ngIf="searchGuestModalOpen()" (click)="closeSearchGuest()">
+  <div class="guest-modal" (click)="$event.stopPropagation()">
+    <div class="guest-modal-header">
+      <div class="fmap-title">
+        <span class="material-icons-round">search</span>
+        <div>
+          <h2>Search Guest</h2>
+          <p>Find existing guest profiles</p>
+        </div>
+      </div>
+      <button class="fmap-close-btn" (click)="closeSearchGuest()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="guest-modal-body">
+      <div class="search-bar">
+        <span class="material-icons-round">search</span>
+        <input type="text" placeholder="Search by name, email or phone..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" autofocus>
+      </div>
+      
+      <div class="guest-list">
+        <div class="guest-list-item" *ngFor="let g of filteredGuests()" (click)="selectGuest(g)">
+          <div class="guest-avatar">{{ g.fullName.charAt(0) }}</div>
+          <div class="guest-details">
+            <div class="guest-name">{{ g.title }} {{ g.fullName }} <span class="vip-badge" *ngIf="g.vip">VIP</span></div>
+            <div class="guest-contact">
+              <span><i class="material-icons-round">phone</i> {{ g.phoneCode }} {{ g.phone }}</span>
+              <span><i class="material-icons-round">email</i> {{ g.email }}</span>
+            </div>
+          </div>
+          <div class="guest-visits">
+            <strong>{{ g.visits }}</strong> visits
+            <div class="last-visit" *ngIf="g.lastVisit">Last: {{ g.lastVisit | date }}</div>
+          </div>
+          <button class="btn-select-guest">Select</button>
+        </div>
+        
+        <div class="empty-state" *ngIf="filteredGuests().length === 0 && searchQuery()">
+          <span class="material-icons-round">person_search</span>
+          <p>No guests found matching "{{ searchQuery() }}"</p>
+          <button class="btn-premium mt-3" style="width: auto; padding: 8px 16px" (click)="closeSearchGuest(); openCreateGuest()">Create New Guest</button>
+        </div>
+        <div class="empty-state" *ngIf="filteredGuests().length === 0 && !searchQuery()">
+          <span class="material-icons-round">person_search</span>
+          <p>Type to search guests...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     CREATE GUEST MODAL
+     ================================================================ -->
+<div class="fmap-overlay" *ngIf="createGuestModalOpen()" (click)="closeCreateGuest()">
+  <div class="guest-modal" (click)="$event.stopPropagation()">
+    <div class="guest-modal-header">
+      <div class="fmap-title">
+        <span class="material-icons-round">person_add</span>
+        <div>
+          <h2>Create New Guest</h2>
+          <p>Add a new guest profile to the system</p>
+        </div>
+      </div>
+      <button class="fmap-close-btn" (click)="closeCreateGuest()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    
+    <div class="guest-modal-body guest-create-form card-body">
+      <div class="grid-3">
+        <div class="input-group">
+          <label>Title</label>
+          <select [ngModel]="guestData().title" (ngModelChange)="updateGuestField('title', $event)">
+            <option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option>
+          </select>
+        </div>
+        <div class="input-group span-2">
+          <label>Guest Full Name *</label>
+          <input type="text" placeholder="Enter full name" [ngModel]="guestData().fullName" (ngModelChange)="updateGuestField('fullName', $event)">
+        </div>
+      </div>
+      
+      <div class="grid-2 mt-3">
+        <div class="input-group">
+          <label>Phone Number *</label>
+          <div style="display:flex; gap: 8px;">
+            <select style="width: 120px;" [ngModel]="guestData().phoneCode" (ngModelChange)="updateGuestField('phoneCode', $event)">
+              <option>+91 (India)</option><option>+1 (USA)</option>
+            </select>
+            <input type="tel" placeholder="Phone number" style="flex:1" [ngModel]="guestData().phone" (ngModelChange)="updateGuestField('phone', $event)">
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Email Address</label>
+          <input type="email" placeholder="email@example.com" [ngModel]="guestData().email" (ngModelChange)="updateGuestField('email', $event)">
+        </div>
+      </div>
+      
+      <div class="grid-2 mt-3">
+        <div class="input-group">
+          <label>Identity Proof</label>
+          <select [ngModel]="guestData().idProof" (ngModelChange)="updateGuestField('idProof', $event)">
+            <option>Aadhar Card</option><option>Passport</option><option>Driving License</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>ID Number</label>
+          <input type="text" placeholder="Enter ID Number" [ngModel]="guestData().idNumber" (ngModelChange)="updateGuestField('idNumber', $event)">
+        </div>
+      </div>
+    </div>
+    
+    <div class="fmap-footer" style="justify-content: flex-end;">
+      <div class="fmf-actions">
+        <button class="fmf-cancel" (click)="closeCreateGuest()">Cancel</button>
+        <button class="fmf-confirm" [disabled]="!guestData().fullName || !guestData().phone" (click)="saveNewGuest()">
+          <span class="material-icons-round">save</span>
+          Save Guest Profile
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+

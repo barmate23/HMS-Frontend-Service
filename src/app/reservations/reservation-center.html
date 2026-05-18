@@ -266,7 +266,7 @@
                [class.active]="selectedFloor() === floor"
                (click)="setFloor(floor)">
             <div class="floor-main">
-              <span class="material-icons floor-icon">&#xea40;</span>
+              <span class="material-icons-round floor-icon">layers</span>
               <span class="f-num">{{floor.split(' ')[1]}}</span>
             </div>
             <span class="f-label">FLOOR</span>
@@ -310,13 +310,13 @@
 
                 <div class="tile-actions">
                   <button class="action-btn btn-edit" title="Edit">
-                    <i class="material-icons-round">&#xe3c9;</i>
+                    <span class="material-icons-round">edit</span>
                   </button>
                   <button class="action-btn btn-in" title="Check In">
-                    <i class="material-icons-round">&#xea77;</i>
+                    <span class="material-icons-round">login</span>
                   </button>
                   <button class="action-btn btn-out" title="Check Out">
-                    <i class="material-icons-round">&#xe9ba;</i>
+                    <span class="material-icons-round">logout</span>
                   </button>
                 </div>
               </div>

@@ -1,23 +1,4 @@
 <div class="booking-page">
-  <!-- Top Navigation -->
-  <nav class="sticky-nav">
-    <div class="nav-left">
-      <button class="icon-btn back-btn">
-        <span class="material-icons-round">arrow_back</span>
-      </button>
-      <div class="title-group">
-        <span class="nav-title">New Booking</span>
-        <span class="nav-subtitle">Create a new reservation</span>
-      </div>
-    </div>
-    <div class="nav-right">
-      <button class="btn-outline" (click)="saveDraft()">
-        <span class="material-icons-round">save</span>
-        SAVE DRAFT
-      </button>
-    </div>
-  </nav>
-
   <div class="main-content">
     <div class="two-column-layout">
 
@@ -378,8 +359,16 @@
               <span class="addon-chip">Extra Bed +₹800</span>
             </div>
 
-            <div class="summary-actions">
+            <div class="summary-actions" style="display: flex; flex-direction: column; gap: 6px;">
               <button class="btn-premium">CONFIRM BOOKING</button>
+              <button class="btn-outline" (click)="saveDraft()" style="width: 100%; justify-content: center; height: 26px; font-size: 10px;">
+                <span class="material-icons-round" style="font-size: 12px; margin-right: 4px;">save</span>
+                SAVE DRAFT
+              </button>
+              <button class="btn-text primary" (click)="goBack()" style="width: 100%; justify-content: center; font-size: 11px; padding: 4px 0; display: flex; align-items: center; gap: 4px;">
+                <span class="material-icons-round" style="font-size: 14px;">arrow_back</span>
+                Back to Dashboard
+              </button>
             </div>
           </div>
 

@@ -15,8 +15,8 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 10px;
-  gap: 8px;
+  padding: 4px;
+  gap: 4px;
   overflow: hidden !important;
 }
 
@@ -28,10 +28,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 8px;
   background: white;
-  padding: 8px 16px;
-  border-radius: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   border: 1px solid var(--surface-200);
 }
@@ -52,20 +52,20 @@
 .search-input {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
   background-color: var(--surface-50);
-  padding: 8px 14px;
-  border-radius: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
   border: 1px solid var(--surface-200);
   flex: 1;
-  max-width: 400px;
+  max-width: 240px;
 }
 
 .search-input input {
   border: none;
   background: transparent;
   outline: none;
-  font-size: 13px;
+  font-size: 11px;
   width: 100%;
   color: var(--surface-900);
 }
@@ -80,12 +80,12 @@
 .filter-dropdown, .date-range-picker {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: 4px;
+  padding: 4px 8px;
   background-color: white;
   border: 1px solid var(--surface-200);
-  border-radius: 10px;
-  font-size: 12px;
+  border-radius: 4px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--surface-700);
   cursor: pointer;
@@ -395,20 +395,20 @@
 .view-toggles {
   display: flex;
   background-color: var(--surface-50);
-  padding: 4px;
-  border-radius: 10px;
+  padding: 1.5px;
+  border-radius: 4px;
   border: 1px solid var(--surface-200);
 }
 
 .view-toggles button {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
+  gap: 3px;
+  padding: 3px 8px;
   border: none;
   background: transparent;
-  border-radius: 8px;
-  font-size: 11px;
+  border-radius: 3px;
+  font-size: 9.5px;
   font-weight: 700;
   color: var(--surface-500);
   cursor: pointer;
@@ -425,13 +425,13 @@
   background-color: var(--accent-color);
   color: var(--primary-color);
   border: none;
-  padding: 10px 18px;
-  border-radius: 10px;
+  padding: 4px 10px;
+  border-radius: 4px;
   font-weight: 800;
-  font-size: 12px;
+  font-size: 10px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   cursor: pointer;
   transition: all 0.2s;
   box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
@@ -446,7 +446,7 @@
 .view-content {
   flex: 1;
   overflow-y: auto;
-  border-radius: 16px;
+  border-radius: 12px;
   background: white;
   border: 1px solid var(--surface-200);
 }
@@ -460,11 +460,11 @@
 
 .reservation-table th {
   text-align: left;
-  padding: 8px 16px;
+  padding: 4px 6px;
   background-color: rgba(56, 189, 248, 0.12); /* Soft tint of the solid Azure */
   color: var(--primary-color);
   font-family: var(--font-poppins);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.1em;
   position: sticky;
@@ -474,7 +474,7 @@
 }
 
 .reservation-table td {
-  padding: 8px 16px;
+  padding: 4px 6px;
   border: 1px solid rgba(56, 189, 248, 0.15); /* Themed Data Grid Lines */
 }
 
@@ -497,7 +497,7 @@
 .actions-icon { color: #64748B; } /* Slate */
 
 .reservation-table td {
-  padding: 16px 20px;
+  padding: 4px 6px;
   border-bottom: 1px solid var(--surface-100);
 }
 
@@ -506,49 +506,49 @@
 }
 
 /* Cell Styles */
-.guest-cell { display: flex; align-items: center; gap: 12px; }
+.guest-cell { display: flex; align-items: center; gap: 6px; }
 .guest-avatar {
-  width: 36px;
-  height: 36px;
+  width: 20px;
+  height: 20px;
   background-color: var(--surface-100);
-  border-radius: 10px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-poppins);
   font-weight: 800;
   color: var(--primary-color);
-  font-size: 12px;
+  font-size: 8.5px;
 }
 
 .guest-name { 
   font-family: var(--font-poppins);
-  font-weight: 800; 
-  font-size: 14px; 
+  font-weight: 700; 
+  font-size: 11px; 
   color: var(--primary-color); 
 }
 
 .guest-mobile { 
-  font-size: 11px; 
-  font-weight: 700; 
+  font-size: 9px; 
+  font-weight: 600; 
   color: var(--surface-500); 
   display: flex; 
   align-items: center; 
-  gap: 4px; 
-  margin-top: 4px;
+  gap: 2px; 
+  margin-top: 1px;
 }
 
 .guest-mobile .material-icons-round {
-  font-size: 14px;
+  font-size: 10px;
   color: var(--accent-color);
 }
 
 .tag {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-left: 6px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-left: 4px;
 }
 .tag.repeat { background-color: #FFEDD5; color: #9A3412; }
 .tag.vip { background-color: #FCE7F3; color: #9D174D; }
@@ -557,43 +557,55 @@
 .room-number { 
   font-family: var(--font-poppins);
   font-weight: 700; 
-  font-size: 13px; 
+  font-size: 10.5px; 
   color: var(--primary-color); 
   display: block; 
 }
-.room-info { font-size: 11px; color: var(--surface-500); }
+.room-info { font-size: 9px; color: var(--surface-500); }
 
 .stay-dates { 
   font-family: var(--font-poppins);
   font-weight: 700; 
-  font-size: 13px; 
+  font-size: 10.5px; 
   color: var(--surface-900); 
   display: block; 
 }
-.stay-info { font-size: 11px; color: var(--surface-500); }
+.stay-info { font-size: 9px; color: var(--surface-500); }
 
 .status-pill {
-  font-size: 10px;
+  font-size: 8.5px;
   font-weight: 800;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
   display: inline-block;
 }
 .status-pill.checkedin { background-color: #ECFDF5; color: #065F46; }
 .status-pill.confirmed { background-color: #EFF6FF; color: #1E40AF; }
 
-.amount { font-weight: 800; font-size: 14px; color: var(--surface-900); display: block; }
-.paid { font-size: 10px; color: var(--success-color); font-weight: 700; }
+.amount { font-weight: 800; font-size: 11px; color: var(--surface-900); display: block; }
+.paid { font-size: 8.5px; color: var(--success-color); font-weight: 700; }
 
 .action-buttons {
   display: flex;
-  gap: 6px;
+  gap: 3px;
+  justify-content: center;
+}
+
+/* Precise alignment centering for high-density grid columns */
+.reservation-table th:nth-child(n+2) {
+  text-align: center;
+}
+.reservation-table th:nth-child(n+2) .header-content {
+  justify-content: center;
+}
+.reservation-table td:nth-child(n+2) {
+  text-align: center;
 }
 
 .action-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
   border: 1px solid var(--surface-200);
   background: white;
   display: flex;
@@ -604,7 +616,7 @@
 }
 
 .action-btn .material-icons-round {
-  font-size: 14px;
+  font-size: 10px;
 }
 
 /* Color Variants */
@@ -667,13 +679,13 @@
 
 .floating-fab {
   position: fixed;
-  bottom: 30px;
-  right: 30px;
-  width: 56px;
-  height: 56px;
+  bottom: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
   background-color: var(--primary-color);
   color: white;
-  border-radius: 16px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -681,6 +693,10 @@
   cursor: pointer;
   z-index: 100;
   transition: all 0.3s;
+}
+
+.floating-fab .material-icons-round {
+  font-size: 18px !important;
 }
 
 .floating-fab:hover { transform: scale(1.1) rotate(10deg); }
@@ -715,27 +731,27 @@
 
 /* Frozen Floor Sidebar */
 .floor-sidebar {
-  width: 90px;
+  width: 70px;
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
   border-right: 1px solid var(--surface-200);
   display: flex;
   flex-direction: column;
-  padding: 20px 10px;
-  gap: 16px;
+  padding: 12px 6px;
+  gap: 10px;
   overflow-y: auto;
 }
 
 .floor-item {
-  height: 70px;
+  height: 52px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   cursor: pointer;
-  border-radius: 16px;
+  border-radius: 10px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--surface-500);
   border: 1px solid transparent;
@@ -754,18 +770,22 @@
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
 }
 
-.f-num { font-size: 18px !important; font-weight: 800; }
-.f-label { font-size: 9px; font-weight: 700; text-transform: uppercase; opacity: 0.7; }
+.floor-icon {
+  font-size: 16px !important;
+}
+
+.f-num { font-size: 14px !important; font-weight: 800; }
+.f-label { font-size: 8px; font-weight: 700; text-transform: uppercase; opacity: 0.7; }
 
 /* Frozen Content Area — header pinned, only grid-viewport scrolls */
 .room-rack-content {
   flex: 1;
   min-height: 0;
-  padding: 12px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  gap: 10px;
+  gap: 8px;
 }
 
 .rack-header {
@@ -776,33 +796,33 @@
 }
 
 .rack-header h3 {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 800;
   color: var(--primary-color);
 }
 
 .rack-legend {
   display: flex;
-  gap: 12px;
+  gap: 6px;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 10px;
+  gap: 4px;
+  font-size: 9px;
   font-weight: 700;
   color: var(--surface-600);
   text-transform: uppercase;
-  padding: 4px 10px;
+  padding: 2px 8px;
   background: var(--surface-50);
-  border-radius: 20px;
+  border-radius: 10px;
   border: 1px solid var(--surface-200);
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
 }
 
@@ -842,15 +862,15 @@
 
 .room-tile {
   background: white;
-  border-radius: 14px;
-  padding: 12px;
+  border-radius: 10px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   transition: all 0.3s ease;
   position: relative;
   border: 1px solid var(--surface-200);
-  min-height: 130px;
+  min-height: 100px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
@@ -867,7 +887,7 @@
   left: 0;
   right: 0;
   height: 4px;
-  border-radius: 14px 14px 0 0;
+  border-radius: 10px 10px 0 0;
 }
 
 .room-tile.available .tile-status-bar { background: var(--success-color); }
@@ -883,13 +903,13 @@
 }
 
 .r-num {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--primary-color);
 }
 
 .r-type {
-  font-size: 8px;
+  font-size: 7.5px;
   font-weight: 800;
   color: var(--surface-400);
   text-transform: uppercase;
@@ -910,7 +930,7 @@
 }
 
 .guest-row i {
-  font-size: 14px !important;
+  font-size: 11px !important;
   color: var(--accent-color);
 }
 

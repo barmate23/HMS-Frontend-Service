@@ -237,6 +237,8 @@ export class NewBookingComponent {
 
   saveDraft() { console.log('Draft saved'); }
 
+  goBack() { window.history.back(); }
+
   formatINR(val: number): string {
     return '₹' + val.toLocaleString('en-IN');
   }

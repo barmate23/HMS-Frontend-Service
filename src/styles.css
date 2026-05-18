@@ -31,13 +31,13 @@
   --border-color: var(--surface-200);
 
   /* Layout Variables */
-  --sidebar-width: 240px;
-  --sidebar-collapsed-width: 64px;
-  --topbar-height: 48px;
+  --sidebar-width: 190px; /* Slimmer, professional CRM sidebar */
+  --sidebar-collapsed-width: 44px;
+  --topbar-height: 36px; /* Ultra sleek, high-density top bar */
   
   --font-sans: "Poppins", sans-serif;
   --font-poppins: "Poppins", sans-serif;
-  --font-inter: "Inter", sans-serif;
+  --font-inter: "Poppins", sans-serif;
 }
 
 * {
@@ -47,7 +47,7 @@
 }
 
 html {
-  font-size: 75%; /* 12px base */
+  font-size: 68.75%; /* 11px base - instantly compresses all rem layouts */
   height: 100vh !important;
   overflow: hidden !important;
 }

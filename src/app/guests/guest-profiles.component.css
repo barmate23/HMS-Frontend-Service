@@ -1,4 +1,4 @@
-﻿:host {
+:host {
   display: block;
   height: 100%;
   flex: 1;
@@ -18,7 +18,7 @@
 .sticky-nav {
   position: sticky;
   top: 0;
-  height: 60px;
+  height: 38px;
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -26,9 +26,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 40px;
+  padding: 0 12px;
   z-index: 1000;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
 .title-group {
@@ -39,14 +39,14 @@
 .nav-title {
   font-family: var(--font-poppins);
   font-weight: 800;
-  font-size: 20px;
+  font-size: 13px;
   color: var(--primary-color);
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
 .nav-subtitle {
-  font-size: 12px;
+  font-size: 9.5px;
   color: var(--surface-500);
   font-weight: 500;
 }
@@ -62,9 +62,9 @@
   align-items: center;
   background: var(--surface-50);
   border: 1px solid var(--surface-200);
-  border-radius: 10px;
-  padding: 8px 12px;
-  width: 280px;
+  border-radius: 4px;
+  padding: 4px 8px;
+  width: 200px;
   transition: all 0.2s;
 }
 
@@ -243,6 +243,16 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+}
+
+.premium-table th:nth-child(1),
+.premium-table th:nth-child(n+4) {
+  text-align: center;
+}
+
+.premium-table td:nth-child(1),
+.premium-table td:nth-child(n+4) {
+  text-align: center;
 }
 
 .premium-table th {
@@ -929,6 +939,7 @@ tr.is-checked-in .avatar {
 .action-buttons {
   display: flex;
   gap: 8px;
+  justify-content: center;
 }
 
 .btn-icon {

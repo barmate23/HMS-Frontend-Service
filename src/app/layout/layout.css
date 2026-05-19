@@ -3,18 +3,23 @@
   height: 100vh !important;
   width: 100vw !important;
   overflow: hidden !important;
+  background-color: var(--surface-100);
+  padding: 12px;
+  gap: 12px;
 }
 
 /* Sidebar */
 .sidebar {
   width: var(--sidebar-width);
-  background-color: var(--primary-color);
-  color: var(--text-white);
+  background-color: var(--surface-50); /* White */
+  color: var(--surface-700);
   display: flex;
   flex-direction: column;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 100;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--surface-200);
 }
 
 .layout-wrapper.collapsed .sidebar {
@@ -40,17 +45,17 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--surface-100);
+  border: 1px solid var(--surface-200);
   border-radius: 6px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--surface-500);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .menu-toggle:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
+  background-color: var(--surface-200);
+  color: var(--primary-color);
 }
 
 .layout-wrapper.collapsed .logo-container {
@@ -64,7 +69,7 @@
 }
 
 .logo-box {
-  background-color: var(--accent-color);
+  background-color: var(--primary-color);
   width: 24px;
   height: 24px;
   border-radius: 6px;
@@ -75,14 +80,15 @@
 }
 
 .logo-box span {
-  color: var(--primary-color);
+  color: white;
   font-size: 15px;
 }
 
 .logo-text {
   font-family: var(--font-poppins);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
+  color: var(--surface-900);
   white-space: nowrap;
   letter-spacing: -0.02em;
 }
@@ -98,7 +104,7 @@
   align-items: center;
   gap: 8px;
   padding: 5px 8px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--surface-600);
   text-decoration: none;
   border-radius: 6px;
   margin-bottom: 1px;
@@ -113,18 +119,25 @@
 
 .nav-item .material-icons-round {
   font-size: 18px;
+  color: var(--surface-400);
 }
 
 .nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: white;
+  background-color: var(--surface-100);
+  color: var(--primary-color);
+}
+.nav-item:hover .material-icons-round {
+  color: var(--primary-color);
 }
 
 .nav-item.active {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: var(--accent-color);
-  border-right: 3px solid var(--accent-color);
+  background-color: var(--primary-light);
+  color: var(--primary-color);
+  border-right: 3px solid var(--primary-color);
   border-radius: 6px 0 0 6px;
+}
+.nav-item.active .material-icons-round {
+  color: var(--primary-color);
 }
 
 .nav-group {
@@ -136,8 +149,8 @@
   padding-right: 8px;
 }
 .nav-item.has-submenu.expanded {
-  background-color: rgba(0, 0, 0, 0.1);
-  color: var(--accent-color);
+  background-color: var(--surface-100);
+  color: var(--primary-color);
 }
 
 .expand-icon {
@@ -152,7 +165,7 @@
   padding-left: 8px;
   margin-top: 2px;
   margin-bottom: 2px;
-  border-left: 1px dashed rgba(255, 255, 255, 0.1);
+  border-left: 1px dashed var(--surface-300);
   margin-left: 10px;
   animation: slideDown 0.2s ease-out;
 }
@@ -178,7 +191,7 @@
 .badge {
   margin-left: auto;
   background-color: var(--accent-color);
-  color: var(--primary-color);
+  color: white;
   font-size: 8px;
   font-weight: 800;
   padding: 1px 4px;
@@ -192,13 +205,16 @@
   flex-direction: column;
   overflow: hidden !important;
   height: 100% !important;
-  background-color: var(--surface-100);
+  background-color: var(--surface-50);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--surface-200);
 }
 
 /* Top Bar */
 .top-bar {
   height: var(--topbar-height);
-  background-color: white;
+  background-color: var(--surface-50);
   border-bottom: 1px solid var(--surface-200);
   display: flex;
   align-items: center;
@@ -345,7 +361,7 @@
   height: 20px;
   border-radius: 4px;
   border: 1px solid var(--surface-200);
-  background: white;
+  background: var(--surface-50);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -384,7 +400,7 @@
 }
 
 .user-pill:hover {
-  background-color: white;
+  background-color: var(--surface-50);
   border-color: var(--accent-color);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
@@ -408,7 +424,7 @@
   top: calc(100% + 6px);
   right: 0;
   width: 220px;
-  background: white;
+  background: var(--surface-50);
   border-radius: 12px;
   border: 1px solid var(--surface-200);
   box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);

@@ -29,7 +29,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: white;
+  background: var(--surface-50);
   padding: 4px 8px;
   border-radius: 6px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
@@ -82,7 +82,7 @@
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background-color: white;
+  background-color: var(--surface-50);
   border: 1px solid var(--surface-200);
   border-radius: 4px;
   font-size: 10px;
@@ -99,75 +99,219 @@
   color: var(--primary-color);
 }
 
-/* ── Calendar Dropdown ── */
-.calendar-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 9999;
-  background: white;
-  border: 1px solid var(--surface-200);
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15);
-  padding: 16px;
-  min-width: 580px;
-  animation: calFadeIn 0.15s ease;
+/* ── Premium Custom Date Picker ── */
+.custom-date-picker-wrapper {
+  position: relative;
 }
 
-.selection-header {
+.date-trigger {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
-  background: var(--surface-50);
-  padding: 8px;
+  background: white;
+  border: 1px solid var(--surface-200);
+  padding: 8px 16px;
   border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+  transition: all 0.2s;
 }
 
-.selection-box {
-  flex: 1;
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: white;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+.date-trigger:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(15, 61, 62, 0.08);
+}
+
+.date-display {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.selection-box.active {
-  border-color: var(--primary-color);
-  background: white;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
-}
-
-.selection-box .label {
-  font-size: 9px;
+.date-display .label {
+  font-size: 8.5px;
   font-weight: 800;
-  color: var(--surface-500);
+  color: var(--surface-400);
   letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
-.selection-box .value {
+.date-display .val {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--primary-color);
+  font-family: var(--font-poppins);
 }
 
-.selection-box.active .label { color: var(--accent-color); }
-
-.selection-arrow {
+.date-trigger .arrow {
   color: var(--surface-300);
-  display: flex;
-  align-items: center;
+  font-size: 14px;
+}
+
+.date-trigger .trigger-icon {
+  color: var(--accent-color);
+  font-size: 18px;
+  margin-left: 8px;
+}
+
+/* Glassmorphic Calendar Dropdown */
+.cal-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 320px;
+  background: white;
+  border: 1px solid var(--surface-200);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 20px 40px rgba(15, 61, 62, 0.12);
+  z-index: 9999;
+  animation: calFadeIn 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 @keyframes calFadeIn {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+.cal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.cal-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--primary-color);
+  font-family: var(--font-poppins);
+}
+
+.cal-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--surface-200);
+  background: white;
+  color: var(--surface-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cal-icon-btn:hover {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.cal-icon-btn .material-icons-round { font-size: 18px; }
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-day-name {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--surface-400);
+  padding-bottom: 8px;
+}
+
+.cal-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--surface-600);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.cal-cell:not(.empty):hover {
+  background: var(--surface-100);
+  color: var(--primary-color);
+}
+
+.cal-cell.empty { cursor: default; }
+
+.cal-cell.today {
+  color: var(--accent-color);
+  font-weight: 900;
+}
+.cal-cell.today::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+  background: var(--accent-color);
+  border-radius: 50%;
+}
+
+.cal-cell.in-range {
+  background: var(--primary-light);
+  color: var(--primary-color);
+  border-radius: 0;
+}
+
+.cal-cell.start {
+  background: var(--primary-color) !important;
+  color: white !important;
+  border-radius: 8px 0 0 8px;
+}
+
+.cal-cell.end {
+  background: var(--primary-color) !important;
+  color: white !important;
+  border-radius: 0 8px 8px 0;
+}
+
+.cal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--surface-100);
+}
+
+.cal-text-btn {
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--surface-500);
+  cursor: pointer;
+}
+
+.cal-text-btn:hover { color: var(--danger-color); }
+
+.cal-solid-btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: none;
+  background: var(--primary-color);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(15, 61, 62, 0.2);
+  transition: transform 0.2s;
+}
+
+.cal-solid-btn:hover { transform: translateY(-2px); }
 
 .cal-months {
   display: flex;
@@ -293,7 +437,7 @@
   padding: 7px 18px;
   border-radius: 8px;
   border: 1px solid var(--surface-200);
-  background: white;
+  background: var(--surface-50);
   font-size: 11px;
   font-weight: 700;
   color: var(--surface-600);
@@ -416,7 +560,7 @@
 }
 
 .view-toggles button.active {
-  background-color: white;
+  background-color: var(--surface-50);
   color: var(--primary-color);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
@@ -447,22 +591,23 @@
   flex: 1;
   overflow-y: auto;
   border-radius: 12px;
-  background: white;
+  background: var(--surface-50);
   border: 1px solid var(--surface-200);
 }
 
 /* List View Table */
 .reservation-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0 8px;
   white-space: nowrap;
 }
 
 .reservation-table th {
   text-align: left;
-  padding: 4px 6px;
-  background-color: rgba(56, 189, 248, 0.12); /* Soft tint of the solid Azure */
-  color: var(--primary-color);
+  padding: 4px 12px;
+  background-color: transparent;
+  color: var(--surface-500);
   font-family: var(--font-poppins);
   font-size: 9px;
   font-weight: 800;
@@ -470,12 +615,25 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  border: 1px solid rgba(56, 189, 248, 0.3); /* Themed Header Border */
+  border: none;
 }
 
 .reservation-table td {
-  padding: 4px 6px;
-  border: 1px solid rgba(56, 189, 248, 0.15); /* Themed Data Grid Lines */
+  padding: 8px 12px;
+  background-color: var(--surface-50);
+  border-top: 1px solid var(--surface-200);
+  border-bottom: 1px solid var(--surface-200);
+  transition: all 0.2s;
+}
+
+.reservation-table td:first-child {
+  border-left: 1px solid var(--surface-200);
+  border-radius: 12px 0 0 12px;
+}
+
+.reservation-table td:last-child {
+  border-right: 1px solid var(--surface-200);
+  border-radius: 0 12px 12px 0;
 }
 
 .header-content {
@@ -496,13 +654,13 @@
 .billing-icon { color: #F59E0B; } /* Amber */
 .actions-icon { color: #64748B; } /* Slate */
 
-.reservation-table td {
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--surface-100);
-}
+/* Remove overriding td styling */
 
-.reservation-table tr:hover {
-  background-color: var(--surface-50);
+.reservation-table tr:hover td {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-color: transparent;
+  z-index: 10;
+  position: relative;
 }
 
 /* Cell Styles */
@@ -607,7 +765,7 @@
   height: 18px;
   border-radius: 4px;
   border: 1px solid var(--surface-200);
-  background: white;
+  background: var(--surface-50);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -733,7 +891,7 @@
 .floor-sidebar {
   width: 52px;
   flex-shrink: 0;
-  background: white;
+  background: var(--surface-50);
   border-right: 1px solid var(--surface-200);
   display: flex;
   flex-direction: column;
@@ -816,7 +974,7 @@
   color: var(--surface-600);
   text-transform: uppercase;
   padding: 2px 6px;
-  background: white;
+  background: var(--surface-50);
   border-radius: 4px;
   border: 1px solid var(--surface-200);
 }
@@ -848,9 +1006,9 @@
 /* Room grid — never scrolls, fills grid-viewport */
 .room-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   grid-auto-rows: auto;
-  gap: 8px;
+  gap: 16px;
   align-items: start;
 }
 
@@ -861,25 +1019,42 @@
 .grid-viewport::-webkit-scrollbar-thumb:hover { background: var(--accent-color); }
 
 
-.room-tile {
-  background: white;
-  border-radius: 8px;
-  padding: 7px 8px 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  transition: all 0.2s ease;
-  position: relative;
-  border: 1px solid var(--surface-200);
-  border-left-width: 3px;
-  min-height: 86px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
+@keyframes cardCascade {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
+.room-tile {
+  background: var(--surface-50);
+  border-radius: 12px;
+  padding: 12px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  border: 1px solid var(--surface-200);
+  border-left-width: 4px;
+  min-height: 110px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  animation: cardCascade 0.4s ease-out backwards;
+}
+
+/* Stagger animation for the first 12 cards */
+.room-tile:nth-child(1) { animation-delay: 0.05s; }
+.room-tile:nth-child(2) { animation-delay: 0.10s; }
+.room-tile:nth-child(3) { animation-delay: 0.15s; }
+.room-tile:nth-child(4) { animation-delay: 0.20s; }
+.room-tile:nth-child(5) { animation-delay: 0.25s; }
+.room-tile:nth-child(6) { animation-delay: 0.30s; }
+.room-tile:nth-child(7) { animation-delay: 0.35s; }
+.room-tile:nth-child(8) { animation-delay: 0.40s; }
+
 .room-tile:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-5px) scale(1.01);
+  box-shadow: 0 12px 24px rgba(15, 61, 62, 0.1); /* Soft shadow using primary-color */
+  border-color: var(--primary-color);
   z-index: 10;
 }
 
@@ -894,36 +1069,36 @@
 
 .room-tile.available  { border-left-color: var(--success-color); }
 .room-tile.occupied   { border-left-color: var(--danger-color); }
-.room-tile.dirty      { border-left-color: #F59E0B; }
-.room-tile.maintenance{ border-left-color: #6366F1; }
+.room-tile.dirty      { border-left-color: #E9C46A; } /* Softer amber */
+.room-tile.maintenance{ border-left-color: #8D99AE; } /* Elegant stone/slate */
 
 .room-tile.available .tile-status-bar  { background: var(--success-color); }
 .room-tile.occupied .tile-status-bar   { background: var(--danger-color); }
-.room-tile.dirty .tile-status-bar      { background: #F59E0B; }
-.room-tile.maintenance .tile-status-bar{ background: #6366F1; }
+.room-tile.dirty .tile-status-bar      { background: #E9C46A; }
+.room-tile.maintenance .tile-status-bar{ background: #8D99AE; }
 
 .tile-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-top: 3px;
+  margin-top: 4px;
 }
 
 .r-num {
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--primary-color);
 }
 
 .r-type {
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 800;
-  color: var(--surface-400);
+  color: var(--surface-500);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.05em;
   background: var(--surface-100);
-  padding: 1px 4px;
-  border-radius: 3px;
+  padding: 3px 6px;
+  border-radius: 4px;
 }
 
 .tile-body {
@@ -936,17 +1111,17 @@
 .guest-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   color: var(--primary-color);
 }
 
 .guest-row i {
-  font-size: 10px !important;
+  font-size: 13px !important;
   color: var(--accent-color);
 }
 
 .guest-name {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
@@ -956,31 +1131,32 @@
 .status-row {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
+  margin-top: 2px;
 }
 
 .status-text {
-  font-size: 7.5px;
+  font-size: 9px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  opacity: 0.65;
+  color: var(--surface-500);
 }
 
 /* Minimal Action Buttons */
 .tile-actions {
   display: flex !important;
-  gap: 3px !important;
+  gap: 6px !important;
   margin-top: auto !important;
-  padding-top: 5px !important;
+  padding-top: 8px !important;
   border-top: 1px solid var(--surface-100) !important;
 }
 
 .action-btn {
-  width: 20px !important;
-  height: 20px !important;
+  width: 26px !important;
+  height: 26px !important;
   flex: none !important;
-  border-radius: 4px !important;
+  border-radius: 6px !important;
   border: none !important;
   display: flex !important;
   align-items: center !important;
@@ -990,16 +1166,29 @@
   color: white !important;
 }
 
-.action-btn i, .action-btn span { font-size: 11px !important; color: white !important; }
+.action-btn i, .action-btn span { font-size: 13px !important; }
 
-.btn-edit, .action-btn.edit   { background: #0EA5E9 !important; }
-.btn-in, .action-btn.checkin  { background: #10B981 !important; }
-.btn-out, .action-btn.checkout{ background: #F43F5E !important; }
+.btn-edit, .action-btn.edit   { background: var(--primary-light) !important; color: var(--primary-color) !important; }
+.btn-in, .action-btn.checkin  { background: rgba(42, 157, 143, 0.15) !important; color: var(--success-color) !important; }
+.btn-out, .action-btn.checkout{ background: rgba(230, 57, 70, 0.15) !important; color: var(--danger-color) !important; }
+
+/* Override icon colors for pastel buttons */
+.btn-edit .material-icons-round, .action-btn.edit .material-icons-round { color: var(--primary-color) !important; }
+.btn-in .material-icons-round, .action-btn.checkin .material-icons-round { color: var(--success-color) !important; }
+.btn-out .material-icons-round, .action-btn.checkout .material-icons-round { color: var(--danger-color) !important; }
 
 .action-btn:hover {
-  filter: brightness(1.12) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.15) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+}
+
+.btn-edit:hover, .action-btn.edit:hover { background: var(--primary-color) !important; color: white !important; }
+.btn-in:hover, .action-btn.checkin:hover { background: var(--success-color) !important; color: white !important; }
+.btn-out:hover, .action-btn.checkout:hover { background: var(--danger-color) !important; color: white !important; }
+
+.btn-edit:hover .material-icons-round, .btn-in:hover .material-icons-round, .btn-out:hover .material-icons-round,
+.action-btn.edit:hover .material-icons-round, .action-btn.checkin:hover .material-icons-round, .action-btn.checkout:hover .material-icons-round {
+  color: white !important;
 }
 
 .checkout-tag {

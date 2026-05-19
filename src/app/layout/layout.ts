@@ -26,6 +26,17 @@ export class Layout {
         { label: 'Guest Profiles', icon: 'person_search', route: '/guests' }
       ]
     },
+    {
+      label: 'Hotel Setup',
+      icon: 'domain',
+      expanded: false,
+      children: [
+        { label: 'Hotels', icon: 'location_city', route: '/masters/hotels' },
+        { label: 'Floors', icon: 'layers', route: '/masters/floors' },
+        { label: 'Room Types', icon: 'bed', route: '/masters/room-types' },
+        { label: 'Rooms', icon: 'meeting_room', route: '/masters/rooms' }
+      ]
+    },
     { label: 'In-House', icon: 'people', route: '/in-house' },
     { label: 'Room Rack', icon: 'grid_on', route: '/room-rack' },
     { label: 'Night Audit', icon: 'bedtime', route: '/night-audit' },

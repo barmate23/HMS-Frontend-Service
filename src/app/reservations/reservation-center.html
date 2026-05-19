@@ -13,120 +13,52 @@
           <span class="material-icons-round">expand_more</span>
         </div>
         
-        <!-- Date Range Trigger Button -->
-        <div class="date-range-picker" (click)="toggleCalendar($event)" id="date-range-btn">
-          <span class="material-icons-round">calendar_today</span>
-          <span>{{dateRangeLabel}}</span>
-        </div>
-
-        <!-- Calendar Dropdown (sibling, not child) -->
-        <div class="calendar-dropdown" *ngIf="showCalendar()" (click)="$event.stopPropagation()">
-          
-          <!-- Selection Mode Header -->
-          <div class="selection-header">
-            <div class="selection-box" 
-                 [class.active]="selectingMode() === 'START'"
-                 (click)="setSelectingMode('START', $event)">
-              <span class="label">CHECK-IN</span>
-              <span class="value">{{rangeStart() ? (rangeStart() | date:'EEE, MMM d') : 'Select Date'}}</span>
+        <!-- Beautiful Custom Date Picker -->
+        <div class="custom-date-picker-wrapper">
+          <div class="date-trigger" (click)="toggleCalendar($event)">
+            <div class="date-display">
+              <span class="label">FROM</span>
+              <span class="val">{{rangeStart() ? (rangeStart() | date:'dd MMM, yyyy') : 'Select Date'}}</span>
             </div>
-            <div class="selection-arrow">
-              <span class="material-icons-round">arrow_forward</span>
+            <span class="material-icons-round arrow">arrow_forward</span>
+            <div class="date-display">
+              <span class="label">TO</span>
+              <span class="val">{{rangeEnd() ? (rangeEnd() | date:'dd MMM, yyyy') : 'Select Date'}}</span>
             </div>
-            <div class="selection-box" 
-                 [class.active]="selectingMode() === 'END'"
-                 (click)="setSelectingMode('END', $event)">
-              <span class="label">CHECK-OUT</span>
-              <span class="value">{{rangeEnd() ? (rangeEnd() | date:'EEE, MMM d') : 'Select Date'}}</span>
-            </div>
+            <span class="material-icons-round trigger-icon">calendar_month</span>
           </div>
 
-          <!-- Year Picker Mode -->
-          <div class="year-grid" *ngIf="showYearPicker()">
-            <div class="year-picker-header">Select Year</div>
-            <div class="year-cells">
-              <div *ngFor="let y of yearRange()"
-                   class="year-cell"
-                   [class.active-year]="y === calendarMonth().getFullYear()"
-                   (click)="selectYear(y)">{{y}}</div>
+          <!-- Glassmorphic Calendar Dropdown -->
+          <div class="cal-dropdown glass-panel" *ngIf="showCalendar()" (click)="$event.stopPropagation()">
+            <div class="cal-header">
+              <button class="cal-icon-btn" (click)="prevMonth()"><span class="material-icons-round">chevron_left</span></button>
+              <span class="cal-title">{{currentMonthName()}} {{calendarMonth().getFullYear()}}</span>
+              <button class="cal-icon-btn" (click)="nextMonth()"><span class="material-icons-round">chevron_right</span></button>
             </div>
-          </div>
-
-          <!-- Calendar Month View -->
-          <ng-container *ngIf="!showYearPicker()">
-            <div class="cal-months">
-              <!-- Current Month -->
-              <div class="cal-month">
-                <div class="cal-nav">
-                  <button class="cal-nav-btn" (click)="prevMonth()">
-                    <span class="material-icons-round">chevron_left</span>
-                  </button>
-                  <span class="cal-month-label">
-                    {{currentMonthName()}}
-                    <span class="cal-year-btn" (click)="showYearPicker.set(true)">
-                      {{calendarMonth().getFullYear()}}
-                      <span class="material-icons-round" style="font-size: 14px; margin-left: 2px">expand_more</span>
-                    </span>
-                  </span>
-                  <button class="cal-nav-btn" (click)="nextMonth()">
-                    <span class="material-icons-round">chevron_right</span>
-                  </button>
+            
+            <div class="cal-grid">
+              <div class="cal-day-name" *ngFor="let d of weekDays">{{d}}</div>
+              <ng-container *ngFor="let week of calendarDays">
+                <div *ngFor="let day of week"
+                     class="cal-cell"
+                     [class.empty]="!day"
+                     [class.today]="isToday(day)"
+                     [class.start]="isRangeStart(day)"
+                     [class.end]="isRangeEnd(day)"
+                     [class.in-range]="isInRange(day)"
+                     (click)="onDayClick(day, $event)"
+                     (mouseenter)="hoverDate.set(day)"
+                     (mouseleave)="hoverDate.set(null)">
+                  <span>{{day ? day.getDate() : ''}}</span>
                 </div>
-                <div class="cal-grid">
-                  <div class="cal-dow" *ngFor="let d of weekDays">{{d}}</div>
-                  <ng-container *ngFor="let week of calendarDays">
-                    <div *ngFor="let day of week"
-                         class="cal-day"
-                         [class.empty]="!day"
-                         [class.today]="isToday(day)"
-                         [class.range-start]="isRangeStart(day)"
-                         [class.range-end]="isRangeEnd(day)"
-                         [class.in-range]="isInRange(day)"
-                         (click)="onDayClick(day, $event)"
-                         (mouseenter)="hoverDate.set(day)"
-                         (mouseleave)="hoverDate.set(null)">
-                      {{day ? day.getDate() : ''}}
-                    </div>
-                  </ng-container>
-                </div>
-              </div>
-
-              <div class="cal-month">
-                <div class="cal-nav">
-                  <span class="cal-month-label">
-                    {{nextMonthName()}}
-                    <span class="cal-year-btn" (click)="showYearPicker.set(true)">
-                      {{nextMonthYear()}}
-                      <span class="material-icons-round" style="font-size: 14px; margin-left: 2px">expand_more</span>
-                    </span>
-                  </span>
-                </div>
-                <div class="cal-grid">
-                  <div class="cal-dow" *ngFor="let d of weekDays">{{d}}</div>
-                  <ng-container *ngFor="let week of nextCalendarDays">
-                    <div *ngFor="let day of week"
-                         class="cal-day"
-                         [class.empty]="!day"
-                         [class.today]="isToday(day)"
-                         [class.range-start]="isRangeStart(day)"
-                         [class.range-end]="isRangeEnd(day)"
-                         [class.in-range]="isInRange(day)"
-                         (click)="onDayClick(day, $event)"
-                         (mouseenter)="hoverDate.set(day)"
-                         (mouseleave)="hoverDate.set(null)">
-                      {{day ? day.getDate() : ''}}
-                    </div>
-                  </ng-container>
-                </div>
-              </div>
+              </ng-container>
             </div>
 
             <div class="cal-footer">
-              <span class="cal-selection-hint">{{selectingMode() === 'START' ? 'Select Check-in Date' : 'Select Check-out Date'}}</span>
-              <button class="cal-clear-btn" (click)="clearDates()">Clear</button>
-              <button class="cal-apply-btn" (click)="applyDates()">Apply</button>
+              <button class="cal-text-btn" (click)="clearDates()">Clear</button>
+              <button class="cal-solid-btn" (click)="applyDates()">Apply</button>
             </div>
-          </ng-container>
+          </div>
         </div>
       </div>
     </div>

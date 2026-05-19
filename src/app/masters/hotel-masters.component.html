@@ -1,0 +1,794 @@
+<div class="masters-page">
+  <!-- Top Navigation & Tabs -->
+  <nav class="sticky-nav">
+    <div class="nav-left">
+      <div class="tabs-container">
+        <button class="tab-btn" [class.active]="activeTab() === 'hotels'" (click)="switchTab('hotels')">
+          <span class="material-icons-round">domain</span>
+          Hotels
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'floors'" (click)="switchTab('floors')">
+          <span class="material-icons-round">layers</span>
+          Floors
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'room-types'" (click)="switchTab('room-types')">
+          <span class="material-icons-round">bed</span>
+          Room Types
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'rooms'" (click)="switchTab('rooms')">
+          <span class="material-icons-round">meeting_room</span>
+          Rooms
+        </button>
+      </div>
+    </div>
+    
+    <div class="nav-right">
+      <div class="search-box">
+        <span class="material-icons-round">search</span>
+        <input 
+          type="text" 
+          [placeholder]="
+            activeTab() === 'hotels' ? 'Search by name, city...' :
+            activeTab() === 'floors' ? 'Search by floor, hotel...' :
+            activeTab() === 'room-types' ? 'Search by type, description...' :
+            'Search by room, status, floor...'
+          " 
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+        >
+      </div>
+      
+      <button class="btn-primary" (click)="openCreateModal()">
+        <span class="material-icons-round">add</span>
+        <span>
+          Add {{ 
+            activeTab() === 'hotels' ? 'Hotel' :
+            activeTab() === 'floors' ? 'Floor' :
+            activeTab() === 'room-types' ? 'Room Type' :
+            'Room'
+          }}
+        </span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    
+    <!-- ========================================== -->
+    <!-- HOTELS TAB VIEW                            -->
+    <!-- ========================================== -->
+    <div class="modern-card" *ngIf="activeTab() === 'hotels'">
+      <div class="card-header">
+        <h2 class="card-title">Registered Properties</h2>
+        <div class="header-actions">
+          <span class="total-badge">{{ filteredHotels().length }} Properties</span>
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <table class="premium-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>HOTEL NAME & LOCATION</th>
+              <th>CONTACT DETAILS</th>
+              <th style="text-align: center;">ROOM COUNT</th>
+              <th style="text-align: center;">CURRENCY</th>
+              <th style="text-align: center;">STATUS</th>
+              <th style="text-align: center;">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let hotel of filteredHotels()" [class.inactive-row]="!hotel.isActive">
+              <td><span class="mono-text">H-{{ hotel.id }}</span></td>
+              <td>
+                <div class="hotel-info">
+                  <div class="avatar-box">
+                    <span class="material-icons-round">domain</span>
+                  </div>
+                  <div class="name-block">
+                    <span class="entity-name">{{ hotel.name }}</span>
+                    <span class="entity-sub">
+                      <span class="material-icons-round">place</span>
+                      {{ hotel.city }}, {{ hotel.state }}, {{ hotel.country }}
+                    </span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="contact-block">
+                  <span class="contact-item">
+                    <span class="material-icons-round">email</span>
+                    {{ hotel.email }}
+                  </span>
+                  <span class="contact-item">
+                    <span class="material-icons-round">phone</span>
+                    {{ hotel.phone }}
+                  </span>
+                </div>
+              </td>
+              <td style="text-align: center;">
+                <span class="numeric-badge">{{ hotel.totalRooms }} Rooms</span>
+              </td>
+              <td style="text-align: center;">
+                <span class="currency-badge">{{ hotel.currency }}</span>
+              </td>
+              <td style="text-align: center;">
+                <span 
+                  class="status-pill" 
+                  [class.active]="hotel.isActive" 
+                  [class.inactive]="!hotel.isActive"
+                  (click)="toggleHotelActive(hotel, $event)"
+                  title="Click to toggle status"
+                >
+                  {{ hotel.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td style="text-align: center;">
+                <div class="action-buttons">
+                  <button class="btn-icon edit" title="Edit Hotel" (click)="openEditModal(hotel)">
+                    <span class="material-icons-round">edit</span>
+                  </button>
+                  <button class="btn-icon delete" title="Delete Hotel" (click)="deleteHotel(hotel.id, hotel.name, $event)">
+                    <span class="material-icons-round">delete_outline</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredHotels().length === 0">
+              <td colspan="7" class="empty-state">
+                <span class="material-icons-round">domain_disabled</span>
+                <p>No hotels configured yet.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- FLOORS TAB VIEW                            -->
+    <!-- ========================================== -->
+    <div class="modern-card" *ngIf="activeTab() === 'floors'">
+      <div class="card-header">
+        <h2 class="card-title">Building Floors</h2>
+        <div class="header-actions">
+          <span class="total-badge">{{ filteredFloors().length }} Floors</span>
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <table class="premium-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>FLOOR NUMBER</th>
+              <th>HOTEL PROPERTY</th>
+              <th style="text-align: center;">ROOM COUNT</th>
+              <th>TELEPHONE EXT.</th>
+              <th style="text-align: center;">STATUS</th>
+              <th style="text-align: center;">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let floor of filteredFloors()" [class.inactive-row]="!floor.isActive">
+              <td><span class="mono-text">F-{{ floor.id }}</span></td>
+              <td>
+                <div class="floor-info">
+                  <span class="material-icons-round icon-decor">layers</span>
+                  <span class="entity-name">{{ floor.floorNumber }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="hotel-ref">
+                  <span class="material-icons-round">domain</span>
+                  <span>{{ getHotelName(floor.hotelId) }}</span>
+                </div>
+              </td>
+              <td style="text-align: center;">
+                <span class="numeric-badge">{{ floor.noOfRooms }} Rooms Limit</span>
+              </td>
+              <td>
+                <span class="telephone-box" *ngIf="floor.telephone">
+                  <span class="material-icons-round">phone_in_talk</span>
+                  {{ floor.telephone }}
+                </span>
+                <span class="none-text" *ngIf="!floor.telephone">—</span>
+              </td>
+              <td style="text-align: center;">
+                <span 
+                  class="status-pill" 
+                  [class.active]="floor.isActive" 
+                  [class.inactive]="!floor.isActive"
+                  (click)="toggleFloorActive(floor, $event)"
+                  title="Click to toggle status"
+                >
+                  {{ floor.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td style="text-align: center;">
+                <div class="action-buttons">
+                  <button class="btn-icon edit" title="Edit Floor" (click)="openEditModal(floor)">
+                    <span class="material-icons-round">edit</span>
+                  </button>
+                  <button class="btn-icon delete" title="Delete Floor" (click)="deleteFloor(floor.id, floor.floorNumber, $event)">
+                    <span class="material-icons-round">delete_outline</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredFloors().length === 0">
+              <td colspan="7" class="empty-state">
+                <span class="material-icons-round">layers_clear</span>
+                <p>No building floors configured.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- ROOM TYPES TAB VIEW                        -->
+    <!-- ========================================== -->
+    <div class="modern-card" *ngIf="activeTab() === 'room-types'">
+      <div class="card-header">
+        <h2 class="card-title">Room Categories</h2>
+        <div class="header-actions">
+          <span class="total-badge">{{ filteredRoomTypes().length }} Categories</span>
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <table class="premium-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>ROOM TYPE & DESCRIPTION</th>
+              <th>HOTEL PROPERTY</th>
+              <th style="text-align: center;">CAPACITY</th>
+              <th style="text-align: right;">BASE PRICE</th>
+              <th style="text-align: center;">AREA</th>
+              <th style="text-align: center;">STATUS</th>
+              <th style="text-align: center;">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let rt of filteredRoomTypes()" [class.inactive-row]="!rt.isActive">
+              <td><span class="mono-text">RT-{{ rt.id }}</span></td>
+              <td>
+                <div class="room-type-info">
+                  <div class="avatar-box">
+                    <span class="material-icons-round">bed</span>
+                  </div>
+                  <div class="name-block">
+                    <span class="entity-name">{{ rt.name }}</span>
+                    <span class="entity-desc" title="{{rt.description}}">{{ rt.description | slice:0:70 }}{{ rt.description.length > 70 ? '...' : '' }}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="hotel-ref">
+                  <span class="material-icons-round">domain</span>
+                  <span>{{ getHotelName(rt.hotelId) }}</span>
+                </div>
+              </td>
+              <td style="text-align: center;">
+                <div class="capacity-box">
+                  <span class="material-icons-round">people</span>
+                  <span>{{ rt.capacity }} Pax</span>
+                </div>
+              </td>
+              <td style="text-align: right;">
+                <span class="price-val">
+                  {{ getHotelCurrency(rt.hotelId) }} {{ rt.basePricePerNight | number:'1.2-2' }}
+                </span>
+                <span class="price-sub">/ Night</span>
+              </td>
+              <td style="text-align: center;">
+                <span class="numeric-badge">{{ rt.area }} Sq Ft</span>
+              </td>
+              <td style="text-align: center;">
+                <span 
+                  class="status-pill" 
+                  [class.active]="rt.isActive" 
+                  [class.inactive]="!rt.isActive"
+                  (click)="toggleRoomTypeActive(rt, $event)"
+                  title="Click to toggle status"
+                >
+                  {{ rt.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td style="text-align: center;">
+                <div class="action-buttons">
+                  <button class="btn-icon edit" title="Edit Room Type" (click)="openEditModal(rt)">
+                    <span class="material-icons-round">edit</span>
+                  </button>
+                  <button class="btn-icon delete" title="Delete Room Type" (click)="deleteRoomType(rt.id, rt.name, $event)">
+                    <span class="material-icons-round">delete_outline</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredRoomTypes().length === 0">
+              <td colspan="8" class="empty-state">
+                <span class="material-icons-round">hotel_class</span>
+                <p>No room types configured.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- ROOMS TAB VIEW                             -->
+    <!-- ========================================== -->
+    <div class="modern-card" *ngIf="activeTab() === 'rooms'">
+      <div class="card-header">
+        <h2 class="card-title">Room Inventory</h2>
+        <div class="header-actions">
+          <span class="total-badge">{{ filteredRooms().length }} Rooms</span>
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <table class="premium-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>ROOM NO.</th>
+              <th>HOTEL & FLOOR LOCATION</th>
+              <th>CATEGORY TYPE</th>
+              <th style="text-align: center;">MAX OCCUPANCY</th>
+              <th>HOUSEKEEPING / STATUS</th>
+              <th>TELEPHONE</th>
+              <th style="text-align: center;">STATUS</th>
+              <th style="text-align: center;">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let room of filteredRooms()" [class.inactive-row]="!room.isActive">
+              <td><span class="mono-text">RM-{{ room.id }}</span></td>
+              <td>
+                <div class="room-number-box">
+                  <span class="room-pill">{{ room.roomNumber }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="location-chain">
+                  <span class="loc-hotel">{{ getHotelForFloor(room.floorId) }}</span>
+                  <span class="loc-divider">/</span>
+                  <span class="loc-floor">{{ getFloorNumber(room.floorId) }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="room-type-tag">{{ getRoomTypeName(room.typeId) }}</span>
+              </td>
+              <td style="text-align: center;">
+                <span class="numeric-badge">{{ room.maxOccupancy }} Guests</span>
+              </td>
+              <td>
+                <span class="hk-status" [class]="room.status.toLowerCase()">
+                  <span class="material-icons-round">
+                    {{
+                      room.status === 'VACANT' ? 'check_circle' :
+                      room.status === 'OCCUPIED' ? 'meeting_room' :
+                      room.status === 'MAINTENANCE' ? 'build' :
+                      room.status === 'RESERVED' ? 'lock' : 'cleaning_services'
+                    }}
+                  </span>
+                  <span>{{ room.status }}</span>
+                </span>
+              </td>
+              <td>
+                <span class="telephone-box" *ngIf="room.telephone">
+                  <span class="material-icons-round">phone_in_talk</span>
+                  {{ room.telephone }}
+                </span>
+                <span class="none-text" *ngIf="!room.telephone">—</span>
+              </td>
+              <td style="text-align: center;">
+                <span 
+                  class="status-pill" 
+                  [class.active]="room.isActive" 
+                  [class.inactive]="!room.isActive"
+                  (click)="toggleRoomActive(room, $event)"
+                  title="Click to toggle status"
+                >
+                  {{ room.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td style="text-align: center;">
+                <div class="action-buttons">
+                  <button class="btn-icon edit" title="Edit Room" (click)="openEditModal(room)">
+                    <span class="material-icons-round">edit</span>
+                  </button>
+                  <button class="btn-icon delete" title="Delete Room" (click)="deleteRoom(room.id, room.roomNumber, $event)">
+                    <span class="material-icons-round">delete_outline</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredRooms().length === 0">
+              <td colspan="9" class="empty-state">
+                <span class="material-icons-round">no_meeting_room</span>
+                <p>No room inventory configured.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================
+     HOTEL REGISTRATION MODAL
+     ================================================================ -->
+<div class="modal-overlay" *ngIf="isHotelModalOpen()" (click)="closeModal('hotels')">
+  <div class="ci-modal" (click)="$event.stopPropagation()">
+    
+    <div class="ci-header">
+      <div class="ci-title">
+        <span class="material-icons-round">{{ modalMode() === 'create' ? 'domain_add' : 'domain' }}</span>
+        <div>
+          <h2>{{ modalMode() === 'create' ? 'Add New Property' : 'Edit Hotel Property' }}</h2>
+          <p>{{ modalMode() === 'create' ? 'Register a new hotel unit' : 'Update settings for H-' + currentHotel().id }}</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="closeModal('hotels')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="ci-body">
+      <div class="form-section-title">Property Profile</div>
+      
+      <div class="ci-input-group">
+        <label>Hotel Name *</label>
+        <input type="text" [(ngModel)]="currentHotel().name" placeholder="e.g. Oasis Palms Resort">
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Email Address *</label>
+          <input type="email" [(ngModel)]="currentHotel().email" placeholder="e.g. contact@oasis.com">
+        </div>
+        <div class="ci-input-group">
+          <label>Phone Number *</label>
+          <input type="tel" [(ngModel)]="currentHotel().phone" placeholder="e.g. +1 305-555-0199">
+        </div>
+      </div>
+
+      <div class="form-section-title mt-4">Address Details</div>
+      
+      <div class="ci-input-group">
+        <label>Street Address *</label>
+        <textarea [(ngModel)]="currentHotel().address" placeholder="e.g. 4200 Collins Ave" rows="2"></textarea>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>City *</label>
+          <input type="text" [(ngModel)]="currentHotel().city" placeholder="Miami Beach">
+        </div>
+        <div class="ci-input-group">
+          <label>State / Region *</label>
+          <input type="text" [(ngModel)]="currentHotel().state" placeholder="Florida">
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Country *</label>
+          <input type="text" [(ngModel)]="currentHotel().country" placeholder="USA">
+        </div>
+        <div class="ci-input-group">
+          <label>Zip Code *</label>
+          <input type="text" [(ngModel)]="currentHotel().zipCode" placeholder="33140">
+        </div>
+      </div>
+
+      <div class="form-section-title mt-4">Capacity & Settings</div>
+      
+      <div class="ci-form-grid">
+        <div class="ci-input-group">
+          <label>Total Rooms *</label>
+          <input type="number" [(ngModel)]="currentHotel().totalRooms" placeholder="150" min="1">
+        </div>
+        <div class="ci-input-group">
+          <label>Billing Currency *</label>
+          <select [(ngModel)]="currentHotel().currency">
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="INR">INR (₹)</option>
+            <option value="GBP">GBP (£)</option>
+            <option value="AED">AED (Dh)</option>
+            <option value="SGD">SGD (S$)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ci-input-group mt-3">
+        <div class="toggle-group">
+          <label class="toggle-option">
+            <input type="checkbox" [(ngModel)]="currentHotel().isActive"> 
+            Active Property (Open for booking Folios)
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" (click)="closeModal('hotels')">Cancel</button>
+      <button class="ci-btn-confirm" (click)="saveHotel()">
+        <span class="material-icons-round">save</span>
+        {{ modalMode() === 'create' ? 'Create Hotel' : 'Save Changes' }}
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================
+     FLOOR CONFIGURATION MODAL
+     ================================================================ -->
+<div class="modal-overlay" *ngIf="isFloorModalOpen()" (click)="closeModal('floors')">
+  <div class="ci-modal" (click)="$event.stopPropagation()">
+    
+    <div class="ci-header">
+      <div class="ci-title">
+        <span class="material-icons-round">layers</span>
+        <div>
+          <h2>{{ modalMode() === 'create' ? 'Add New Floor' : 'Edit Floor Configuration' }}</h2>
+          <p>{{ modalMode() === 'create' ? 'Setup new physical floor layout' : 'Update settings for F-' + currentFloor().id }}</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="closeModal('floors')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="ci-body">
+      <div class="form-section-title">Floor Setup</div>
+
+      <div class="ci-input-group">
+        <label>Hotel Property *</label>
+        <select [(ngModel)]="currentFloor().hotelId">
+          <option *ngFor="let h of mastersService.hotels()" [value]="h.id" [disabled]="!h.isActive">
+            {{ h.name }} {{ !h.isActive ? '(Inactive)' : '' }}
+          </option>
+        </select>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Floor Number/Name *</label>
+          <input type="text" [(ngModel)]="currentFloor().floorNumber" placeholder="e.g. Floor 1 or Ground Floor">
+        </div>
+        <div class="ci-input-group">
+          <label>Capacity (Max Rooms) *</label>
+          <input type="number" [(ngModel)]="currentFloor().noOfRooms" placeholder="30" min="1">
+        </div>
+      </div>
+
+      <div class="ci-input-group mt-3">
+        <label>Telephone Extension / Speed Dial</label>
+        <input type="text" [(ngModel)]="currentFloor().telephone" placeholder="e.g. +1 305-555-1001">
+      </div>
+
+      <div class="ci-input-group mt-3">
+        <div class="toggle-group">
+          <label class="toggle-option">
+            <input type="checkbox" [(ngModel)]="currentFloor().isActive">
+            Active Floor
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" (click)="closeModal('floors')">Cancel</button>
+      <button class="ci-btn-confirm" (click)="saveFloor()">
+        <span class="material-icons-round">save</span>
+        {{ modalMode() === 'create' ? 'Create Floor' : 'Save Changes' }}
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================
+     ROOM TYPE CONFIGURATION MODAL
+     ================================================================ -->
+<div class="modal-overlay" *ngIf="isRoomTypeModalOpen()" (click)="closeModal('room-types')">
+  <div class="ci-modal" (click)="$event.stopPropagation()">
+    
+    <div class="ci-header">
+      <div class="ci-title">
+        <span class="material-icons-round">bed</span>
+        <div>
+          <h2>{{ modalMode() === 'create' ? 'Create Room Type' : 'Edit Room Category' }}</h2>
+          <p>{{ modalMode() === 'create' ? 'Establish a new room category and rate structure' : 'Update category details' }}</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="closeModal('room-types')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="ci-body">
+      <div class="form-section-title">Category Profile</div>
+
+      <div class="ci-input-group">
+        <label>Hotel Property *</label>
+        <select [(ngModel)]="currentRoomType().hotelId">
+          <option *ngFor="let h of mastersService.hotels()" [value]="h.id" [disabled]="!h.isActive">
+            {{ h.name }} {{ !h.isActive ? '(Inactive)' : '' }}
+          </option>
+        </select>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Room Category Name *</label>
+          <input type="text" [(ngModel)]="currentRoomType().name" placeholder="e.g. Deluxe Suite">
+        </div>
+        <div class="ci-input-group">
+          <label>Max Guest Capacity (Pax) *</label>
+          <input type="number" [(ngModel)]="currentRoomType().capacity" placeholder="2" min="1">
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Base Rate per Night *</label>
+          <div class="ci-input-icon">
+            <input type="number" [(ngModel)]="currentRoomType().basePricePerNight" placeholder="150" min="0">
+          </div>
+        </div>
+        <div class="ci-input-group">
+          <label>Area (Square Feet) *</label>
+          <input type="number" [(ngModel)]="currentRoomType().area" placeholder="350" min="1">
+        </div>
+      </div>
+
+
+      <div class="ci-input-group mt-3">
+        <label>Description Details</label>
+        <textarea [(ngModel)]="currentRoomType().description" placeholder="Specify beds, view, balcony and custom room setup details..." rows="3"></textarea>
+      </div>
+
+      <div class="ci-input-group mt-3">
+        <div class="toggle-group">
+          <label class="toggle-option">
+            <input type="checkbox" [(ngModel)]="currentRoomType().isActive">
+            Active Category
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" (click)="closeModal('room-types')">Cancel</button>
+      <button class="ci-btn-confirm" (click)="saveRoomType()">
+        <span class="material-icons-round">save</span>
+        {{ modalMode() === 'create' ? 'Save Category' : 'Save Changes' }}
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================
+     ROOM INVENTORY MODAL
+     ================================================================ -->
+<div class="modal-overlay" *ngIf="isRoomModalOpen()" (click)="closeModal('rooms')">
+  <div class="ci-modal" (click)="$event.stopPropagation()">
+    
+    <div class="ci-header">
+      <div class="ci-title">
+        <span class="material-icons-round">meeting_room</span>
+        <div>
+          <h2>{{ modalMode() === 'create' ? 'Add Room' : 'Edit Room Settings' }}</h2>
+          <p>{{ modalMode() === 'create' ? 'Assign a new room to a floor unit' : 'Update configuration for Room #' + currentRoom().roomNumber }}</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="closeModal('rooms')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="ci-body">
+      <div class="form-section-title">Room Alignment</div>
+
+      <!-- Hotel Filter (only shown or editable during creation for convenience) -->
+      <div class="ci-input-group">
+        <label>Hotel Property *</label>
+        <select 
+          [ngModel]="selectedHotelIdForRoomForm()" 
+          (ngModelChange)="onHotelChangeInRoomForm($event)"
+          [disabled]="modalMode() === 'edit'"
+        >
+          <option *ngFor="let h of mastersService.hotels()" [value]="h.id" [disabled]="!h.isActive">
+            {{ h.name }} {{ !h.isActive ? '(Inactive)' : '' }}
+          </option>
+        </select>
+        <span class="input-tip" *ngIf="modalMode() === 'edit'">Cannot transfer rooms between properties</span>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Assign to Floor *</label>
+          <select [(ngModel)]="currentRoom().floorId">
+            <option *ngIf="floorsForSelectedHotel().length === 0" disabled>No floors available. Create a floor first!</option>
+            <option *ngFor="let f of floorsForSelectedHotel()" [value]="f.id">
+              {{ f.floorNumber }}
+            </option>
+          </select>
+        </div>
+
+        <div class="ci-input-group">
+          <label>Room Category (Type) *</label>
+          <select [(ngModel)]="currentRoom().typeId">
+            <option *ngIf="roomTypesForSelectedHotel().length === 0" disabled>No types available. Create a type first!</option>
+            <option *ngFor="let rt of roomTypesForSelectedHotel()" [value]="rt.id">
+              {{ rt.name }} ({{ getHotelCurrency(rt.hotelId) }} {{ rt.basePricePerNight }}/nt)
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-section-title mt-4">Room Attributes</div>
+
+      <div class="ci-form-grid">
+        <div class="ci-input-group">
+          <label>Room Number *</label>
+          <input type="text" [(ngModel)]="currentRoom().roomNumber" placeholder="e.g. 101 or 305-B">
+        </div>
+        <div class="ci-input-group">
+          <label>Max Guest Occupancy *</label>
+          <input type="number" [(ngModel)]="currentRoom().maxOccupancy" placeholder="2" min="1">
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Housekeeping Status</label>
+          <select [(ngModel)]="currentRoom().status">
+            <option value="VACANT">VACANT</option>
+            <option value="OCCUPIED">OCCUPIED</option>
+            <option value="MAINTENANCE">MAINTENANCE</option>
+            <option value="RESERVED">RESERVED</option>
+            <option value="CLEANING">CLEANING</option>
+          </select>
+        </div>
+        
+        <div class="ci-input-group">
+          <label>Room Extension Phone</label>
+          <input type="text" [(ngModel)]="currentRoom().telephone" placeholder="e.g. Ext 101">
+        </div>
+      </div>
+
+      <div class="ci-input-group mt-4">
+        <div class="toggle-group">
+          <label class="toggle-option">
+            <input type="checkbox" [(ngModel)]="currentRoom().isActive">
+            Active Room (Enable Check-Ins / Bookings)
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" (click)="closeModal('rooms')">Cancel</button>
+      <button class="ci-btn-confirm" (click)="saveRoom()">
+        <span class="material-icons-round">save</span>
+        {{ modalMode() === 'create' ? 'Create Room' : 'Save Changes' }}
+      </button>
+    </div>
+
+  </div>
+</div>

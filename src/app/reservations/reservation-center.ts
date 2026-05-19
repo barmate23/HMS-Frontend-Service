@@ -181,8 +181,22 @@ export class ReservationCenter {
     return date.toDateString() === new Date().toDateString();
   }
 
-  clearDates() { this.rangeStart.set(null); this.rangeEnd.set(null); }
-  applyDates() { this.showCalendar.set(false); this.showYearPicker.set(false); }
+  updateStart(val: string) {
+    if (val) this.rangeStart.set(new Date(val));
+  }
+  
+  updateEnd(val: string) {
+    if (val) this.rangeEnd.set(new Date(val));
+  }
+
+  clearDates() { 
+    this.rangeStart.set(null); 
+    this.rangeEnd.set(null); 
+  }
+  
+  applyDates() { 
+    this.showCalendar.set(false); 
+  }
 
 
   floors = ['Floor 1', 'Floor 2', 'Floor 3', 'Floor 4'];

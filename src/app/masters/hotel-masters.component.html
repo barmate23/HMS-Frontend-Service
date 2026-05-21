@@ -1,4 +1,4 @@
-<div class="masters-page">
+<div class="masters-container">
 
   <!-- Loading State -->
   <div class="api-loading-bar" *ngIf="mastersService.isLoading()">
@@ -13,8 +13,9 @@
     <span>{{ mastersService.loadError() }}</span>
     <button (click)="mastersService.loadAll()">Retry</button>
   </div>
-  <!-- Top Navigation & Tabs -->
-  <nav class="sticky-nav">
+  
+  <!-- Compact Navigation (Matching Reservation Header) -->
+  <div class="compact-nav">
     <div class="nav-left">
       <div class="tabs-container">
         <button class="tab-btn" [class.active]="activeTab() === 'hotels'" (click)="switchTab('hotels')">
@@ -64,9 +65,9 @@
         </span>
       </button>
     </div>
-  </nav>
+  </div>
 
-  <div class="main-content">
+  <div class="view-content">
     
     <!-- ========================================== -->
     <!-- HOTELS TAB VIEW                            -->

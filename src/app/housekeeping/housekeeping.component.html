@@ -1,6 +1,6 @@
-<div class="housekeeping-page">
-  <!-- Top Navigation & Tabs -->
-  <nav class="sticky-nav">
+<div class="hk-container">
+  <!-- Compact Navigation (Matching Reservation Header) -->
+  <div class="compact-nav">
     <div class="nav-left">
       <div class="tabs-container">
         <button class="tab-btn" [class.active]="activeTab() === 'board'" (click)="selectTab('board')">
@@ -94,9 +94,9 @@
 
       </ng-container>
     </div>
-  </nav>
+  </div>
 
-  <div class="main-content">
+  <div class="view-content">
 
     <!-- ========================================== -->
     <!-- BOARD VIEW                                 -->

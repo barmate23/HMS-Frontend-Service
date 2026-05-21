@@ -3,6 +3,7 @@
   height: 100%;
   flex: 1;
   min-height: 0;
+  font-family: var(--font-poppins);
 }
 
 .masters-page {
@@ -13,6 +14,86 @@
   overflow: hidden;
   font-family: var(--font-poppins);
 }
+
+/* ── API Loading Bar ─────────────────────────────────────────── */
+.api-loading-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, var(--primary-color), #1a5657);
+  color: rgba(255,255,255,0.9);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-poppins);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.api-loading-bar .material-icons-round { font-size: 15px; }
+
+.loading-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.07) 50%, transparent 100%);
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+/* ── API Error Banner ────────────────────────────────────────── */
+.api-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: #FEF2F2;
+  border-bottom: 1px solid #FECACA;
+  color: #991B1B;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: var(--font-poppins);
+  flex-shrink: 0;
+}
+
+.api-error-banner .material-icons-round {
+  font-size: 18px;
+  color: #DC2626;
+  flex-shrink: 0;
+}
+
+.api-error-banner span { flex: 1; }
+
+.api-error-banner button {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid #FECACA;
+  background: white;
+  color: #DC2626;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-poppins);
+  transition: all 0.2s;
+}
+
+.api-error-banner button:hover {
+  background: #DC2626;
+  color: white;
+}
+
+/* ── Spin Animation (loading icon) ──────────────────────────── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.spin { animation: spin 0.8s linear infinite; display: inline-block; }
+
 
 /* Sticky Navigation & Premium Tabs */
 .sticky-nav {
@@ -215,6 +296,7 @@
   padding: 8px 12px;
   font-size: 9.5px;
   font-weight: 800;
+  font-family: var(--font-poppins);
   color: var(--surface-500);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -228,6 +310,7 @@
   border-bottom: 1px solid var(--surface-100);
   vertical-align: middle;
   font-size: 11.5px;
+  font-family: var(--font-poppins);
   color: var(--surface-700);
   white-space: nowrap;
 }
@@ -323,6 +406,7 @@
   color: var(--surface-700);
   font-size: 10.5px;
   font-weight: 600;
+  font-family: var(--font-poppins);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -333,6 +417,7 @@
   color: #00796B;
   font-size: 10px;
   font-weight: 700;
+  font-family: var(--font-poppins);
   padding: 2px 6px;
   border-radius: 4px;
   letter-spacing: 0.05em;
@@ -421,6 +506,7 @@
   border-radius: 4px;
   font-size: 10.5px;
   font-weight: 700;
+  font-family: var(--font-poppins);
 }
 
 .capacity-box .material-icons-round {
@@ -482,6 +568,7 @@
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
+  font-family: var(--font-poppins);
   white-space: nowrap;
 }
 
@@ -492,6 +579,7 @@
   gap: 6px;
   font-size: 10.5px;
   font-weight: 700;
+  font-family: var(--font-poppins);
   padding: 3px 8px;
   border-radius: 12px;
   text-transform: uppercase;
@@ -532,6 +620,7 @@
   display: inline-block;
   font-size: 10px;
   font-weight: 700;
+  font-family: var(--font-poppins);
   padding: 2px 8px;
   border-radius: 12px;
   cursor: pointer;

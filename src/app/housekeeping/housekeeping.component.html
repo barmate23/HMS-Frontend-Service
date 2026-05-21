@@ -1,0 +1,779 @@
+<div class="housekeeping-page">
+  <!-- Top Navigation & Tabs -->
+  <nav class="sticky-nav">
+    <div class="nav-left">
+      <div class="tabs-container">
+        <button class="tab-btn" [class.active]="activeTab() === 'board'" (click)="selectTab('board')">
+          <span class="material-icons-round">dashboard</span>
+          Board
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'tasks'" (click)="selectTab('tasks')">
+          <span class="material-icons-round">assignment</span>
+          Tasks
+          <span class="badge" *ngIf="hk.taskStats().pending > 0">{{ hk.taskStats().pending }}</span>
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'staff'" (click)="selectTab('staff')">
+          <span class="material-icons-round">badge</span>
+          Staff
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'lost-found'" (click)="selectTab('lost-found')">
+          <span class="material-icons-round">search_off</span>
+          Lost & Found
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'maintenance'" (click)="selectTab('maintenance')">
+          <span class="material-icons-round">build_circle</span>
+          Maintenance
+        </button>
+      </div>
+    </div>
+    
+    <div class="nav-right">
+      <!-- Search & Filters Contextual to Tabs -->
+      <ng-container [ngSwitch]="activeTab()">
+        
+        <!-- Board Controls -->
+        <ng-container *ngSwitchCase="'board'">
+          <div class="search-box">
+            <span class="material-icons-round">search</span>
+            <input type="text" placeholder="Search Room, Floor..." [ngModel]="boardSearch()" (ngModelChange)="boardSearch.set($event)">
+          </div>
+          <select class="filter-select" [ngModel]="boardFilter()" (ngModelChange)="boardFilter.set($event)">
+            <option value="ALL">All Statuses</option>
+            <option *ngFor="let st of allStatuses" [value]="st">{{ hkStatusLabel(st) }}</option>
+          </select>
+        </ng-container>
+
+        <!-- Tasks Controls -->
+        <ng-container *ngSwitchCase="'tasks'">
+          <div class="search-box">
+            <span class="material-icons-round">search</span>
+            <input type="text" placeholder="Search Room, Staff..." [ngModel]="taskSearch()" (ngModelChange)="taskSearch.set($event)">
+          </div>
+          <select class="filter-select" [ngModel]="taskFilter()" (ngModelChange)="taskFilter.set($event)">
+            <option value="ALL">All Tasks</option>
+            <option value="PENDING">Pending</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="SKIPPED">Skipped</option>
+          </select>
+          <button class="btn-primary" (click)="openCreateTaskModal()">
+            <span class="material-icons-round">add</span>
+            <span>Add Task</span>
+          </button>
+        </ng-container>
+
+        <!-- Staff Controls -->
+        <ng-container *ngSwitchCase="'staff'">
+          <!-- No extra controls required for staff list, but can show simple stats -->
+          <span class="total-badge">{{ hk.staff().length }} Team Members</span>
+        </ng-container>
+
+        <!-- Lost & Found Controls -->
+        <ng-container *ngSwitchCase="'lost-found'">
+          <div class="search-box">
+            <span class="material-icons-round">search</span>
+            <input type="text" placeholder="Search item, room, guest..." [ngModel]="lfSearch()" (ngModelChange)="lfSearch.set($event)">
+          </div>
+          <button class="btn-primary" (click)="openCreateLFModal()">
+            <span class="material-icons-round">add</span>
+            <span>Log Found Item</span>
+          </button>
+        </ng-container>
+
+        <!-- Maintenance Controls -->
+        <ng-container *ngSwitchCase="'maintenance'">
+          <div class="search-box">
+            <span class="material-icons-round">search</span>
+            <input type="text" placeholder="Search issue, room..." [ngModel]="maintSearch()" (ngModelChange)="maintSearch.set($event)">
+          </div>
+          <button class="btn-primary" (click)="openCreateMaintModal()">
+            <span class="material-icons-round">add</span>
+            <span>Report Issue</span>
+          </button>
+        </ng-container>
+
+      </ng-container>
+    </div>
+  </nav>
+
+  <div class="main-content">
+
+    <!-- ========================================== -->
+    <!-- BOARD VIEW                                 -->
+    <!-- ========================================== -->
+    <div class="board-view-container" *ngIf="activeTab() === 'board'">
+      <!-- Mini Stats Cards Grid -->
+      <div class="hk-stats-grid">
+        <div class="hk-stat-card total">
+          <div class="stat-icon"><span class="material-icons-round">meeting_room</span></div>
+          <div class="stat-info">
+            <span class="val">{{ hk.roomStats().total }}</span>
+            <span class="lbl">Total Rooms</span>
+          </div>
+        </div>
+        <div class="hk-stat-card vacant-dirty">
+          <div class="stat-icon"><span class="material-icons-round">do_not_disturb_on</span></div>
+          <div class="stat-info">
+            <span class="val">{{ hk.roomStats().vacantDirty }}</span>
+            <span class="lbl">Vacant Dirty</span>
+          </div>
+        </div>
+        <div class="hk-stat-card vacant-clean">
+          <div class="stat-icon"><span class="material-icons-round">check_circle</span></div>
+          <div class="stat-info">
+            <span class="val">{{ hk.roomStats().vacantClean }}</span>
+            <span class="lbl">Vacant Clean</span>
+          </div>
+        </div>
+        <div class="hk-stat-card occupied-dirty">
+          <div class="stat-icon"><span class="material-icons-round">bedtime</span></div>
+          <div class="stat-info">
+            <span class="val">{{ hk.roomStats().occupiedDirty }}</span>
+            <span class="lbl">Occupied Dirty</span>
+          </div>
+        </div>
+        <div class="hk-stat-card occupied-clean">
+          <div class="stat-icon"><span class="material-icons-round">hotel</span></div>
+          <div class="stat-info">
+            <span class="val">{{ hk.roomStats().occupiedClean }}</span>
+            <span class="lbl">Occupied Clean</span>
+          </div>
+        </div>
+        <div class="hk-stat-card inspected">
+          <div class="stat-icon"><span class="material-icons-round">verified</span></div>
+          <div class="stat-info">
+            <span class="val">{{ hk.roomStats().inspected }}</span>
+            <span class="lbl">Inspected</span>
+          </div>
+        </div>
+        <div class="hk-stat-card dnd">
+          <div class="stat-icon"><span class="material-icons-round">do_not_disturb</span></div>
+          <div class="stat-info">
+            <span class="val">{{ hk.roomStats().dnd }}</span>
+            <span class="lbl">DND</span>
+          </div>
+        </div>
+        <div class="hk-stat-card oor">
+          <div class="stat-icon"><span class="material-icons-round">cancel</span></div>
+          <div class="stat-info">
+            <span class="val">{{ hk.roomStats().oor }}</span>
+            <span class="lbl">OOR/Maint</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floors and Room Grid -->
+      <div class="floors-container">
+        <div class="floor-block" *ngFor="let f of roomsByFloor()">
+          <h3 class="floor-title">
+            <span class="material-icons-round">layers</span>
+            {{ f.floor }}
+            <span class="floor-badge">{{ f.rooms.length }} Rooms</span>
+          </h3>
+          <div class="rooms-grid">
+            <div class="room-card" *ngFor="let room of f.rooms" (click)="openStatusModal(room)" [class.priority-high]="room.priority === 'HIGH'">
+              
+              <!-- Card Header -->
+              <div class="rc-header">
+                <span class="room-number">{{ room.roomNumber }}</span>
+                <span class="room-type">{{ room.type }}</span>
+                <span class="priority-dot" *ngIf="room.priority === 'HIGH'" title="High Priority Cleaning"></span>
+              </div>
+
+              <!-- Card Body -->
+              <div class="rc-body">
+                <div class="hk-status-badge" [class]="room.hkStatus.toLowerCase()">
+                  <span class="material-icons-round">{{ hkStatusIcon(room.hkStatus) }}</span>
+                  <span>{{ hkStatusLabel(room.hkStatus) }}</span>
+                </div>
+                
+                <div class="guest-info" *ngIf="room.isOccupied">
+                  <span class="material-icons-round text-muted">person</span>
+                  <span class="guest-name" title="{{ room.guestName }}">{{ room.guestName }}</span>
+                </div>
+                <div class="checkout-info" *ngIf="room.isOccupied && room.checkoutDate">
+                  <span class="material-icons-round text-muted">logout</span>
+                  <span>CO: {{ room.checkoutDate }}</span>
+                </div>
+                <div class="clean-info" *ngIf="room.lastCleaned">
+                  <span class="material-icons-round text-muted">cleaning_services</span>
+                  <span>Cleaned: {{ room.lastCleaned | date:'shortTime' }}</span>
+                </div>
+              </div>
+
+              <!-- Card Actions / Quick status change -->
+              <div class="rc-footer">
+                <div class="staff-assigned" *ngIf="room.assignedToId">
+                  <span class="avatar-sm" title="{{ getStaffName(room.assignedToId) }}">{{ getStaffAvatar(room.assignedToId) }}</span>
+                  <span class="staff-name">{{ getStaffName(room.assignedToId) }}</span>
+                </div>
+                <div class="staff-assigned unassigned" *ngIf="!room.assignedToId">
+                  <span class="material-icons-round">person_add_disabled</span>
+                  <span>Unassigned</span>
+                </div>
+                <div class="quick-actions">
+                  <button class="quick-btn" title="Mark Clean" (click)="quickStatusChange(room, 'VACANT_CLEAN', $event)" *ngIf="room.hkStatus === 'VACANT_DIRTY' || room.hkStatus === 'OCCUPIED_DIRTY'">
+                    <span class="material-icons-round text-success">check_circle</span>
+                  </button>
+                  <button class="quick-btn" title="Inspect Room" (click)="quickStatusChange(room, 'INSPECTED', $event)" *ngIf="room.hkStatus === 'VACANT_CLEAN'">
+                    <span class="material-icons-round text-primary">verified</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        <div class="empty-state" *ngIf="roomsByFloor().length === 0">
+          <span class="material-icons-round">meeting_room</span>
+          <p>No rooms match the filter query.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TASKS VIEW                                 -->
+    <!-- ========================================== -->
+    <div class="modern-card" *ngIf="activeTab() === 'tasks'">
+      <div class="card-header">
+        <h2 class="card-title">Housekeeping Assignments & Tasks</h2>
+        <div class="header-actions">
+          <span class="total-badge">{{ filteredTasks().length }} Active Tasks</span>
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <table class="premium-table">
+          <thead>
+            <tr>
+              <th style="width: 6%;">ID</th>
+              <th style="width: 10%;">ROOM NO.</th>
+              <th style="width: 8%;">FLOOR</th>
+              <th style="width: 28%;">TASK TYPE</th>
+              <th style="width: 10%;">PRIORITY</th>
+              <th style="width: 14%;">ASSIGNED TO</th>
+              <th style="width: 8%; text-align: center;">EST. MINS</th>
+              <th style="width: 10%;">STATUS</th>
+              <th style="width: 6%; text-align: center;">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of filteredTasks()">
+              <td><span class="mono-text">T-{{ t.id }}</span></td>
+              <td><span class="room-pill">{{ t.roomNumber }}</span></td>
+              <td>{{ t.floor }}</td>
+              <td>
+                <div class="task-type-container">
+                  <span class="task-label">{{ taskTypeLabel(t.taskType) }}</span>
+                  <span class="task-notes" *ngIf="t.notes" title="{{ t.notes }}">{{ t.notes }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="priority-badge" [class]="t.priority.toLowerCase()">
+                  <span class="material-icons-round">{{ priorityIcon(t.priority) }}</span>
+                  {{ t.priority }}
+                </span>
+              </td>
+              <td>
+                <div class="staff-cell" *ngIf="t.assignedToId">
+                  <span class="avatar-sm">{{ getStaffAvatar(t.assignedToId) }}</span>
+                  <span>{{ getStaffName(t.assignedToId) }}</span>
+                </div>
+                <span class="none-text" *ngIf="!t.assignedToId">Unassigned</span>
+              </td>
+              <td style="text-align: center;"><span class="numeric-badge">{{ t.estimatedMins }}m</span></td>
+              <td>
+                <span class="status-badge" [class]="t.status.toLowerCase()">{{ t.status }}</span>
+              </td>
+              <td style="text-align: center;">
+                <div class="action-buttons">
+                  <button class="btn-icon check" title="In Progress" *ngIf="t.status === 'PENDING'" (click)="updateTaskStatus(t, 'IN_PROGRESS', $event)">
+                    <span class="material-icons-round text-warning">play_arrow</span>
+                  </button>
+                  <button class="btn-icon check" title="Complete" *ngIf="t.status === 'IN_PROGRESS'" (click)="updateTaskStatus(t, 'COMPLETED', $event)">
+                    <span class="material-icons-round text-success">done</span>
+                  </button>
+                  <button class="btn-icon edit" title="Edit" (click)="openEditTaskModal(t)">
+                    <span class="material-icons-round">edit</span>
+                  </button>
+                  <button class="btn-icon delete" title="Delete" (click)="deleteTask(t.id, $event)">
+                    <span class="material-icons-round">delete_outline</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredTasks().length === 0">
+              <td colspan="9" class="empty-state">
+                <span class="material-icons-round">checklist</span>
+                <p>No active tasks matching selection.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- STAFF VIEW                                 -->
+    <!-- ========================================== -->
+    <div class="staff-view-container" *ngIf="activeTab() === 'staff'">
+      <div class="staff-grid">
+        <div class="staff-card" *ngFor="let s of hk.staff()">
+          <div class="sc-header">
+            <div class="staff-avatar-large">{{ s.avatar }}</div>
+            <div class="staff-title-group">
+              <h4 class="staff-name">{{ s.name }}</h4>
+              <span class="staff-role">{{ s.role }}</span>
+            </div>
+            <span class="staff-status-pill" [class]="s.status.toLowerCase()">
+              {{ s.status.replace('_', ' ') }}
+            </span>
+          </div>
+
+          <div class="sc-body">
+            <div class="info-row">
+              <span class="material-icons-round text-muted">schedule</span>
+              <span class="label">Shift:</span>
+              <strong class="value">{{ s.shift }}</strong>
+            </div>
+            <div class="info-row">
+              <span class="material-icons-round text-muted">phone</span>
+              <span class="label">Phone:</span>
+              <strong class="value">{{ s.phone }}</strong>
+            </div>
+            <div class="info-row">
+              <span class="material-icons-round text-muted">check_circle</span>
+              <span class="label">Completed Today:</span>
+              <strong class="value text-success">{{ s.completedToday }} Tasks</strong>
+            </div>
+            <div class="info-row rooms-list-row">
+              <span class="material-icons-round text-muted">meeting_room</span>
+              <span class="label">Assigned Rooms:</span>
+              <div class="assigned-room-tags">
+                <span class="room-tag" *ngFor="let roomId of s.assignedRoomIds">
+                  Room {{ roomId }}
+                </span>
+                <span class="none-text" *ngIf="s.assignedRoomIds.length === 0">None</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- LOST & FOUND VIEW                          -->
+    <!-- ========================================== -->
+    <div class="modern-card" *ngIf="activeTab() === 'lost-found'">
+      <div class="card-header">
+        <h2 class="card-title">Lost & Found Registry</h2>
+        <div class="header-actions">
+          <span class="total-badge">{{ filteredLF().length }} Records</span>
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <table class="premium-table">
+          <thead>
+            <tr>
+              <th style="width: 5%;">ID</th>
+              <th style="width: 10%;">DATE FOUND</th>
+              <th style="width: 7%;">ROOM</th>
+              <th style="width: 25%;">ITEM DESCRIPTION</th>
+              <th style="width: 10%;">CATEGORY</th>
+              <th style="width: 10%;">FOUND BY</th>
+              <th style="width: 13%;">STORAGE LOCATION</th>
+              <th style="width: 12%;">GUEST INFO</th>
+              <th style="width: 8%;">STATUS</th>
+              <th style="width: 10%; text-align: center;">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of filteredLF()">
+              <td><span class="mono-text">LF-{{ item.id }}</span></td>
+              <td>{{ item.foundDate }}</td>
+              <td><span class="room-pill">{{ item.roomNumber }}</span></td>
+              <td>
+                <div class="item-desc-cell">
+                  <span class="item-description">{{ item.description }}</span>
+                  <span class="item-notes" *ngIf="item.notes" title="{{ item.notes }}">{{ item.notes }}</span>
+                </div>
+              </td>
+              <td><span class="category-badge">{{ item.category }}</span></td>
+              <td>{{ item.foundBy }}</td>
+              <td>
+                <span class="storage-box">
+                  <span class="material-icons-round">inventory_2</span>
+                  {{ item.storageLocation }}
+                </span>
+              </td>
+              <td>
+                <div class="guest-contact" *ngIf="item.guestName">
+                  <strong class="guest-name-text">{{ item.guestName }}</strong>
+                  <span class="guest-phone">{{ item.guestContact }}</span>
+                </div>
+                <span class="none-text" *ngIf="!item.guestName">—</span>
+              </td>
+              <td>
+                <span class="status-badge lf-status" [class]="item.status.toLowerCase()">{{ item.status }}</span>
+              </td>
+              <td style="text-align: center;">
+                <div class="action-buttons">
+                  <button class="btn-icon check" *ngIf="item.status === 'STORED'" (click)="updateLFStatus(item.id, 'CLAIMED', $event)" title="Mark Claimed">
+                    <span class="material-icons-round text-success">done_all</span>
+                  </button>
+                  <button class="btn-icon edit" title="Edit" (click)="openEditLFModal(item)">
+                    <span class="material-icons-round">edit</span>
+                  </button>
+                  <button class="btn-icon delete" title="Delete" (click)="deleteLF(item.id, $event)">
+                    <span class="material-icons-round">delete_outline</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredLF().length === 0">
+              <td colspan="10" class="empty-state">
+                <span class="material-icons-round">search_off</span>
+                <p>No lost & found records found.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MAINTENANCE VIEW                           -->
+    <!-- ========================================== -->
+    <div class="modern-card" *ngIf="activeTab() === 'maintenance'">
+      <div class="card-header">
+        <h2 class="card-title">Maintenance & Repair Requests</h2>
+        <div class="header-actions">
+          <span class="total-badge">{{ filteredMaint().length }} Issues Logged</span>
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <table class="premium-table">
+          <thead>
+            <tr>
+              <th style="width: 5%;">ID</th>
+              <th style="width: 10%;">REPORTED AT</th>
+              <th style="width: 7%;">ROOM</th>
+              <th style="width: 25%;">ISSUE DESCRIPTION</th>
+              <th style="width: 10%;">CATEGORY</th>
+              <th style="width: 10%;">PRIORITY</th>
+              <th style="width: 10%;">REPORTED BY</th>
+              <th style="width: 11%;">ASSIGNED TO</th>
+              <th style="width: 6%;">STATUS</th>
+              <th style="width: 6%; text-align: center;">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let m of filteredMaint()">
+              <td><span class="mono-text">M-{{ m.id }}</span></td>
+              <td>{{ m.reportedAt | date:'shortDate' }}</td>
+              <td><span class="room-pill">{{ m.roomNumber }}</span></td>
+              <td>
+                <div class="issue-cell">
+                  <span class="issue-text">{{ m.issue }}</span>
+                  <span class="issue-notes" *ngIf="m.notes" title="{{ m.notes }}">{{ m.notes }}</span>
+                </div>
+              </td>
+              <td><span class="category-badge">{{ m.category }}</span></td>
+              <td>
+                <span class="priority-badge" [class]="m.priority.toLowerCase()">
+                  <span class="material-icons-round">{{ priorityIcon(m.priority === 'URGENT' ? 'HIGH' : m.priority === 'LOW' ? 'LOW' : 'MEDIUM') }}</span>
+                  {{ m.priority }}
+                </span>
+              </td>
+              <td>{{ m.reportedBy }}</td>
+              <td>
+                <span class="assigned-box" *ngIf="m.assignedTo">
+                  <span class="material-icons-round">engineering</span>
+                  {{ m.assignedTo }}
+                </span>
+                <span class="none-text" *ngIf="!m.assignedTo">Unassigned</span>
+              </td>
+              <td>
+                <span class="status-badge maint-status" [class]="m.status.toLowerCase()">{{ m.status }}</span>
+              </td>
+              <td style="text-align: center;">
+                <div class="action-buttons">
+                  <button class="btn-icon check" title="Start Progress" *ngIf="m.status === 'OPEN'" (click)="updateMaintStatus(m.id, 'IN_PROGRESS', $event)">
+                    <span class="material-icons-round text-warning">play_arrow</span>
+                  </button>
+                  <button class="btn-icon check" title="Resolve" *ngIf="m.status === 'IN_PROGRESS'" (click)="updateMaintStatus(m.id, 'RESOLVED', $event)">
+                    <span class="material-icons-round text-success">done</span>
+                  </button>
+                  <button class="btn-icon edit" title="Edit" (click)="openEditMaintModal(m)">
+                    <span class="material-icons-round">edit</span>
+                  </button>
+                  <button class="btn-icon delete" title="Delete" (click)="deleteMaint(m.id, $event)">
+                    <span class="material-icons-round">delete_outline</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredMaint().length === 0">
+              <td colspan="10" class="empty-state">
+                <span class="material-icons-round">build_circle</span>
+                <p>No maintenance issues reported.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================
+     MODAL dialogs
+     ================================================================ -->
+
+<!-- 1. ROOM STATUS UPDATE MODAL -->
+<div class="modal-overlay" *ngIf="isStatusModalOpen()" (click)="isStatusModalOpen.set(false)">
+  <div class="ci-modal" (click)="$event.stopPropagation()">
+    <div class="ci-header">
+      <div class="ci-title">
+        <span class="material-icons-round">cleaning_services</span>
+        <div>
+          <h2>Update Room Status</h2>
+          <p>Room #{{ selectedRoom()?.roomNumber }} — {{ selectedRoom()?.type }}</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="isStatusModalOpen.set(false)">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="ci-body">
+      <div class="ci-input-group">
+        <label>Select Housekeeping Status *</label>
+        <select [(ngModel)]="newRoomStatus">
+          <option *ngFor="let st of allStatuses" [value]="st">{{ hkStatusLabel(st) }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" (click)="isStatusModalOpen.set(false)">Cancel</button>
+      <button class="ci-btn-confirm" (click)="saveRoomStatus()">
+        <span class="material-icons-round">save</span>
+        Save Changes
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 2. TASK MODAL (Create/Edit) -->
+<div class="modal-overlay" *ngIf="isTaskModalOpen()" (click)="isTaskModalOpen.set(false)">
+  <div class="ci-modal" (click)="$event.stopPropagation()">
+    <div class="ci-header">
+      <div class="ci-title">
+        <span class="material-icons-round">assignment</span>
+        <div>
+          <h2>{{ modalMode() === 'create' ? 'Create Task' : 'Edit Task' }}</h2>
+          <p>{{ modalMode() === 'create' ? 'Add new cleaning assignment' : 'Edit Task T-' + currentTask().id }}</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="isTaskModalOpen.set(false)">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="ci-body">
+      <div class="ci-form-grid">
+        <div class="ci-input-group">
+          <label>Room Number *</label>
+          <input type="text" [(ngModel)]="currentTask().roomNumber" placeholder="e.g. 101">
+        </div>
+        <div class="ci-input-group">
+          <label>Task Type *</label>
+          <select [(ngModel)]="currentTask().taskType">
+            <option *ngFor="let type of taskTypes" [value]="type">{{ taskTypeLabel(type) }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Priority *</label>
+          <select [(ngModel)]="currentTask().priority">
+            <option value="LOW">LOW</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="HIGH">HIGH</option>
+          </select>
+        </div>
+        <div class="ci-input-group">
+          <label>Assigned Housekeeper</label>
+          <select [(ngModel)]="currentTask().assignedToId">
+            <option [value]="undefined">Unassigned</option>
+            <option *ngFor="let s of hk.staff()" [value]="s.id">{{ s.name }} ({{ s.role }})</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ci-input-group mt-3">
+        <label>Estimated Minutes *</label>
+        <input type="number" [(ngModel)]="currentTask().estimatedMins" min="5" max="300" placeholder="30">
+      </div>
+
+      <div class="ci-input-group mt-3">
+        <label>Instruction / Notes</label>
+        <textarea [(ngModel)]="currentTask().notes" placeholder="Any specific requirements (e.g. Extra pillows, Late check-out cleaning)" rows="3"></textarea>
+      </div>
+    </div>
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" (click)="isTaskModalOpen.set(false)">Cancel</button>
+      <button class="ci-btn-confirm" (click)="saveTask()">
+        <span class="material-icons-round">save</span>
+        {{ modalMode() === 'create' ? 'Create Task' : 'Save Changes' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 3. LOST & FOUND MODAL (Create/Edit) -->
+<div class="modal-overlay" *ngIf="isLFModalOpen()" (click)="isLFModalOpen.set(false)">
+  <div class="ci-modal" (click)="$event.stopPropagation()">
+    <div class="ci-header">
+      <div class="ci-title">
+        <span class="material-icons-round">search_off</span>
+        <div>
+          <h2>{{ modalMode() === 'create' ? 'Log Lost & Found Item' : 'Edit Lost & Found Item' }}</h2>
+          <p>{{ modalMode() === 'create' ? 'Log item left behind by guests' : 'Edit Registry LF-' + currentLF().id }}</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="isLFModalOpen.set(false)">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="ci-body">
+      <div class="ci-form-grid">
+        <div class="ci-input-group">
+          <label>Room Number *</label>
+          <input type="text" [(ngModel)]="currentLF().roomNumber" placeholder="e.g. 102">
+        </div>
+        <div class="ci-input-group">
+          <label>Item Description *</label>
+          <input type="text" [(ngModel)]="currentLF().description" placeholder="e.g. Gold wristwatch">
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Category *</label>
+          <select [(ngModel)]="currentLF().category">
+            <option *ngFor="let cat of lfCategories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+        <div class="ci-input-group">
+          <label>Found By *</label>
+          <input type="text" [(ngModel)]="currentLF().foundBy" placeholder="e.g. Meena Pillai">
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Storage Location *</label>
+          <input type="text" [(ngModel)]="currentLF().storageLocation" placeholder="e.g. Locker A1">
+        </div>
+        <div class="ci-input-group">
+          <label>Found Date</label>
+          <input type="date" [(ngModel)]="currentLF().foundDate">
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Guest Name (Optional)</label>
+          <input type="text" [(ngModel)]="currentLF().guestName" placeholder="e.g. Rajan Mehta">
+        </div>
+        <div class="ci-input-group">
+          <label>Guest Contact (Optional)</label>
+          <input type="text" [(ngModel)]="currentLF().guestContact" placeholder="e.g. +91 98111 22333">
+        </div>
+      </div>
+
+      <div class="ci-input-group mt-3">
+        <label>Storage Notes</label>
+        <textarea [(ngModel)]="currentLF().notes" placeholder="Notes regarding packaging, state of item, or guest communications." rows="2"></textarea>
+      </div>
+    </div>
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" (click)="isLFModalOpen.set(false)">Cancel</button>
+      <button class="ci-btn-confirm" (click)="saveLF()">
+        <span class="material-icons-round">save</span>
+        {{ modalMode() === 'create' ? 'Log Item' : 'Save Changes' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 4. MAINTENANCE MODAL (Create/Edit) -->
+<div class="modal-overlay" *ngIf="isMaintModalOpen()" (click)="isMaintModalOpen.set(false)">
+  <div class="ci-modal" (click)="$event.stopPropagation()">
+    <div class="ci-header">
+      <div class="ci-title">
+        <span class="material-icons-round">build_circle</span>
+        <div>
+          <h2>{{ modalMode() === 'create' ? 'Report Maintenance Issue' : 'Edit Maintenance Request' }}</h2>
+          <p>{{ modalMode() === 'create' ? 'Report a room or facility repair requirement' : 'Edit Request M-' + currentMaint().id }}</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="isMaintModalOpen.set(false)">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="ci-body">
+      <div class="ci-form-grid">
+        <div class="ci-input-group">
+          <label>Room/Location Number *</label>
+          <input type="text" [(ngModel)]="currentMaint().roomNumber" placeholder="e.g. 105">
+        </div>
+        <div class="ci-input-group">
+          <label>Repair Issue *</label>
+          <input type="text" [(ngModel)]="currentMaint().issue" placeholder="e.g. AC compressor noise">
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Category *</label>
+          <select [(ngModel)]="currentMaint().category">
+            <option *ngFor="let cat of maintCategories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+        <div class="ci-input-group">
+          <label>Priority *</label>
+          <select [(ngModel)]="currentMaint().priority">
+            <option *ngFor="let pr of maintPriorities" [value]="pr">{{ pr }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Reported By *</label>
+          <input type="text" [(ngModel)]="currentMaint().reportedBy" placeholder="e.g. Meena Pillai">
+        </div>
+        <div class="ci-input-group">
+          <label>Assigned Staff/Team</label>
+          <input type="text" [(ngModel)]="currentMaint().assignedTo" placeholder="e.g. Engineering Team">
+        </div>
+      </div>
+
+      <div class="ci-input-group mt-3">
+        <label>Repair Notes</label>
+        <textarea [(ngModel)]="currentMaint().notes" placeholder="Add further context regarding the issue, tools required, etc." rows="2"></textarea>
+      </div>
+    </div>
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" (click)="isMaintModalOpen.set(false)">Cancel</button>
+      <button class="ci-btn-confirm" (click)="saveMaint()">
+        <span class="material-icons-round">save</span>
+        {{ modalMode() === 'create' ? 'Report Issue' : 'Save Changes' }}
+      </button>
+    </div>
+  </div>
+</div>

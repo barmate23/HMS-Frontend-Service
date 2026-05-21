@@ -26,6 +26,18 @@ export class Layout {
         { label: 'Guest Profiles', icon: 'person_search', route: '/guests' }
       ]
     },
+    { 
+      label: 'Housekeeping', 
+      icon: 'cleaning_services', 
+      expanded: false,
+      children: [
+        { label: 'Room Board', icon: 'dashboard', route: '/housekeeping/board' },
+        { label: 'Tasks', icon: 'assignment', route: '/housekeeping/tasks' },
+        { label: 'Staff', icon: 'badge', route: '/housekeeping/staff' },
+        { label: 'Lost & Found', icon: 'search_off', route: '/housekeeping/lost-found' },
+        { label: 'Maintenance', icon: 'build_circle', route: '/housekeeping/maintenance' }
+      ]
+    },
     {
       label: 'Hotel Setup',
       icon: 'domain',

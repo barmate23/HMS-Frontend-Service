@@ -1,4 +1,4 @@
-import { Component, signal, computed, effect, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, NavigationEnd, RouterModule } from '@angular/router';
@@ -38,6 +38,10 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   currentFloor = signal<Partial<Floor>>({});
   currentRoomType = signal<Partial<RoomType>>({});
   currentRoom = signal<Partial<Room>>({});
+
+  // Saving / deleting state
+  isSaving = signal(false);
+  isDeleting = signal(false);
 
   // Helper form state for Rooms tab: selected Hotel to filter Floor & RoomType
   selectedHotelIdForRoomForm = signal<number | null>(null);
@@ -164,9 +168,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     return this.mastersService.roomTypesMap().get(typeId)?.name || `Type #${typeId}`;
   }
 
-  getHotelCurrency(hotelId?: number): string {
-    if (!hotelId) return 'USD';
-    return this.mastersService.hotelsMap().get(hotelId)?.currency || 'USD';
+  getHotelCurrency(): string {
+    return '₹';
   }
 
   getHotelForFloor(floorId?: number): string {
@@ -211,7 +214,6 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
         country: '',
         zipCode: '',
         totalRooms: 10,
-        currency: 'USD',
         isActive: true
       });
       this.isHotelModalOpen.set(true);
@@ -296,12 +298,15 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   // --- Save Operations ---
   saveHotel() {
     const hotel = this.currentHotel();
-    if (!hotel.name || !hotel.email || !hotel.phone) {
-      alert('Please fill out all required fields.');
+    if (!hotel.name || !hotel.email) {
+      alert('Please fill out all required fields (Name, Email).');
       return;
     }
-    this.mastersService.saveHotel(hotel);
-    this.closeModal('hotels');
+    this.isSaving.set(true);
+    this.mastersService.saveHotel(hotel).subscribe({
+      next: () => { this.isSaving.set(false); this.closeModal('hotels'); },
+      error: (err) => { this.isSaving.set(false); alert('Error saving hotel: ' + (err?.message || 'Unknown error')); }
+    });
   }
 
   saveFloor() {
@@ -310,8 +315,11 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       alert('Please select a hotel and specify a floor number.');
       return;
     }
-    this.mastersService.saveFloor(floor);
-    this.closeModal('floors');
+    this.isSaving.set(true);
+    this.mastersService.saveFloor(floor).subscribe({
+      next: () => { this.isSaving.set(false); this.closeModal('floors'); },
+      error: (err) => { this.isSaving.set(false); alert('Error saving floor: ' + (err?.message || 'Unknown error')); }
+    });
   }
 
   saveRoomType() {
@@ -320,8 +328,11 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       alert('Please fill out all required fields.');
       return;
     }
-    this.mastersService.saveRoomType(rt);
-    this.closeModal('room-types');
+    this.isSaving.set(true);
+    this.mastersService.saveRoomType(rt).subscribe({
+      next: () => { this.isSaving.set(false); this.closeModal('room-types'); },
+      error: (err) => { this.isSaving.set(false); alert('Error saving room type: ' + (err?.message || 'Unknown error')); }
+    });
   }
 
   saveRoom() {
@@ -330,57 +341,76 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       alert('Please specify a room number, floor, and room type.');
       return;
     }
-    this.mastersService.saveRoom(room);
-    this.closeModal('rooms');
+    this.isSaving.set(true);
+    this.mastersService.saveRoom(room).subscribe({
+      next: () => { this.isSaving.set(false); this.closeModal('rooms'); },
+      error: (err) => { this.isSaving.set(false); alert('Error saving room: ' + (err?.message || 'Unknown error')); }
+    });
   }
 
   // --- Toggle Active States ---
   toggleHotelActive(hotel: Hotel, event: Event) {
     event.stopPropagation();
-    this.mastersService.saveHotel({ ...hotel, isActive: !hotel.isActive });
+    this.mastersService.saveHotel({ ...hotel, isActive: !hotel.isActive }).subscribe();
   }
 
   toggleFloorActive(floor: Floor, event: Event) {
     event.stopPropagation();
-    this.mastersService.saveFloor({ ...floor, isActive: !floor.isActive });
+    this.mastersService.saveFloor({ ...floor, isActive: !floor.isActive }).subscribe();
   }
 
   toggleRoomTypeActive(rt: RoomType, event: Event) {
     event.stopPropagation();
-    this.mastersService.saveRoomType({ ...rt, isActive: !rt.isActive });
+    this.mastersService.saveRoomType({ ...rt, isActive: !rt.isActive }).subscribe();
   }
 
   toggleRoomActive(room: Room, event: Event) {
     event.stopPropagation();
-    this.mastersService.saveRoom({ ...room, isActive: !room.isActive });
+    this.mastersService.saveRoom({ ...room, isActive: !room.isActive }).subscribe();
   }
 
   // --- Delete Operations ---
   deleteHotel(id: number, name: string, event: Event) {
     event.stopPropagation();
     if (confirm(`Are you sure you want to delete Hotel "${name}"? This could leave associated floors and rooms orphaned.`)) {
-      this.mastersService.deleteHotel(id);
+      this.isDeleting.set(true);
+      this.mastersService.deleteHotel(id).subscribe({
+        next: () => this.isDeleting.set(false),
+        error: (err) => { this.isDeleting.set(false); alert('Error deleting hotel: ' + (err?.message || 'Unknown error')); }
+      });
     }
   }
 
   deleteFloor(id: number, floorNumber: string, event: Event) {
     event.stopPropagation();
     if (confirm(`Are you sure you want to delete "${floorNumber}"?`)) {
-      this.mastersService.deleteFloor(id);
+      this.isDeleting.set(true);
+      this.mastersService.deleteFloor(id).subscribe({
+        next: () => this.isDeleting.set(false),
+        error: (err) => { this.isDeleting.set(false); alert('Error deleting floor: ' + (err?.message || 'Unknown error')); }
+      });
     }
   }
 
   deleteRoomType(id: number, name: string, event: Event) {
     event.stopPropagation();
     if (confirm(`Are you sure you want to delete Room Type "${name}"?`)) {
-      this.mastersService.deleteRoomType(id);
+      this.isDeleting.set(true);
+      this.mastersService.deleteRoomType(id).subscribe({
+        next: () => this.isDeleting.set(false),
+        error: (err) => { this.isDeleting.set(false); alert('Error deleting room type: ' + (err?.message || 'Unknown error')); }
+      });
     }
   }
 
   deleteRoom(id: number, roomNumber: string, event: Event) {
     event.stopPropagation();
     if (confirm(`Are you sure you want to delete Room #${roomNumber}?`)) {
-      this.mastersService.deleteRoom(id);
+      this.isDeleting.set(true);
+      this.mastersService.deleteRoom(id).subscribe({
+        next: () => this.isDeleting.set(false),
+        error: (err) => { this.isDeleting.set(false); alert('Error deleting room: ' + (err?.message || 'Unknown error')); }
+      });
     }
   }
 }

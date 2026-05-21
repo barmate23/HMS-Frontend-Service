@@ -1,4 +1,18 @@
 <div class="masters-page">
+
+  <!-- Loading State -->
+  <div class="api-loading-bar" *ngIf="mastersService.isLoading()">
+    <div class="loading-shimmer"></div>
+    <span class="material-icons-round spin">sync</span>
+    Loading data from server...
+  </div>
+
+  <!-- Error State -->
+  <div class="api-error-banner" *ngIf="mastersService.loadError() && !mastersService.isLoading()">
+    <span class="material-icons-round">error_outline</span>
+    <span>{{ mastersService.loadError() }}</span>
+    <button (click)="mastersService.loadAll()">Retry</button>
+  </div>
   <!-- Top Navigation & Tabs -->
   <nav class="sticky-nav">
     <div class="nav-left">
@@ -73,7 +87,6 @@
               <th>HOTEL NAME & LOCATION</th>
               <th>CONTACT DETAILS</th>
               <th style="text-align: center;">ROOM COUNT</th>
-              <th style="text-align: center;">CURRENCY</th>
               <th style="text-align: center;">STATUS</th>
               <th style="text-align: center;">ACTIONS</th>
             </tr>
@@ -111,9 +124,6 @@
                 <span class="numeric-badge">{{ hotel.totalRooms }} Rooms</span>
               </td>
               <td style="text-align: center;">
-                <span class="currency-badge">{{ hotel.currency }}</span>
-              </td>
-              <td style="text-align: center;">
                 <span 
                   class="status-pill" 
                   [class.active]="hotel.isActive" 
@@ -136,7 +146,7 @@
               </td>
             </tr>
             <tr *ngIf="filteredHotels().length === 0">
-              <td colspan="7" class="empty-state">
+              <td colspan="6" class="empty-state">
                 <span class="material-icons-round">domain_disabled</span>
                 <p>No hotels configured yet.</p>
               </td>
@@ -244,10 +254,10 @@
           <thead>
             <tr>
               <th>ID</th>
-              <th>ROOM TYPE & DESCRIPTION</th>
+              <th>ROOM TYPE</th>
               <th>HOTEL PROPERTY</th>
               <th style="text-align: center;">CAPACITY</th>
-              <th style="text-align: right;">BASE PRICE</th>
+              <th style="text-align: center;">BASE PRICE</th>
               <th style="text-align: center;">AREA</th>
               <th style="text-align: center;">STATUS</th>
               <th style="text-align: center;">ACTIONS</th>
@@ -263,7 +273,6 @@
                   </div>
                   <div class="name-block">
                     <span class="entity-name">{{ rt.name }}</span>
-                    <span class="entity-desc" title="{{rt.description}}">{{ rt.description | slice:0:70 }}{{ rt.description.length > 70 ? '...' : '' }}</span>
                   </div>
                 </div>
               </td>
@@ -279,9 +288,9 @@
                   <span>{{ rt.capacity }} Pax</span>
                 </div>
               </td>
-              <td style="text-align: right;">
+              <td style="text-align: center;">
                 <span class="price-val">
-                  {{ getHotelCurrency(rt.hotelId) }} {{ rt.basePricePerNight | number:'1.2-2' }}
+                  ₹{{ rt.basePricePerNight | number:'1.2-2' }}
                 </span>
                 <span class="price-sub">/ Night</span>
               </td>
@@ -493,22 +502,9 @@
 
       <div class="form-section-title mt-4">Capacity & Settings</div>
       
-      <div class="ci-form-grid">
-        <div class="ci-input-group">
-          <label>Total Rooms *</label>
-          <input type="number" [(ngModel)]="currentHotel().totalRooms" placeholder="150" min="1">
-        </div>
-        <div class="ci-input-group">
-          <label>Billing Currency *</label>
-          <select [(ngModel)]="currentHotel().currency">
-            <option value="USD">USD ($)</option>
-            <option value="EUR">EUR (€)</option>
-            <option value="INR">INR (₹)</option>
-            <option value="GBP">GBP (£)</option>
-            <option value="AED">AED (Dh)</option>
-            <option value="SGD">SGD (S$)</option>
-          </select>
-        </div>
+      <div class="ci-input-group">
+        <label>Total Rooms *</label>
+        <input type="number" [(ngModel)]="currentHotel().totalRooms" placeholder="150" min="1">
       </div>
 
       <div class="ci-input-group mt-3">
@@ -522,10 +518,11 @@
     </div>
 
     <div class="ci-footer">
-      <button class="ci-btn-cancel" (click)="closeModal('hotels')">Cancel</button>
-      <button class="ci-btn-confirm" (click)="saveHotel()">
-        <span class="material-icons-round">save</span>
-        {{ modalMode() === 'create' ? 'Create Hotel' : 'Save Changes' }}
+      <button class="ci-btn-cancel" (click)="closeModal('hotels')" [disabled]="isSaving()">Cancel</button>
+      <button class="ci-btn-confirm" (click)="saveHotel()" [disabled]="isSaving()">
+        <span class="material-icons-round spin" *ngIf="isSaving()">sync</span>
+        <span class="material-icons-round" *ngIf="!isSaving()">save</span>
+        {{ isSaving() ? 'Saving...' : (modalMode() === 'create' ? 'Create Hotel' : 'Save Changes') }}
       </button>
     </div>
 
@@ -590,10 +587,11 @@
     </div>
 
     <div class="ci-footer">
-      <button class="ci-btn-cancel" (click)="closeModal('floors')">Cancel</button>
-      <button class="ci-btn-confirm" (click)="saveFloor()">
-        <span class="material-icons-round">save</span>
-        {{ modalMode() === 'create' ? 'Create Floor' : 'Save Changes' }}
+      <button class="ci-btn-cancel" (click)="closeModal('floors')" [disabled]="isSaving()">Cancel</button>
+      <button class="ci-btn-confirm" (click)="saveFloor()" [disabled]="isSaving()">
+        <span class="material-icons-round spin" *ngIf="isSaving()">sync</span>
+        <span class="material-icons-round" *ngIf="!isSaving()">save</span>
+        {{ isSaving() ? 'Saving...' : (modalMode() === 'create' ? 'Create Floor' : 'Save Changes') }}
       </button>
     </div>
 
@@ -672,10 +670,11 @@
     </div>
 
     <div class="ci-footer">
-      <button class="ci-btn-cancel" (click)="closeModal('room-types')">Cancel</button>
-      <button class="ci-btn-confirm" (click)="saveRoomType()">
-        <span class="material-icons-round">save</span>
-        {{ modalMode() === 'create' ? 'Save Category' : 'Save Changes' }}
+      <button class="ci-btn-cancel" (click)="closeModal('room-types')" [disabled]="isSaving()">Cancel</button>
+      <button class="ci-btn-confirm" (click)="saveRoomType()" [disabled]="isSaving()">
+        <span class="material-icons-round spin" *ngIf="isSaving()">sync</span>
+        <span class="material-icons-round" *ngIf="!isSaving()">save</span>
+        {{ isSaving() ? 'Saving...' : (modalMode() === 'create' ? 'Save Category' : 'Save Changes') }}
       </button>
     </div>
 
@@ -735,7 +734,7 @@
           <select [(ngModel)]="currentRoom().typeId">
             <option *ngIf="roomTypesForSelectedHotel().length === 0" disabled>No types available. Create a type first!</option>
             <option *ngFor="let rt of roomTypesForSelectedHotel()" [value]="rt.id">
-              {{ rt.name }} ({{ getHotelCurrency(rt.hotelId) }} {{ rt.basePricePerNight }}/nt)
+              {{ rt.name }} (₹{{ rt.basePricePerNight }}/nt)
             </option>
           </select>
         </div>
@@ -783,10 +782,11 @@
     </div>
 
     <div class="ci-footer">
-      <button class="ci-btn-cancel" (click)="closeModal('rooms')">Cancel</button>
-      <button class="ci-btn-confirm" (click)="saveRoom()">
-        <span class="material-icons-round">save</span>
-        {{ modalMode() === 'create' ? 'Create Room' : 'Save Changes' }}
+      <button class="ci-btn-cancel" (click)="closeModal('rooms')" [disabled]="isSaving()">Cancel</button>
+      <button class="ci-btn-confirm" (click)="saveRoom()" [disabled]="isSaving()">
+        <span class="material-icons-round spin" *ngIf="isSaving()">sync</span>
+        <span class="material-icons-round" *ngIf="!isSaving()">save</span>
+        {{ isSaving() ? 'Saving...' : (modalMode() === 'create' ? 'Create Room' : 'Save Changes') }}
       </button>
     </div>
 

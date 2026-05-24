@@ -94,6 +94,67 @@
   user-select: none;
 }
 
+.status-select {
+  height: 30px;
+  min-width: 110px;
+  outline: none;
+  font-family: var(--font-poppins);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+.reservation-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--surface-200);
+  flex-shrink: 0;
+}
+
+.reservation-state .material-icons-round {
+  font-size: 15px;
+}
+
+.reservation-state.loading {
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.reservation-state.error {
+  background: #FEF2F2;
+  color: #991B1B;
+}
+
+.reservation-state.success {
+  background: #ECFDF5;
+  color: #047857;
+}
+
+.reservation-state span:nth-child(2) {
+  flex: 1;
+}
+
+.reservation-state button {
+  border: 1px solid #FECACA;
+  background: white;
+  color: #DC2626;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
 .date-range-picker:hover {
   border-color: var(--accent-color);
   color: var(--primary-color);
@@ -737,8 +798,12 @@
   border-radius: 4px;
   display: inline-block;
 }
-.status-pill.checkedin { background-color: #ECFDF5; color: #065F46; }
+.status-pill.checked-in { background-color: #ECFDF5; color: #065F46; }
+.status-pill.checked-out { background-color: #F1F5F9; color: #475569; }
 .status-pill.confirmed { background-color: #EFF6FF; color: #1E40AF; }
+.status-pill.pending { background-color: #FFF7ED; color: #9A3412; }
+.status-pill.cancelled { background-color: #FEF2F2; color: #991B1B; }
+.status-pill.no-show { background-color: #FDF2F8; color: #9D174D; }
 
 .amount { font-weight: 800; font-size: 11px; color: var(--surface-900); display: block; }
 .paid { font-size: 8.5px; color: var(--success-color); font-weight: 700; }
@@ -785,6 +850,32 @@
 .action-btn.edit:hover { background-color: var(--accent-color); color: white; border-color: var(--accent-color); }
 .action-btn.checkin:hover { background-color: var(--success-color); color: white; border-color: var(--success-color); }
 .action-btn.checkout:hover { background-color: var(--danger-color); color: white; border-color: var(--danger-color); }
+
+.action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 180px;
+  color: var(--surface-400);
+}
+
+.empty-state .material-icons-round {
+  font-size: 34px;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
 
 /* Inventory Grid (Stay View) */
 .inventory-grid { display: flex; flex-direction: column; height: 100%; min-width: 1000px; }

@@ -4,14 +4,19 @@
     <div class="header-left">
       <div class="search-input">
         <span class="material-icons-round">search</span>
-        <input type="text" placeholder="Search guest, email, ID...">
+        <input type="text" placeholder="Search guest, email, ID..." [ngModel]="searchText()" (ngModelChange)="onSearchChange($event)">
       </div>
       
       <div class="header-filters">
-        <div class="filter-dropdown">
-          <span>All Status</span>
-          <span class="material-icons-round">expand_more</span>
-        </div>
+        <select class="filter-dropdown status-select" [ngModel]="statusFilter()" (ngModelChange)="onStatusChange($event)">
+          <option value="ALL">All Status</option>
+          <option value="PENDING">Pending</option>
+          <option value="CONFIRMED">Confirmed</option>
+          <option value="CHECKED_IN">Checked In</option>
+          <option value="CHECKED_OUT">Checked Out</option>
+          <option value="CANCELLED">Cancelled</option>
+          <option value="NO_SHOW">No Show</option>
+        </select>
         
         <!-- Beautiful Custom Date Picker -->
         <div class="custom-date-picker-wrapper">
@@ -83,6 +88,21 @@
 
   <!-- Views Content -->
   <div class="view-content">
+    <div class="reservation-state loading" *ngIf="isLoadingReservations()">
+      <span class="material-icons-round spin">sync</span>
+      Loading reservations...
+    </div>
+
+    <div class="reservation-state error" *ngIf="reservationError() && !isLoadingReservations()">
+      <span class="material-icons-round">error_outline</span>
+      <span>{{ reservationError() }}</span>
+      <button type="button" (click)="loadReservations()">Retry</button>
+    </div>
+
+    <div class="reservation-state success" *ngIf="reservationMessage() && !reservationError()">
+      <span class="material-icons-round">check_circle</span>
+      <span>{{ reservationMessage() }}</span>
+    </div>
     
     <!-- List View -->
     <div class="list-view" *ngIf="viewMode() === 'LIST'">
@@ -155,12 +175,12 @@
             <td>
               <div class="stay-cell">
                 <span class="stay-dates">{{res.checkIn}} - {{res.checkOut}}</span>
-                <span class="stay-info">3 NIGHTS • 2A, 0C</span>
+                <span class="stay-info">{{ stayInfo(res) }}</span>
               </div>
             </td>
             <td>
-              <span class="status-pill" [ngClass]="res.status.toLowerCase()">
-                {{res.status}}
+              <span class="status-pill" [ngClass]="statusClass(res.status)">
+                {{ statusLabel(res.status) }}
               </span>
             </td>
             <td>
@@ -171,15 +191,23 @@
             </td>
             <td>
               <div class="action-buttons">
-                <button class="action-btn edit" title="Edit Booking">
+                <button class="action-btn edit" title="Load Details" (click)="viewReservationDetails(res.id)">
                   <span class="material-icons-round">edit</span>
                 </button>
-                <button class="action-btn checkin" title="Check-in">
-                  <span class="material-icons-round">login</span>
+                <button class="action-btn checkin" title="Cancel Reservation" (click)="cancelReservation(res.id, res.guestName)" [disabled]="res.status === 'CANCELLED'">
+                  <span class="material-icons-round">block</span>
                 </button>
-                <button class="action-btn checkout" title="Check-out">
-                  <span class="material-icons-round">logout</span>
+                <button class="action-btn checkout" title="Delete Reservation" (click)="deleteReservation(res.id, res.guestName)">
+                  <span class="material-icons-round">delete_outline</span>
                 </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="!isLoadingReservations() && reservations().length === 0">
+            <td colspan="6">
+              <div class="empty-state">
+                <span class="material-icons-round">event_busy</span>
+                <p>No reservations found.</p>
               </div>
             </td>
           </tr>

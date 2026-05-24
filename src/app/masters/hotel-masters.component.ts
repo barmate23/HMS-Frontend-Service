@@ -5,7 +5,7 @@ import { Router, NavigationEnd, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
-import { HotelMastersService, Hotel, Floor, RoomType, Room } from './hotel-masters.service';
+import { HotelMastersService, Hotel, Floor, RoomType, Room, RatePlan } from './hotel-masters.service';
 
 @Component({
   selector: 'app-hotel-masters',
@@ -19,8 +19,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private routerSub?: Subscription;
 
-  // Active tab state: 'hotels' | 'floors' | 'room-types' | 'rooms'
-  activeTab = signal<'hotels' | 'floors' | 'room-types' | 'rooms'>('hotels');
+  // Active tab state: 'hotels' | 'floors' | 'room-types' | 'rooms' | 'rate-plans'
+  activeTab = signal<'hotels' | 'floors' | 'room-types' | 'rooms' | 'rate-plans'>('hotels');
   
   // Search query
   searchQuery = signal<string>('');
@@ -30,6 +30,7 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   isFloorModalOpen = signal(false);
   isRoomTypeModalOpen = signal(false);
   isRoomModalOpen = signal(false);
+  isRatePlanModalOpen = signal(false);
 
   modalMode = signal<'create' | 'edit'>('create');
 
@@ -38,6 +39,7 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   currentFloor = signal<Partial<Floor>>({});
   currentRoomType = signal<Partial<RoomType>>({});
   currentRoom = signal<Partial<Room>>({});
+  currentRatePlan = signal<Partial<RatePlan>>({});
 
   // Saving / deleting state
   isSaving = signal(false);
@@ -70,12 +72,14 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       this.activeTab.set('room-types');
     } else if (url.includes('/masters/rooms')) {
       this.activeTab.set('rooms');
+    } else if (url.includes('/masters/rate-plans')) {
+      this.activeTab.set('rate-plans');
     }
     // Clear search query when changing tabs
     this.searchQuery.set('');
   }
 
-  switchTab(tab: 'hotels' | 'floors' | 'room-types' | 'rooms') {
+  switchTab(tab: 'hotels' | 'floors' | 'room-types' | 'rooms' | 'rate-plans') {
     this.router.navigate([`/masters/${tab}`]);
   }
 
@@ -152,6 +156,18 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     });
   });
 
+  filteredRatePlans = computed(() => {
+    const list = this.mastersService.ratePlans();
+    const query = this.searchQuery().toLowerCase().trim();
+    if (!query) return list;
+    return list.filter(rp =>
+      rp.name.toLowerCase().includes(query) ||
+      (rp.description || '').toLowerCase().includes(query) ||
+      String(rp.priceAdjustment ?? '').includes(query) ||
+      String(rp.displayOrder ?? '').includes(query)
+    );
+  });
+
   // --- Dynamic Mappings ---
   getHotelName(hotelId?: number): string {
     if (!hotelId) return 'N/A';
@@ -177,6 +193,15 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     const floor = this.mastersService.floorsMap().get(floorId);
     if (!floor) return 'N/A';
     return this.getHotelName(floor.hotelId);
+  }
+
+  formatRateAdjustment(value?: number): string {
+    const amount = value ?? 0;
+    const formatted = amount.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    return amount > 0 ? `+${formatted}` : formatted;
   }
 
   // --- Dropdown Filtering for Room Form ---
@@ -257,6 +282,15 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
         isActive: true
       });
       this.isRoomModalOpen.set(true);
+    } else if (tab === 'rate-plans') {
+      this.currentRatePlan.set({
+        name: '',
+        description: '',
+        priceAdjustment: 0,
+        displayOrder: this.mastersService.ratePlans().length + 1,
+        isActive: true
+      });
+      this.isRatePlanModalOpen.set(true);
     }
     document.body.style.overflow = 'hidden';
   }
@@ -283,15 +317,19 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
         this.selectedHotelIdForRoomForm.set(floor.hotelId);
       }
       this.isRoomModalOpen.set(true);
+    } else if (tab === 'rate-plans') {
+      this.currentRatePlan.set({ ...item });
+      this.isRatePlanModalOpen.set(true);
     }
     document.body.style.overflow = 'hidden';
   }
 
-  closeModal(tab: 'hotels' | 'floors' | 'room-types' | 'rooms') {
+  closeModal(tab: 'hotels' | 'floors' | 'room-types' | 'rooms' | 'rate-plans') {
     if (tab === 'hotels') this.isHotelModalOpen.set(false);
     if (tab === 'floors') this.isFloorModalOpen.set(false);
     if (tab === 'room-types') this.isRoomTypeModalOpen.set(false);
     if (tab === 'rooms') this.isRoomModalOpen.set(false);
+    if (tab === 'rate-plans') this.isRatePlanModalOpen.set(false);
     document.body.style.overflow = '';
   }
 
@@ -345,6 +383,19 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     this.mastersService.saveRoom(room).subscribe({
       next: () => { this.isSaving.set(false); this.closeModal('rooms'); },
       error: (err) => { this.isSaving.set(false); alert('Error saving room: ' + (err?.message || 'Unknown error')); }
+    });
+  }
+
+  saveRatePlan() {
+    const ratePlan = this.currentRatePlan();
+    if (!ratePlan.name) {
+      alert('Please enter a rate plan name.');
+      return;
+    }
+    this.isSaving.set(true);
+    this.mastersService.saveRatePlan(ratePlan).subscribe({
+      next: () => { this.isSaving.set(false); this.closeModal('rate-plans'); },
+      error: (err) => { this.isSaving.set(false); alert('Error saving rate plan: ' + (err?.message || 'Unknown error')); }
     });
   }
 
@@ -410,6 +461,17 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       this.mastersService.deleteRoom(id).subscribe({
         next: () => this.isDeleting.set(false),
         error: (err) => { this.isDeleting.set(false); alert('Error deleting room: ' + (err?.message || 'Unknown error')); }
+      });
+    }
+  }
+
+  deleteRatePlan(id: number, name: string, event: Event) {
+    event.stopPropagation();
+    if (confirm(`Are you sure you want to delete Rate Plan "${name}"?`)) {
+      this.isDeleting.set(true);
+      this.mastersService.deleteRatePlan(id).subscribe({
+        next: () => this.isDeleting.set(false),
+        error: (err) => { this.isDeleting.set(false); alert('Error deleting rate plan: ' + (err?.message || 'Unknown error')); }
       });
     }
   }

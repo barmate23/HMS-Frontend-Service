@@ -34,6 +34,10 @@
           <span class="material-icons-round">meeting_room</span>
           Rooms
         </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'rate-plans'" (click)="switchTab('rate-plans')">
+          <span class="material-icons-round">sell</span>
+          Rate Plans
+        </button>
       </div>
     </div>
     
@@ -46,6 +50,7 @@
             activeTab() === 'hotels' ? 'Search by name, city...' :
             activeTab() === 'floors' ? 'Search by floor, hotel...' :
             activeTab() === 'room-types' ? 'Search by type, description...' :
+            activeTab() === 'rate-plans' ? 'Search by rate plan, adjustment...' :
             'Search by room, status, floor...'
           " 
           [ngModel]="searchQuery()"
@@ -60,6 +65,7 @@
             activeTab() === 'hotels' ? 'Hotel' :
             activeTab() === 'floors' ? 'Floor' :
             activeTab() === 'room-types' ? 'Room Type' :
+            activeTab() === 'rate-plans' ? 'Rate Plan' :
             'Room'
           }}
         </span>
@@ -431,6 +437,89 @@
       </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- RATE PLANS TAB VIEW                        -->
+    <!-- ========================================== -->
+    <div class="modern-card" *ngIf="activeTab() === 'rate-plans'">
+      <div class="card-header">
+        <h2 class="card-title">Rate Plan Library</h2>
+        <div class="header-actions">
+          <span class="total-badge">{{ filteredRatePlans().length }} Rate Plans</span>
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <table class="premium-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>RATE PLAN</th>
+              <th>DESCRIPTION</th>
+              <th style="text-align: center;">PRICE ADJUSTMENT</th>
+              <th style="text-align: center;">DISPLAY ORDER</th>
+              <th style="text-align: center;">STATUS</th>
+              <th style="text-align: center;">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let plan of filteredRatePlans()" [class.inactive-row]="plan.isActive === false">
+              <td><span class="mono-text">RP-{{ plan.id }}</span></td>
+              <td>
+                <div class="rate-plan-info">
+                  <div class="avatar-box">
+                    <span class="material-icons-round">sell</span>
+                  </div>
+                  <div class="name-block">
+                    <span class="entity-name">{{ plan.name }}</span>
+                    <span class="entity-sub">
+                      <span class="material-icons-round">sort</span>
+                      Priority {{ plan.displayOrder || 0 }}
+                    </span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="entity-desc">{{ plan.description || 'No description added' }}</span>
+              </td>
+              <td style="text-align: center;">
+                <span class="adjustment-pill" [class.negative]="(plan.priceAdjustment || 0) < 0">
+                  {{ formatRateAdjustment(plan.priceAdjustment) }}
+                </span>
+              </td>
+              <td style="text-align: center;">
+                <span class="numeric-badge">{{ plan.displayOrder || 0 }}</span>
+              </td>
+              <td style="text-align: center;">
+                <span 
+                  class="status-pill" 
+                  [class.active]="plan.isActive !== false" 
+                  [class.inactive]="plan.isActive === false"
+                >
+                  {{ plan.isActive === false ? 'Inactive' : 'Active' }}
+                </span>
+              </td>
+              <td style="text-align: center;">
+                <div class="action-buttons">
+                  <button class="btn-icon edit" title="Edit Rate Plan" (click)="openEditModal(plan)">
+                    <span class="material-icons-round">edit</span>
+                  </button>
+                  <button class="btn-icon delete" title="Delete Rate Plan" (click)="deleteRatePlan(plan.id, plan.name, $event)">
+                    <span class="material-icons-round">delete_outline</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredRatePlans().length === 0">
+              <td colspan="7" class="empty-state">
+                <span class="material-icons-round">sell</span>
+                <p>No rate plans configured yet.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -524,6 +613,64 @@
         <span class="material-icons-round spin" *ngIf="isSaving()">sync</span>
         <span class="material-icons-round" *ngIf="!isSaving()">save</span>
         {{ isSaving() ? 'Saving...' : (modalMode() === 'create' ? 'Create Hotel' : 'Save Changes') }}
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================
+     RATE PLAN CONFIGURATION MODAL
+     ================================================================ -->
+<div class="modal-overlay" *ngIf="isRatePlanModalOpen()" (click)="closeModal('rate-plans')">
+  <div class="ci-modal" (click)="$event.stopPropagation()">
+    
+    <div class="ci-header">
+      <div class="ci-title">
+        <span class="material-icons-round">sell</span>
+        <div>
+          <h2>{{ modalMode() === 'create' ? 'Create Rate Plan' : 'Edit Rate Plan' }}</h2>
+          <p>{{ modalMode() === 'create' ? 'Define a reusable pricing rule' : 'Update pricing rule RP-' + currentRatePlan().id }}</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="closeModal('rate-plans')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="ci-body">
+      <div class="form-section-title">Rate Plan Profile</div>
+
+      <div class="ci-input-group">
+        <label>Rate Plan Name *</label>
+        <input type="text" [(ngModel)]="currentRatePlan().name" placeholder="e.g. Standard BAR or Weekend Saver">
+      </div>
+
+      <div class="ci-input-group mt-3">
+        <label>Description</label>
+        <textarea [(ngModel)]="currentRatePlan().description" placeholder="Describe booking conditions, inclusions, or usage rules..." rows="3"></textarea>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Price Adjustment</label>
+          <input type="number" [(ngModel)]="currentRatePlan().priceAdjustment" placeholder="0.00" step="0.01">
+          <span class="input-tip">Use positive values for markups and negative values for discounts.</span>
+        </div>
+        <div class="ci-input-group">
+          <label>Display Order</label>
+          <input type="number" [(ngModel)]="currentRatePlan().displayOrder" placeholder="1" min="0">
+        </div>
+      </div>
+
+    </div>
+
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" (click)="closeModal('rate-plans')" [disabled]="isSaving()">Cancel</button>
+      <button class="ci-btn-confirm" (click)="saveRatePlan()" [disabled]="isSaving()">
+        <span class="material-icons-round spin" *ngIf="isSaving()">sync</span>
+        <span class="material-icons-round" *ngIf="!isSaving()">save</span>
+        {{ isSaving() ? 'Saving...' : (modalMode() === 'create' ? 'Create Rate Plan' : 'Save Changes') }}
       </button>
     </div>
 

@@ -46,7 +46,8 @@ export class Layout {
         { label: 'Hotels', icon: 'location_city', route: '/masters/hotels' },
         { label: 'Floors', icon: 'layers', route: '/masters/floors' },
         { label: 'Room Types', icon: 'bed', route: '/masters/room-types' },
-        { label: 'Rooms', icon: 'meeting_room', route: '/masters/rooms' }
+        { label: 'Rooms', icon: 'meeting_room', route: '/masters/rooms' },
+        { label: 'Rate Plans', icon: 'sell', route: '/masters/rate-plans' }
       ]
     },
     { label: 'In-House', icon: 'people', route: '/in-house' },

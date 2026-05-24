@@ -120,6 +120,7 @@
 .nav-left {
   display: flex;
   align-items: center;
+  min-width: 0;
   flex: 1;
 }
 
@@ -127,6 +128,12 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs-container::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-btn {
@@ -146,6 +153,8 @@
   height: 26px;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .tab-btn .material-icons-round {
@@ -343,7 +352,7 @@
 }
 
 /* Custom Table Entity Mappings */
-.hotel-info, .floor-info, .room-type-info {
+.hotel-info, .floor-info, .room-type-info, .rate-plan-info {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -531,6 +540,27 @@
 .price-sub {
   font-size: 9px;
   color: var(--surface-500);
+}
+
+.adjustment-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  background: #ECFDF5;
+  border: 1px solid #BBF7D0;
+  color: #047857;
+  font-size: 10.5px;
+  font-weight: 800;
+  font-family: var(--font-poppins);
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.adjustment-pill.negative {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  color: #B91C1C;
 }
 
 /* Rooms Styles */

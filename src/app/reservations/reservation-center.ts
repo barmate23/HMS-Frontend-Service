@@ -1,5 +1,6 @@
-import { Component, signal, computed, HostListener } from '@angular/core';
+import { Component, signal, computed, HostListener, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,12 +15,27 @@ interface Reservation {
   plan: string;
   checkIn: string;
   checkOut: string;
-  status: 'CHECKEDIN' | 'CONFIRMED' | 'PENDING' | 'CANCELLED';
+  status: 'CHECKED_IN' | 'CHECKED_OUT' | 'CONFIRMED' | 'PENDING' | 'CANCELLED' | 'NO_SHOW';
   billingAmount: number;
   paidAmount: number;
+  nights?: number;
+  adults?: number;
+  children?: number;
   vip?: boolean;
   repeat?: boolean;
   new?: boolean;
+}
+
+interface StandardResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  metadata?: {
+    totalRecords?: number;
+    currentPage?: number;
+    pageSize?: number;
+    totalPages?: number;
+  };
 }
 
 interface Room {
@@ -38,9 +54,18 @@ interface Room {
   templateUrl: './reservation-center.html',
   styleUrls: ['./reservation-center.css']
 })
-export class ReservationCenter {
+export class ReservationCenter implements OnInit {
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = '/api/v1';
+
   viewMode = signal<'LIST' | 'STAY' | 'MAP'>('LIST');
   selectedFloor = signal('Floor 1');
+  searchText = signal('');
+  statusFilter = signal<'ALL' | 'PENDING' | 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED' | 'NO_SHOW'>('ALL');
+  isLoadingReservations = signal(false);
+  reservationError = signal<string | null>(null);
+  reservationMessage = signal<string | null>(null);
+  totalReservationRecords = signal(0);
 
   // Date Range Picker State
   showCalendar = signal(false);
@@ -52,6 +77,10 @@ export class ReservationCenter {
   hoverDate = signal<Date | null>(null);
 
   weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+  ngOnInit() {
+    this.loadReservations();
+  }
 
   get dateRangeLabel(): string {
     const s = this.rangeStart();
@@ -196,16 +225,159 @@ export class ReservationCenter {
   
   applyDates() { 
     this.showCalendar.set(false); 
+    this.loadReservations();
   }
 
 
   floors = ['Floor 1', 'Floor 2', 'Floor 3', 'Floor 4'];
 
-  reservations = signal<Reservation[]>([
-    { id: '1', guestName: 'John Doe', guestEmail: 'john@example.com', guestPhone: '+1 555-0101', roomNumber: '102', roomType: 'DOUBLE', plan: 'CP', checkIn: 'Mar 24', checkOut: 'Mar 27', status: 'CHECKEDIN', billingAmount: 495, paidAmount: 100, repeat: true },
-    { id: '2', guestName: 'Jane Smith', guestEmail: 'jane@example.com', guestPhone: '+1 555-0102', roomNumber: '203', roomType: 'SUITE', plan: 'MAP', checkIn: 'Mar 25', checkOut: 'Mar 28', status: 'CHECKEDIN', billingAmount: 990, paidAmount: 200, vip: true },
-    { id: '3', guestName: 'Alice Johnson', guestEmail: 'alice@example.com', guestPhone: '+1 555-0103', roomNumber: '104', roomType: 'DELUXE', plan: 'EP', checkIn: 'Mar 26', checkOut: 'Mar 29', status: 'CONFIRMED', billingAmount: 660, paidAmount: 0, new: true }
-  ]);
+  reservations = signal<Reservation[]>([]);
+
+  loadReservations() {
+    this.isLoadingReservations.set(true);
+    this.reservationError.set(null);
+    this.reservationMessage.set(null);
+
+    let params = new HttpParams()
+      .set('page', '0')
+      .set('size', '10');
+
+    const search = this.searchText().trim();
+    if (search) params = params.set('searchText', search);
+    if (this.statusFilter() !== 'ALL') params = params.set('status', this.statusFilter());
+    if (this.rangeStart()) params = params.set('fromDate', this.toApiDate(this.rangeStart()!));
+    if (this.rangeEnd()) params = params.set('toDate', this.toApiDate(this.rangeEnd()!));
+
+    this.http.get<StandardResponse<any[]>>(`${this.baseUrl}/frontOffice/getAllReservations`, { params }).subscribe({
+      next: (response) => {
+        this.reservations.set((response.data ?? []).map(item => this.mapReservation(item)));
+        this.totalReservationRecords.set(response.metadata?.totalRecords ?? response.data?.length ?? 0);
+        this.isLoadingReservations.set(false);
+      },
+      error: (err) => {
+        console.error('[ReservationCenter] loadReservations error:', err);
+        this.reservationError.set(err?.error?.message || err?.error?.error?.message || 'Unable to load reservations.');
+        this.isLoadingReservations.set(false);
+      }
+    });
+  }
+
+  onSearchChange(value: string) {
+    this.searchText.set(value);
+    this.loadReservations();
+  }
+
+  onStatusChange(value: string) {
+    this.statusFilter.set(value as any);
+    this.loadReservations();
+  }
+
+  viewReservationDetails(id: string) {
+    this.reservationError.set(null);
+    this.reservationMessage.set(null);
+
+    this.http.get<StandardResponse<any>>(`${this.baseUrl}/frontOffice/getReservationById/${id}`).subscribe({
+      next: (response) => {
+        const reservation = this.mapReservation(response.data ?? {});
+        this.reservationMessage.set(`Loaded reservation ${reservation.id} for ${reservation.guestName}.`);
+      },
+      error: (err) => {
+        console.error('[ReservationCenter] getReservationById error:', err);
+        this.reservationError.set(err?.error?.message || err?.error?.error?.message || 'Unable to load reservation details.');
+      }
+    });
+  }
+
+  cancelReservation(id: string, guestName: string) {
+    if (!confirm(`Cancel reservation for ${guestName}?`)) return;
+
+    this.reservationError.set(null);
+    this.reservationMessage.set(null);
+
+    this.http.put<StandardResponse<any>>(`${this.baseUrl}/frontOffice/cancelReservation/${id}`, {}).subscribe({
+      next: (response) => {
+        this.reservationMessage.set(response.message || 'Reservation cancelled.');
+        this.loadReservations();
+      },
+      error: (err) => {
+        console.error('[ReservationCenter] cancelReservation error:', err);
+        this.reservationError.set(err?.error?.message || err?.error?.error?.message || 'Unable to cancel reservation.');
+      }
+    });
+  }
+
+  deleteReservation(id: string, guestName: string) {
+    if (!confirm(`Delete reservation for ${guestName}? This cannot be undone.`)) return;
+
+    this.reservationError.set(null);
+    this.reservationMessage.set(null);
+
+    this.http.delete<StandardResponse<void>>(`${this.baseUrl}/frontOffice/deleteReservation/${id}`).subscribe({
+      next: (response) => {
+        this.reservationMessage.set(response.message || 'Reservation deleted.');
+        this.loadReservations();
+      },
+      error: (err) => {
+        console.error('[ReservationCenter] deleteReservation error:', err);
+        this.reservationError.set(err?.error?.message || err?.error?.error?.message || 'Unable to delete reservation.');
+      }
+    });
+  }
+
+  private mapReservation(item: any): Reservation {
+    const guest = item.guest || item.guestDetails || {};
+    const room = Array.isArray(item.rooms) ? item.rooms[0] : (item.room || {});
+    const roomIds = Array.isArray(item.roomIds) ? item.roomIds : [];
+    const ratePlan = item.ratePlan || {};
+    const firstName = guest.firstName || item.firstName || '';
+    const lastName = guest.lastName || item.lastName || '';
+    const guestName = item.guestFullName || item.guestName || `${firstName} ${lastName}`.trim() || item.billingName || 'Guest';
+    const checkIn = item.checkInDate || item.arrivalDate || item.checkIn || '';
+    const checkOut = item.checkOutDate || item.departureDate || item.checkOut || '';
+
+    return {
+      id: String(item.id ?? item.bookingId ?? item.reservationId ?? ''),
+      guestName,
+      guestEmail: guest.email || item.guestEmail || item.email || '',
+      guestPhone: guest.phone || item.guestPhone || item.phone || '',
+      roomNumber: room.roomNumber || item.roomNumber || (roomIds.length ? String(roomIds[0]) : '-'),
+      roomType: room.roomTypeName || item.roomTypeName || item.roomType || '-',
+      plan: room.ratePlanName || ratePlan.shortLabel || ratePlan.name || item.ratePlanName || String(item.ratePlanId ?? '-'),
+      checkIn: this.formatDateLabel(checkIn),
+      checkOut: this.formatDateLabel(checkOut),
+      status: this.normalizeStatus(item.reservationStatus || item.status),
+      billingAmount: Number(item.billingAmount ?? item.totalAmount ?? item.grandTotal ?? 0),
+      paidAmount: Number(item.paidAmount ?? item.amountPaid ?? 0),
+      nights: Number(item.numberOfNights ?? item.nights ?? 0),
+      adults: Number(item.numberOfAdults ?? item.adults ?? 0),
+      children: Number(item.numberOfChildren ?? item.children ?? 0),
+      vip: Boolean(guest.isVip || item.isVip),
+      new: this.normalizeStatus(item.reservationStatus || item.status) === 'PENDING'
+    };
+  }
+
+  private normalizeStatus(status: string): Reservation['status'] {
+    if (status === 'CHECKEDIN') return 'CHECKED_IN';
+    if (status === 'CHECKED_OUT') return 'CHECKED_OUT';
+    if (status === 'CANCELLED') return 'CANCELLED';
+    if (status === 'NO_SHOW') return 'NO_SHOW';
+    if (status === 'PENDING') return 'PENDING';
+    return 'CONFIRMED';
+  }
+
+  private toApiDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private formatDateLabel(value: string): string {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
 
   rooms = signal<Room[]>([
     // Floor 1 (30 Rooms)
@@ -265,6 +437,18 @@ export class ReservationCenter {
 
   setFloor(floor: string) {
     this.selectedFloor.set(floor);
+  }
+
+  statusLabel(status: Reservation['status']): string {
+    return status.replace('_', ' ');
+  }
+
+  statusClass(status: Reservation['status']): string {
+    return status.toLowerCase().replace('_', '-');
+  }
+
+  stayInfo(res: Reservation): string {
+    return `${res.nights ?? 0} NIGHTS • ${res.adults ?? 0}A, ${res.children ?? 0}C`;
   }
 
   getInitials(name: string): string {

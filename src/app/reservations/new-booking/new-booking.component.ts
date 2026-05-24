@@ -1,13 +1,95 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 // expose Math for template
 const math = Math;
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 
 export interface Room {
   id: string; number: string; type: string; typeShort: string; typeId: string;
+  hotelId?: number;
   floor: number; status: 'Available' | 'Occupied' | 'Reserved' | 'Maintenance';
   rate: number; view: string; beds: string;
+}
+
+interface ApiRoomType {
+  id: number;
+  hotelId?: number;
+  name: string;
+  capacity?: number;
+  basePricePerNight?: number;
+  description?: string;
+  isActive?: boolean;
+}
+
+interface ApiRoom {
+  id: number;
+  roomNumber: string;
+  floorId: number;
+  floorNumber?: string;
+  roomTypeId: number;
+  roomTypeName?: string;
+  status: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED' | 'CLEANING';
+  maxOccupancy?: number;
+  isActive?: boolean;
+}
+
+interface ApiRatePlan {
+  id: number;
+  name: string;
+  description?: string;
+  priceAdjustment?: number;
+  displayOrder?: number;
+  isActive?: boolean;
+}
+
+interface StandardResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+interface GuestRequest {
+  title?: 'MR' | 'MRS' | 'MS' | 'MISS' | 'DR' | 'PROF';
+  firstName: string;
+  lastName: string;
+  countryCode?: string;
+  phone: string;
+  email: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postCode?: string;
+  country?: string;
+  nationality?: string;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER';
+  dateOfBirth?: string;
+  idProofType?: 'PASSPORT' | 'AADHAR' | 'DRIVING_LICENSE' | 'PAN' | 'VOTER_ID';
+  idProofNumber?: string;
+  guestNotes?: string;
+  preference?: string;
+  isVip?: boolean;
+}
+
+interface ReservationRequest {
+  guestId?: number;
+  guestDetails?: GuestRequest;
+  hotelId: number;
+  checkInDate: string;
+  checkInTime: string;
+  checkOutDate: string;
+  checkOutTime: string;
+  numberOfAdults: number;
+  numberOfChildren: number;
+  reservationStatus: 'PENDING' | 'CONFIRMED';
+  roomIds: number[];
+  ratePlanId: number;
+  billingName?: string;
+  billingAddress?: string;
+  specialRequests?: string;
+  notes?: string;
 }
 
 export interface GuestProfile {
@@ -41,9 +123,16 @@ export interface GuestProfile {
   templateUrl: './new-booking.component.html',
   styleUrls: ['./new-booking.component.css']
 })
-export class NewBookingComponent {
+export class NewBookingComponent implements OnInit {
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = '/api/v1';
+
   checkIn = signal('');
   checkOut = signal('');
+  checkInTime = signal('14:00');
+  checkOutTime = signal('11:00');
+  numberOfAdults = signal(2);
+  numberOfChildren = signal(0);
   viewMode = signal<'list' | 'map'>('list');
   selectedRoomType = signal<string>('ALL');
   selectedRoom = signal<Room | null>(null);
@@ -51,6 +140,14 @@ export class NewBookingComponent {
   selectedFloor = signal<number>(1);
   mapModalOpen = signal(false);
   modalHoveredRoom = signal<Room | null>(null);
+  isRoomInventoryLoading = signal(false);
+  roomInventoryError = signal<string | null>(null);
+  isRatePlanLoading = signal(false);
+  ratePlanError = signal<string | null>(null);
+  isCreatingReservation = signal(false);
+  reservationError = signal<string | null>(null);
+  reservationSuccess = signal<string | null>(null);
+  private dataRevision = signal(0);
 
   // Guest State
   guestData = signal<GuestProfile>({
@@ -135,18 +232,173 @@ export class NewBookingComponent {
     { id:'408', number:'408', type:'Penthouse',  typeShort:'PNT', typeId:'PNT', floor:4, status:'Available',  rate:25000,view:'Panoramic', beds:'King' },
   ];
 
+  ngOnInit() {
+    this.loadRoomInventory();
+    this.loadRatePlans();
+  }
+
+  loadRoomInventory() {
+    this.isRoomInventoryLoading.set(true);
+    this.roomInventoryError.set(null);
+
+    forkJoin({
+      roomTypes: this.http.get<StandardResponse<ApiRoomType[]>>(`${this.baseUrl}/roomTypes/getAllRoomTypes?page=0&size=50`),
+      rooms: this.http.get<StandardResponse<ApiRoom[]>>(`${this.baseUrl}/rooms/getAllRooms?page=0&size=10`)
+    }).subscribe({
+      next: ({ roomTypes, rooms }) => {
+        const activeTypes = (roomTypes.data ?? []).filter(rt => rt.isActive !== false);
+        const typeMap = new Map(activeTypes.map(rt => [rt.id, rt]));
+
+        this.roomTypes = [
+          { id: 'ALL', label: 'All Types', icon: 'meeting_room' },
+          ...activeTypes.map(rt => ({
+            id: String(rt.id),
+            label: rt.name,
+            icon: this.iconForRoomType(rt.name)
+          }))
+        ];
+
+        this.allRooms = (rooms.data ?? [])
+          .filter(room => room.isActive !== false)
+          .map(room => this.mapApiRoom(room, typeMap));
+
+        this.ensureSelectedFloorExists();
+        this.selectedRoom.set(null);
+        this.dataRevision.update(value => value + 1);
+        this.isRoomInventoryLoading.set(false);
+      },
+      error: (err) => {
+        console.error('[NewBookingComponent] loadRoomInventory error:', err);
+        this.roomInventoryError.set('Unable to load room inventory.');
+        this.isRoomInventoryLoading.set(false);
+      }
+    });
+  }
+
+  loadRatePlans() {
+    this.isRatePlanLoading.set(true);
+    this.ratePlanError.set(null);
+
+    this.http.get<StandardResponse<ApiRatePlan[]>>(`${this.baseUrl}/ratePlans/getAllRatePlans?page=0&size=50`).subscribe({
+      next: (response) => {
+        const plans = (response.data ?? [])
+          .filter(plan => plan.isActive !== false)
+          .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
+        this.ratePlans = plans.map(plan => this.mapApiRatePlan(plan));
+        if (this.ratePlans.length > 0 && !this.ratePlans.some(plan => plan.id === this.selectedPlan())) {
+          this.selectedPlan.set(this.ratePlans[0].id);
+        }
+
+        this.dataRevision.update(value => value + 1);
+        this.isRatePlanLoading.set(false);
+      },
+      error: (err) => {
+        console.error('[NewBookingComponent] loadRatePlans error:', err);
+        this.ratePlanError.set('Unable to load rate plans.');
+        this.isRatePlanLoading.set(false);
+      }
+    });
+  }
+
+  private mapApiRatePlan(plan: ApiRatePlan) {
+    return {
+      id: String(plan.id),
+      shortLabel: this.shortCodeForRatePlan(plan.name, plan.id),
+      label: plan.name,
+      desc: plan.description || 'Room Rate Only',
+      extra: Number(plan.priceAdjustment ?? 0),
+      icon: this.iconForRatePlan(plan.name, plan.description)
+    };
+  }
+
+  private shortCodeForRatePlan(name: string, id: number): string {
+    const words = name.trim().split(/\s+/).filter(Boolean);
+    const code = words.length > 1
+      ? words.map(word => word[0]).join('')
+      : name.slice(0, 3);
+    return (code || `RP${id}`).toUpperCase();
+  }
+
+  private iconForRatePlan(name: string, description?: string): string {
+    const text = `${name} ${description || ''}`.toLowerCase();
+    if (text.includes('breakfast')) return 'free_breakfast';
+    if (text.includes('dinner') || text.includes('meal')) return 'restaurant';
+    if (text.includes('american')) return 'restaurant_menu';
+    return 'bed';
+  }
+
+  private mapApiRoom(room: ApiRoom, typeMap: Map<number, ApiRoomType>): Room {
+    const roomType = typeMap.get(room.roomTypeId);
+    const typeName = room.roomTypeName || roomType?.name || `Room Type ${room.roomTypeId}`;
+
+    return {
+      id: String(room.id),
+      number: room.roomNumber,
+      type: typeName,
+      typeShort: this.shortCodeForRoomType(typeName, room.roomTypeId),
+      typeId: String(room.roomTypeId),
+      hotelId: roomType?.hotelId,
+      floor: room.floorId,
+      status: this.mapRoomStatus(room.status),
+      rate: Number(roomType?.basePricePerNight ?? 0),
+      view: room.floorNumber || `Floor ${room.floorId}`,
+      beds: `${room.maxOccupancy || 1} Pax`
+    };
+  }
+
+  private mapRoomStatus(status: ApiRoom['status']): Room['status'] {
+    if (status === 'VACANT') return 'Available';
+    if (status === 'OCCUPIED') return 'Occupied';
+    if (status === 'RESERVED') return 'Reserved';
+    return 'Maintenance';
+  }
+
+  private iconForRoomType(name: string): string {
+    const lower = name.toLowerCase();
+    if (lower.includes('suite')) return 'villa';
+    if (lower.includes('pent')) return 'apartment';
+    if (lower.includes('lux') || lower.includes('delux')) return 'hotel';
+    if (lower.includes('superior')) return 'king_bed';
+    if (lower.includes('standard')) return 'single_bed';
+    return 'bed';
+  }
+
+  private shortCodeForRoomType(name: string, id: number): string {
+    const words = name.trim().split(/\s+/).filter(Boolean);
+    const code = words.length > 1
+      ? words.map(word => word[0]).join('')
+      : name.slice(0, 3);
+    return (code || `RT${id}`).toUpperCase();
+  }
+
+  private ensureSelectedFloorExists() {
+    const floorIds = Array.from(new Set(this.allRooms.map(room => room.floor))).sort((a, b) => a - b);
+    if (floorIds.length > 0) {
+      this.floors = floorIds.map(floor => ({ number: floor, label: `Floor ${floor}` }));
+      if (!floorIds.includes(this.selectedFloor())) {
+        this.selectedFloor.set(floorIds[0]);
+      }
+    }
+  }
+
   availableCountFor(typeId: string): number {
+    this.dataRevision();
     if (typeId === 'ALL') return this.allRooms.filter(r => r.status === 'Available').length;
     return this.allRooms.filter(r => r.typeId === typeId && r.status === 'Available').length;
   }
 
   filteredRooms = computed(() => {
+    this.dataRevision();
     const type = this.selectedRoomType();
     if (type === 'ALL') return this.allRooms.filter(r => r.status === 'Available');
     return this.allRooms.filter(r => r.typeId === type && r.status === 'Available');
   });
 
-  currentFloorRooms = computed(() => this.allRooms.filter(r => r.floor === this.selectedFloor()));
+  currentFloorRooms = computed(() => {
+    this.dataRevision();
+    return this.allRooms.filter(r => r.floor === this.selectedFloor());
+  });
 
   nights = computed(() => {
     if (!this.checkIn() || !this.checkOut()) return 1;
@@ -160,10 +412,31 @@ export class NewBookingComponent {
     return ((room?.rate ?? 5000) + (plan?.extra ?? 0)) * this.nights();
   });
 
-  selectedPlanDetails = computed(() => this.ratePlans.find(p => p.id === this.selectedPlan()) ?? this.ratePlans[0]);
+  selectedPlanDetails = computed(() => {
+    this.dataRevision();
+    return this.ratePlans.find(p => p.id === this.selectedPlan()) ?? this.ratePlans[0] ?? {
+      id: '',
+      shortLabel: '',
+      label: 'Rate Plan',
+      desc: 'Room Rate Only',
+      extra: 0,
+      icon: 'bed'
+    };
+  });
 
   taxAmount  = computed(() => math.round(this.totalPrice() * 0.12));
   grandTotal = computed(() => math.round(this.totalPrice() * 1.12));
+
+  canConfirmBooking = computed(() =>
+    !!this.selectedRoom() &&
+    !!this.selectedPlan() &&
+    !!this.checkIn() &&
+    !!this.checkOut() &&
+    !!this.guestData().fullName &&
+    !!this.guestData().phone &&
+    !!this.guestData().email &&
+    !this.isCreatingReservation()
+  );
 
   setViewMode(mode: 'list' | 'map') { this.viewMode.set(mode); }
   selectRoomType(id: string) { this.selectedRoomType.set(id); this.selectedRoom.set(null); }
@@ -182,6 +455,7 @@ export class NewBookingComponent {
   hoverRoom(room: Room | null) { this.modalHoveredRoom.set(room); }
 
   floorStats = computed(() => {
+    this.dataRevision();
     const fl = this.selectedFloor();
     const rooms = this.allRooms.filter(r => r.floor === fl);
     return {
@@ -235,7 +509,169 @@ export class NewBookingComponent {
     this.guestData.update(data => ({ ...data, [field]: value }));
   }
 
-  saveDraft() { console.log('Draft saved'); }
+  confirmBooking() {
+    this.reservationError.set(null);
+    this.reservationSuccess.set(null);
+
+    const validationError = this.validateReservation();
+    if (validationError) {
+      this.reservationError.set(validationError);
+      return;
+    }
+
+    const payload = this.buildReservationPayload('CONFIRMED');
+    this.isCreatingReservation.set(true);
+
+    this.http.post<StandardResponse<any>>(`${this.baseUrl}/frontOffice/createReservation`, payload).subscribe({
+      next: (response) => {
+        this.isCreatingReservation.set(false);
+        this.reservationSuccess.set(response.message || 'Reservation created successfully.');
+      },
+      error: (err) => {
+        console.error('[NewBookingComponent] createReservation error:', err);
+        this.isCreatingReservation.set(false);
+        this.reservationError.set(err?.error?.message || err?.error?.error?.message || 'Unable to create reservation.');
+      }
+    });
+  }
+
+  saveDraft() {
+    this.reservationError.set(null);
+    this.reservationSuccess.set(null);
+
+    const validationError = this.validateReservation();
+    if (validationError) {
+      this.reservationError.set(validationError);
+      return;
+    }
+
+    const payload = this.buildReservationPayload('PENDING');
+    this.isCreatingReservation.set(true);
+
+    this.http.post<StandardResponse<any>>(`${this.baseUrl}/frontOffice/createReservation`, payload).subscribe({
+      next: (response) => {
+        this.isCreatingReservation.set(false);
+        this.reservationSuccess.set(response.message || 'Reservation draft saved.');
+      },
+      error: (err) => {
+        console.error('[NewBookingComponent] saveDraft reservation error:', err);
+        this.isCreatingReservation.set(false);
+        this.reservationError.set(err?.error?.message || err?.error?.error?.message || 'Unable to save reservation draft.');
+      }
+    });
+  }
+
+  private validateReservation(): string | null {
+    if (!this.guestData().fullName.trim()) return 'Please enter guest full name.';
+    if (!this.guestData().phone.trim()) return 'Please enter guest phone number.';
+    if (!this.guestData().email.trim()) return 'Please enter guest email address.';
+    if (!this.checkIn()) return 'Please select arrival date.';
+    if (!this.checkOut()) return 'Please select departure date.';
+    if (!this.selectedRoom()) return 'Please select an available room.';
+    if (!this.selectedPlan()) return 'Please select a rate plan.';
+    if (this.numberOfAdults() < 1) return 'At least one adult is required.';
+    return null;
+  }
+
+  private buildReservationPayload(status: 'PENDING' | 'CONFIRMED'): ReservationRequest {
+    const room = this.selectedRoom()!;
+    const guestId = this.getNumericGuestId();
+    const payload: ReservationRequest = {
+      hotelId: room.hotelId ?? 1,
+      checkInDate: this.checkIn(),
+      checkInTime: this.toApiTime(this.checkInTime()),
+      checkOutDate: this.checkOut(),
+      checkOutTime: this.toApiTime(this.checkOutTime()),
+      numberOfAdults: this.numberOfAdults(),
+      numberOfChildren: this.numberOfChildren(),
+      reservationStatus: status,
+      roomIds: [Number(room.id)],
+      ratePlanId: Number(this.selectedPlan()),
+      billingName: this.guestData().fullName,
+      billingAddress: [this.guestData().address1, this.guestData().address2, this.guestData().city, this.guestData().state, this.guestData().zip]
+        .filter(Boolean)
+        .join(', '),
+      notes: this.guestData().notes
+    };
+
+    if (guestId) {
+      payload.guestId = guestId;
+    } else {
+      payload.guestDetails = this.buildGuestDetailsPayload();
+    }
+
+    return payload;
+  }
+
+  private buildGuestDetailsPayload(): GuestRequest {
+    const guest = this.guestData();
+    const { firstName, lastName } = this.splitGuestName(guest.fullName);
+
+    return {
+      title: this.mapGuestTitle(guest.title),
+      firstName,
+      lastName,
+      countryCode: this.extractCountryCode(guest.phoneCode),
+      phone: guest.phone,
+      email: guest.email,
+      addressLine1: guest.address1,
+      addressLine2: guest.address2,
+      city: guest.city,
+      state: guest.state,
+      postCode: guest.zip,
+      country: guest.country,
+      nationality: guest.nationality,
+      gender: this.mapGender(guest.gender),
+      dateOfBirth: guest.dob || undefined,
+      idProofType: this.mapIdProof(guest.idProof),
+      idProofNumber: guest.idNumber,
+      guestNotes: guest.notes,
+      isVip: guest.vip
+    };
+  }
+
+  private getNumericGuestId(): number | undefined {
+    const id = this.guestData().id;
+    if (!id) return undefined;
+    const parsed = Number(id);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  private splitGuestName(fullName: string): { firstName: string; lastName: string } {
+    const parts = fullName.trim().split(/\s+/).filter(Boolean);
+    const firstName = parts.shift() || fullName.trim();
+    const lastName = parts.join(' ') || firstName;
+    return { firstName, lastName };
+  }
+
+  private toApiTime(value: string): string {
+    const [hour = '00', minute = '00'] = value.split(':');
+    return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:00`;
+  }
+
+  private extractCountryCode(value: string): string {
+    return value.split(' ')[0] || value;
+  }
+
+  private mapGuestTitle(value: string): GuestRequest['title'] {
+    if (value === 'Mrs.') return 'MRS';
+    if (value === 'Ms.') return 'MS';
+    if (value === 'Dr.') return 'DR';
+    return 'MR';
+  }
+
+  private mapGender(value: string): GuestRequest['gender'] | undefined {
+    if (value === 'Male') return 'MALE';
+    if (value === 'Female') return 'FEMALE';
+    if (value) return 'OTHER';
+    return undefined;
+  }
+
+  private mapIdProof(value: string): GuestRequest['idProofType'] {
+    if (value === 'Passport') return 'PASSPORT';
+    if (value === 'Driving License') return 'DRIVING_LICENSE';
+    return 'AADHAR';
+  }
 
   goBack() { window.history.back(); }
 

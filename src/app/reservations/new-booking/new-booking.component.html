@@ -134,14 +134,14 @@
                 <label>Arrival</label>
                 <div class="datetime-grid">
                   <input type="date" [ngModel]="checkIn()" (ngModelChange)="checkIn.set($event)">
-                  <input type="time" value="14:00">
+                  <input type="time" [ngModel]="checkInTime()" (ngModelChange)="checkInTime.set($event)">
                 </div>
               </div>
               <div class="input-group">
                 <label>Departure</label>
                 <div class="datetime-grid">
                   <input type="date" [ngModel]="checkOut()" (ngModelChange)="checkOut.set($event)">
-                  <input type="time" value="11:00">
+                  <input type="time" [ngModel]="checkOutTime()" (ngModelChange)="checkOutTime.set($event)">
                 </div>
               </div>
             </div>
@@ -150,10 +150,10 @@
                 <label>Nights</label>
                 <input type="number" [value]="nights()" readonly class="disabled-input">
               </div>
-              <div class="input-group"><label>Guests</label><input type="number" value="2"></div>
+              <div class="input-group"><label>Adults</label><input type="number" min="1" [ngModel]="numberOfAdults()" (ngModelChange)="numberOfAdults.set(+$event || 1)"></div>
               <div class="input-group">
-                <label>Status</label>
-                <select><option>Confirmed</option><option>Tentative</option></select>
+                <label>Children</label>
+                <input type="number" min="0" [ngModel]="numberOfChildren()" (ngModelChange)="numberOfChildren.set(+$event || 0)">
               </div>
             </div>
           </div>
@@ -181,6 +181,16 @@
 
           <!-- LIST VIEW (always shown in card) -->
           <div class="card-body">
+            <div class="inventory-state loading" *ngIf="isRoomInventoryLoading()">
+              <span class="material-icons-round spin">sync</span>
+              Loading room inventory...
+            </div>
+
+            <div class="inventory-state error" *ngIf="roomInventoryError() && !isRoomInventoryLoading()">
+              <span class="material-icons-round">error_outline</span>
+              <span>{{ roomInventoryError() }}</span>
+              <button type="button" (click)="loadRoomInventory()">Retry</button>
+            </div>
 
             <!-- Room Type Filter -->
             <div class="section-label">Filter by Room Type</div>
@@ -225,6 +235,17 @@
 
             <!-- Rate Plan Selector -->
             <div class="section-label mt-3">Rate Plan</div>
+            <div class="inventory-state loading" *ngIf="isRatePlanLoading()">
+              <span class="material-icons-round spin">sync</span>
+              Loading rate plans...
+            </div>
+
+            <div class="inventory-state error" *ngIf="ratePlanError() && !isRatePlanLoading()">
+              <span class="material-icons-round">error_outline</span>
+              <span>{{ ratePlanError() }}</span>
+              <button type="button" (click)="loadRatePlans()">Retry</button>
+            </div>
+
             <div class="plan-grid">
               <div class="plan-card" *ngFor="let plan of ratePlans"
                    [class.active]="selectedPlan() === plan.id"
@@ -237,7 +258,12 @@
                 <div class="plan-desc">{{ plan.desc }}</div>
                 <div class="plan-price" *ngIf="plan.extra > 0">+{{ formatINR(plan.extra) }}/night</div>
                 <div class="plan-price included" *ngIf="plan.extra === 0">Room Rate Only</div>
+                <div class="plan-price discount" *ngIf="plan.extra < 0">{{ formatINR(plan.extra) }}/night</div>
               </div>
+            </div>
+            <div class="empty-state compact" *ngIf="!isRatePlanLoading() && !ratePlanError() && ratePlans.length === 0">
+              <span class="material-icons-round">sell</span>
+              <p>No rate plans configured yet.</p>
             </div>
           </div>
         </div>
@@ -352,6 +378,16 @@
               <div class="total-amount">{{ formatINR(grandTotal()) }}</div>
             </div>
 
+            <div class="reservation-message error" *ngIf="reservationError()">
+              <span class="material-icons-round">error_outline</span>
+              <span>{{ reservationError() }}</span>
+            </div>
+
+            <div class="reservation-message success" *ngIf="reservationSuccess()">
+              <span class="material-icons-round">check_circle</span>
+              <span>{{ reservationSuccess() }}</span>
+            </div>
+
             <!-- Add-ons -->
             <div class="quick-addons">
               <span class="addon-chip active">Breakfast +₹500</span>
@@ -360,10 +396,12 @@
             </div>
 
             <div class="summary-actions" style="display: flex; flex-direction: column; gap: 6px;">
-              <button class="btn-premium">CONFIRM BOOKING</button>
-              <button class="btn-outline" (click)="saveDraft()" style="width: 100%; justify-content: center; height: 26px; font-size: 10px;">
+              <button class="btn-premium" (click)="confirmBooking()" [disabled]="isCreatingReservation()">
+                {{ isCreatingReservation() ? 'SAVING...' : 'CONFIRM BOOKING' }}
+              </button>
+              <button class="btn-outline" (click)="saveDraft()" [disabled]="isCreatingReservation()" style="width: 100%; justify-content: center; height: 26px; font-size: 10px;">
                 <span class="material-icons-round" style="font-size: 12px; margin-right: 4px;">save</span>
-                SAVE DRAFT
+                {{ isCreatingReservation() ? 'SAVING...' : 'SAVE DRAFT' }}
               </button>
               <button class="btn-text primary" (click)="goBack()" style="width: 100%; justify-content: center; font-size: 11px; padding: 4px 0; display: flex; align-items: center; gap: 4px;">
                 <span class="material-icons-round" style="font-size: 14px;">arrow_back</span>

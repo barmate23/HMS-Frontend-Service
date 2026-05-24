@@ -61,6 +61,17 @@ export interface Room {
   isActive: boolean;
 }
 
+export interface RatePlan {
+  id: number;
+  name: string;
+  description: string;
+  priceAdjustment: number;
+  displayOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+  isActive?: boolean;
+}
+
 export interface HotelRequest {
   name: string;
   email: string;
@@ -100,6 +111,13 @@ export interface RoomRequest {
   telephone?: string;
 }
 
+export interface RatePlanRequest {
+  name: string;
+  description?: string;
+  priceAdjustment?: number;
+  displayOrder?: number;
+}
+
 interface StandardResponse<T = any> {
   success: boolean;
   message: string;
@@ -111,13 +129,14 @@ interface StandardResponse<T = any> {
 @Injectable({ providedIn: 'root' })
 export class HotelMastersService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://100.120.107.63:9002/api/v1';
+  private readonly baseUrl = '/api/v1';
 
   // ── Reactive Signals ──
   private _hotels = signal<Hotel[]>([]);
   private _floors = signal<Floor[]>([]);
   private _roomTypes = signal<RoomType[]>([]);
   private _rooms = signal<Room[]>([]);
+  private _ratePlans = signal<RatePlan[]>([]);
 
   // Loading / error signals
   isLoading = signal(false);
@@ -128,6 +147,7 @@ export class HotelMastersService {
   public readonly floors = this._floors.asReadonly();
   public readonly roomTypes = this._roomTypes.asReadonly();
   public readonly rooms = this._rooms.asReadonly();
+  public readonly ratePlans = this._ratePlans.asReadonly();
 
   // ── Computed Maps ──
   public readonly hotelsMap = computed(() => new Map(this.hotels().map(h => [h.id, h])));
@@ -147,12 +167,14 @@ export class HotelMastersService {
       hotels: this.http.get<StandardResponse<Hotel[]>>(`${this.baseUrl}/hotels/getAllHotels`),
       floors: this.http.get<StandardResponse<Floor[]>>(`${this.baseUrl}/floors/getAllFloors`),
       roomTypes: this.http.get<StandardResponse<RoomType[]>>(`${this.baseUrl}/roomTypes/getAllRoomTypes`),
-      rooms: this.http.get<StandardResponse<Room[]>>(`${this.baseUrl}/rooms/getAllRooms`)
+      rooms: this.http.get<StandardResponse<Room[]>>(`${this.baseUrl}/rooms/getAllRooms`),
+      ratePlans: this.http.get<StandardResponse<RatePlan[]>>(`${this.baseUrl}/ratePlans/getAllRatePlans`)
     }).subscribe({
       next: (results) => {
         if (results.hotels.success) this._hotels.set(results.hotels.data ?? []);
         if (results.floors.success) this._floors.set(results.floors.data ?? []);
         if (results.roomTypes.success) this._roomTypes.set(results.roomTypes.data ?? []);
+        if (results.ratePlans.success) this._ratePlans.set(results.ratePlans.data ?? []);
         if (results.rooms.success) {
           // Normalise: backend uses roomTypeId, UI also needs typeId alias
           const rooms = (results.rooms.data ?? []).map(r => ({ ...r, typeId: r.roomTypeId }));
@@ -316,6 +338,39 @@ export class HotelMastersService {
       tap(() => this._rooms.update(list => list.filter(r => r.id !== id))),
       map(() => void 0),
       catchError(err => { console.error('deleteRoom error', err); return throwError(() => err); })
+    );
+  }
+
+  saveRatePlan(ratePlan: Partial<RatePlan>): Observable<RatePlan> {
+    const payload: RatePlanRequest = {
+      name: ratePlan.name!,
+      description: ratePlan.description,
+      priceAdjustment: ratePlan.priceAdjustment,
+      displayOrder: ratePlan.displayOrder
+    };
+
+    const req$ = ratePlan.id
+      ? this.http.put<StandardResponse<RatePlan>>(`${this.baseUrl}/ratePlans/updateRatePlan/${ratePlan.id}`, payload)
+      : this.http.post<StandardResponse<RatePlan>>(`${this.baseUrl}/ratePlans/createRatePlan`, payload);
+
+    return req$.pipe(
+      map(res => res.data),
+      tap(saved => {
+        if (ratePlan.id) {
+          this._ratePlans.update(list => list.map(rp => rp.id === saved.id ? { ...rp, ...saved } : rp));
+        } else {
+          this._ratePlans.update(list => [saved, ...list]);
+        }
+      }),
+      catchError(err => { console.error('saveRatePlan error', err); return throwError(() => err); })
+    );
+  }
+
+  deleteRatePlan(id: number): Observable<void> {
+    return this.http.delete<StandardResponse<void>>(`${this.baseUrl}/ratePlans/deleteRatePlan/${id}`).pipe(
+      tap(() => this._ratePlans.update(list => list.filter(rp => rp.id !== id))),
+      map(() => void 0),
+      catchError(err => { console.error('deleteRatePlan error', err); return throwError(() => err); })
     );
   }
 }

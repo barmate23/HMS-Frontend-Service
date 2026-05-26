@@ -10,14 +10,18 @@
           <div class="card-header">
             <div class="header-title">
               <span class="material-icons-round">person</span>
-              <h2>Guest Information</h2>
+              <h2>{{ isEditMode() ? 'Edit Reservation' : 'Guest Information' }}</h2>
             </div>
             <div class="header-actions">
-              <button class="btn-text success" (click)="openCreateGuest()">Create Guest</button>
-              <button class="btn-text primary" (click)="openSearchGuest()">Search Guest</button>
+              <button class="btn-text success" *ngIf="!isEditMode()" (click)="openCreateGuest()">Create Guest</button>
+              <button class="btn-text primary" *ngIf="!isEditMode()" (click)="openSearchGuest()">Search Guest</button>
             </div>
           </div>
           <div class="card-body">
+            <div class="edit-context-bar" *ngIf="isEditMode()">
+              <span class="material-icons-round">{{ isLoadingReservationForEdit() ? 'sync' : 'edit_note' }}</span>
+              <span>{{ isLoadingReservationForEdit() ? 'Loading reservation details...' : 'Editing reservation #' + editReservationId() }}</span>
+            </div>
             <div class="grid-3">
               <div class="input-group">
                 <label>Title</label>
@@ -28,9 +32,10 @@
               <div class="input-group span-2">
                 <label>Guest Full Name</label>
                 <div class="input-with-icon">
-                  <input type="text" placeholder="Enter full name" [ngModel]="guestData().fullName" (ngModelChange)="updateGuestField('fullName', $event)">
+                  <input type="text" placeholder="Enter full name" [ngModel]="guestData().fullName" (ngModelChange)="updateGuestField('fullName', $event)" (blur)="markFieldTouched('fullName')" [class.invalid]="shouldShowError('fullName')">
                   <span class="material-icons-round">search</span>
                 </div>
+                <span class="field-error" *ngIf="shouldShowError('fullName')">{{ validationMessage('fullName') }}</span>
               </div>
             </div>
             <div class="grid-3 mt-3">
@@ -42,13 +47,15 @@
               </div>
               <div class="input-group span-2">
                 <label>Phone Number</label>
-                <input type="tel" placeholder="Phone number" [ngModel]="guestData().phone" (ngModelChange)="updateGuestField('phone', $event)">
+                <input type="tel" placeholder="Phone number" inputmode="numeric" maxlength="15" [ngModel]="guestData().phone" (ngModelChange)="updateGuestField('phone', $event)" (blur)="markFieldTouched('phone')" [class.invalid]="shouldShowError('phone')">
+                <span class="field-error" *ngIf="shouldShowError('phone')">{{ validationMessage('phone') }}</span>
               </div>
             </div>
             <div class="grid-2 mt-3">
               <div class="input-group">
                 <label>Email Address</label>
-                <input type="email" placeholder="email@example.com" [ngModel]="guestData().email" (ngModelChange)="updateGuestField('email', $event)">
+                <input type="email" placeholder="email@example.com" inputmode="email" [ngModel]="guestData().email" (ngModelChange)="updateGuestField('email', $event)" (blur)="markFieldTouched('email')" [class.invalid]="shouldShowError('email')">
+                <span class="field-error" *ngIf="shouldShowError('email')">{{ validationMessage('email') }}</span>
               </div>
               <div class="input-group">
                 <label>Country</label>
@@ -64,7 +71,8 @@
                 <input type="text" placeholder="Address Line 2" class="span-2" [ngModel]="guestData().address2" (ngModelChange)="updateGuestField('address2', $event)">
                 <input type="text" placeholder="City" [ngModel]="guestData().city" (ngModelChange)="updateGuestField('city', $event)">
                 <input type="text" placeholder="State" [ngModel]="guestData().state" (ngModelChange)="updateGuestField('state', $event)">
-                <input type="text" placeholder="Post Code" [ngModel]="guestData().zip" (ngModelChange)="updateGuestField('zip', $event)">
+                <input type="text" placeholder="Post Code" inputmode="numeric" maxlength="10" [ngModel]="guestData().zip" (ngModelChange)="updateGuestField('zip', $event)" (blur)="markFieldTouched('zip')" [class.invalid]="shouldShowError('zip')">
+                <span class="field-error address-error" *ngIf="shouldShowError('zip')">{{ validationMessage('zip') }}</span>
               </div>
             </div>
           </div>
@@ -98,19 +106,21 @@
               </div>
               <div class="input-group">
                 <label>Date of Birth</label>
-                <input type="date" [ngModel]="guestData().dob" (ngModelChange)="updateGuestField('dob', $event)">
+                <input type="date" [ngModel]="guestData().dob" (ngModelChange)="updateGuestField('dob', $event)" (blur)="markFieldTouched('dob')" [class.invalid]="shouldShowError('dob')">
+                <span class="field-error" *ngIf="shouldShowError('dob')">{{ validationMessage('dob') }}</span>
               </div>
             </div>
             <div class="grid-2 mt-3">
               <div class="input-group">
                 <label>Identity Proof</label>
-                <select [ngModel]="guestData().idProof" (ngModelChange)="updateGuestField('idProof', $event)">
+                <select [ngModel]="guestData().idProof" (ngModelChange)="updateGuestField('idProof', $event); markFieldTouched('idNumber')">
                   <option>Aadhar Card</option><option>Passport</option><option>Driving License</option>
                 </select>
               </div>
               <div class="input-group">
                 <label>ID Number</label>
-                <input type="text" placeholder="Enter ID Number" [ngModel]="guestData().idNumber" (ngModelChange)="updateGuestField('idNumber', $event)">
+                <input type="text" placeholder="Enter ID Number" [ngModel]="guestData().idNumber" (ngModelChange)="updateGuestField('idNumber', $event)" (blur)="markFieldTouched('idNumber')" [class.invalid]="shouldShowError('idNumber')">
+                <span class="field-error" *ngIf="shouldShowError('idNumber')">{{ validationMessage('idNumber') }}</span>
               </div>
             </div>
             <div class="input-group full mt-3">
@@ -133,16 +143,18 @@
               <div class="input-group">
                 <label>Arrival</label>
                 <div class="datetime-grid">
-                  <input type="date" [ngModel]="checkIn()" (ngModelChange)="checkIn.set($event)">
+                  <input type="date" [min]="todayIso" [ngModel]="checkIn()" (ngModelChange)="onStayDateChange('checkIn', $event)" (blur)="markFieldTouched('checkIn')" [class.invalid]="shouldShowError('checkIn')">
                   <input type="time" [ngModel]="checkInTime()" (ngModelChange)="checkInTime.set($event)">
                 </div>
+                <span class="field-error" *ngIf="shouldShowError('checkIn')">{{ validationMessage('checkIn') }}</span>
               </div>
               <div class="input-group">
                 <label>Departure</label>
                 <div class="datetime-grid">
-                  <input type="date" [ngModel]="checkOut()" (ngModelChange)="checkOut.set($event)">
+                  <input type="date" [min]="minCheckOutDate()" [ngModel]="checkOut()" (ngModelChange)="onStayDateChange('checkOut', $event)" (blur)="markFieldTouched('checkOut')" [class.invalid]="shouldShowError('checkOut')">
                   <input type="time" [ngModel]="checkOutTime()" (ngModelChange)="checkOutTime.set($event)">
                 </div>
+                <span class="field-error" *ngIf="shouldShowError('checkOut')">{{ validationMessage('checkOut') }}</span>
               </div>
             </div>
             <div class="grid-3 mt-3">
@@ -150,10 +162,15 @@
                 <label>Nights</label>
                 <input type="number" [value]="nights()" readonly class="disabled-input">
               </div>
-              <div class="input-group"><label>Adults</label><input type="number" min="1" [ngModel]="numberOfAdults()" (ngModelChange)="numberOfAdults.set(+$event || 1)"></div>
+              <div class="input-group">
+                <label>Adults</label>
+                <input type="number" min="1" [ngModel]="numberOfAdults()" (ngModelChange)="numberOfAdults.set(+$event || 1)" (blur)="markFieldTouched('adults')" [class.invalid]="shouldShowError('adults')">
+                <span class="field-error" *ngIf="shouldShowError('adults')">{{ validationMessage('adults') }}</span>
+              </div>
               <div class="input-group">
                 <label>Children</label>
-                <input type="number" min="0" [ngModel]="numberOfChildren()" (ngModelChange)="numberOfChildren.set(+$event || 0)">
+                <input type="number" min="0" [ngModel]="numberOfChildren()" (ngModelChange)="numberOfChildren.set(+$event || 0)" (blur)="markFieldTouched('children')" [class.invalid]="shouldShowError('children')">
+                <span class="field-error" *ngIf="shouldShowError('children')">{{ validationMessage('children') }}</span>
               </div>
             </div>
           </div>
@@ -181,9 +198,9 @@
 
           <!-- LIST VIEW (always shown in card) -->
           <div class="card-body">
-            <div class="inventory-state loading" *ngIf="isRoomInventoryLoading()">
+            <div class="inventory-state loading" *ngIf="isRoomInventoryLoading() || isAvailableRoomsLoading()">
               <span class="material-icons-round spin">sync</span>
-              Loading room inventory...
+              {{ isAvailableRoomsLoading() ? 'Loading available rooms for selected stay...' : 'Loading room inventory...' }}
             </div>
 
             <div class="inventory-state error" *ngIf="roomInventoryError() && !isRoomInventoryLoading()">
@@ -214,6 +231,10 @@
             </div>
 
             <div class="room-list-grid mt-2">
+              <div class="empty-state" *ngIf="!hasStayDates()">
+                <span class="material-icons-round">date_range</span>
+                <p>Select arrival and departure dates to view available rooms</p>
+              </div>
               <div class="room-list-item" *ngFor="let room of filteredRooms()"
                    [class.selected]="selectedRoom()?.id === room.id"
                    (click)="selectRoom(room)" [id]="'room-' + room.id">
@@ -227,11 +248,12 @@
                   <span class="material-icons-round">check_circle</span>
                 </div>
               </div>
-              <div class="empty-state" *ngIf="filteredRooms().length === 0">
+              <div class="empty-state" *ngIf="hasStayDates() && filteredRooms().length === 0">
                 <span class="material-icons-round">search_off</span>
                 <p>No available rooms for this type</p>
               </div>
             </div>
+            <span class="field-error section-error" *ngIf="shouldShowError('room')">{{ validationMessage('room') }}</span>
 
             <!-- Rate Plan Selector -->
             <div class="section-label mt-3">Rate Plan</div>
@@ -265,6 +287,7 @@
               <span class="material-icons-round">sell</span>
               <p>No rate plans configured yet.</p>
             </div>
+            <span class="field-error section-error" *ngIf="shouldShowError('plan')">{{ validationMessage('plan') }}</span>
           </div>
         </div>
 
@@ -396,10 +419,10 @@
             </div>
 
             <div class="summary-actions" style="display: flex; flex-direction: column; gap: 6px;">
-              <button class="btn-premium" (click)="confirmBooking()" [disabled]="isCreatingReservation()">
-                {{ isCreatingReservation() ? 'SAVING...' : 'CONFIRM BOOKING' }}
+              <button class="btn-premium" (click)="confirmBooking()" [disabled]="isCreatingReservation() || isLoadingReservationForEdit()">
+                {{ isCreatingReservation() ? 'SAVING...' : (isEditMode() ? 'UPDATE RESERVATION' : 'CONFIRM BOOKING') }}
               </button>
-              <button class="btn-outline" (click)="saveDraft()" [disabled]="isCreatingReservation()" style="width: 100%; justify-content: center; height: 26px; font-size: 10px;">
+              <button class="btn-outline" *ngIf="!isEditMode()" (click)="saveDraft()" [disabled]="isCreatingReservation()" style="width: 100%; justify-content: center; height: 26px; font-size: 10px;">
                 <span class="material-icons-round" style="font-size: 12px; margin-right: 4px;">save</span>
                 {{ isCreatingReservation() ? 'SAVING...' : 'SAVE DRAFT' }}
               </button>

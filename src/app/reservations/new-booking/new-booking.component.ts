@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
 
 export interface Room {
   id: string; number: string; type: string; typeShort: string; typeId: string;
@@ -83,7 +84,7 @@ interface ReservationRequest {
   checkOutTime: string;
   numberOfAdults: number;
   numberOfChildren: number;
-  reservationStatus: 'PENDING' | 'CONFIRMED';
+  reservationStatus: 'PENDING' | 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED' | 'NO_SHOW';
   roomIds: number[];
   ratePlanId: number;
   billingName?: string;
@@ -116,6 +117,10 @@ export interface GuestProfile {
   lastVisit?: string;
 }
 
+type BookingValidationField =
+  'fullName' | 'phone' | 'email' | 'zip' | 'dob' | 'idNumber' |
+  'checkIn' | 'checkOut' | 'adults' | 'children' | 'room' | 'plan';
+
 @Component({
   selector: 'app-new-booking',
   standalone: true,
@@ -125,7 +130,10 @@ export interface GuestProfile {
 })
 export class NewBookingComponent implements OnInit {
   private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly baseUrl = '/api/v1';
+  readonly todayIso = this.toDateInputValue(new Date());
 
   checkIn = signal('');
   checkOut = signal('');
@@ -142,12 +150,20 @@ export class NewBookingComponent implements OnInit {
   modalHoveredRoom = signal<Room | null>(null);
   isRoomInventoryLoading = signal(false);
   roomInventoryError = signal<string | null>(null);
+  isAvailableRoomsLoading = signal(false);
   isRatePlanLoading = signal(false);
   ratePlanError = signal<string | null>(null);
   isCreatingReservation = signal(false);
   reservationError = signal<string | null>(null);
   reservationSuccess = signal<string | null>(null);
+  editReservationId = signal<string | null>(null);
+  editReservationStatus = signal<ReservationRequest['reservationStatus']>('CONFIRMED');
+  editHotelId = signal<number | null>(null);
+  isLoadingReservationForEdit = signal(false);
+  touchedFields = signal<Partial<Record<BookingValidationField, boolean>>>({});
+  formSubmitted = signal(false);
   private dataRevision = signal(0);
+  private pendingEditDetails: any | null = null;
 
   // Guest State
   guestData = signal<GuestProfile>({
@@ -232,7 +248,15 @@ export class NewBookingComponent implements OnInit {
     { id:'408', number:'408', type:'Penthouse',  typeShort:'PNT', typeId:'PNT', floor:4, status:'Available',  rate:25000,view:'Panoramic', beds:'King' },
   ];
 
+  isEditMode = computed(() => !!this.editReservationId());
+
   ngOnInit() {
+    const reservationId = this.route.snapshot.queryParamMap.get('reservationId');
+    if (reservationId) {
+      this.editReservationId.set(reservationId);
+      this.loadReservationForEdit(reservationId);
+    }
+
     this.loadRoomInventory();
     this.loadRatePlans();
   }
@@ -263,7 +287,11 @@ export class NewBookingComponent implements OnInit {
           .map(room => this.mapApiRoom(room, typeMap));
 
         this.ensureSelectedFloorExists();
-        this.selectedRoom.set(null);
+        if (this.pendingEditDetails) {
+          this.applyReservationForEdit(this.pendingEditDetails);
+        } else {
+          this.selectedRoom.set(null);
+        }
         this.dataRevision.update(value => value + 1);
         this.isRoomInventoryLoading.set(false);
       },
@@ -273,6 +301,66 @@ export class NewBookingComponent implements OnInit {
         this.isRoomInventoryLoading.set(false);
       }
     });
+  }
+
+  loadAvailableRoomsForStay() {
+    if (!this.checkIn() || !this.checkOut()) return;
+
+    this.isAvailableRoomsLoading.set(true);
+    this.roomInventoryError.set(null);
+
+    const floorId = this.selectedFloor();
+    this.http.get<StandardResponse<ApiRoom[]>>(`${this.baseUrl}/rooms/available?floorId=${floorId}&checkIn=${this.checkIn()}&checkOut=${this.checkOut()}`).subscribe({
+      next: (response) => {
+        const typeMap = this.buildRoomTypeMap();
+        this.mergeAvailableRoomsForFloor(response.data ?? [], typeMap, floorId);
+        this.selectedRoom.set(null);
+        this.dataRevision.update(value => value + 1);
+        this.isAvailableRoomsLoading.set(false);
+      },
+      error: (err) => {
+        console.error('[NewBookingComponent] loadAvailableRoomsForStay error:', err);
+        this.roomInventoryError.set(err?.error?.message || err?.error?.error?.message || 'Unable to load available rooms for selected stay.');
+        this.isAvailableRoomsLoading.set(false);
+      }
+    });
+  }
+
+  onStayDateChange(field: 'checkIn' | 'checkOut', value: string) {
+    if (field === 'checkIn') {
+      this.checkIn.set(value);
+      if (this.checkOut() && this.compareDateInput(this.checkOut(), this.minCheckOutDate()) < 0) {
+        this.checkOut.set('');
+        this.selectedRoom.set(null);
+      }
+    } else {
+      this.checkOut.set(value);
+    }
+    this.loadAvailableRoomsForStay();
+  }
+
+  private buildRoomTypeMap(): Map<number, ApiRoomType> {
+    const map = new Map<number, ApiRoomType>();
+    this.roomTypes
+      .filter(rt => rt.id !== 'ALL')
+      .forEach(rt => {
+        const id = Number(rt.id);
+        if (Number.isFinite(id)) {
+          map.set(id, {
+            id,
+            name: rt.label
+          });
+        }
+      });
+    return map;
+  }
+
+  private mergeAvailableRoomsForFloor(availableRooms: ApiRoom[], typeMap: Map<number, ApiRoomType>, floorId: number) {
+    const mappedRooms = availableRooms.map(room => this.mapApiRoom({ ...room, status: 'VACANT' }, typeMap));
+    this.allRooms = [
+      ...this.allRooms.filter(room => room.floor !== floorId),
+      ...mappedRooms
+    ];
   }
 
   loadRatePlans() {
@@ -286,7 +374,7 @@ export class NewBookingComponent implements OnInit {
           .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 
         this.ratePlans = plans.map(plan => this.mapApiRatePlan(plan));
-        if (this.ratePlans.length > 0 && !this.ratePlans.some(plan => plan.id === this.selectedPlan())) {
+        if (!this.isEditMode() && this.ratePlans.length > 0 && !this.ratePlans.some(plan => plan.id === this.selectedPlan())) {
           this.selectedPlan.set(this.ratePlans[0].id);
         }
 
@@ -382,13 +470,149 @@ export class NewBookingComponent implements OnInit {
     }
   }
 
+  private loadReservationForEdit(id: string) {
+    this.isLoadingReservationForEdit.set(true);
+    this.reservationError.set(null);
+
+    this.http.get<StandardResponse<any>>(`${this.baseUrl}/frontOffice/getReservationById/${id}`).subscribe({
+      next: (response) => {
+        const details = response.data;
+        this.pendingEditDetails = details;
+        this.applyReservationForEdit(details);
+        this.isLoadingReservationForEdit.set(false);
+      },
+      error: (err) => {
+        console.error('[NewBookingComponent] getReservationById error:', err);
+        this.isLoadingReservationForEdit.set(false);
+        this.reservationError.set(err?.error?.message || err?.error?.error?.message || 'Unable to load reservation details.');
+      }
+    });
+  }
+
+  private applyReservationForEdit(details: any) {
+    if (!details) return;
+
+    const booking = this.firstReservationBooking(details);
+    const room = this.upsertRoomFromReservation(details, booking);
+    const guestName = details.guestFullName || details.billingName || '';
+    const addressParts = this.parseBillingAddress(details.billingAddress || '');
+
+    this.editHotelId.set(Number(details.hotelId || room?.hotelId || 1));
+    this.editReservationStatus.set(this.mapReservationStatus(details.reservationStatus));
+
+    this.guestData.update(data => ({
+      ...data,
+      id: details.guestId ? String(details.guestId) : data.id,
+      fullName: guestName || data.fullName,
+      phone: details.guestPhone || data.phone,
+      email: details.guestEmail || data.email,
+      address1: addressParts.address1 || data.address1,
+      address2: addressParts.address2 || data.address2,
+      city: addressParts.city || data.city,
+      state: addressParts.state || data.state,
+      zip: addressParts.zip || data.zip,
+      vip: Boolean(details.guestIsVip),
+      notes: details.notes || data.notes
+    }));
+
+    this.checkIn.set(details.checkInDate || booking?.checkInDate || '');
+    this.checkOut.set(details.checkOutDate || booking?.checkOutDate || '');
+    this.checkInTime.set(this.toInputTime(details.checkInTime || '14:00:00'));
+    this.checkOutTime.set(this.toInputTime(details.checkOutTime || '11:00:00'));
+    this.numberOfAdults.set(Number(details.numberOfAdults ?? 1));
+    this.numberOfChildren.set(Number(details.numberOfChildren ?? 0));
+
+    if (details.ratePlanId) {
+      this.selectedPlan.set(String(details.ratePlanId));
+    }
+
+    if (room) {
+      this.selectedRoom.set(room);
+      this.selectedFloor.set(room.floor);
+      this.selectedRoomType.set(room.typeId);
+    }
+
+    this.dataRevision.update(value => value + 1);
+  }
+
+  private firstReservationBooking(details: any): any {
+    return Array.isArray(details?.bookings) && details.bookings.length > 0
+      ? details.bookings[0]
+      : Array.isArray(details?.rooms) && details.rooms.length > 0
+        ? details.rooms[0]
+        : null;
+  }
+
+  private upsertRoomFromReservation(details: any, booking: any): Room | null {
+    const roomId = booking?.roomId ?? booking?.id ?? details?.roomId;
+    if (!roomId) return null;
+
+    const id = String(roomId);
+    const existing = this.allRooms.find(room => room.id === id);
+    if (existing) {
+      const availableExisting = { ...existing, status: 'Available' as const };
+      this.allRooms = this.allRooms.map(room => room.id === id ? availableExisting : room);
+      return availableExisting;
+    }
+
+    const roomTypeName = booking?.roomTypeName || booking?.type || 'Room';
+    const floor = Number(booking?.floorId ?? booking?.floor ?? 1);
+    const room: Room = {
+      id,
+      number: booking?.roomNumber || booking?.number || id,
+      type: roomTypeName,
+      typeShort: this.shortCodeForRoomType(roomTypeName, Number(booking?.roomTypeId ?? roomId)),
+      typeId: String(booking?.roomTypeId ?? roomTypeName),
+      hotelId: Number(details?.hotelId || 1),
+      floor,
+      status: 'Available',
+      rate: Number(booking?.ratePerNight ?? 0),
+      view: booking?.floorNumber || `Floor ${floor}`,
+      beds: `${details?.numberOfAdults ?? 1} Pax`
+    };
+
+    this.allRooms = [...this.allRooms, room];
+    this.ensureSelectedFloorExists();
+    return room;
+  }
+
+  private parseBillingAddress(value: string): { address1: string; address2: string; city: string; state: string; zip: string } {
+    const parts = value.split(',').map(part => part.trim()).filter(Boolean);
+    if (parts.length >= 5) {
+      return {
+        address1: parts[0] || '',
+        address2: parts.slice(1, -3).join(', '),
+        city: parts[parts.length - 3] || '',
+        state: parts[parts.length - 2] || '',
+        zip: parts[parts.length - 1] || ''
+      };
+    }
+
+    return {
+      address1: parts[0] || '',
+      address2: '',
+      city: parts[1] || '',
+      state: parts[2] || '',
+      zip: parts[3] || ''
+    };
+  }
+
+  private mapReservationStatus(value: string): ReservationRequest['reservationStatus'] {
+    const allowed: ReservationRequest['reservationStatus'][] = ['PENDING', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'CANCELLED', 'NO_SHOW'];
+    return allowed.includes(value as ReservationRequest['reservationStatus'])
+      ? value as ReservationRequest['reservationStatus']
+      : 'CONFIRMED';
+  }
+
   availableCountFor(typeId: string): number {
+    if (!this.hasStayDates()) return 0;
     this.dataRevision();
     if (typeId === 'ALL') return this.allRooms.filter(r => r.status === 'Available').length;
     return this.allRooms.filter(r => r.typeId === typeId && r.status === 'Available').length;
   }
 
   filteredRooms = computed(() => {
+    if (!this.hasStayDates()) return [];
     this.dataRevision();
     const type = this.selectedRoomType();
     if (type === 'ALL') return this.allRooms.filter(r => r.status === 'Available');
@@ -396,6 +620,7 @@ export class NewBookingComponent implements OnInit {
   });
 
   currentFloorRooms = computed(() => {
+    if (!this.hasStayDates()) return [];
     this.dataRevision();
     return this.allRooms.filter(r => r.floor === this.selectedFloor());
   });
@@ -426,23 +651,34 @@ export class NewBookingComponent implements OnInit {
 
   taxAmount  = computed(() => math.round(this.totalPrice() * 0.12));
   grandTotal = computed(() => math.round(this.totalPrice() * 1.12));
+  hasStayDates = computed(() => !!this.checkIn() && !!this.checkOut());
+  minCheckOutDate = computed(() => this.checkIn() ? this.addDaysIso(this.checkIn(), 1) : this.todayIso);
 
   canConfirmBooking = computed(() =>
-    !!this.selectedRoom() &&
-    !!this.selectedPlan() &&
-    !!this.checkIn() &&
-    !!this.checkOut() &&
-    !!this.guestData().fullName &&
-    !!this.guestData().phone &&
-    !!this.guestData().email &&
-    !this.isCreatingReservation()
+    !this.validationMessage('fullName') &&
+    !this.validationMessage('phone') &&
+    !this.validationMessage('email') &&
+    !this.validationMessage('zip') &&
+    !this.validationMessage('dob') &&
+    !this.validationMessage('idNumber') &&
+    !this.validationMessage('checkIn') &&
+    !this.validationMessage('checkOut') &&
+    !this.validationMessage('adults') &&
+    !this.validationMessage('children') &&
+    !this.validationMessage('room') &&
+    !this.validationMessage('plan') &&
+    !this.isCreatingReservation() &&
+    !this.isLoadingReservationForEdit()
   );
 
   setViewMode(mode: 'list' | 'map') { this.viewMode.set(mode); }
   selectRoomType(id: string) { this.selectedRoomType.set(id); this.selectedRoom.set(null); }
   selectRoom(room: Room) { if (room.status === 'Available') this.selectedRoom.set(room); }
   selectPlan(id: string) { this.selectedPlan.set(id); }
-  selectFloor(num: number) { this.selectedFloor.set(num); }
+  selectFloor(num: number) {
+    this.selectedFloor.set(num);
+    this.loadAvailableRoomsForStay();
+  }
 
   openMapModal()  { this.mapModalOpen.set(true);  document.body.style.overflow = 'hidden'; }
   closeMapModal() { this.mapModalOpen.set(false); document.body.style.overflow = ''; }
@@ -509,6 +745,96 @@ export class NewBookingComponent implements OnInit {
     this.guestData.update(data => ({ ...data, [field]: value }));
   }
 
+  markFieldTouched(field: BookingValidationField) {
+    this.touchedFields.update(fields => ({ ...fields, [field]: true }));
+  }
+
+  shouldShowError(field: BookingValidationField): boolean {
+    return !!(this.formSubmitted() || this.touchedFields()[field]) && !!this.validationMessage(field);
+  }
+
+  validationMessage(field: BookingValidationField): string {
+    const guest = this.guestData();
+
+    switch (field) {
+      case 'fullName': {
+        const name = guest.fullName.trim();
+        if (!name) return 'Guest full name is required.';
+        if (name.length < 2) return 'Enter a valid guest name.';
+        if (!/^[A-Za-z][A-Za-z .'-]*$/.test(name)) return 'Use letters, spaces, dots, apostrophes or hyphens only.';
+        return '';
+      }
+      case 'phone': {
+        const phone = this.onlyDigits(guest.phone);
+        if (!phone) return 'Phone number is required.';
+        if (this.extractCountryCode(guest.phoneCode) === '+91') {
+          if (!/^[6-9]\d{9}$/.test(phone)) return 'Enter a valid 10 digit Indian mobile number.';
+        } else if (!/^\d{7,15}$/.test(phone)) {
+          return 'Enter a valid phone number.';
+        }
+        return '';
+      }
+      case 'email': {
+        const email = guest.email.trim();
+        if (this.isEditMode() && !email) return '';
+        if (!email) return 'Email address is required.';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return 'Enter a valid email address.';
+        return '';
+      }
+      case 'zip': {
+        const zip = guest.zip.trim();
+        if (this.isEditMode() && !zip) return '';
+        if (!zip) return 'Post code is required.';
+        if (guest.country === 'India' && !/^\d{6}$/.test(zip)) return 'Enter a valid 6 digit Indian post code.';
+        if (guest.country === 'USA' && !/^\d{5}(-\d{4})?$/.test(zip)) return 'Enter a valid US ZIP code.';
+        if (!/^[A-Za-z0-9 -]{4,10}$/.test(zip)) return 'Enter a valid post code.';
+        return '';
+      }
+      case 'dob': {
+        if (!guest.dob) return '';
+        const dob = new Date(guest.dob);
+        if (Number.isNaN(dob.getTime())) return 'Enter a valid date of birth.';
+        if (dob >= new Date()) return 'Date of birth must be in the past.';
+        return '';
+      }
+      case 'idNumber': {
+        const idNumber = guest.idNumber.trim();
+        if (this.isEditMode() && !idNumber) return '';
+        if (!idNumber) return 'ID number is required.';
+        if (guest.idProof === 'Aadhar Card' && !/^[2-9]\d{11}$/.test(this.onlyDigits(idNumber))) {
+          return 'Enter a valid 12 digit Aadhaar number.';
+        }
+        if (guest.idProof === 'Passport' && !/^[A-Z][0-9]{7}$/i.test(idNumber.replace(/\s/g, ''))) {
+          return 'Enter a valid passport number, e.g. A1234567.';
+        }
+        if (guest.idProof === 'Driving License' && idNumber.replace(/\s|-/g, '').length < 8) {
+          return 'Enter a valid driving license number.';
+        }
+        return '';
+      }
+      case 'checkIn':
+        if (!this.checkIn()) return 'Arrival date is required.';
+        if (!this.isEditMode() && this.compareDateInput(this.checkIn(), this.todayIso) < 0) return 'Arrival date cannot be in the past.';
+        return '';
+      case 'checkOut':
+        if (!this.checkOut()) return 'Departure date is required.';
+        if (this.checkIn() && this.compareDateInput(this.checkOut(), this.checkIn()) <= 0) {
+          return 'Departure must be after arrival.';
+        }
+        return '';
+      case 'adults':
+        return this.numberOfAdults() >= 1 ? '' : 'At least one adult is required.';
+      case 'children':
+        return this.numberOfChildren() >= 0 ? '' : 'Children cannot be negative.';
+      case 'room':
+        return this.selectedRoom() ? '' : 'Please select an available room.';
+      case 'plan':
+        return this.selectedPlan() ? '' : 'Please select a rate plan.';
+      default:
+        return '';
+    }
+  }
+
   confirmBooking() {
     this.reservationError.set(null);
     this.reservationSuccess.set(null);
@@ -519,18 +845,24 @@ export class NewBookingComponent implements OnInit {
       return;
     }
 
-    const payload = this.buildReservationPayload('CONFIRMED');
+    const payload = this.buildReservationPayload(this.isEditMode() ? this.editReservationStatus() : 'CONFIRMED');
     this.isCreatingReservation.set(true);
 
-    this.http.post<StandardResponse<any>>(`${this.baseUrl}/frontOffice/createReservation`, payload).subscribe({
+    const reservationId = this.editReservationId();
+    const request$ = reservationId
+      ? this.http.put<StandardResponse<any>>(`${this.baseUrl}/frontOffice/updateReservation/${reservationId}`, payload)
+      : this.http.post<StandardResponse<any>>(`${this.baseUrl}/frontOffice/createReservation`, payload);
+
+    request$.subscribe({
       next: (response) => {
         this.isCreatingReservation.set(false);
-        this.reservationSuccess.set(response.message || 'Reservation created successfully.');
+        this.reservationSuccess.set(response.message || (reservationId ? 'Reservation updated successfully.' : 'Reservation created successfully.'));
+        this.router.navigate(['/reservations']);
       },
       error: (err) => {
-        console.error('[NewBookingComponent] createReservation error:', err);
+        console.error('[NewBookingComponent] save reservation error:', err);
         this.isCreatingReservation.set(false);
-        this.reservationError.set(err?.error?.message || err?.error?.error?.message || 'Unable to create reservation.');
+        this.reservationError.set(err?.error?.message || err?.error?.error?.message || (reservationId ? 'Unable to update reservation.' : 'Unable to create reservation.'));
       }
     });
   }
@@ -552,6 +884,7 @@ export class NewBookingComponent implements OnInit {
       next: (response) => {
         this.isCreatingReservation.set(false);
         this.reservationSuccess.set(response.message || 'Reservation draft saved.');
+        this.router.navigate(['/reservations']);
       },
       error: (err) => {
         console.error('[NewBookingComponent] saveDraft reservation error:', err);
@@ -562,22 +895,37 @@ export class NewBookingComponent implements OnInit {
   }
 
   private validateReservation(): string | null {
-    if (!this.guestData().fullName.trim()) return 'Please enter guest full name.';
-    if (!this.guestData().phone.trim()) return 'Please enter guest phone number.';
-    if (!this.guestData().email.trim()) return 'Please enter guest email address.';
-    if (!this.checkIn()) return 'Please select arrival date.';
-    if (!this.checkOut()) return 'Please select departure date.';
-    if (!this.selectedRoom()) return 'Please select an available room.';
-    if (!this.selectedPlan()) return 'Please select a rate plan.';
-    if (this.numberOfAdults() < 1) return 'At least one adult is required.';
-    return null;
+    this.markReservationFieldsTouched();
+    const fields: BookingValidationField[] = [
+      'fullName', 'phone', 'email', 'zip', 'dob', 'idNumber',
+      'checkIn', 'checkOut', 'adults', 'children', 'room', 'plan'
+    ];
+    return fields.map(field => this.validationMessage(field)).find(Boolean) || null;
   }
 
-  private buildReservationPayload(status: 'PENDING' | 'CONFIRMED'): ReservationRequest {
+  private markReservationFieldsTouched() {
+    this.formSubmitted.set(true);
+    this.touchedFields.set({
+      fullName: true,
+      phone: true,
+      email: true,
+      zip: true,
+      dob: true,
+      idNumber: true,
+      checkIn: true,
+      checkOut: true,
+      adults: true,
+      children: true,
+      room: true,
+      plan: true
+    });
+  }
+
+  private buildReservationPayload(status: ReservationRequest['reservationStatus']): ReservationRequest {
     const room = this.selectedRoom()!;
     const guestId = this.getNumericGuestId();
     const payload: ReservationRequest = {
-      hotelId: room.hotelId ?? 1,
+      hotelId: room.hotelId ?? this.editHotelId() ?? 1,
       checkInDate: this.checkIn(),
       checkInTime: this.toApiTime(this.checkInTime()),
       checkOutDate: this.checkOut(),
@@ -612,8 +960,8 @@ export class NewBookingComponent implements OnInit {
       firstName,
       lastName,
       countryCode: this.extractCountryCode(guest.phoneCode),
-      phone: guest.phone,
-      email: guest.email,
+      phone: this.onlyDigits(guest.phone),
+      email: guest.email.trim(),
       addressLine1: guest.address1,
       addressLine2: guest.address2,
       city: guest.city,
@@ -624,10 +972,14 @@ export class NewBookingComponent implements OnInit {
       gender: this.mapGender(guest.gender),
       dateOfBirth: guest.dob || undefined,
       idProofType: this.mapIdProof(guest.idProof),
-      idProofNumber: guest.idNumber,
+      idProofNumber: guest.idProof === 'Aadhar Card' ? this.onlyDigits(guest.idNumber) : guest.idNumber.trim(),
       guestNotes: guest.notes,
       isVip: guest.vip
     };
+  }
+
+  private onlyDigits(value: string): string {
+    return (value || '').replace(/\D/g, '');
   }
 
   private getNumericGuestId(): number | undefined {
@@ -647,6 +999,33 @@ export class NewBookingComponent implements OnInit {
   private toApiTime(value: string): string {
     const [hour = '00', minute = '00'] = value.split(':');
     return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:00`;
+  }
+
+  private toInputTime(value: string): string {
+    const [hour = '00', minute = '00'] = (value || '').split(':');
+    return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+  }
+
+  private toDateInputValue(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private addDaysIso(value: string, days: number): string {
+    const date = this.parseDateInput(value);
+    date.setDate(date.getDate() + days);
+    return this.toDateInputValue(date);
+  }
+
+  private compareDateInput(a: string, b: string): number {
+    return this.parseDateInput(a).getTime() - this.parseDateInput(b).getTime();
+  }
+
+  private parseDateInput(value: string): Date {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, (month || 1) - 1, day || 1);
   }
 
   private extractCountryCode(value: string): string {

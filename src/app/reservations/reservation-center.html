@@ -18,52 +18,19 @@
           <option value="NO_SHOW">No Show</option>
         </select>
         
-        <!-- Beautiful Custom Date Picker -->
-        <div class="custom-date-picker-wrapper">
-          <div class="date-trigger" (click)="toggleCalendar($event)">
-            <div class="date-display">
-              <span class="label">FROM</span>
-              <span class="val">{{rangeStart() ? (rangeStart() | date:'dd MMM, yyyy') : 'Select Date'}}</span>
-            </div>
-            <span class="material-icons-round arrow">arrow_forward</span>
-            <div class="date-display">
-              <span class="label">TO</span>
-              <span class="val">{{rangeEnd() ? (rangeEnd() | date:'dd MMM, yyyy') : 'Select Date'}}</span>
-            </div>
-            <span class="material-icons-round trigger-icon">calendar_month</span>
-          </div>
-
-          <!-- Glassmorphic Calendar Dropdown -->
-          <div class="cal-dropdown glass-panel" *ngIf="showCalendar()" (click)="$event.stopPropagation()">
-            <div class="cal-header">
-              <button class="cal-icon-btn" (click)="prevMonth()"><span class="material-icons-round">chevron_left</span></button>
-              <span class="cal-title">{{currentMonthName()}} {{calendarMonth().getFullYear()}}</span>
-              <button class="cal-icon-btn" (click)="nextMonth()"><span class="material-icons-round">chevron_right</span></button>
-            </div>
-            
-            <div class="cal-grid">
-              <div class="cal-day-name" *ngFor="let d of weekDays">{{d}}</div>
-              <ng-container *ngFor="let week of calendarDays">
-                <div *ngFor="let day of week"
-                     class="cal-cell"
-                     [class.empty]="!day"
-                     [class.today]="isToday(day)"
-                     [class.start]="isRangeStart(day)"
-                     [class.end]="isRangeEnd(day)"
-                     [class.in-range]="isInRange(day)"
-                     (click)="onDayClick(day, $event)"
-                     (mouseenter)="hoverDate.set(day)"
-                     (mouseleave)="hoverDate.set(null)">
-                  <span>{{day ? day.getDate() : ''}}</span>
-                </div>
-              </ng-container>
-            </div>
-
-            <div class="cal-footer">
-              <button class="cal-text-btn" (click)="clearDates()">Clear</button>
-              <button class="cal-solid-btn" (click)="applyDates()">Apply</button>
-            </div>
-          </div>
+        <div class="date-range-compact">
+          <label class="date-field">
+            <span>From</span>
+            <input type="date" [ngModel]="dateInputValue(rangeStart())" (ngModelChange)="updateStart($event)">
+          </label>
+          <span class="material-icons-round date-separator">arrow_forward</span>
+          <label class="date-field">
+            <span>To</span>
+            <input type="date" [ngModel]="dateInputValue(rangeEnd())" (ngModelChange)="updateEnd($event)">
+          </label>
+          <button class="date-clear-btn" type="button" title="Clear date range" (click)="clearDates()" *ngIf="rangeStart() || rangeEnd()">
+            <span class="material-icons-round">close</span>
+          </button>
         </div>
       </div>
     </div>
@@ -191,14 +158,14 @@
             </td>
             <td>
               <div class="action-buttons">
-                <button class="action-btn edit" title="Load Details" (click)="viewReservationDetails(res.id)">
+                <button class="action-btn view" title="View Reservation" (click)="viewReservationDetails(res.id)">
+                  <span class="material-icons-round">visibility</span>
+                </button>
+                <button class="action-btn edit" title="Edit Reservation" (click)="openEditReservation(res.id)" [disabled]="res.status === 'CANCELLED'">
                   <span class="material-icons-round">edit</span>
                 </button>
                 <button class="action-btn checkin" title="Cancel Reservation" (click)="cancelReservation(res.id, res.guestName)" [disabled]="res.status === 'CANCELLED'">
                   <span class="material-icons-round">block</span>
-                </button>
-                <button class="action-btn checkout" title="Delete Reservation" (click)="deleteReservation(res.id, res.guestName)">
-                  <span class="material-icons-round">delete_outline</span>
                 </button>
               </div>
             </td>
@@ -292,3 +259,206 @@
 <div class="floating-fab">
   <span class="material-icons-round">bolt</span>
 </div>
+
+<div class="reservation-detail-overlay" *ngIf="isReservationDetailsOpen()" (click)="closeReservationDetails()">
+  <div class="reservation-detail-modal" (click)="$event.stopPropagation()">
+    <div class="detail-modal-header">
+      <div class="detail-title-group">
+        <div class="detail-avatar">{{ getInitials(detailGuestName(selectedReservationDetails())) }}</div>
+        <div>
+          <span class="detail-kicker">Reservation Details</span>
+          <h2>{{ detailGuestName(selectedReservationDetails()) }}</h2>
+          <p>{{ detailPrimaryRoom(selectedReservationDetails()) }}</p>
+        </div>
+      </div>
+      <button class="detail-close" (click)="closeReservationDetails()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="detail-loading" *ngIf="isLoadingReservationDetails()">
+      <span class="material-icons-round spin">sync</span>
+      Loading reservation...
+    </div>
+
+    <div class="detail-body" *ngIf="!isLoadingReservationDetails() && selectedReservationDetails() as details">
+      <div class="detail-summary-row">
+        <div class="detail-chip id">
+          <span class="material-icons-round">confirmation_number</span>
+          <div><small>ID</small><strong>{{ details.id || '-' }}</strong></div>
+        </div>
+        <div class="detail-chip status">
+          <span class="material-icons-round">verified</span>
+          <div><small>Status</small><strong>{{ detailStatus(details) }}</strong></div>
+        </div>
+        <div class="detail-chip total">
+          <span class="material-icons-round">payments</span>
+          <div><small>Total</small><strong>₹{{ details.grandTotal || 0 }}</strong></div>
+        </div>
+      </div>
+
+      <div class="detail-inline-actions">
+        <button class="detail-edit-btn" type="button" (click)="openEditReservation(details.id)" [disabled]="detailStatus(details) === 'CANCELLED'">
+          <span class="material-icons-round">edit</span>
+          Edit Reservation
+        </button>
+      </div>
+
+      <div class="detail-columns">
+        <div class="detail-section">
+          <div class="section-heading">
+            <span class="material-icons-round">person</span>
+            <h3>Guest</h3>
+          </div>
+          <div class="detail-grid compact">
+            <div><span>Name</span><strong>{{ detailGuestName(details) }}</strong></div>
+            <div><span>Phone</span><strong>{{ details.guestPhone || '-' }}</strong></div>
+            <div><span>Email</span><strong>{{ details.guestEmail || '-' }}</strong></div>
+            <div><span>Badge</span><strong>{{ details.guestBadge || '-' }}</strong></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="section-heading">
+            <span class="material-icons-round">date_range</span>
+            <h3>Stay</h3>
+          </div>
+          <div class="detail-grid compact">
+            <div><span>Check In</span><strong>{{ details.checkInDate || '-' }} · {{ details.checkInTime || '-' }}</strong></div>
+            <div><span>Check Out</span><strong>{{ details.checkOutDate || '-' }} · {{ details.checkOutTime || '-' }}</strong></div>
+            <div><span>Nights</span><strong>{{ details.numberOfNights || 0 }}</strong></div>
+            <div><span>Guests</span><strong>{{ details.numberOfAdults || 0 }}A, {{ details.numberOfChildren || 0 }}C</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="section-heading">
+          <span class="material-icons-round">meeting_room</span>
+          <h3>Rooms & Charges</h3>
+        </div>
+        <div class="detail-room" *ngFor="let room of detailRooms(details)">
+          <span class="material-icons-round">meeting_room</span>
+          <div>
+            <strong>Room {{ room.roomNumber || '-' }}</strong>
+            <span>{{ room.roomTypeName || '-' }} • {{ room.ratePlanName || '-' }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <div class="section-heading">
+          <span class="material-icons-round">receipt_long</span>
+          <h3>Billing & Notes</h3>
+        </div>
+        <div class="detail-grid billing">
+          <div><span>Billing Name</span><strong>{{ details.billingName || '-' }}</strong></div>
+          <div><span>Paid Amount</span><strong>{{ detailMoney(details.paidAmount) }}</strong></div>
+          <div class="wide"><span>Billing Address</span><strong>{{ details.billingAddress || '-' }}</strong></div>
+          <div class="wide"><span>Notes</span><strong>{{ details.notes || '-' }}</strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- <div class="reservation-edit-modal" (click)="$event.stopPropagation()" *ngIf="editReservationForm() as form">
+    <div class="detail-modal-header edit-header">
+      <div class="detail-title-group">
+        <div class="detail-avatar">
+          <span class="material-icons-round">edit_calendar</span>
+        </div>
+        <div>
+          <span class="detail-kicker">Edit Reservation</span>
+          <h2>#{{ form.id }} · {{ detailGuestName(selectedReservationDetails()) }}</h2>
+          <p>Update stay, status, guest count and billing notes</p>
+        </div>
+      </div>
+      <button class="detail-close" (click)="closeEditReservation()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="detail-body edit-body">
+      <div class="edit-error" *ngIf="editReservationError()">
+        <span class="material-icons-round">error_outline</span>
+        {{ editReservationError() }}
+      </div>
+
+      <div class="edit-form-grid">
+        <div class="edit-field">
+          <label>Check In</label>
+          <input type="date" [ngModel]="form.checkInDate" (ngModelChange)="updateEditForm('checkInDate', $event)">
+        </div>
+        <div class="edit-field">
+          <label>Check In Time</label>
+          <input type="time" [ngModel]="form.checkInTime" (ngModelChange)="updateEditForm('checkInTime', $event)">
+        </div>
+        <div class="edit-field">
+          <label>Check Out</label>
+          <input type="date" [ngModel]="form.checkOutDate" (ngModelChange)="updateEditForm('checkOutDate', $event)">
+        </div>
+        <div class="edit-field">
+          <label>Check Out Time</label>
+          <input type="time" [ngModel]="form.checkOutTime" (ngModelChange)="updateEditForm('checkOutTime', $event)">
+        </div>
+        <div class="edit-field">
+          <label>Adults</label>
+          <input type="number" min="1" [ngModel]="form.numberOfAdults" (ngModelChange)="updateEditForm('numberOfAdults', +$event || 1)">
+        </div>
+        <div class="edit-field">
+          <label>Children</label>
+          <input type="number" min="0" [ngModel]="form.numberOfChildren" (ngModelChange)="updateEditForm('numberOfChildren', +$event || 0)">
+        </div>
+        <div class="edit-field">
+          <label>Status</label>
+          <select [ngModel]="form.reservationStatus" (ngModelChange)="updateEditForm('reservationStatus', $event)">
+            <option value="PENDING">PENDING</option>
+            <option value="CONFIRMED">CONFIRMED</option>
+            <option value="CHECKED_IN">CHECKED IN</option>
+            <option value="CHECKED_OUT">CHECKED OUT</option>
+            <option value="CANCELLED">CANCELLED</option>
+            <option value="NO_SHOW">NO SHOW</option>
+          </select>
+        </div>
+        <div class="edit-field">
+          <label>Rate Plan ID</label>
+          <input type="number" min="1" [ngModel]="form.ratePlanId" (ngModelChange)="updateEditForm('ratePlanId', +$event || 0)">
+        </div>
+        <div class="edit-field wide">
+          <label>Billing Name</label>
+          <input type="text" [ngModel]="form.billingName" (ngModelChange)="updateEditForm('billingName', $event)">
+        </div>
+        <div class="edit-field wide">
+          <label>Billing Address</label>
+          <textarea rows="2" [ngModel]="form.billingAddress" (ngModelChange)="updateEditForm('billingAddress', $event)"></textarea>
+        </div>
+        <div class="edit-field wide">
+          <label>Special Requests</label>
+          <textarea rows="2" [ngModel]="form.specialRequests" (ngModelChange)="updateEditForm('specialRequests', $event)"></textarea>
+        </div>
+        <div class="edit-field wide">
+          <label>Notes</label>
+          <textarea rows="2" [ngModel]="form.notes" (ngModelChange)="updateEditForm('notes', $event)"></textarea>
+        </div>
+      </div>
+
+      <div class="edit-static-strip">
+        <div>
+          <span>Room IDs</span>
+          <strong>{{ form.roomIds.join(', ') || '-' }}</strong>
+        </div>
+        <div>
+          <span>Guest ID</span>
+          <strong>{{ form.guestId || '-' }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="edit-footer">
+      <button class="edit-cancel" type="button" (click)="closeEditReservation()">Cancel</button>
+      <button class="edit-save" type="button" (click)="saveReservationEdit()" [disabled]="isSavingReservationEdit()">
+        <span class="material-icons-round">save</span>
+        {{ isSavingReservationEdit() ? 'Saving...' : 'Save Changes' }}
+      </button>
+    </div>
+  </div>
+</div> -->

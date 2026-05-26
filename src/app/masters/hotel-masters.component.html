@@ -547,17 +547,20 @@
       
       <div class="ci-input-group">
         <label>Hotel Name *</label>
-        <input type="text" [(ngModel)]="currentHotel().name" placeholder="e.g. Oasis Palms Resort">
+        <input type="text" [(ngModel)]="currentHotel().name" (blur)="markFieldTouched('name')" [class.invalid]="shouldShowError('name')" placeholder="e.g. Oasis Palms Resort">
+        <span class="field-error" *ngIf="shouldShowError('name')">{{ validationMessage('name') }}</span>
       </div>
 
       <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
           <label>Email Address *</label>
-          <input type="email" [(ngModel)]="currentHotel().email" placeholder="e.g. contact@oasis.com">
+          <input type="email" [(ngModel)]="currentHotel().email" (blur)="markFieldTouched('email')" [class.invalid]="shouldShowError('email')" placeholder="e.g. contact@oasis.com">
+          <span class="field-error" *ngIf="shouldShowError('email')">{{ validationMessage('email') }}</span>
         </div>
         <div class="ci-input-group">
           <label>Phone Number *</label>
-          <input type="tel" [(ngModel)]="currentHotel().phone" placeholder="e.g. +1 305-555-0199">
+          <input type="tel" [(ngModel)]="currentHotel().phone" (blur)="markFieldTouched('phone')" [class.invalid]="shouldShowError('phone')" placeholder="e.g. +1 305-555-0199">
+          <span class="field-error" *ngIf="shouldShowError('phone')">{{ validationMessage('phone') }}</span>
         </div>
       </div>
 
@@ -565,28 +568,33 @@
       
       <div class="ci-input-group">
         <label>Street Address *</label>
-        <textarea [(ngModel)]="currentHotel().address" placeholder="e.g. 4200 Collins Ave" rows="2"></textarea>
+        <textarea [(ngModel)]="currentHotel().address" (blur)="markFieldTouched('address')" [class.invalid]="shouldShowError('address')" placeholder="e.g. 4200 Collins Ave" rows="2"></textarea>
+        <span class="field-error" *ngIf="shouldShowError('address')">{{ validationMessage('address') }}</span>
       </div>
 
       <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
           <label>City *</label>
-          <input type="text" [(ngModel)]="currentHotel().city" placeholder="Miami Beach">
+          <input type="text" [(ngModel)]="currentHotel().city" (blur)="markFieldTouched('city')" [class.invalid]="shouldShowError('city')" placeholder="Miami Beach">
+          <span class="field-error" *ngIf="shouldShowError('city')">{{ validationMessage('city') }}</span>
         </div>
         <div class="ci-input-group">
           <label>State / Region *</label>
-          <input type="text" [(ngModel)]="currentHotel().state" placeholder="Florida">
+          <input type="text" [(ngModel)]="currentHotel().state" (blur)="markFieldTouched('state')" [class.invalid]="shouldShowError('state')" placeholder="Florida">
+          <span class="field-error" *ngIf="shouldShowError('state')">{{ validationMessage('state') }}</span>
         </div>
       </div>
 
       <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
           <label>Country *</label>
-          <input type="text" [(ngModel)]="currentHotel().country" placeholder="USA">
+          <input type="text" [(ngModel)]="currentHotel().country" (blur)="markFieldTouched('country')" [class.invalid]="shouldShowError('country')" placeholder="USA">
+          <span class="field-error" *ngIf="shouldShowError('country')">{{ validationMessage('country') }}</span>
         </div>
         <div class="ci-input-group">
           <label>Zip Code *</label>
-          <input type="text" [(ngModel)]="currentHotel().zipCode" placeholder="33140">
+          <input type="text" [(ngModel)]="currentHotel().zipCode" (blur)="markFieldTouched('zipCode')" [class.invalid]="shouldShowError('zipCode')" placeholder="33140">
+          <span class="field-error" *ngIf="shouldShowError('zipCode')">{{ validationMessage('zipCode') }}</span>
         </div>
       </div>
 
@@ -594,7 +602,8 @@
       
       <div class="ci-input-group">
         <label>Total Rooms *</label>
-        <input type="number" [(ngModel)]="currentHotel().totalRooms" placeholder="150" min="1">
+        <input type="number" [(ngModel)]="currentHotel().totalRooms" (blur)="markFieldTouched('totalRooms')" [class.invalid]="shouldShowError('totalRooms')" placeholder="150" min="1">
+        <span class="field-error" *ngIf="shouldShowError('totalRooms')">{{ validationMessage('totalRooms') }}</span>
       </div>
 
       <div class="ci-input-group mt-3">
@@ -643,23 +652,27 @@
 
       <div class="ci-input-group">
         <label>Rate Plan Name *</label>
-        <input type="text" [(ngModel)]="currentRatePlan().name" placeholder="e.g. Standard BAR or Weekend Saver">
+        <input type="text" [(ngModel)]="currentRatePlan().name" (blur)="markFieldTouched('name')" [class.invalid]="shouldShowError('name')" placeholder="e.g. Standard BAR or Weekend Saver">
+        <span class="field-error" *ngIf="shouldShowError('name')">{{ validationMessage('name') }}</span>
       </div>
 
       <div class="ci-input-group mt-3">
         <label>Description</label>
-        <textarea [(ngModel)]="currentRatePlan().description" placeholder="Describe booking conditions, inclusions, or usage rules..." rows="3"></textarea>
+        <textarea [(ngModel)]="currentRatePlan().description" (blur)="markFieldTouched('description')" [class.invalid]="shouldShowError('description')" placeholder="Describe booking conditions, inclusions, or usage rules..." rows="3"></textarea>
+        <span class="field-error" *ngIf="shouldShowError('description')">{{ validationMessage('description') }}</span>
       </div>
 
       <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
           <label>Price Adjustment</label>
-          <input type="number" [(ngModel)]="currentRatePlan().priceAdjustment" placeholder="0.00" step="0.01">
+          <input type="number" [(ngModel)]="currentRatePlan().priceAdjustment" (blur)="markFieldTouched('priceAdjustment')" [class.invalid]="shouldShowError('priceAdjustment')" placeholder="0.00" step="0.01">
           <span class="input-tip">Use positive values for markups and negative values for discounts.</span>
+          <span class="field-error" *ngIf="shouldShowError('priceAdjustment')">{{ validationMessage('priceAdjustment') }}</span>
         </div>
         <div class="ci-input-group">
           <label>Display Order</label>
-          <input type="number" [(ngModel)]="currentRatePlan().displayOrder" placeholder="1" min="0">
+          <input type="number" [(ngModel)]="currentRatePlan().displayOrder" (blur)="markFieldTouched('displayOrder')" [class.invalid]="shouldShowError('displayOrder')" placeholder="1" min="0">
+          <span class="field-error" *ngIf="shouldShowError('displayOrder')">{{ validationMessage('displayOrder') }}</span>
         </div>
       </div>
 
@@ -701,27 +714,31 @@
 
       <div class="ci-input-group">
         <label>Hotel Property *</label>
-        <select [(ngModel)]="currentFloor().hotelId">
+        <select [(ngModel)]="currentFloor().hotelId" (blur)="markFieldTouched('hotelId')" [class.invalid]="shouldShowError('hotelId')">
           <option *ngFor="let h of mastersService.hotels()" [value]="h.id" [disabled]="!h.isActive">
             {{ h.name }} {{ !h.isActive ? '(Inactive)' : '' }}
           </option>
         </select>
+        <span class="field-error" *ngIf="shouldShowError('hotelId')">{{ validationMessage('hotelId') }}</span>
       </div>
 
       <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
           <label>Floor Number/Name *</label>
-          <input type="text" [(ngModel)]="currentFloor().floorNumber" placeholder="e.g. Floor 1 or Ground Floor">
+          <input type="text" [(ngModel)]="currentFloor().floorNumber" (blur)="markFieldTouched('floorNumber')" [class.invalid]="shouldShowError('floorNumber')" placeholder="e.g. Floor 1 or Ground Floor">
+          <span class="field-error" *ngIf="shouldShowError('floorNumber')">{{ validationMessage('floorNumber') }}</span>
         </div>
         <div class="ci-input-group">
           <label>Capacity (Max Rooms) *</label>
-          <input type="number" [(ngModel)]="currentFloor().noOfRooms" placeholder="30" min="1">
+          <input type="number" [(ngModel)]="currentFloor().noOfRooms" (blur)="markFieldTouched('noOfRooms')" [class.invalid]="shouldShowError('noOfRooms')" placeholder="30" min="1">
+          <span class="field-error" *ngIf="shouldShowError('noOfRooms')">{{ validationMessage('noOfRooms') }}</span>
         </div>
       </div>
 
       <div class="ci-input-group mt-3">
         <label>Telephone Extension / Speed Dial</label>
-        <input type="text" [(ngModel)]="currentFloor().telephone" placeholder="e.g. +1 305-555-1001">
+        <input type="text" [(ngModel)]="currentFloor().telephone" (blur)="markFieldTouched('telephone')" [class.invalid]="shouldShowError('telephone')" placeholder="e.g. +1 305-555-1001">
+        <span class="field-error" *ngIf="shouldShowError('telephone')">{{ validationMessage('telephone') }}</span>
       </div>
 
       <div class="ci-input-group mt-3">
@@ -770,21 +787,24 @@
 
       <div class="ci-input-group">
         <label>Hotel Property *</label>
-        <select [(ngModel)]="currentRoomType().hotelId">
+        <select [(ngModel)]="currentRoomType().hotelId" (blur)="markFieldTouched('hotelId')" [class.invalid]="shouldShowError('hotelId')">
           <option *ngFor="let h of mastersService.hotels()" [value]="h.id" [disabled]="!h.isActive">
             {{ h.name }} {{ !h.isActive ? '(Inactive)' : '' }}
           </option>
         </select>
+        <span class="field-error" *ngIf="shouldShowError('hotelId')">{{ validationMessage('hotelId') }}</span>
       </div>
 
       <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
           <label>Room Category Name *</label>
-          <input type="text" [(ngModel)]="currentRoomType().name" placeholder="e.g. Deluxe Suite">
+          <input type="text" [(ngModel)]="currentRoomType().name" (blur)="markFieldTouched('name')" [class.invalid]="shouldShowError('name')" placeholder="e.g. Deluxe Suite">
+          <span class="field-error" *ngIf="shouldShowError('name')">{{ validationMessage('name') }}</span>
         </div>
         <div class="ci-input-group">
           <label>Max Guest Capacity (Pax) *</label>
-          <input type="number" [(ngModel)]="currentRoomType().capacity" placeholder="2" min="1">
+          <input type="number" [(ngModel)]="currentRoomType().capacity" (blur)="markFieldTouched('capacity')" [class.invalid]="shouldShowError('capacity')" placeholder="2" min="1">
+          <span class="field-error" *ngIf="shouldShowError('capacity')">{{ validationMessage('capacity') }}</span>
         </div>
       </div>
 
@@ -792,19 +812,22 @@
         <div class="ci-input-group">
           <label>Base Rate per Night *</label>
           <div class="ci-input-icon">
-            <input type="number" [(ngModel)]="currentRoomType().basePricePerNight" placeholder="150" min="0">
+            <input type="number" [(ngModel)]="currentRoomType().basePricePerNight" (blur)="markFieldTouched('basePricePerNight')" [class.invalid]="shouldShowError('basePricePerNight')" placeholder="150" min="0">
           </div>
+          <span class="field-error" *ngIf="shouldShowError('basePricePerNight')">{{ validationMessage('basePricePerNight') }}</span>
         </div>
         <div class="ci-input-group">
           <label>Area (Square Feet) *</label>
-          <input type="number" [(ngModel)]="currentRoomType().area" placeholder="350" min="1">
+          <input type="number" [(ngModel)]="currentRoomType().area" (blur)="markFieldTouched('area')" [class.invalid]="shouldShowError('area')" placeholder="350" min="1">
+          <span class="field-error" *ngIf="shouldShowError('area')">{{ validationMessage('area') }}</span>
         </div>
       </div>
 
 
       <div class="ci-input-group mt-3">
         <label>Description Details</label>
-        <textarea [(ngModel)]="currentRoomType().description" placeholder="Specify beds, view, balcony and custom room setup details..." rows="3"></textarea>
+        <textarea [(ngModel)]="currentRoomType().description" (blur)="markFieldTouched('description')" [class.invalid]="shouldShowError('description')" placeholder="Specify beds, view, balcony and custom room setup details..." rows="3"></textarea>
+        <span class="field-error" *ngIf="shouldShowError('description')">{{ validationMessage('description') }}</span>
       </div>
 
       <div class="ci-input-group mt-3">
@@ -858,33 +881,37 @@
           [ngModel]="selectedHotelIdForRoomForm()" 
           (ngModelChange)="onHotelChangeInRoomForm($event)"
           [disabled]="modalMode() === 'edit'"
+          [class.invalid]="shouldShowError('hotelId')"
         >
           <option *ngFor="let h of mastersService.hotels()" [value]="h.id" [disabled]="!h.isActive">
             {{ h.name }} {{ !h.isActive ? '(Inactive)' : '' }}
           </option>
         </select>
         <span class="input-tip" *ngIf="modalMode() === 'edit'">Cannot transfer rooms between properties</span>
+        <span class="field-error" *ngIf="shouldShowError('hotelId')">{{ validationMessage('hotelId') }}</span>
       </div>
 
       <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
           <label>Assign to Floor *</label>
-          <select [(ngModel)]="currentRoom().floorId">
+          <select [(ngModel)]="currentRoom().floorId" (blur)="markFieldTouched('floorId')" [class.invalid]="shouldShowError('floorId')">
             <option *ngIf="floorsForSelectedHotel().length === 0" disabled>No floors available. Create a floor first!</option>
             <option *ngFor="let f of floorsForSelectedHotel()" [value]="f.id">
               {{ f.floorNumber }}
             </option>
           </select>
+          <span class="field-error" *ngIf="shouldShowError('floorId')">{{ validationMessage('floorId') }}</span>
         </div>
 
         <div class="ci-input-group">
           <label>Room Category (Type) *</label>
-          <select [(ngModel)]="currentRoom().typeId">
+          <select [(ngModel)]="currentRoom().typeId" (blur)="markFieldTouched('typeId')" [class.invalid]="shouldShowError('typeId')">
             <option *ngIf="roomTypesForSelectedHotel().length === 0" disabled>No types available. Create a type first!</option>
             <option *ngFor="let rt of roomTypesForSelectedHotel()" [value]="rt.id">
               {{ rt.name }} (₹{{ rt.basePricePerNight }}/nt)
             </option>
           </select>
+          <span class="field-error" *ngIf="shouldShowError('typeId')">{{ validationMessage('typeId') }}</span>
         </div>
       </div>
 
@@ -893,11 +920,13 @@
       <div class="ci-form-grid">
         <div class="ci-input-group">
           <label>Room Number *</label>
-          <input type="text" [(ngModel)]="currentRoom().roomNumber" placeholder="e.g. 101 or 305-B">
+          <input type="text" [(ngModel)]="currentRoom().roomNumber" (blur)="markFieldTouched('roomNumber')" [class.invalid]="shouldShowError('roomNumber')" placeholder="e.g. 101 or 305-B">
+          <span class="field-error" *ngIf="shouldShowError('roomNumber')">{{ validationMessage('roomNumber') }}</span>
         </div>
         <div class="ci-input-group">
           <label>Max Guest Occupancy *</label>
-          <input type="number" [(ngModel)]="currentRoom().maxOccupancy" placeholder="2" min="1">
+          <input type="number" [(ngModel)]="currentRoom().maxOccupancy" (blur)="markFieldTouched('maxOccupancy')" [class.invalid]="shouldShowError('maxOccupancy')" placeholder="2" min="1">
+          <span class="field-error" *ngIf="shouldShowError('maxOccupancy')">{{ validationMessage('maxOccupancy') }}</span>
         </div>
       </div>
 
@@ -915,7 +944,8 @@
         
         <div class="ci-input-group">
           <label>Room Extension Phone</label>
-          <input type="text" [(ngModel)]="currentRoom().telephone" placeholder="e.g. Ext 101">
+          <input type="text" [(ngModel)]="currentRoom().telephone" (blur)="markFieldTouched('telephone')" [class.invalid]="shouldShowError('telephone')" placeholder="e.g. Ext 101">
+          <span class="field-error" *ngIf="shouldShowError('telephone')">{{ validationMessage('telephone') }}</span>
         </div>
       </div>
 

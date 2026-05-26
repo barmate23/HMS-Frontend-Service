@@ -2,7 +2,7 @@ import { Component, signal, computed, HostListener, inject, OnInit } from '@angu
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 
 interface Reservation {
@@ -56,6 +56,7 @@ interface Room {
 })
 export class ReservationCenter implements OnInit {
   private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
   private readonly baseUrl = '/api/v1';
 
   viewMode = signal<'LIST' | 'STAY' | 'MAP'>('LIST');
@@ -66,13 +67,16 @@ export class ReservationCenter implements OnInit {
   reservationError = signal<string | null>(null);
   reservationMessage = signal<string | null>(null);
   totalReservationRecords = signal(0);
+  selectedReservationDetails = signal<any | null>(null);
+  isReservationDetailsOpen = signal(false);
+  isLoadingReservationDetails = signal(false);
 
   // Date Range Picker State
   showCalendar = signal(false);
   showYearPicker = signal(false);
-  calendarMonth = signal(new Date(2026, 2, 1)); // March 2026
-  rangeStart = signal<Date | null>(new Date(2026, 2, 20));
-  rangeEnd = signal<Date | null>(new Date(2026, 3, 3));
+  calendarMonth = signal(new Date());
+  rangeStart = signal<Date | null>(null);
+  rangeEnd = signal<Date | null>(null);
   selectingMode = signal<'START' | 'END'>('START');
   hoverDate = signal<Date | null>(null);
 
@@ -92,6 +96,15 @@ export class ReservationCenter implements OnInit {
 
   currentMonthName(): string {
     return this.calendarMonth().toLocaleDateString('en-US', { month: 'long' });
+  }
+
+  currentMonthYear(): number {
+    return this.calendarMonth().getFullYear();
+  }
+
+  formatRangeDate(date: Date | null): string {
+    if (!date) return 'Select date';
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   nextMonthName(): string {
@@ -162,23 +175,20 @@ export class ReservationCenter implements OnInit {
     e.preventDefault();
     if (!date) return;
     
-    if (this.selectingMode() === 'START') {
+    if (this.selectingMode() === 'START' || !this.rangeStart()) {
       this.rangeStart.set(date);
-      // Auto-switch to END mode for convenience
+      this.rangeEnd.set(null);
       this.selectingMode.set('END');
-      
-      // If start is now after end, clear end
-      const end = this.rangeEnd();
-      if (end && date > end) this.rangeEnd.set(null);
     } else {
       const start = this.rangeStart();
       if (start && date < start) {
-        // If user picks an end date before start, treat it as new start
         this.rangeStart.set(date);
+        this.rangeEnd.set(null);
+        this.selectingMode.set('END');
       } else {
         this.rangeEnd.set(date);
+        this.selectingMode.set('START');
       }
-      // Stay in END mode or we could switch back if desired
     }
   }
 
@@ -211,21 +221,34 @@ export class ReservationCenter implements OnInit {
   }
 
   updateStart(val: string) {
-    if (val) this.rangeStart.set(new Date(val));
+    this.rangeStart.set(val ? this.parseDateInput(val) : null);
+    this.loadReservations();
   }
   
   updateEnd(val: string) {
-    if (val) this.rangeEnd.set(new Date(val));
+    this.rangeEnd.set(val ? this.parseDateInput(val) : null);
+    this.loadReservations();
   }
 
   clearDates() { 
     this.rangeStart.set(null); 
     this.rangeEnd.set(null); 
+    this.selectingMode.set('START');
+    this.loadReservations();
   }
   
   applyDates() { 
     this.showCalendar.set(false); 
     this.loadReservations();
+  }
+
+  dateInputValue(date: Date | null): string {
+    return date ? this.toApiDate(date) : '';
+  }
+
+  private parseDateInput(value: string): Date {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
   }
 
 
@@ -275,17 +298,31 @@ export class ReservationCenter implements OnInit {
   viewReservationDetails(id: string) {
     this.reservationError.set(null);
     this.reservationMessage.set(null);
+    this.selectedReservationDetails.set(null);
+    this.isLoadingReservationDetails.set(true);
+    this.isReservationDetailsOpen.set(true);
 
     this.http.get<StandardResponse<any>>(`${this.baseUrl}/frontOffice/getReservationById/${id}`).subscribe({
       next: (response) => {
-        const reservation = this.mapReservation(response.data ?? {});
-        this.reservationMessage.set(`Loaded reservation ${reservation.id} for ${reservation.guestName}.`);
+        this.selectedReservationDetails.set(response.data ?? {});
+        this.isLoadingReservationDetails.set(false);
       },
       error: (err) => {
         console.error('[ReservationCenter] getReservationById error:', err);
+        this.isLoadingReservationDetails.set(false);
+        this.isReservationDetailsOpen.set(false);
         this.reservationError.set(err?.error?.message || err?.error?.error?.message || 'Unable to load reservation details.');
       }
     });
+  }
+
+  closeReservationDetails() {
+    this.isReservationDetailsOpen.set(false);
+    this.selectedReservationDetails.set(null);
+  }
+
+  openEditReservation(id: string) {
+    this.router.navigate(['/new-booking'], { queryParams: { reservationId: id } });
   }
 
   cancelReservation(id: string, guestName: string) {
@@ -302,24 +339,6 @@ export class ReservationCenter implements OnInit {
       error: (err) => {
         console.error('[ReservationCenter] cancelReservation error:', err);
         this.reservationError.set(err?.error?.message || err?.error?.error?.message || 'Unable to cancel reservation.');
-      }
-    });
-  }
-
-  deleteReservation(id: string, guestName: string) {
-    if (!confirm(`Delete reservation for ${guestName}? This cannot be undone.`)) return;
-
-    this.reservationError.set(null);
-    this.reservationMessage.set(null);
-
-    this.http.delete<StandardResponse<void>>(`${this.baseUrl}/frontOffice/deleteReservation/${id}`).subscribe({
-      next: (response) => {
-        this.reservationMessage.set(response.message || 'Reservation deleted.');
-        this.loadReservations();
-      },
-      error: (err) => {
-        console.error('[ReservationCenter] deleteReservation error:', err);
-        this.reservationError.set(err?.error?.message || err?.error?.error?.message || 'Unable to delete reservation.');
       }
     });
   }
@@ -447,6 +466,37 @@ export class ReservationCenter implements OnInit {
     return status.toLowerCase().replace('_', '-');
   }
 
+  detailGuestName(details: any): string {
+    return details?.guestFullName || details?.guestName || details?.billingName || 'Guest';
+  }
+
+  detailRooms(details: any): any[] {
+    if (Array.isArray(details?.bookings)) return details.bookings;
+    if (Array.isArray(details?.rooms)) return details.rooms;
+    return [];
+  }
+
+  detailStatus(details: any): string {
+    return details?.reservationStatus || details?.status || '-';
+  }
+
+  detailPrimaryRoom(details: any): string {
+    const room = this.detailRooms(details)[0];
+    return room?.roomNumber ? `Room ${room.roomNumber}` : 'No room assigned';
+  }
+
+  detailRoomMeta(room: any): string {
+    return [
+      room.roomTypeName,
+      room.ratePlanName || detailsSafe(room, 'ratePlan.name'),
+      room.bookingStatus
+    ].filter(Boolean).join(' • ') || '-';
+  }
+
+  detailMoney(value: any): string {
+    return `₹${Number(value ?? 0).toLocaleString('en-IN')}`;
+  }
+
   stayInfo(res: Reservation): string {
     return `${res.nights ?? 0} NIGHTS • ${res.adults ?? 0}A, ${res.children ?? 0}C`;
   }
@@ -454,4 +504,8 @@ export class ReservationCenter implements OnInit {
   getInitials(name: string): string {
     return name.split(' ').map(n => n[0]).join('');
   }
+}
+
+function detailsSafe(obj: any, path: string): any {
+  return path.split('.').reduce((acc, key) => acc?.[key], obj);
 }

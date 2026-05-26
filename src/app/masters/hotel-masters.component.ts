@@ -7,6 +7,9 @@ import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { HotelMastersService, Hotel, Floor, RoomType, Room, RatePlan } from './hotel-masters.service';
 
+type MasterTab = 'hotels' | 'floors' | 'room-types' | 'rooms' | 'rate-plans';
+type ValidationErrors = Partial<Record<string, string>>;
+
 @Component({
   selector: 'app-hotel-masters',
   standalone: true,
@@ -20,7 +23,7 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   private routerSub?: Subscription;
 
   // Active tab state: 'hotels' | 'floors' | 'room-types' | 'rooms' | 'rate-plans'
-  activeTab = signal<'hotels' | 'floors' | 'room-types' | 'rooms' | 'rate-plans'>('hotels');
+  activeTab = signal<MasterTab>('hotels');
   
   // Search query
   searchQuery = signal<string>('');
@@ -44,6 +47,9 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   // Saving / deleting state
   isSaving = signal(false);
   isDeleting = signal(false);
+  formSubmitted = signal(false);
+  touchedFields = signal<Record<string, boolean>>({});
+  formErrors = signal<ValidationErrors>({});
 
   // Helper form state for Rooms tab: selected Hotel to filter Floor & RoomType
   selectedHotelIdForRoomForm = signal<number | null>(null);
@@ -79,7 +85,7 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     this.searchQuery.set('');
   }
 
-  switchTab(tab: 'hotels' | 'floors' | 'room-types' | 'rooms' | 'rate-plans') {
+  switchTab(tab: MasterTab) {
     this.router.navigate([`/masters/${tab}`]);
   }
 
@@ -222,10 +228,13 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     this.selectedHotelIdForRoomForm.set(hotelId);
     // Reset Floor & RoomType selections when hotel changes
     this.currentRoom.update(r => ({ ...r, floorId: undefined, typeId: undefined }));
+    this.markFieldTouched('hotelId');
+    this.validateForm('rooms', false);
   }
 
   // --- Modal Open/Close ---
   openCreateModal() {
+    this.resetValidation();
     this.modalMode.set('create');
     const tab = this.activeTab();
     if (tab === 'hotels') {
@@ -296,6 +305,7 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   }
 
   openEditModal(item: any) {
+    this.resetValidation();
     this.modalMode.set('edit');
     const tab = this.activeTab();
     if (tab === 'hotels') {
@@ -324,22 +334,223 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     document.body.style.overflow = 'hidden';
   }
 
-  closeModal(tab: 'hotels' | 'floors' | 'room-types' | 'rooms' | 'rate-plans') {
+  closeModal(tab: MasterTab) {
     if (tab === 'hotels') this.isHotelModalOpen.set(false);
     if (tab === 'floors') this.isFloorModalOpen.set(false);
     if (tab === 'room-types') this.isRoomTypeModalOpen.set(false);
     if (tab === 'rooms') this.isRoomModalOpen.set(false);
     if (tab === 'rate-plans') this.isRatePlanModalOpen.set(false);
+    this.resetValidation();
     document.body.style.overflow = '';
+  }
+
+  markFieldTouched(field: string) {
+    this.touchedFields.update(fields => ({ ...fields, [field]: true }));
+    this.validateForm(this.activeTab(), false);
+  }
+
+  shouldShowError(field: string): boolean {
+    return !!(this.formSubmitted() || this.touchedFields()[field]) && !!this.formErrors()[field];
+  }
+
+  validationMessage(field: string): string {
+    return this.formErrors()[field] || '';
+  }
+
+  private resetValidation() {
+    this.formSubmitted.set(false);
+    this.touchedFields.set({});
+    this.formErrors.set({});
+  }
+
+  private validateForm(tab: MasterTab, submit = true): boolean {
+    if (submit) this.formSubmitted.set(true);
+    const errors =
+      tab === 'hotels' ? this.validateHotelForm() :
+      tab === 'floors' ? this.validateFloorForm() :
+      tab === 'room-types' ? this.validateRoomTypeForm() :
+      tab === 'rooms' ? this.validateRoomForm() :
+      this.validateRatePlanForm();
+
+    this.formErrors.set(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  private validateHotelForm(): ValidationErrors {
+    const h = this.currentHotel();
+    const errors: ValidationErrors = {};
+    const name = (h.name || '').trim();
+    const email = (h.email || '').trim();
+    const phone = (h.phone || '').trim();
+    const zipCode = (h.zipCode || '').trim();
+
+    if (!name) errors['name'] = 'Hotel name is required.';
+    else if (name.length < 2) errors['name'] = 'Enter a valid hotel name.';
+    else if (!/^[A-Za-z0-9][A-Za-z0-9 .,'&()-]*$/.test(name)) errors['name'] = 'Use letters, numbers and common punctuation only.';
+    else if (this.isDuplicateHotelName(name, h.id)) errors['name'] = 'A hotel with this name already exists.';
+
+    if (!email) errors['email'] = 'Email address is required.';
+    else if (!this.isValidEmail(email)) errors['email'] = 'Enter a valid email address.';
+
+    if (!phone) errors['phone'] = 'Phone number is required.';
+    else if (!this.isValidPhone(phone)) errors['phone'] = 'Enter a valid phone number.';
+
+    if (!(h.address || '').trim()) errors['address'] = 'Street address is required.';
+    if (!(h.city || '').trim()) errors['city'] = 'City is required.';
+    else if (!this.isValidPlaceName(h.city || '')) errors['city'] = 'Enter a valid city name.';
+
+    if (!(h.state || '').trim()) errors['state'] = 'State or region is required.';
+    else if (!this.isValidPlaceName(h.state || '')) errors['state'] = 'Enter a valid state or region.';
+
+    if (!(h.country || '').trim()) errors['country'] = 'Country is required.';
+    else if (!this.isValidPlaceName(h.country || '')) errors['country'] = 'Enter a valid country.';
+
+    if (!zipCode) errors['zipCode'] = 'Zip code is required.';
+    else if (!/^[A-Za-z0-9 -]{4,10}$/.test(zipCode)) errors['zipCode'] = 'Enter a valid zip/post code.';
+
+    if (!this.isPositiveInteger(h.totalRooms)) errors['totalRooms'] = 'Total rooms must be at least 1.';
+
+    return errors;
+  }
+
+  private validateFloorForm(): ValidationErrors {
+    const f = this.currentFloor();
+    const errors: ValidationErrors = {};
+    const floorNumber = (f.floorNumber || '').trim();
+
+    if (!f.hotelId) errors['hotelId'] = 'Hotel property is required.';
+    if (!floorNumber) errors['floorNumber'] = 'Floor number or name is required.';
+    else if (!/^[A-Za-z0-9][A-Za-z0-9 ._-]*$/.test(floorNumber)) errors['floorNumber'] = 'Use letters, numbers, spaces, hyphen or underscore only.';
+    else if (this.isDuplicateFloor(floorNumber, f.hotelId, f.id)) errors['floorNumber'] = 'This floor already exists for the selected hotel.';
+
+    if (!this.isPositiveInteger(f.noOfRooms)) errors['noOfRooms'] = 'Capacity must be at least 1.';
+    if ((f.telephone || '').trim() && !this.isValidExtension(f.telephone || '')) errors['telephone'] = 'Enter a valid phone or extension.';
+
+    return errors;
+  }
+
+  private validateRoomTypeForm(): ValidationErrors {
+    const rt = this.currentRoomType();
+    const errors: ValidationErrors = {};
+    const name = (rt.name || '').trim();
+
+    if (!rt.hotelId) errors['hotelId'] = 'Hotel property is required.';
+    if (!name) errors['name'] = 'Room category name is required.';
+    else if (name.length < 2) errors['name'] = 'Enter a valid category name.';
+    else if (!/^[A-Za-z0-9][A-Za-z0-9 .,'&()-]*$/.test(name)) errors['name'] = 'Use letters, numbers and common punctuation only.';
+    else if (this.isDuplicateRoomType(name, rt.hotelId, rt.id)) errors['name'] = 'This room category already exists for the selected hotel.';
+
+    if (!this.isPositiveInteger(rt.capacity)) errors['capacity'] = 'Capacity must be at least 1.';
+    if (!this.isNonNegativeNumber(rt.basePricePerNight)) errors['basePricePerNight'] = 'Base rate must be 0 or more.';
+    if (!this.isPositiveNumber(rt.area)) errors['area'] = 'Area must be greater than 0.';
+    if ((rt.description || '').length > 250) errors['description'] = 'Description must be 250 characters or fewer.';
+
+    return errors;
+  }
+
+  private validateRoomForm(): ValidationErrors {
+    const room = this.currentRoom();
+    const errors: ValidationErrors = {};
+    const roomNumber = (room.roomNumber || '').trim();
+    const hotelId = this.selectedHotelIdForRoomForm();
+
+    if (!hotelId) errors['hotelId'] = 'Hotel property is required.';
+    if (!room.floorId) errors['floorId'] = 'Floor is required.';
+    if (!room.typeId) errors['typeId'] = 'Room category is required.';
+
+    if (!roomNumber) errors['roomNumber'] = 'Room number is required.';
+    else if (!/^[A-Za-z0-9][A-Za-z0-9 -]*$/.test(roomNumber)) errors['roomNumber'] = 'Use letters, numbers, spaces or hyphens only.';
+    else if (this.isDuplicateRoom(roomNumber, room.floorId, room.id)) errors['roomNumber'] = 'This room number already exists on the selected floor.';
+
+    if (!this.isPositiveInteger(room.maxOccupancy)) errors['maxOccupancy'] = 'Max occupancy must be at least 1.';
+    if ((room.telephone || '').trim() && !this.isValidExtension(room.telephone || '')) errors['telephone'] = 'Enter a valid phone or extension.';
+
+    return errors;
+  }
+
+  private validateRatePlanForm(): ValidationErrors {
+    const rp = this.currentRatePlan();
+    const errors: ValidationErrors = {};
+    const name = (rp.name || '').trim();
+
+    if (!name) errors['name'] = 'Rate plan name is required.';
+    else if (name.length < 2) errors['name'] = 'Enter a valid rate plan name.';
+    else if (!/^[A-Za-z0-9][A-Za-z0-9 .,'&()+/-]*$/.test(name)) errors['name'] = 'Use letters, numbers and common punctuation only.';
+    else if (this.isDuplicateRatePlan(name, rp.id)) errors['name'] = 'A rate plan with this name already exists.';
+
+    if ((rp.description || '').length > 250) errors['description'] = 'Description must be 250 characters or fewer.';
+    if (!this.isFiniteNumber(rp.priceAdjustment)) errors['priceAdjustment'] = 'Price adjustment must be a valid number.';
+    else if (Math.abs(Number(rp.priceAdjustment)) > 999999) errors['priceAdjustment'] = 'Price adjustment is too large.';
+    if (!this.isNonNegativeInteger(rp.displayOrder)) errors['displayOrder'] = 'Display order must be 0 or more.';
+
+    return errors;
+  }
+
+  private isDuplicateHotelName(name: string, id?: number): boolean {
+    return this.mastersService.hotels().some(h => h.id !== id && h.name.trim().toLowerCase() === name.trim().toLowerCase());
+  }
+
+  private isDuplicateFloor(floorNumber: string, hotelId?: number, id?: number): boolean {
+    return this.mastersService.floors().some(f => f.id !== id && Number(f.hotelId) === Number(hotelId) && f.floorNumber.trim().toLowerCase() === floorNumber.trim().toLowerCase());
+  }
+
+  private isDuplicateRoomType(name: string, hotelId?: number, id?: number): boolean {
+    return this.mastersService.roomTypes().some(rt => rt.id !== id && Number(rt.hotelId) === Number(hotelId) && rt.name.trim().toLowerCase() === name.trim().toLowerCase());
+  }
+
+  private isDuplicateRoom(roomNumber: string, floorId?: number, id?: number): boolean {
+    return this.mastersService.rooms().some(room => room.id !== id && Number(room.floorId) === Number(floorId) && room.roomNumber.trim().toLowerCase() === roomNumber.trim().toLowerCase());
+  }
+
+  private isDuplicateRatePlan(name: string, id?: number): boolean {
+    return this.mastersService.ratePlans().some(rp => rp.id !== id && rp.name.trim().toLowerCase() === name.trim().toLowerCase());
+  }
+
+  private isValidEmail(value: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value);
+  }
+
+  private isValidPhone(value: string): boolean {
+    const digits = value.replace(/\D/g, '');
+    return digits.length >= 7 && digits.length <= 15;
+  }
+
+  private isValidExtension(value: string): boolean {
+    return /^[A-Za-z0-9 +()-]{2,20}$/.test(value.trim());
+  }
+
+  private isValidPlaceName(value: string): boolean {
+    return /^[A-Za-z][A-Za-z .'-]*$/.test(value.trim());
+  }
+
+  private isPositiveInteger(value: any): boolean {
+    const number = Number(value);
+    return Number.isInteger(number) && number >= 1;
+  }
+
+  private isNonNegativeInteger(value: any): boolean {
+    const number = Number(value);
+    return Number.isInteger(number) && number >= 0;
+  }
+
+  private isPositiveNumber(value: any): boolean {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0;
+  }
+
+  private isNonNegativeNumber(value: any): boolean {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0;
+  }
+
+  private isFiniteNumber(value: any): boolean {
+    return Number.isFinite(Number(value));
   }
 
   // --- Save Operations ---
   saveHotel() {
+    if (!this.validateForm('hotels')) return;
     const hotel = this.currentHotel();
-    if (!hotel.name || !hotel.email) {
-      alert('Please fill out all required fields (Name, Email).');
-      return;
-    }
     this.isSaving.set(true);
     this.mastersService.saveHotel(hotel).subscribe({
       next: () => { this.isSaving.set(false); this.closeModal('hotels'); },
@@ -348,11 +559,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   }
 
   saveFloor() {
+    if (!this.validateForm('floors')) return;
     const floor = this.currentFloor();
-    if (!floor.hotelId || !floor.floorNumber) {
-      alert('Please select a hotel and specify a floor number.');
-      return;
-    }
     this.isSaving.set(true);
     this.mastersService.saveFloor(floor).subscribe({
       next: () => { this.isSaving.set(false); this.closeModal('floors'); },
@@ -361,11 +569,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   }
 
   saveRoomType() {
+    if (!this.validateForm('room-types')) return;
     const rt = this.currentRoomType();
-    if (!rt.hotelId || !rt.name || rt.basePricePerNight === undefined) {
-      alert('Please fill out all required fields.');
-      return;
-    }
     this.isSaving.set(true);
     this.mastersService.saveRoomType(rt).subscribe({
       next: () => { this.isSaving.set(false); this.closeModal('room-types'); },
@@ -374,11 +579,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   }
 
   saveRoom() {
+    if (!this.validateForm('rooms')) return;
     const room = this.currentRoom();
-    if (!room.roomNumber || !room.floorId || !room.typeId) {
-      alert('Please specify a room number, floor, and room type.');
-      return;
-    }
     this.isSaving.set(true);
     this.mastersService.saveRoom(room).subscribe({
       next: () => { this.isSaving.set(false); this.closeModal('rooms'); },
@@ -387,11 +589,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   }
 
   saveRatePlan() {
+    if (!this.validateForm('rate-plans')) return;
     const ratePlan = this.currentRatePlan();
-    if (!ratePlan.name) {
-      alert('Please enter a rate plan name.');
-      return;
-    }
     this.isSaving.set(true);
     this.mastersService.saveRatePlan(ratePlan).subscribe({
       next: () => { this.isSaving.set(false); this.closeModal('rate-plans'); },

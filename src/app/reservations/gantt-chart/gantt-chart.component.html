@@ -1,0 +1,141 @@
+<div class="arrivals-page">
+  <nav class="sticky-nav">
+    <div class="nav-left">
+      <div class="title-group">
+        <span class="nav-title">Booking Gantt Chart</span>
+        <span class="nav-subtitle">Room occupancy timeline by selected date range</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <div class="date-range">
+        <label>
+          <span>Floor</span>
+          <select [(ngModel)]="selectedFloorId" (ngModelChange)="onFloorChange()">
+            <option *ngFor="let f of floors" [ngValue]="f.id">{{ f.floorNumber }}</option>
+          </select>
+        </label>
+        <label>
+          <span>From</span>
+          <input type="date" [(ngModel)]="startDate">
+        </label>
+        <label>
+          <span>To</span>
+          <input type="date" [(ngModel)]="endDate">
+        </label>
+      </div>
+      <button class="btn-primary" (click)="loadGanttData()">
+        <span class="material-icons-round">sync</span>
+        Apply
+      </button>
+      <button class="btn-outline" [class.active]="showTodayFocus" (click)="toggleTodayFocus()">
+        <span class="material-icons-round">today</span>
+        Focus Now
+      </button>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon total"><span class="material-icons-round">event_note</span></div>
+        <div class="stat-details">
+          <span class="stat-value">{{ totalBookings }}</span>
+          <span class="stat-label">Bookings In Range</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon checked-in"><span class="material-icons-round">meeting_room</span></div>
+        <div class="stat-details">
+          <span class="stat-value">{{ occupiedRooms }}</span>
+          <span class="stat-label">Occupied Rooms</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon pending"><span class="material-icons-round">login</span></div>
+        <div class="stat-details">
+          <span class="stat-value">{{ checkedInBookings }}</span>
+          <span class="stat-label">Checked In</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modern-card">
+      <div class="card-header">
+        <h2 class="card-title">Timeline View</h2>
+      </div>
+
+      <div class="state" *ngIf="isLoading">Loading Gantt chart...</div>
+      <div class="state error" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+      <div class="gantt-shell" *ngIf="!isLoading && !errorMessage">
+        <div class="left-header">
+          <span>Room</span>
+          <span>Guest</span>
+          <span>Status</span>
+        </div>
+        <div class="timeline-header" #timelineHeaderEl (scroll)="onHeaderScroll()" [style.--day-col-width.px]="dayColWidthPx">
+          <div class="today-focus-line" *ngIf="showTodayFocus && todayLinePct !== null" [style.left.%]="todayLinePct"></div>
+          <div class="timeline-header-inner" [style.width.px]="timelineWidthPx">
+            <div class="day-col" *ngFor="let d of dateColumns">
+              <span class="day-name">{{ dayName(d) }}</span>
+              <span class="day-date">{{ labelForDate(d) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="left-body">
+          <div class="row-meta"
+               *ngFor="let lane of roomLanes"
+               (mouseenter)="onRoomHover(lane.roomId)"
+               (mouseleave)="onRoomHover(null)"
+               (click)="togglePinnedRoom(lane.roomId)">
+            <div class="room-badge">{{ lane.roomNumber }}</div>
+            <div class="guest-block">
+              <div class="guest-top-row">
+                <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+              </div>
+              <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+              <div class="guest-hint-row">
+                <span class="guest-hint clickable" *ngIf="lane.bookings.length === 1">View List</span>
+                <span class="guest-hint more" *ngIf="lane.bookings.length > 1">+{{ lane.bookings.length - 1 }} More</span>
+              </div>
+            </div>
+            <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+
+            <div class="guest-mini-list" *ngIf="isGuestListVisible(lane.roomId)">
+              <div class="mini-header">
+                <strong>Room {{ lane.roomNumber }} Bookings</strong>
+                <span>{{ lane.bookings.length }}</span>
+              </div>
+              <div class="mini-item" *ngFor="let b of lane.bookings">
+                <div class="name">{{ b.guestName }}</div>
+                <div class="meta">{{ formatRange(b.checkInDate, b.checkOutDate) }} • {{ b.reservationRef }}</div>
+              </div>
+              <div class="mini-empty" *ngIf="lane.bookings.length === 0">No bookings in selected range.</div>
+            </div>
+          </div>
+          <div class="empty-row" *ngIf="roomLanes.length === 0">No rooms found for selected floor.</div>
+        </div>
+
+        <div class="timeline-body" #timelineBodyEl (scroll)="onBodyScroll()" [style.--day-col-width.px]="dayColWidthPx">
+          <div class="today-focus-line body" *ngIf="showTodayFocus && todayLinePct !== null" [style.left.%]="todayLinePct"></div>
+          <div class="timeline-body-inner" [style.width.px]="timelineWidthPx">
+            <div class="timeline-row" *ngFor="let lane of roomLanes">
+              <div class="grid-lines">
+                <span *ngFor="let d of dateColumns"></span>
+              </div>
+              <div class="booking-bar"
+                   *ngFor="let row of lane.bookings"
+                   [style.left.px]="row.barLeftPx"
+                   [style.width.px]="row.barWidthPx"
+                   [style.background]="row.color || ''">
+                <span>{{ row.guestName }} • {{ row.nights }}N</span>
+              </div>
+            </div>
+          </div>
+          <div class="empty-row" *ngIf="roomLanes.length === 0"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

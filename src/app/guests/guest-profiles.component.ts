@@ -1,9 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { FrontOfficeApiService, GuestApiItem, GuestRequest } from '../front-office-api.service';
 
 export interface GuestProfile {
   id: string;
+  apiId?: number;
   firstName: string;
   lastName: string;
   email: string;
@@ -23,21 +25,25 @@ export interface GuestProfile {
   templateUrl: './guest-profiles.component.html',
   styleUrls: ['./guest-profiles.component.css']
 })
-export class GuestProfilesComponent {
+export class GuestProfilesComponent implements OnInit {
   searchQuery = '';
-  
-  guests: GuestProfile[] = [
-    { id: 'G-1001', firstName: 'Jacob', lastName: 'Jones', email: 'jacob.j@example.com', phone: '+1 202-555-0188', nationality: 'USA', vipStatus: true, totalStays: 12, totalSpent: 45000, lastVisit: 'May 10, 2026', notes: 'Prefers high floor' },
-    { id: 'G-1002', firstName: 'Jane', lastName: 'Cooper', email: 'jane.c@example.com', phone: '+44 7700 900111', nationality: 'UK', vipStatus: false, totalStays: 2, totalSpent: 8500, lastVisit: 'Apr 15, 2026', notes: 'Allergic to peanuts' },
-    { id: 'G-1003', firstName: 'Wade', lastName: 'Warren', email: 'wade.w@example.com', phone: '+91 9876500000', nationality: 'India', vipStatus: false, totalStays: 5, totalSpent: 22000, lastVisit: 'Mar 22, 2026', notes: 'Early check-in usually required' },
-    { id: 'G-1004', firstName: 'Esther', lastName: 'Howard', email: 'esther.h@example.com', phone: '+1 555-0199', nationality: 'Canada', vipStatus: true, totalStays: 8, totalSpent: 34000, lastVisit: 'Feb 05, 2026', notes: 'Corporate rate applied' },
-    { id: 'G-1005', firstName: 'Cameron', lastName: 'Williamson', email: 'cam.w@example.com', phone: '+61 1900 654 321', nationality: 'Australia', vipStatus: true, totalStays: 15, totalSpent: 62000, lastVisit: 'Jan 12, 2026', notes: 'Wine bottle in room' }
-  ];
+  guests: GuestProfile[] = [];
+  isLoading = false;
+  errorMessage = '';
+  isModalOpen = false;
+  modalMode: 'create' | 'edit' = 'create';
+  currentGuest: Partial<GuestProfile> = {};
+
+  constructor(private readonly api: FrontOfficeApiService) {}
+
+  ngOnInit() {
+    this.loadGuests();
+  }
 
   get filteredGuests() {
     if (!this.searchQuery) return this.guests;
     const lowerQ = this.searchQuery.toLowerCase();
-    return this.guests.filter(g => 
+    return this.guests.filter(g =>
       g.firstName.toLowerCase().includes(lowerQ) ||
       g.lastName.toLowerCase().includes(lowerQ) ||
       g.email.toLowerCase().includes(lowerQ) ||
@@ -46,17 +52,24 @@ export class GuestProfilesComponent {
     );
   }
 
-  // Modal State
-  isModalOpen = false;
-  modalMode: 'create' | 'edit' = 'create';
-  
-  // Form State
-  currentGuest: Partial<GuestProfile> = {};
+  loadGuests() {
+    this.isLoading = true;
+    this.errorMessage = '';
+    this.api.getGuests().subscribe({
+      next: response => {
+        this.guests = (response.data || []).map(guest => this.mapGuest(guest));
+        this.isLoading = false;
+      },
+      error: () => {
+        this.errorMessage = 'Unable to load guests.';
+        this.isLoading = false;
+      }
+    });
+  }
 
   openCreateModal() {
     this.modalMode = 'create';
     this.currentGuest = {
-      id: 'G-' + Math.floor(1000 + Math.random() * 9000),
       firstName: '',
       lastName: '',
       email: '',
@@ -74,7 +87,7 @@ export class GuestProfilesComponent {
 
   openEditModal(guest: GuestProfile) {
     this.modalMode = 'edit';
-    this.currentGuest = { ...guest }; // clone
+    this.currentGuest = { ...guest };
     this.isModalOpen = true;
     document.body.style.overflow = 'hidden';
   }
@@ -85,20 +98,59 @@ export class GuestProfilesComponent {
   }
 
   saveGuest() {
-    if (this.modalMode === 'create') {
-      this.guests.unshift(this.currentGuest as GuestProfile);
-    } else {
-      const idx = this.guests.findIndex(g => g.id === this.currentGuest.id);
-      if (idx !== -1) {
-        this.guests[idx] = this.currentGuest as GuestProfile;
-      }
-    }
-    this.closeModal();
+    const payload = this.toGuestRequest(this.currentGuest);
+    const request = this.modalMode === 'create' || !this.currentGuest.apiId
+      ? this.api.createGuest(payload)
+      : this.api.updateGuest(this.currentGuest.apiId, payload);
+
+    request.subscribe({
+      next: () => {
+        this.closeModal();
+        this.loadGuests();
+      },
+      error: () => this.errorMessage = 'Unable to save guest.'
+    });
   }
 
   deleteGuest(id: string) {
-    if (confirm('Are you sure you want to delete this guest profile?')) {
-      this.guests = this.guests.filter(g => g.id !== id);
-    }
+    const guest = this.guests.find(g => g.id === id);
+    if (!guest?.apiId || !confirm('Are you sure you want to delete this guest profile?')) return;
+
+    this.api.deleteGuest(guest.apiId).subscribe({
+      next: () => this.loadGuests(),
+      error: () => this.errorMessage = 'Unable to delete guest.'
+    });
+  }
+
+  private mapGuest(guest: GuestApiItem): GuestProfile {
+    return {
+      id: `G-${guest.id}`,
+      apiId: guest.id,
+      firstName: guest.firstName || '',
+      lastName: guest.lastName || '',
+      email: guest.email || '',
+      phone: `${guest.countryCode || ''} ${guest.phone || ''}`.trim(),
+      nationality: guest.nationality || guest.country || '',
+      vipStatus: !!guest.isVip,
+      totalStays: 0,
+      totalSpent: 0,
+      lastVisit: '-',
+      notes: guest.guestNotes || guest.preference || ''
+    };
+  }
+
+  private toGuestRequest(guest: Partial<GuestProfile>): GuestRequest {
+    const phone = guest.phone || '';
+    return {
+      title: 'MR',
+      firstName: guest.firstName || '',
+      lastName: guest.lastName || '',
+      countryCode: phone.startsWith('+') ? phone.split(' ')[0] : '',
+      phone: phone.startsWith('+') ? phone.split(' ').slice(1).join(' ') || phone : phone,
+      email: guest.email || '',
+      nationality: guest.nationality || '',
+      guestNotes: guest.notes || '',
+      isVip: !!guest.vipStatus
+    };
   }
 }

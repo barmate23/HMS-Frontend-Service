@@ -10,9 +10,9 @@
     <div class="nav-right">
       <div class="search-box">
         <span class="material-icons-round">search</span>
-        <input type="text" placeholder="Search guests or booking ref...">
+        <input type="text" placeholder="Search guests or booking ref..." [(ngModel)]="searchQuery" (keyup.enter)="loadArrivals()">
       </div>
-      <button class="btn-outline">
+      <button class="btn-outline" (click)="loadArrivals()">
         <span class="material-icons-round">refresh</span>
       </button>
     </div>
@@ -55,6 +55,8 @@
       </div>
       
       <div class="table-container">
+        <div *ngIf="isLoading" style="padding: 24px; color: var(--surface-500);">Loading arrivals...</div>
+        <div *ngIf="errorMessage" style="padding: 16px 24px; color: #be123c;">{{ errorMessage }}</div>
         <table class="premium-table">
           <thead>
             <tr>
@@ -67,7 +69,7 @@
               <th>ACTION</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody *ngIf="!isLoading">
             <tr *ngFor="let guest of arrivals" [class.is-checked-in]="guest.status === 'Checked In'">
               <td>
                 <div class="guest-info">
@@ -107,6 +109,9 @@
                   <span class="material-icons-round">visibility</span> View Folio
                 </button>
               </td>
+            </tr>
+            <tr *ngIf="arrivals.length === 0">
+              <td colspan="7" style="text-align: center; padding: 40px; color: var(--surface-500);">No arrivals found.</td>
             </tr>
           </tbody>
         </table>
@@ -195,7 +200,7 @@
         <!-- Identity verification placeholder -->
         <div class="ci-input-group">
           <label>ID Verification</label>
-          <select>
+          <select [(ngModel)]="idVerification">
             <option>Passport Verified</option>
             <option>Aadhar Card Verified</option>
             <option>Pending Verification</option>

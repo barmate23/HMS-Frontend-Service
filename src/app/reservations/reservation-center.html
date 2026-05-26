@@ -1,13 +1,13 @@
 <div class="reservation-container">
   <!-- Combined Compact Header -->
-  <div class="compact-header">
+  <div class="compact-header" [class.map-mode]="viewMode() === 'MAP'">
     <div class="header-left">
-      <div class="search-input">
+      <div class="search-input" *ngIf="viewMode() === 'LIST'">
         <span class="material-icons-round">search</span>
         <input type="text" placeholder="Search guest, email, ID..." [ngModel]="searchText()" (ngModelChange)="onSearchChange($event)">
       </div>
       
-      <div class="header-filters">
+      <div class="header-filters" *ngIf="viewMode() === 'LIST'">
         <select class="filter-dropdown status-select" [ngModel]="statusFilter()" (ngModelChange)="onStatusChange($event)">
           <option value="ALL">All Status</option>
           <option value="PENDING">Pending</option>
@@ -36,6 +36,22 @@
     </div>
 
     <div class="header-right">
+      <div class="map-top-filters" *ngIf="viewMode() === 'MAP'">
+        <label>
+          <span>Floor</span>
+          <select [ngModel]="mapSelectedFloorId()" (ngModelChange)="onMapFloorChange($event)">
+            <option *ngFor="let f of mapFloors()" [value]="f.id">{{ f.floorNumber }}</option>
+          </select>
+        </label>
+        <label>
+          <span>Date</span>
+          <input type="date" [ngModel]="mapSelectedDate()" (ngModelChange)="mapSelectedDate.set($event)">
+        </label>
+        <button class="mapv2-fetch-btn" (click)="loadRoomWiseStatus()">
+          <span class="material-icons-round">sync</span>
+          Get Room Wise Status
+        </button>
+      </div>
       <div class="view-toggles">
         <button [class.active]="viewMode() === 'LIST'" (click)="setView('LIST')">
           <span class="material-icons-round">list</span>
@@ -185,72 +201,62 @@
 
     <!-- Map View (Room Rack) -->
     <div class="map-view" *ngIf="viewMode() === 'MAP'">
-      <div class="map-layout">
-        <!-- Floor Sidebar -->
-        <div class="floor-sidebar">
-          <div class="floor-item" 
-               *ngFor="let floor of floors" 
-               [class.active]="selectedFloor() === floor"
-               (click)="setFloor(floor)">
-            <div class="floor-main">
-              <span class="material-icons-round floor-icon">layers</span>
-              <span class="f-num">{{floor.split(' ')[1]}}</span>
-            </div>
-            <span class="f-label">FLOOR</span>
+      <div class="mapv2-wrap">
+        <div class="mapv2-toolbar">
+          <div class="mapv2-title">
+            <h3>Room Wise Status</h3>
+            <p>Room status cards for selected floor and date</p>
           </div>
         </div>
 
-        <!-- Room Grid -->
-        <div class="room-rack-content">
-          <div class="rack-header">
-            <h3>{{selectedFloor()}} Layout</h3>
-            <div class="rack-legend">
-              <div class="legend-item"><span class="dot available"></span> AVAILABLE</div>
-              <div class="legend-item"><span class="dot occupied"></span> OCCUPIED</div>
-              <div class="legend-item"><span class="dot dirty"></span> DIRTY</div>
-              <div class="legend-item"><span class="dot maintenance"></span> SERVICE</div>
-            </div>
-          </div>
+        <div class="mapv2-legend">
+          <div class="legend-item"><span class="dot available"></span> AVAILABLE</div>
+          <div class="legend-item"><span class="dot occupied"></span> OCCUPIED</div>
+          <div class="legend-item"><span class="dot booked"></span> BOOKED</div>
+          <div class="legend-item"><span class="dot dirty"></span> DIRTY</div>
+          <div class="legend-item"><span class="dot maintenance"></span> SERVICE</div>
+        </div>
 
-          <!-- DEFINITIVE SCROLLABLE BOX -->
-          <div class="grid-viewport">
-            <div class="room-grid">
-              <div *ngFor="let room of filteredRooms()" 
-                   class="room-tile" 
-                   [ngClass]="room.status">
-                <div class="tile-status-bar"></div>
-                
-                <div class="tile-header">
-                  <span class="r-num">{{room.number}}</span>
-                  <span class="r-type">{{room.type}}</span>
-                </div>
+        <div class="reservation-state loading" *ngIf="mapIsLoading()">
+          <span class="material-icons-round spin">sync</span>
+          Loading room wise status...
+        </div>
+        <div class="reservation-state error" *ngIf="mapError() && !mapIsLoading()">
+          <span class="material-icons-round">error_outline</span>
+          <span>{{ mapError() }}</span>
+        </div>
 
-                <div class="tile-body">
-                  <div class="guest-row" *ngIf="room.guest">
-                    <i class="material-icons-round">person</i>
-                    <span class="guest-name">{{room.guest}}</span>
-                  </div>
-                  <div class="status-row">
-                    <span class="status-text">{{room.status | uppercase}}</span>
-                  </div>
-                </div>
+        <div class="mapv2-grid-viewport" *ngIf="!mapIsLoading() && !mapError()">
+          <div class="room-grid">
+            <div *ngFor="let room of filteredRooms()"
+                 class="room-tile"
+                 [ngClass]="room.status">
+              <div class="tile-status-bar"></div>
 
-                <div class="tile-actions">
-                  <button class="action-btn btn-edit" title="Edit">
-                    <span class="material-icons-round">edit</span>
-                  </button>
-                  <button class="action-btn btn-in" title="Check In">
-                    <span class="material-icons-round">login</span>
-                  </button>
-                  <button class="action-btn btn-out" title="Check Out">
-                    <span class="material-icons-round">logout</span>
-                  </button>
+              <div class="tile-header">
+                <span class="r-num">{{ room.number }}</span>
+                <span class="r-type">{{ room.type }}</span>
+              </div>
+
+              <div class="tile-body">
+                <div class="guest-row" *ngIf="room.guest">
+                  <i class="material-icons-round">person</i>
+                  <span class="guest-name">{{ room.guest }}</span>
                 </div>
+                <div class="status-row">
+                  <span class="status-text">{{ room.status | uppercase }}</span>
+                </div>
+                <div class="room-ref" *ngIf="room.reservationRef">{{ room.reservationRef }}</div>
               </div>
             </div>
           </div>
+          <div class="empty-state" *ngIf="filteredRooms().length === 0">
+            <span class="material-icons-round">meeting_room</span>
+            <p>No rooms available for selected floor.</p>
+          </div>
         </div>
       </div>
+
     </div>
 
   </div>
@@ -356,6 +362,22 @@
           <div class="wide"><span>Billing Address</span><strong>{{ details.billingAddress || '-' }}</strong></div>
           <div class="wide"><span>Notes</span><strong>{{ details.notes || '-' }}</strong></div>
         </div>
+      </div>
+      <div class="map-top-filters" *ngIf="viewMode() === 'MAP'">
+        <label>
+          <span>Floor</span>
+          <select [ngModel]="mapSelectedFloorId()" (ngModelChange)="onMapFloorChange($event)">
+            <option *ngFor="let f of mapFloors()" [value]="f.id">{{ f.floorNumber }}</option>
+          </select>
+        </label>
+        <label>
+          <span>Date</span>
+          <input type="date" [ngModel]="mapSelectedDate()" (ngModelChange)="mapSelectedDate.set($event)">
+        </label>
+        <button class="mapv2-fetch-btn" (click)="loadRoomWiseStatus()">
+          <span class="material-icons-round">sync</span>
+          Get Room Wise Status
+        </button>
       </div>
     </div>
   </div>

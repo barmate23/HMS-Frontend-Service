@@ -43,10 +43,45 @@
   flex: 1;
 }
 
+.map-top-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.map-top-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  justify-content: flex-end;
+}
+
+.map-top-filters label span {
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--surface-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.map-top-filters select,
+.map-top-filters input {
+  height: 32px;
+  min-width: 130px;
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-family: var(--font-poppins);
+  font-weight: 700;
+  color: var(--surface-800);
+  background: white;
+}
+
 .header-right {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  align-items: flex-end;
+  gap: 12px;
 }
 
 .search-input {
@@ -743,6 +778,7 @@
   padding: 1.5px;
   border-radius: 4px;
   border: 1px solid var(--surface-200);
+  height: 32px;
 }
 
 .view-toggles button {
@@ -780,6 +816,7 @@
   cursor: pointer;
   transition: all 0.2s;
   box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
+  height: 32px;
 }
 
 .primary-btn:hover {
@@ -1822,6 +1859,121 @@
   font-size: 12px;
 }
 
+/* MAP VIEW V2 */
+.mapv2-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 8px;
+}
+
+.mapv2-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: white;
+  border: 1px solid var(--surface-200);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.mapv2-title h3 {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--primary-color);
+  margin: 0;
+}
+
+.mapv2-title p {
+  font-size: 9px;
+  color: var(--surface-500);
+  margin: 2px 0 0;
+}
+
+.mapv2-controls {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+
+.mapv2-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mapv2-controls label span {
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--surface-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mapv2-controls select,
+.mapv2-controls input {
+  height: 28px;
+  min-width: 130px;
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-family: var(--font-poppins);
+  font-weight: 600;
+  color: var(--surface-800);
+  background: white;
+}
+
+.mapv2-fetch-btn {
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  color: white;
+  background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+  cursor: pointer;
+}
+
+.mapv2-fetch-btn .material-icons-round {
+  font-size: 13px;
+}
+
+.mapv2-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px;
+}
+
+.dot.booked { background-color: #2563EB; }
+
+.mapv2-grid-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: white;
+  border: 1px solid var(--surface-200);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.room-ref {
+  margin-top: 4px;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--surface-500);
+  letter-spacing: 0.04em;
+}
+
 .reservation-edit-modal {
   width: min(720px, 100%);
   max-height: 88vh;
@@ -1961,6 +2113,23 @@
   background: white;
   color: var(--surface-700);
   border: 1px solid var(--surface-200);
+}
+
+.compact-header.map-mode {
+  justify-content: flex-start;
+}
+
+.compact-header.map-mode .header-left {
+  flex: 0 0 auto;
+}
+
+.compact-header.map-mode .header-right {
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.compact-header.map-mode .map-top-filters {
+  margin-right: auto;
 }
 
 .edit-save {

@@ -4,6 +4,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { forkJoin } from 'rxjs';
 
 interface Reservation {
   id: string;
@@ -39,12 +40,42 @@ interface StandardResponse<T> {
 }
 
 interface Room {
+  id?: number;
   number: string;
+  floorId?: number;
   type: string;
   floor: string;
   status: 'available' | 'occupied' | 'dirty' | 'booked' | 'maintenance';
   guest?: string;
   checkOutDate?: string;
+  reservationRef?: string;
+}
+
+interface ApiFloor {
+  id: number;
+  floorNumber: string;
+  isActive: boolean;
+}
+
+interface ApiRoomType {
+  id: number;
+  name: string;
+}
+
+interface ApiRoom {
+  id: number;
+  roomNumber: string;
+  floorId: number;
+  roomTypeId: number;
+  status: string;
+  isActive: boolean;
+}
+
+interface ApiGanttItem {
+  roomId: number;
+  guestName: string;
+  reservationRef: string;
+  status: string;
 }
 
 @Component({
@@ -81,9 +112,15 @@ export class ReservationCenter implements OnInit {
   hoverDate = signal<Date | null>(null);
 
   weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  mapFloors = signal<ApiFloor[]>([]);
+  mapSelectedFloorId = signal<number | null>(null);
+  mapSelectedDate = signal(this.toApiDate(new Date()));
+  mapIsLoading = signal(false);
+  mapError = signal<string | null>(null);
 
   ngOnInit() {
     this.loadReservations();
+    this.loadRoomWiseStatus();
   }
 
   get dateRangeLabel(): string {
@@ -447,7 +484,9 @@ export class ReservationCenter implements OnInit {
   ];
 
   filteredRooms = computed(() => {
-    return this.rooms().filter(r => r.floor === this.selectedFloor());
+    const floorId = this.mapSelectedFloorId();
+    if (!floorId) return this.rooms();
+    return this.rooms().filter(r => r.floorId === floorId);
   });
 
   setView(mode: 'LIST' | 'STAY' | 'MAP') {
@@ -456,6 +495,58 @@ export class ReservationCenter implements OnInit {
 
   setFloor(floor: string) {
     this.selectedFloor.set(floor);
+  }
+
+  onMapFloorChange(value: string) {
+    this.mapSelectedFloorId.set(value ? Number(value) : null);
+  }
+
+  loadRoomWiseStatus() {
+    this.mapIsLoading.set(true);
+    this.mapError.set(null);
+    const date = this.mapSelectedDate() || this.toApiDate(new Date());
+    const params = new HttpParams().set('startDate', date).set('endDate', date);
+
+    forkJoin({
+      floorsRes: this.http.get<StandardResponse<ApiFloor[]>>(`${this.baseUrl}/floors/getAllFloors`),
+      roomTypesRes: this.http.get<StandardResponse<ApiRoomType[]>>(`${this.baseUrl}/roomTypes/getAllRoomTypes`),
+      roomsRes: this.http.get<StandardResponse<ApiRoom[]>>(`${this.baseUrl}/rooms/getAllRooms`),
+      ganttRes: this.http.get<StandardResponse<ApiGanttItem[]>>(`${this.baseUrl}/frontOffice/getGanttChartData`, { params })
+    }).subscribe({
+      next: ({ floorsRes, roomTypesRes, roomsRes, ganttRes }) => {
+        const floors = (floorsRes.data || []).filter(f => f.isActive);
+        this.mapFloors.set(floors);
+        if (!this.mapSelectedFloorId() && floors.length) this.mapSelectedFloorId.set(floors[0].id);
+
+        const floorById = new Map(floors.map(f => [f.id, f.floorNumber]));
+        const roomTypeById = new Map((roomTypesRes.data || []).map(t => [t.id, t.name]));
+        const bookingByRoomId = new Map((ganttRes.data || []).map(b => [b.roomId, b]));
+
+        const mapped = (roomsRes.data || [])
+          .filter(r => r.isActive)
+          .map(r => {
+            const booking = bookingByRoomId.get(r.id);
+            return {
+              id: r.id,
+              number: r.roomNumber,
+              floorId: r.floorId,
+              floor: floorById.get(r.floorId) || `Floor ${r.floorId}`,
+              type: roomTypeById.get(r.roomTypeId) || 'Room',
+              status: this.normalizeRoomStatus(booking?.status || r.status),
+              guest: booking?.guestName,
+              reservationRef: booking?.reservationRef
+            } as Room;
+          });
+
+        this.rooms.set(mapped);
+        this.mapIsLoading.set(false);
+      },
+      error: (err) => {
+        console.error('[ReservationCenter] loadRoomWiseStatus error:', err);
+        this.mapError.set('Unable to fetch room wise status.');
+        this.mapIsLoading.set(false);
+      }
+    });
   }
 
   statusLabel(status: Reservation['status']): string {
@@ -503,6 +594,16 @@ export class ReservationCenter implements OnInit {
 
   getInitials(name: string): string {
     return name.split(' ').map(n => n[0]).join('');
+  }
+
+  private normalizeRoomStatus(status: string): Room['status'] {
+    const normalized = (status || '').replace(/[^A-Za-z]/g, '').toUpperCase();
+    if (normalized === 'CHECKEDIN' || normalized === 'OCCUPIED') return 'occupied';
+    if (normalized === 'CHECKEDOUT' || normalized === 'VACANT' || normalized === 'AVAILABLE') return 'available';
+    if (normalized === 'DIRTY' || normalized === 'CLEANING') return 'dirty';
+    if (normalized === 'MAINTENANCE' || normalized === 'SERVICE') return 'maintenance';
+    if (normalized === 'CONFIRMED' || normalized === 'PENDING' || normalized === 'RESERVED' || normalized === 'BOOKED') return 'booked';
+    return 'available';
   }
 }
 

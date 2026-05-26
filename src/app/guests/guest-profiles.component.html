@@ -30,6 +30,8 @@
       </div>
       
       <div class="table-container">
+        <div *ngIf="isLoading" style="padding: 24px; color: var(--surface-500);">Loading guests...</div>
+        <div *ngIf="errorMessage" style="padding: 16px 24px; color: #be123c;">{{ errorMessage }}</div>
         <table class="premium-table">
           <thead>
             <tr>
@@ -42,7 +44,7 @@
               <th>ACTIONS</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody *ngIf="!isLoading">
             <tr *ngFor="let guest of filteredGuests">
               <td><span class="mono-text">{{ guest.id }}</span></td>
               <td>

@@ -13,6 +13,7 @@ export const routes: Routes = [
       { path: 'reservations', component: ReservationCenter },
       { path: 'new-booking', component: NewBookingComponent },
       { path: 'arrivals', component: ArrivalsComponent },
+      { path: 'gantt-chart', loadComponent: () => import('./reservations/gantt-chart/gantt-chart.component').then(m => m.GanttChartComponent) },
       { path: 'departures', loadComponent: () => import('./reservations/departures/departures.component').then(m => m.DeparturesComponent) },
       { path: 'guests', loadComponent: () => import('./guests/guest-profiles.component').then(m => m.GuestProfilesComponent) },
       { path: 'housekeeping', loadComponent: () => import('./housekeeping/housekeeping.component').then(m => m.HousekeepingComponent) },

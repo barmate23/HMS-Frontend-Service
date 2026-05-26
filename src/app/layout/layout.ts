@@ -21,6 +21,7 @@ export class Layout {
       expanded: false,
       children: [
         { label: 'Reservations', icon: 'calendar_month', route: '/reservations' },
+        { label: 'Gantt Chart', icon: 'view_timeline', route: '/gantt-chart' },
         { label: 'Arrivals', icon: 'login', route: '/arrivals' },
         { label: 'Departures', icon: 'logout', route: '/departures' },
         { label: 'Guest Profiles', icon: 'person_search', route: '/guests' }

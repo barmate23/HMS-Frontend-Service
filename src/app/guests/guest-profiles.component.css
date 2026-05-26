@@ -112,14 +112,15 @@
 
 /* Content Area */
 .main-content {
-  padding: 16px 24px;
-  max-width: 1400px;
+  padding: 4px;
+  max-width: 100%;
   width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  gap: 4px;
 }
 
 /* Stats Row */
@@ -186,8 +187,8 @@
 /* Modern Card */
 .modern-card {
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
   border: 1px solid var(--surface-100);
   overflow: hidden;
   display: flex;
@@ -198,17 +199,17 @@
 }
 
 .card-header {
-  padding: 12px 16px;
+  padding: 4px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 2px solid var(--accent-light);
+  border-bottom: 1px solid var(--accent-light);
   background: var(--surface-50);
 }
 
 .card-title {
   font-family: var(--font-poppins);
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--primary-color);
   margin: 0;
@@ -256,8 +257,8 @@
 }
 
 .premium-table th {
-  padding: 10px 16px;
-  font-size: 10px;
+  padding: 4px 6px;
+  font-size: 9px;
   font-weight: 800;
   color: var(--surface-500);
   text-transform: uppercase;
@@ -267,7 +268,7 @@
 }
 
 .premium-table td {
-  padding: 10px 16px;
+  padding: 4px 6px;
   border-bottom: 1px solid var(--surface-100);
   vertical-align: middle;
 }
@@ -849,10 +850,10 @@ tr.is-checked-in .avatar {
 .total-badge {
   background: var(--surface-200);
   color: var(--surface-700);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 20px;
+  padding: 2px 8px;
+  border-radius: 10px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }

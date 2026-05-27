@@ -11,5 +11,5 @@ FROM nginx:alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist/hms-modern-app /usr/share/nginx/html
 # Angular 17+ uses dist/project-name/browser output. If it fails, we will remove /browser.
-EXPOSE 80
+EXPOSE 72
 CMD ["nginx", "-g", "daemon off;"]

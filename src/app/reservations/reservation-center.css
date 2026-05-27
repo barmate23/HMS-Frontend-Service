@@ -2117,7 +2117,7 @@
 
 .compact-header.map-mode {
   justify-content: flex-start;
-  min-height: 40px;
+  min-height: 43px;
 }
 
 .compact-header.map-mode .header-left {
@@ -2135,15 +2135,34 @@
 }
 
 .compact-header.map-mode .map-top-filters label {
-  gap: 1px;
+  display: grid;
+  grid-template-columns: auto minmax(130px, 1fr);
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  background: white;
+}
+
+.compact-header.map-mode .map-top-filters label span {
+  color: var(--surface-500);
 }
 
 .compact-header.map-mode .map-top-filters select,
-.compact-header.map-mode .map-top-filters input,
+.compact-header.map-mode .map-top-filters input {
+  min-width: 0;
+  height: 30px;
+  border: none;
+  padding: 0;
+  background: transparent;
+}
+
 .compact-header.map-mode .mapv2-fetch-btn,
 .compact-header.map-mode .view-toggles,
 .compact-header.map-mode .primary-btn {
-  height: 30px;
+  height: 32px;
 }
 
 .edit-save {

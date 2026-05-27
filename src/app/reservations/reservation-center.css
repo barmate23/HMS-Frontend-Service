@@ -2117,6 +2117,7 @@
 
 .compact-header.map-mode {
   justify-content: flex-start;
+  min-height: 40px;
 }
 
 .compact-header.map-mode .header-left {
@@ -2130,6 +2131,19 @@
 
 .compact-header.map-mode .map-top-filters {
   margin-right: auto;
+  align-items: center;
+}
+
+.compact-header.map-mode .map-top-filters label {
+  gap: 1px;
+}
+
+.compact-header.map-mode .map-top-filters select,
+.compact-header.map-mode .map-top-filters input,
+.compact-header.map-mode .mapv2-fetch-btn,
+.compact-header.map-mode .view-toggles,
+.compact-header.map-mode .primary-btn {
+  height: 30px;
 }
 
 .edit-save {

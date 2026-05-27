@@ -12,6 +12,10 @@
           Tasks
           <span class="badge" *ngIf="hk.taskStats().pending > 0">{{ hk.taskStats().pending }}</span>
         </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'audit'" (click)="selectTab('audit')">
+          <span class="material-icons-round">fact_check</span>
+          Audit
+        </button>
         <button class="tab-btn" [class.active]="activeTab() === 'lost-found'" (click)="selectTab('lost-found')">
           <span class="material-icons-round">search_off</span>
           Lost & Found
@@ -60,6 +64,22 @@
             <span class="material-icons-round">add</span>
             <span>Add Task</span>
           </button>
+        </ng-container>
+
+        <!-- Audit Controls -->
+        <ng-container *ngSwitchCase="'audit'">
+          <div class="search-box">
+            <span class="material-icons-round">search</span>
+            <input type="text" placeholder="Search room, guest, issue..." [ngModel]="auditSearch()" (ngModelChange)="auditSearch.set($event)">
+          </div>
+          <select class="filter-select" [ngModel]="auditFloor()" (ngModelChange)="auditFloor.set($event)">
+            <option *ngFor="let floor of auditFloors()" [value]="floor">{{ floor }}</option>
+          </select>
+          <select class="filter-select" [ngModel]="auditFrequency()" (ngModelChange)="auditFrequency.set($event)">
+            <option value="DAILY">Daily SOP</option>
+            <option value="WEEKLY">Weekly SOP</option>
+            <option value="MONTHLY">Monthly SOP</option>
+          </select>
         </ng-container>
 
         <!-- Staff Controls -->
@@ -308,6 +328,137 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- AUDIT VIEW                                 -->
+    <!-- ========================================== -->
+    <div class="audit-view-container" *ngIf="activeTab() === 'audit'">
+      <div class="audit-stats-grid">
+        <div class="audit-stat-card">
+          <span class="material-icons-round">meeting_room</span>
+          <div><strong>{{ auditStats().total }}</strong><small>{{ auditFloor() }} Rooms</small></div>
+        </div>
+        <div class="audit-stat-card pass">
+          <span class="material-icons-round">verified</span>
+          <div><strong>{{ auditStats().done }}</strong><small>Checks Done</small></div>
+        </div>
+        <div class="audit-stat-card recheck">
+          <span class="material-icons-round">schedule</span>
+          <div><strong>{{ auditStats().pending }}</strong><small>Pending</small></div>
+        </div>
+        <div class="audit-stat-card fail">
+          <span class="material-icons-round">report</span>
+          <div><strong>{{ auditStats().issues }}</strong><small>Issues</small></div>
+        </div>
+        <div class="audit-stat-card exception">
+          <span class="material-icons-round">block</span>
+          <div><strong>{{ auditStats().blocked }}</strong><small>Blocked</small></div>
+        </div>
+        <div class="audit-stat-card">
+          <span class="material-icons-round">playlist_add_check</span>
+          <div><strong>{{ auditStats().totalChecks }}</strong><small>{{ auditFrequency() }} Checks</small></div>
+        </div>
+        <div class="audit-stat-card">
+          <span class="material-icons-round">speed</span>
+          <div><strong>{{ auditStats().avgScore }}%</strong><small>Avg Score</small></div>
+        </div>
+        <div class="audit-stat-card fail">
+          <span class="material-icons-round">construction</span>
+          <div><strong>{{ auditStats().defects }}</strong><small>Open Findings</small></div>
+        </div>
+      </div>
+
+      <div class="sop-definition-panel">
+        <div class="sop-definition-head">
+          <div>
+            <h2>{{ auditFrequency() | titlecase }} Room Audit SOP</h2>
+            <p>Defined checkpoints applied room-wise for the selected floor.</p>
+          </div>
+          <div class="sop-actions">
+            <span>{{ activeSopCheckpoints().length }} Checkpoints</span>
+            <button type="button" class="sop-toggle-btn" (click)="toggleAuditSop()">
+              <span class="material-icons-round">{{ isAuditSopExpanded() ? 'unfold_less' : 'unfold_more' }}</span>
+              {{ isAuditSopExpanded() ? 'Collapse' : 'Expand' }}
+            </button>
+          </div>
+        </div>
+        <div class="sop-checkpoint-grid" *ngIf="isAuditSopExpanded()">
+          <div class="sop-checkpoint-card" *ngFor="let check of activeSopCheckpoints()">
+            <strong>{{ check.id }} • {{ check.area }}</strong>
+            <p>{{ check.label }}</p>
+            <span>{{ check.owner }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="audit-board">
+        <div class="audit-floor-block">
+          <h3 class="floor-title">
+            <span class="material-icons-round">layers</span>
+            {{ auditFloor() }}
+            <span class="floor-badge">{{ selectedFloorAudits().length }} Rooms</span>
+          </h3>
+
+          <div class="room-sop-grid">
+            <article class="room-sop-card" *ngFor="let audit of selectedFloorAudits()" [class.release-ready]="audit.releaseReady" [class.high-risk]="audit.severity === 'HIGH'">
+              <div class="audit-card-head">
+                <div>
+                  <strong>Room {{ audit.roomNumber }}</strong>
+                  <span>{{ audit.roomType }} • {{ audit.occupancy }}<ng-container *ngIf="audit.guestName"> • {{ audit.guestName }}</ng-container></span>
+                </div>
+                <span class="audit-score" [ngClass]="auditScoreClass(audit.score)">{{ audit.score }}%</span>
+              </div>
+
+              <div class="audit-status-line">
+                <span class="hk-status-badge" [class]="audit.hkStatus.toLowerCase()">
+                  <span class="material-icons-round">{{ hkStatusIcon(audit.hkStatus) }}</span>
+                  {{ hkStatusLabel(audit.hkStatus) }}
+                </span>
+                <span class="audit-result-pill" [ngClass]="audit.result.toLowerCase()">
+                  <span class="material-icons-round">{{ auditResultIcon(audit.result) }}</span>
+                  {{ auditResultLabel(audit.result) }}
+                </span>
+              </div>
+
+              <div class="sop-room-meta">
+                <div><span>PMS Status</span><strong>{{ audit.pmsStatus }}</strong></div>
+                <div><span>HK Status</span><strong>{{ hkStatusLabel(audit.hkStatus) }}</strong></div>
+                <div><span>Inspector</span><strong>{{ audit.inspector }}</strong></div>
+                <div><span>Last Audit</span><strong>{{ audit.auditedAt | date:'short' }}</strong></div>
+              </div>
+
+              <div class="room-check-list">
+                <div class="room-check-row" *ngFor="let check of roomSopChecks(audit)" [class]="check.status.toLowerCase()">
+                  <span class="material-icons-round">{{ sopStatusIcon(check.status) }}</span>
+                  <div>
+                    <strong>{{ check.id }} • {{ check.area }}</strong>
+                    <p>{{ check.label }}</p>
+                    <small>{{ check.evidence }}</small>
+                    <small class="finding" *ngIf="check.finding">{{ check.finding }}</small>
+                  </div>
+                  <em>{{ sopStatusLabel(check.status) }}</em>
+                </div>
+              </div>
+
+              <div class="audit-followup">
+                <span class="material-icons-round">task_alt</span>
+                <p>{{ audit.followUp }}</p>
+              </div>
+
+              <div class="audit-log">
+                <strong>Status Log</strong>
+                <span *ngFor="let log of audit.statusLog">{{ log }}</span>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="empty-state" *ngIf="selectedFloorAudits().length === 0">
+          <span class="material-icons-round">fact_check</span>
+          <p>No room audit records match the current filters.</p>
+        </div>
       </div>
     </div>
 

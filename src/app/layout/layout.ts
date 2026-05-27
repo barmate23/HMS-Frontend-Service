@@ -34,9 +34,10 @@ export class Layout {
       children: [
         { label: 'Room Board', icon: 'dashboard', route: '/housekeeping/board' },
         { label: 'Tasks', icon: 'assignment', route: '/housekeeping/tasks' },
-        { label: 'Staff', icon: 'badge', route: '/housekeeping/staff' },
+        { label: 'Audit', icon: 'fact_check', route: '/housekeeping/audit' },
         { label: 'Lost & Found', icon: 'search_off', route: '/housekeeping/lost-found' },
-        { label: 'Maintenance', icon: 'build_circle', route: '/housekeeping/maintenance' }
+        { label: 'Maintenance', icon: 'build_circle', route: '/housekeeping/maintenance' },
+        { label: 'Staff', icon: 'badge', route: '/housekeeping/staff' }
       ]
     },
     {
@@ -49,6 +50,16 @@ export class Layout {
         { label: 'Room Types', icon: 'bed', route: '/masters/room-types' },
         { label: 'Rooms', icon: 'meeting_room', route: '/masters/rooms' },
         { label: 'Rate Plans', icon: 'sell', route: '/masters/rate-plans' }
+      ]
+    },
+    {
+      label: 'User Management',
+      icon: 'manage_accounts',
+      expanded: false,
+      children: [
+        { label: 'Users', icon: 'group', route: '/user-management/users' },
+        { label: 'Roles & Permissions', icon: 'admin_panel_settings', route: '/user-management/roles' },
+        { label: 'Access Audit', icon: 'manage_history', route: '/user-management/activity' }
       ]
     },
     { label: 'In-House', icon: 'people', route: '/in-house' },

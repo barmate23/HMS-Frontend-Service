@@ -19,6 +19,7 @@ export const routes: Routes = [
       { path: 'housekeeping', loadComponent: () => import('./housekeeping/housekeeping.component').then(m => m.HousekeepingComponent) },
       { path: 'housekeeping/board', loadComponent: () => import('./housekeeping/housekeeping.component').then(m => m.HousekeepingComponent) },
       { path: 'housekeeping/tasks', loadComponent: () => import('./housekeeping/housekeeping.component').then(m => m.HousekeepingComponent) },
+      { path: 'housekeeping/audit', loadComponent: () => import('./housekeeping/housekeeping.component').then(m => m.HousekeepingComponent) },
       { path: 'housekeeping/staff', loadComponent: () => import('./housekeeping/housekeeping.component').then(m => m.HousekeepingComponent) },
       { path: 'housekeeping/lost-found', loadComponent: () => import('./housekeeping/housekeeping.component').then(m => m.HousekeepingComponent) },
       { path: 'housekeeping/maintenance', loadComponent: () => import('./housekeeping/housekeeping.component').then(m => m.HousekeepingComponent) },
@@ -26,7 +27,11 @@ export const routes: Routes = [
       { path: 'masters/floors', loadComponent: () => import('./masters/hotel-masters.component').then(m => m.HotelMastersComponent) },
       { path: 'masters/room-types', loadComponent: () => import('./masters/hotel-masters.component').then(m => m.HotelMastersComponent) },
       { path: 'masters/rooms', loadComponent: () => import('./masters/hotel-masters.component').then(m => m.HotelMastersComponent) },
-      { path: 'masters/rate-plans', loadComponent: () => import('./masters/hotel-masters.component').then(m => m.HotelMastersComponent) }
+      { path: 'masters/rate-plans', loadComponent: () => import('./masters/hotel-masters.component').then(m => m.HotelMastersComponent) },
+      { path: 'user-management', redirectTo: 'user-management/users', pathMatch: 'full' },
+      { path: 'user-management/users', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) },
+      { path: 'user-management/roles', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) },
+      { path: 'user-management/activity', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) }
     ]
   }
 ];

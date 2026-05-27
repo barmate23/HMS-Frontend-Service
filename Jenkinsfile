@@ -30,7 +30,7 @@ pipeline {
                 sh "docker stop hms-frontend || true"
                 sh "docker rm hms-frontend || true"
                 // Run the newly built image
-                sh "docker run -d -p 4200:80 --name hms-frontend ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                sh "docker run -d -p 72:72 --name hms-frontend ${DOCKER_IMAGE}:${DOCKER_TAG}"
             }
         }
     }

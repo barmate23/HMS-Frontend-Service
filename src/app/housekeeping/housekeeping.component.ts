@@ -124,12 +124,15 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   isLFModalOpen      = signal(false);
   isMaintModalOpen   = signal(false);
   isStatusModalOpen  = signal(false);
+  isSopModalOpen     = signal(false);
+  editingSopId       = signal<string | null>(null);
   modalMode          = signal<'create' | 'edit'>('create');
 
   // --- Form state ---
   currentTask     = signal<Partial<HKTask>>({});
   currentLF       = signal<Partial<LostFoundItem>>({});
   currentMaint    = signal<Partial<MaintenanceRequest>>({});
+  currentSop      = signal<Partial<SopCheckpoint>>({});
   selectedRoom    = signal<HKRoom | null>(null);
   newRoomStatus   = signal<HKStatus>('VACANT_CLEAN');
 
@@ -341,6 +344,75 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   activeSopCheckpoints = computed(() => this.sopCheckpoints().filter(c => c.frequency === this.auditFrequency()));
 
   selectedFloorAudits = computed(() => this.filteredAudits());
+
+  openCreateSopModal() {
+    this.modalMode.set('create');
+    this.editingSopId.set(null);
+    this.currentSop.set({
+      id: this.nextSopId(this.auditFrequency()),
+      frequency: this.auditFrequency(),
+      area: '',
+      label: '',
+      owner: 'Room Attendant'
+    });
+    this.isSopModalOpen.set(true);
+  }
+
+  openEditSopModal(checkpoint: SopCheckpoint) {
+    this.modalMode.set('edit');
+    this.editingSopId.set(checkpoint.id);
+    this.currentSop.set({ ...checkpoint });
+    this.isSopModalOpen.set(true);
+  }
+
+  saveSopCheckpoint() {
+    const checkpoint = this.currentSop();
+    const id = (checkpoint.id || '').trim().toUpperCase();
+    const frequency = checkpoint.frequency || this.auditFrequency();
+    const area = (checkpoint.area || '').trim();
+    const label = (checkpoint.label || '').trim();
+    const owner = (checkpoint.owner || '').trim();
+
+    if (!id || !area || !label || !owner) {
+      alert('Please fill all SOP checkpoint fields.');
+      return;
+    }
+
+    const originalId = this.editingSopId();
+    const duplicate = this.sopCheckpoints().some(item => item.id.toUpperCase() === id && item.id !== originalId);
+    if (duplicate) {
+      alert('Checkpoint ID already exists. Please use a unique ID.');
+      return;
+    }
+
+    const saved: SopCheckpoint = { id, frequency, area, label, owner };
+    if (this.modalMode() === 'create') {
+      this.sopCheckpoints.update(items => [...items, saved].sort((a, b) => a.id.localeCompare(b.id)));
+    } else {
+      this.sopCheckpoints.update(items => items.map(item => item.id === originalId ? saved : item).sort((a, b) => a.id.localeCompare(b.id)));
+    }
+    this.auditFrequency.set(frequency);
+    this.isAuditSopExpanded.set(true);
+    this.isSopModalOpen.set(false);
+    this.editingSopId.set(null);
+  }
+
+  deleteSopCheckpoint(checkpoint: SopCheckpoint, event: Event) {
+    event.stopPropagation();
+    if (confirm(`Delete SOP checkpoint ${checkpoint.id}?`)) {
+      this.sopCheckpoints.update(items => items.filter(item => item.id !== checkpoint.id));
+    }
+  }
+
+  private nextSopId(frequency: AuditFrequency): string {
+    const prefix = frequency === 'DAILY' ? 'D' : frequency === 'WEEKLY' ? 'W' : 'M';
+    const existing = this.sopCheckpoints()
+      .filter(item => item.frequency === frequency && item.id.startsWith(prefix))
+      .map(item => Number(item.id.replace(prefix, '')))
+      .filter(value => Number.isFinite(value));
+    const next = (existing.length ? Math.max(...existing) : 0) + 1;
+    return `${prefix}${String(next).padStart(2, '0')}`;
+  }
 
   // --- Rooms grouped by floor ---
   roomsByFloor = computed(() => {

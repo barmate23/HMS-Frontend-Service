@@ -677,10 +677,33 @@
 
 .hk-grid-table .item-desc-cell,
 .hk-grid-table .issue-cell,
+.hk-grid-table .task-type-container,
 .hk-grid-table .storage-box,
 .hk-grid-table .assigned-box,
+.hk-grid-table .staff-cell,
 .hk-grid-table .guest-contact {
   overflow: visible;
+}
+
+.task-grid .task-type-container {
+  max-width: 100%;
+}
+
+.task-grid .task-label,
+.task-grid .task-notes {
+  max-width: 100%;
+}
+
+.task-grid .staff-cell {
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+}
+
+.task-grid .action-buttons {
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 8px;
 }
 
 .hk-hover-table td {
@@ -1166,6 +1189,7 @@
   border: 1px solid var(--surface-200);
   border-radius: 7px;
   background: var(--surface-50);
+  position: relative;
 }
 
 .sop-checkpoint-card strong {
@@ -1188,6 +1212,31 @@
   color: var(--surface-500);
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.sop-card-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.sop-checkpoint-card:hover .sop-card-actions {
+  opacity: 1;
+}
+
+.sop-card-actions .btn-icon {
+  width: 22px;
+  height: 22px;
+  background: white;
+}
+
+.sop-card-actions .btn-icon .material-icons-round {
+  font-size: 13px;
 }
 
 .audit-floor-block {

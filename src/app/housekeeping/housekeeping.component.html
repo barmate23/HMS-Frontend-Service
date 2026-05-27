@@ -12,10 +12,6 @@
           Tasks
           <span class="badge" *ngIf="hk.taskStats().pending > 0">{{ hk.taskStats().pending }}</span>
         </button>
-        <button class="tab-btn" [class.active]="activeTab() === 'staff'" (click)="selectTab('staff')">
-          <span class="material-icons-round">badge</span>
-          Staff
-        </button>
         <button class="tab-btn" [class.active]="activeTab() === 'lost-found'" (click)="selectTab('lost-found')">
           <span class="material-icons-round">search_off</span>
           Lost & Found
@@ -23,6 +19,10 @@
         <button class="tab-btn" [class.active]="activeTab() === 'maintenance'" (click)="selectTab('maintenance')">
           <span class="material-icons-round">build_circle</span>
           Maintenance
+        </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'staff'" (click)="selectTab('staff')">
+          <span class="material-icons-round">badge</span>
+          Staff
         </button>
       </div>
     </div>
@@ -243,15 +243,14 @@
       </div>
       
       <div class="table-container">
-        <table class="premium-table">
+        <table class="premium-table hk-hover-table">
           <thead>
             <tr>
-              <th style="width: 6%;">ID</th>
               <th style="width: 10%;">ROOM NO.</th>
               <th style="width: 8%;">FLOOR</th>
-              <th style="width: 28%;">TASK TYPE</th>
+              <th style="width: 32%;">TASK TYPE</th>
               <th style="width: 10%;">PRIORITY</th>
-              <th style="width: 14%;">ASSIGNED TO</th>
+              <th style="width: 16%;">ASSIGNED TO</th>
               <th style="width: 8%; text-align: center;">EST. MINS</th>
               <th style="width: 10%;">STATUS</th>
               <th style="width: 6%; text-align: center;">ACTIONS</th>
@@ -259,13 +258,12 @@
           </thead>
           <tbody>
             <tr *ngFor="let t of filteredTasks()">
-              <td><span class="mono-text">T-{{ t.id }}</span></td>
               <td><span class="room-pill">{{ t.roomNumber }}</span></td>
               <td>{{ t.floor }}</td>
               <td>
                 <div class="task-type-container">
-                  <span class="task-label">{{ taskTypeLabel(t.taskType) }}</span>
-                  <span class="task-notes" *ngIf="t.notes" title="{{ t.notes }}">{{ t.notes }}</span>
+                  <span class="task-label truncate-hover" [attr.data-full]="taskTypeLabel(t.taskType)">{{ taskTypeLabel(t.taskType) }}</span>
+                  <span class="task-notes truncate-hover" *ngIf="t.notes" [attr.data-full]="t.notes">{{ t.notes }}</span>
                 </div>
               </td>
               <td>
@@ -277,7 +275,7 @@
               <td>
                 <div class="staff-cell" *ngIf="t.assignedToId">
                   <span class="avatar-sm">{{ getStaffAvatar(t.assignedToId) }}</span>
-                  <span>{{ getStaffName(t.assignedToId) }}</span>
+                  <span class="truncate-hover" [attr.data-full]="getStaffName(t.assignedToId)">{{ getStaffName(t.assignedToId) }}</span>
                 </div>
                 <span class="none-text" *ngIf="!t.assignedToId">Unassigned</span>
               </td>
@@ -303,7 +301,7 @@
               </td>
             </tr>
             <tr *ngIf="filteredTasks().length === 0">
-              <td colspan="9" class="empty-state">
+              <td colspan="8" class="empty-state">
                 <span class="material-icons-round">checklist</span>
                 <p>No active tasks matching selection.</p>
               </td>
@@ -373,42 +371,40 @@
       </div>
       
       <div class="table-container">
-        <table class="premium-table">
+        <table class="premium-table hk-grid-table">
           <thead>
             <tr>
-              <th style="width: 5%;">ID</th>
-              <th style="width: 10%;">DATE FOUND</th>
-              <th style="width: 7%;">ROOM</th>
+              <th style="width: 9%;">DATE FOUND</th>
+              <th style="width: 6%;">ROOM</th>
               <th style="width: 25%;">ITEM DESCRIPTION</th>
-              <th style="width: 10%;">CATEGORY</th>
-              <th style="width: 10%;">FOUND BY</th>
-              <th style="width: 13%;">STORAGE LOCATION</th>
+              <th style="width: 9%;">CATEGORY</th>
+              <th style="width: 9%;">FOUND BY</th>
+              <th style="width: 15%;">STORAGE LOCATION</th>
               <th style="width: 12%;">GUEST INFO</th>
-              <th style="width: 8%;">STATUS</th>
-              <th style="width: 10%; text-align: center;">ACTIONS</th>
+              <th style="width: 7%;">STATUS</th>
+              <th style="width: 8%; text-align: center;">ACTIONS</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let item of filteredLF()">
-              <td><span class="mono-text">LF-{{ item.id }}</span></td>
               <td>{{ item.foundDate }}</td>
               <td><span class="room-pill">{{ item.roomNumber }}</span></td>
               <td>
                 <div class="item-desc-cell">
-                  <span class="item-description">{{ item.description }}</span>
-                  <span class="item-notes" *ngIf="item.notes" title="{{ item.notes }}">{{ item.notes }}</span>
+                  <span class="item-description truncate-hover" [attr.data-full]="item.description">{{ item.description }}</span>
+                  <span class="item-notes truncate-hover" *ngIf="item.notes" [attr.data-full]="item.notes">{{ item.notes }}</span>
                 </div>
               </td>
-              <td><span class="category-badge">{{ item.category }}</span></td>
-              <td>{{ item.foundBy }}</td>
+              <td><span class="category-badge truncate-hover" [attr.data-full]="item.category">{{ item.category }}</span></td>
+              <td><span class="truncate-hover" [attr.data-full]="item.foundBy">{{ item.foundBy }}</span></td>
               <td>
-                <span class="storage-box">
+                <span class="storage-box truncate-hover" [attr.data-full]="item.storageLocation">
                   <span class="material-icons-round">inventory_2</span>
                   {{ item.storageLocation }}
                 </span>
               </td>
               <td>
-                <div class="guest-contact" *ngIf="item.guestName">
+                <div class="guest-contact truncate-hover" *ngIf="item.guestName" [attr.data-full]="item.guestName + ' ' + item.guestContact">
                   <strong class="guest-name-text">{{ item.guestName }}</strong>
                   <span class="guest-phone">{{ item.guestContact }}</span>
                 </div>
@@ -432,7 +428,7 @@
               </td>
             </tr>
             <tr *ngIf="filteredLF().length === 0">
-              <td colspan="10" class="empty-state">
+              <td colspan="9" class="empty-state">
                 <span class="material-icons-round">search_off</span>
                 <p>No lost & found records found.</p>
               </td>
@@ -454,42 +450,40 @@
       </div>
       
       <div class="table-container">
-        <table class="premium-table">
+        <table class="premium-table hk-grid-table maintenance-grid">
           <thead>
             <tr>
-              <th style="width: 5%;">ID</th>
-              <th style="width: 10%;">REPORTED AT</th>
-              <th style="width: 7%;">ROOM</th>
-              <th style="width: 25%;">ISSUE DESCRIPTION</th>
-              <th style="width: 10%;">CATEGORY</th>
-              <th style="width: 10%;">PRIORITY</th>
-              <th style="width: 10%;">REPORTED BY</th>
-              <th style="width: 11%;">ASSIGNED TO</th>
-              <th style="width: 6%;">STATUS</th>
-              <th style="width: 6%; text-align: center;">ACTIONS</th>
+              <th style="width: 7%;">REPORTED AT</th>
+              <th style="width: 5%;">ROOM</th>
+              <th style="width: 30%;">ISSUE DESCRIPTION</th>
+              <th style="width: 8%;">CATEGORY</th>
+              <th style="width: 9%;">PRIORITY</th>
+              <th style="width: 9%;">REPORTED BY</th>
+              <th style="width: 14%;">ASSIGNED TO</th>
+              <th style="width: 10%;">STATUS</th>
+              <th style="width: 8%; text-align: center;">ACTIONS</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let m of filteredMaint()">
-              <td><span class="mono-text">M-{{ m.id }}</span></td>
               <td>{{ m.reportedAt | date:'shortDate' }}</td>
               <td><span class="room-pill">{{ m.roomNumber }}</span></td>
               <td>
                 <div class="issue-cell">
-                  <span class="issue-text">{{ m.issue }}</span>
-                  <span class="issue-notes" *ngIf="m.notes" title="{{ m.notes }}">{{ m.notes }}</span>
+                  <span class="issue-text truncate-hover" [attr.data-full]="m.issue">{{ m.issue }}</span>
+                  <span class="issue-notes truncate-hover" *ngIf="m.notes" [attr.data-full]="m.notes">{{ m.notes }}</span>
                 </div>
               </td>
-              <td><span class="category-badge">{{ m.category }}</span></td>
+              <td><span class="category-badge truncate-hover" [attr.data-full]="m.category">{{ m.category }}</span></td>
               <td>
                 <span class="priority-badge" [class]="m.priority.toLowerCase()">
                   <span class="material-icons-round">{{ priorityIcon(m.priority === 'URGENT' ? 'HIGH' : m.priority === 'LOW' ? 'LOW' : 'MEDIUM') }}</span>
                   {{ m.priority }}
                 </span>
               </td>
-              <td>{{ m.reportedBy }}</td>
+              <td><span class="truncate-hover" [attr.data-full]="m.reportedBy">{{ m.reportedBy }}</span></td>
               <td>
-                <span class="assigned-box" *ngIf="m.assignedTo">
+                <span class="assigned-box truncate-hover" *ngIf="m.assignedTo" [attr.data-full]="m.assignedTo">
                   <span class="material-icons-round">engineering</span>
                   {{ m.assignedTo }}
                 </span>
@@ -516,7 +510,7 @@
               </td>
             </tr>
             <tr *ngIf="filteredMaint().length === 0">
-              <td colspan="10" class="empty-state">
+              <td colspan="9" class="empty-state">
                 <span class="material-icons-round">build_circle</span>
                 <p>No maintenance issues reported.</p>
               </td>

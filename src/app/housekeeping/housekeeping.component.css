@@ -615,6 +615,141 @@
   background: var(--surface-50);
 }
 
+.hk-grid-table {
+  border-collapse: separate;
+  border-spacing: 0 6px;
+}
+
+.hk-grid-table thead {
+  box-shadow: none;
+}
+
+.hk-grid-table th {
+  border-top: 1px solid var(--surface-200);
+  border-bottom: 1px solid var(--surface-200);
+}
+
+.hk-grid-table th:first-child {
+  border-left: 1px solid var(--surface-200);
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+}
+
+.hk-grid-table th:last-child {
+  border-right: 1px solid var(--surface-200);
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.hk-grid-table tbody tr {
+  background: white;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
+}
+
+.hk-grid-table tbody tr:hover {
+  background: var(--primary-light);
+}
+
+.hk-grid-table td {
+  height: 48px;
+  border-top: 1px solid var(--surface-200);
+  border-bottom: 1px solid var(--surface-200);
+  background: inherit;
+  overflow: visible;
+  position: relative;
+}
+
+.hk-grid-table td + td {
+  border-left: 1px solid var(--surface-100);
+}
+
+.hk-grid-table td:first-child {
+  border-left: 1px solid var(--surface-200);
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+}
+
+.hk-grid-table td:last-child {
+  border-right: 1px solid var(--surface-200);
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.hk-grid-table .item-desc-cell,
+.hk-grid-table .issue-cell,
+.hk-grid-table .storage-box,
+.hk-grid-table .assigned-box,
+.hk-grid-table .guest-contact {
+  overflow: visible;
+}
+
+.hk-hover-table td {
+  overflow: visible;
+  position: relative;
+}
+
+.hk-hover-table .task-type-container,
+.hk-hover-table .staff-cell {
+  overflow: visible;
+}
+
+.truncate-hover {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: help;
+}
+
+.truncate-hover:hover {
+  color: var(--primary-color);
+  overflow: visible;
+}
+
+.hk-grid-table .storage-box.truncate-hover,
+.hk-grid-table .assigned-box.truncate-hover {
+  display: inline-flex;
+}
+
+.hk-grid-table .guest-contact.truncate-hover {
+  display: flex;
+}
+
+.truncate-hover:hover::after {
+  content: attr(data-full);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 50;
+  min-width: 180px;
+  max-width: 360px;
+  padding: 8px 10px;
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  background: var(--surface-900);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: normal;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+  pointer-events: none;
+}
+
+.truncate-hover:hover::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  bottom: calc(100% + 3px);
+  z-index: 51;
+  border: 5px solid transparent;
+  border-top-color: var(--surface-900);
+  pointer-events: none;
+}
+
 .mono-text {
   font-family: "JetBrains Mono", monospace;
   font-size: 9.5px;
@@ -740,6 +875,34 @@
   text-transform: uppercase;
   display: inline-block;
   white-space: nowrap !important;
+}
+
+.hk-grid-table .maint-status {
+  max-width: 100%;
+  overflow: visible;
+}
+
+.maintenance-grid td {
+  white-space: normal;
+}
+
+.maintenance-grid .issue-cell {
+  align-items: flex-start;
+  white-space: normal !important;
+}
+
+.maintenance-grid .issue-text,
+.maintenance-grid .issue-notes,
+.maintenance-grid .assigned-box,
+.maintenance-grid .truncate-hover {
+  max-width: 100%;
+  white-space: normal !important;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.maintenance-grid .assigned-box {
+  align-items: flex-start;
 }
 
 .status-badge.pending, .status-badge.stored, .status-badge.open { background: #FFF3E0; color: #E65100; }

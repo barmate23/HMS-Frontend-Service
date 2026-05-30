@@ -62,6 +62,18 @@ export class Layout {
         { label: 'Access Audit', icon: 'manage_history', route: '/user-management/activity' }
       ]
     },
+    {
+      label: 'POS',
+      icon: 'point_of_sale',
+      expanded: false,
+      children: [
+        { label: 'Outlets', icon: 'storefront', route: '/pos/outlets' },
+        { label: 'Table Dining', icon: 'table_restaurant', route: '/pos/dining' },
+        { label: 'Orders', icon: 'restaurant_menu', route: '/pos/orders' },
+        { label: 'Billing', icon: 'receipt_long', route: '/pos/billing' },
+        { label: 'Menu Management', icon: 'menu_book', route: '/pos/menu' }
+      ]
+    },
     { label: 'In-House', icon: 'people', route: '/in-house' },
     { label: 'Room Rack', icon: 'grid_on', route: '/room-rack' },
     { label: 'Night Audit', icon: 'bedtime', route: '/night-audit' },

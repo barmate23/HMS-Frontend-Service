@@ -1,0 +1,321 @@
+<div class="laundry-container">
+  <div class="compact-nav" [class.has-filters]="activeTab() === 'orders' || activeTab() === 'catalogue' || activeTab() === 'reports'">
+    <div class="tabs-container">
+      <button class="tab-btn" [class.active]="activeTab() === 'dashboard'" (click)="switchTab('dashboard')"><span class="material-icons-round">dashboard</span>Dashboard</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'create'" (click)="switchTab('create')"><span class="material-icons-round">add_circle</span>Create Order</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'orders'" (click)="switchTab('orders')"><span class="material-icons-round">local_laundry_service</span>Tracking</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'detail'" (click)="switchTab('detail')"><span class="material-icons-round">timeline</span>Status Flow</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'catalogue'" (click)="switchTab('catalogue')"><span class="material-icons-round">inventory_2</span>Price Master</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'reports'" (click)="switchTab('reports')"><span class="material-icons-round">bar_chart</span>Reports</button>
+    </div>
+
+    <div class="nav-right">
+      <div class="search-box" *ngIf="activeTab() === 'orders' || activeTab() === 'catalogue'">
+        <span class="material-icons-round">search</span>
+        <input [placeholder]="activeTab() === 'orders' ? 'Search room, guest, order...' : 'Search item, category...'" [ngModel]="search()" (ngModelChange)="search.set($event)">
+      </div>
+
+      <select class="filter-select" *ngIf="activeTab() === 'orders'" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+        <option value="ALL">All Statuses</option>
+        <option *ngFor="let status of laundry.statuses" [value]="status">{{ status }}</option>
+      </select>
+
+      <select class="filter-select" *ngIf="activeTab() === 'orders' || activeTab() === 'reports'" [ngModel]="serviceFilter()" (ngModelChange)="serviceFilter.set($event)">
+        <option value="ALL">All Services</option>
+        <option *ngFor="let service of laundry.serviceTypes" [value]="service">{{ service }}</option>
+      </select>
+
+      <select class="filter-select" *ngIf="activeTab() === 'catalogue'" [ngModel]="categoryFilter()" (ngModelChange)="categoryFilter.set($event)">
+        <option value="ALL">All Categories</option>
+        <option *ngFor="let category of laundry.categories" [value]="category">{{ category }}</option>
+      </select>
+
+      <div class="date-range" *ngIf="activeTab() === 'orders' || activeTab() === 'reports'">
+        <label><span>From</span><input type="date" [ngModel]="fromDate()" (ngModelChange)="fromDate.set($event)"></label>
+        <label><span>To</span><input type="date" [ngModel]="toDate()" (ngModelChange)="toDate.set($event)"></label>
+      </div>
+
+      <button class="btn-primary" *ngIf="activeTab() !== 'create'" (click)="newOrder()"><span class="material-icons-round">add</span>New Laundry Order</button>
+      <button class="btn-primary" *ngIf="activeTab() === 'catalogue'" (click)="beginCatalogueEdit()"><span class="material-icons-round">add</span>Add Item</button>
+      <button class="btn-primary" *ngIf="activeTab() === 'reports'"><span class="material-icons-round">download</span>Export</button>
+    </div>
+  </div>
+
+  <div class="view-content" [ngSwitch]="activeTab()">
+    <ng-container *ngSwitchCase="'dashboard'">
+      <div class="metric-grid">
+        <div class="metric-card amber"><span class="material-icons-round">schedule</span><div><strong>{{ dashboardStats().pendingPickup }}</strong><small>Pending Pickup</small></div></div>
+        <div class="metric-card blue"><span class="material-icons-round">local_laundry_service</span><div><strong>{{ dashboardStats().inProcess }}</strong><small>In Process</small></div></div>
+        <div class="metric-card teal"><span class="material-icons-round">verified</span><div><strong>{{ dashboardStats().ready }}</strong><small>Ready for Delivery</small></div></div>
+        <div class="metric-card green"><span class="material-icons-round">currency_rupee</span><div><strong>{{ money(dashboardStats().revenue) }}</strong><small>Today's Revenue</small></div></div>
+        <div class="metric-card coral"><span class="material-icons-round">warning</span><div><strong>{{ dashboardStats().overdue }}</strong><small>Overdue Orders</small></div></div>
+        <div class="metric-card green"><span class="material-icons-round">done_all</span><div><strong>{{ dashboardStats().completedToday }}</strong><small>Completed Today</small></div></div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="modern-card">
+          <div class="card-header">
+            <h2 class="card-title">Live Laundry Activity</h2>
+            <span class="total-badge">Last 10 orders</span>
+          </div>
+          <div class="activity-list">
+            <button class="activity-row" *ngFor="let order of activityFeed()" (click)="viewOrder(order)">
+              <div class="activity-icon"><span class="material-icons-round">local_laundry_service</span></div>
+              <div class="activity-main">
+                <strong>{{ order.orderId }} · Room {{ order.room }}</strong>
+                <span>{{ order.guest }} · {{ order.itemCount }} items · {{ money(order.amount) }}</span>
+              </div>
+              <span class="status-chip" [class]="statusClass(order.status)">{{ order.status }}</span>
+              <time>{{ order.createdAt }}</time>
+            </button>
+          </div>
+        </div>
+
+        <div class="quick-panel">
+          <span class="material-icons-round">bolt</span>
+          <h2>Laundry Desk</h2>
+          <p>Start a guest laundry order, post room-account charges, and move staff through pickup, processing, ready, and delivery steps.</p>
+          <button class="hero-action" (click)="newOrder()"><span class="material-icons-round">add</span>New Laundry Order</button>
+        </div>
+      </div>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'create'">
+      <div class="order-form-card">
+        <div class="form-header">
+          <div>
+            <h2>Create Laundry Order</h2>
+            <p>Price Master rates are fetched automatically based on service type.</p>
+          </div>
+          <span class="total-badge">{{ money(draftTotal()) }}</span>
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>Floor</span>
+            <select [ngModel]="selectedFloor()" (ngModelChange)="setDraftFloor($event)">
+              <option *ngFor="let floor of floors()" [value]="floor">{{ floor }}</option>
+            </select>
+          </label>
+          <label class="field wide">
+            <span>Room / Guest</span>
+            <select [ngModel]="orderDraft().bookingId" (ngModelChange)="setDraftBooking($event)">
+              <option *ngFor="let booking of roomsForSelectedFloor()" [value]="booking.bookingId">Room {{ booking.room }} · {{ booking.guest }} · {{ booking.plan }}</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Service Type</span>
+            <select [ngModel]="orderDraft().serviceType" (ngModelChange)="setDraftServiceType($event)">
+              <option *ngFor="let service of laundry.serviceTypes" [value]="service">{{ service }}</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Billing Option</span>
+            <select [(ngModel)]="orderDraft().billingMode">
+              <option value="Room Account">Room Account</option>
+              <option value="Direct Payment">Direct Payment</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Pickup Datetime</span>
+            <input [(ngModel)]="orderDraft().pickupAt" placeholder="dd-mm-yyyy hh:mm">
+          </label>
+          <label class="field">
+            <span>Expected Delivery</span>
+            <input [(ngModel)]="orderDraft().expectedDeliveryAt" placeholder="dd-mm-yyyy hh:mm">
+          </label>
+          <label class="field full">
+            <span>Special Instructions</span>
+            <textarea rows="3" [(ngModel)]="orderDraft().notes" placeholder="Guest preferences, stain notes, delivery instructions..."></textarea>
+          </label>
+        </div>
+
+        <div class="line-toolbar">
+          <strong>Item Table</strong>
+          <button class="mini-add-btn" type="button" (click)="addOrderLine()"><span class="material-icons-round">add</span>Add Item</button>
+        </div>
+
+        <div class="table-container">
+          <table class="hms-table line-table">
+            <thead><tr><th>ITEM NAME</th><th>QUANTITY</th><th>UNIT PRICE</th><th>TOTAL</th><th>NOTES</th><th>ACTIONS</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let line of orderDraft().lines || []; let i = index">
+                <td>
+                  <select [ngModel]="line.catalogueId" (ngModelChange)="updateLineItem(i, $event)">
+                    <option *ngFor="let item of laundry.catalogue()" [value]="item.id" [disabled]="!item.active || laundry.priceFor(item, orderDraft().serviceType || 'Wash & Fold') === 0">{{ item.itemName }} · {{ item.category }}</option>
+                    <option [value]="0">Other / Manual Item</option>
+                  </select>
+                  <input *ngIf="line.catalogueId === 0" class="manual-item-input" [ngModel]="line.itemName" (ngModelChange)="updateLineCustomName(i, $event)" placeholder="Type item name">
+                </td>
+                <td><input class="qty-input" type="number" min="1" [ngModel]="line.quantity" (ngModelChange)="updateLineQty(i, $event)"></td>
+                <td>
+                  <span *ngIf="line.catalogueId !== 0">{{ money(line.unitPrice) }}</span>
+                  <input *ngIf="line.catalogueId === 0" class="price-input" type="number" min="0" [ngModel]="line.unitPrice" (ngModelChange)="updateLineUnitPrice(i, $event)" placeholder="Rate">
+                </td>
+                <td><strong>{{ money(currentLineTotal(line)) }}</strong></td>
+                <td><input [ngModel]="line.notes" (ngModelChange)="updateLineNotes(i, $event)" placeholder="Per-item note"></td>
+                <td><button class="btn-icon delete" type="button" (click)="removeLine(i)"><span class="material-icons-round">delete_outline</span></button></td>
+              </tr>
+              <tr *ngIf="!(orderDraft().lines || []).length"><td colspan="6" class="empty-state">Add laundry items to calculate the order total.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="form-footer">
+          <button class="secondary-btn" (click)="saveDraft()">Save Draft</button>
+          <button class="confirm-btn" [disabled]="!(orderDraft().lines || []).length" (click)="confirmOrder()"><span class="material-icons-round">check_circle</span>Confirm Order</button>
+        </div>
+      </div>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'orders'">
+      <div class="modern-card">
+        <div class="card-header">
+          <h2 class="card-title">Order List & Tracking</h2>
+          <span class="total-badge">{{ filteredOrders().length }} Orders</span>
+        </div>
+        <div class="table-container">
+          <table class="hms-table order-table">
+            <thead><tr><th>ORDER ID</th><th>ROOM · GUEST</th><th>NO. OF ITEMS</th><th>SERVICE TYPE</th><th>EXPECTED DELIVERY</th><th>STATUS</th><th>AMOUNT</th><th>ACTIONS</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let order of filteredOrders()">
+                <td><strong>{{ order.orderId }}</strong><span class="subline">{{ order.createdAt }}</span></td>
+                <td><span class="room-pill">Room {{ order.room }}</span><span class="subline">{{ order.guest }} · {{ order.plan }}</span></td>
+                <td>{{ laundry.orderItemCount(order) }}</td>
+                <td>{{ order.serviceType }}</td>
+                <td>{{ order.expectedDeliveryAt }}</td>
+                <td><span class="status-chip" [class]="statusClass(order.status)">{{ order.status }}</span></td>
+                <td><strong>{{ money(laundry.orderAmount(order)) }}</strong><span class="subline">{{ order.billingMode }}</span></td>
+                <td>
+                  <div class="action-buttons">
+                    <button class="btn-icon view" title="View" (click)="viewOrder(order)"><span class="material-icons-round">visibility</span></button>
+                    <button class="btn-icon edit" title="Edit" (click)="editOrder(order)"><span class="material-icons-round">edit</span></button>
+                    <button class="btn-icon delete" title="Cancel" (click)="laundry.cancelOrder(order.id)"><span class="material-icons-round">cancel</span></button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'detail'">
+      <div class="status-order-selector">
+        <div>
+          <span>Status Workflow</span>
+          <strong>Select Laundry Order</strong>
+        </div>
+        <select [ngModel]="selectedOrderId()" (ngModelChange)="selectStatusOrder($event)">
+          <option *ngFor="let order of laundry.orders()" [value]="order.id">
+            {{ order.orderId }} · Room {{ order.room }} · {{ order.guest }} · {{ order.status }}
+          </option>
+        </select>
+        <button class="secondary-btn" type="button" (click)="switchTab('orders')">
+          <span class="material-icons-round">list_alt</span>
+          View All Orders
+        </button>
+      </div>
+
+      <div class="detail-layout" *ngIf="selectedOrder() as order">
+        <div class="detail-panel">
+          <div class="detail-head">
+            <div><span class="detail-kicker">Laundry Order</span><h2>{{ order.orderId }}</h2><p>Room {{ order.room }} · {{ order.guest }}</p></div>
+            <span class="status-chip" [class]="statusClass(order.status)">{{ order.status }}</span>
+          </div>
+          <div class="metadata-grid">
+            <div><span>Guest Details</span><strong>{{ order.guest }}</strong><small>Room {{ order.room }}</small></div>
+            <div><span>Room & Plan</span><strong>{{ order.plan }}</strong><small>Booking #{{ order.bookingId }}</small></div>
+            <div><span>Service</span><strong>{{ order.serviceType }}</strong><small>{{ laundry.orderItemCount(order) }} items</small></div>
+            <div><span>Pickup Time</span><strong>{{ order.pickupAt }}</strong></div>
+            <div><span>Delivery Time</span><strong>{{ order.expectedDeliveryAt }}</strong></div>
+            <div><span>Billing Mode</span><strong>{{ order.billingMode }}</strong><small>{{ order.postedToFolio ? 'Posted to folio' : 'Not posted' }}</small></div>
+            <div class="wide"><span>Notes</span><strong>{{ order.notes || 'No special instructions' }}</strong></div>
+          </div>
+        </div>
+
+        <div class="stepper-panel">
+          <div class="card-header"><h2 class="card-title">Status Flow</h2><span class="total-badge">Real-time desk action</span></div>
+          <div class="status-stepper">
+            <div class="step" *ngFor="let step of ['Requested', 'Picked Up', 'In Laundry', 'Ready for Delivery', 'Delivered']" [class]="stepState(order, step)">
+              <span class="step-dot"><span class="material-icons-round">{{ stepState(order, step) === 'done' ? 'check' : stepState(order, step) === 'current' ? 'radio_button_checked' : 'radio_button_unchecked' }}</span></span>
+              <div><strong>{{ step }}</strong><small>{{ stepState(order, step) | titlecase }}</small></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modern-card full-span">
+          <div class="card-header"><h2 class="card-title">Item-Level Details</h2><span class="total-badge">{{ money(laundry.orderAmount(order)) }}</span></div>
+          <table class="hms-table">
+            <thead><tr><th>ITEM</th><th>QTY</th><th>UNIT PRICE</th><th>TOTAL</th><th>PER-ITEM NOTES</th></tr></thead>
+            <tbody><tr *ngFor="let line of order.lines"><td>{{ line.itemName }}</td><td>{{ line.quantity }}</td><td>{{ money(line.unitPrice) }}</td><td>{{ money(currentLineTotal(line)) }}</td><td>{{ line.notes || '-' }}</td></tr></tbody>
+          </table>
+          <div class="detail-footer">
+            <button class="secondary-btn"><span class="material-icons-round">print</span>Print Slip</button>
+            <button class="secondary-btn" *ngIf="order.billingMode === 'Room Account' && !order.postedToFolio" (click)="laundry.postOrderToFolio(order.id)"><span class="material-icons-round">receipt_long</span>Post to Folio</button>
+            <button class="confirm-btn" [disabled]="!nextStatus(order)" (click)="applyNextStatus(order)"><span class="material-icons-round">arrow_forward</span>{{ nextActionLabel(order) }}</button>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'catalogue'">
+      <div class="modern-card">
+        <div class="card-header"><h2 class="card-title">Laundry Item Price Master</h2><span class="total-badge">{{ filteredCatalogue().length }} Items</span></div>
+        <div class="catalogue-editor" *ngIf="editingCatalogueId() !== null">
+          <label><span>Category</span><select [(ngModel)]="catalogueDraft().category"><option *ngFor="let category of laundry.categories" [value]="category">{{ category }}</option></select></label>
+          <label><span>Item Name</span><input [(ngModel)]="catalogueDraft().itemName"></label>
+          <label><span>Wash & Fold</span><input type="number" [(ngModel)]="catalogueDraft().washFold"></label>
+          <label><span>Wash & Press</span><input type="number" [(ngModel)]="catalogueDraft().washPress"></label>
+          <label><span>Dry Clean</span><input type="number" [(ngModel)]="catalogueDraft().dryClean"></label>
+          <label><span>Express +%</span><input type="number" [(ngModel)]="catalogueDraft().expressSurcharge"></label>
+          <button class="confirm-btn" (click)="saveCatalogueEdit()">Save</button>
+          <button class="secondary-btn" (click)="cancelCatalogueEdit()">Cancel</button>
+        </div>
+        <div class="table-container">
+          <table class="hms-table">
+            <thead><tr><th>CATEGORY</th><th>ITEM NAME</th><th>WASH & FOLD</th><th>WASH & PRESS</th><th>DRY CLEAN</th><th>EXPRESS SURCHARGE</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let item of filteredCatalogue()">
+                <td>{{ item.category }}</td>
+                <td><strong>{{ item.itemName }}</strong></td>
+                <td>{{ money(item.washFold) }}</td>
+                <td>{{ money(item.washPress) }}</td>
+                <td>{{ money(item.dryClean) }}</td>
+                <td>+{{ item.expressSurcharge }}%</td>
+                <td><span class="status-chip" [class.delivered]="item.active" [class.cancelled]="!item.active">{{ item.active ? 'Active' : 'Inactive' }}</span></td>
+                <td><div class="action-buttons"><button class="btn-icon edit" (click)="beginCatalogueEdit(item)"><span class="material-icons-round">edit</span></button><button class="btn-icon delete" (click)="laundry.toggleCatalogueItem(item.id)"><span class="material-icons-round">{{ item.active ? 'toggle_off' : 'toggle_on' }}</span></button></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'reports'">
+      <div class="metric-grid reports">
+        <div class="metric-card green"><span class="material-icons-round">currency_rupee</span><div><strong>{{ money(reportStats().revenue) }}</strong><small>Monthly Revenue</small></div></div>
+        <div class="metric-card teal"><span class="material-icons-round">receipt_long</span><div><strong>{{ reportStats().totalOrders }}</strong><small>Total Orders</small></div></div>
+        <div class="metric-card blue"><span class="material-icons-round">timer</span><div><strong>{{ reportStats().averageTat }}</strong><small>Average Turnaround Time</small></div></div>
+      </div>
+      <div class="reports-grid">
+        <div class="modern-card">
+          <div class="card-header"><h2 class="card-title">Revenue by Service Type</h2><span class="total-badge">% Share</span></div>
+          <div class="bar-list">
+            <div class="bar-row" *ngFor="let item of serviceRevenue()">
+              <div class="bar-label"><strong>{{ item.service }}</strong><span>{{ money(item.revenue) }} · {{ item.share }}%</span></div>
+              <div class="bar-track"><span [style.width]="item.width"></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="modern-card">
+          <div class="card-header"><h2 class="card-title">Top Rooms by Order Volume</h2><span class="total-badge">Filtered by date range</span></div>
+          <table class="hms-table">
+            <thead><tr><th>ROOM</th><th>GUEST</th><th>ORDERS</th><th>REVENUE</th><th>AVG TAT</th></tr></thead>
+            <tbody><tr *ngFor="let room of topRooms()"><td><span class="room-pill">Room {{ room.room }}</span></td><td>{{ room.guest }}</td><td>{{ room.orders }}</td><td>{{ money(room.revenue) }}</td><td>{{ room.tat }}</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</div>

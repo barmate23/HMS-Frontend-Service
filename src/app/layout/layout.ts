@@ -41,6 +41,19 @@ export class Layout {
       ]
     },
     {
+      label: 'Laundry',
+      icon: 'local_laundry_service',
+      expanded: false,
+      children: [
+        { label: 'Dashboard', icon: 'dashboard', route: '/laundry/dashboard' },
+        { label: 'Create Order', icon: 'add_circle', route: '/laundry/create' },
+        { label: 'Order Tracking', icon: 'list_alt', route: '/laundry/orders' },
+        { label: 'Status Flow', icon: 'timeline', route: '/laundry/detail' },
+        { label: 'Price Master', icon: 'inventory_2', route: '/laundry/catalogue' },
+        { label: 'Reports', icon: 'bar_chart', route: '/laundry/reports' }
+      ]
+    },
+    {
       label: 'Hotel Setup',
       icon: 'domain',
       expanded: false,

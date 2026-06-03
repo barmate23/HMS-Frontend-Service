@@ -5,6 +5,9 @@ import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 import {
   LaundryCatalogueItem,
+  LinenDispatch,
+  LinenDispatchLine,
+  LinenDispatchStatus,
   LaundryOrder,
   LaundryOrderLine,
   LaundryService,
@@ -34,8 +37,10 @@ export class LaundryComponent implements OnInit, OnDestroy {
   toDate = signal('2026-05-31');
   selectedFloor = signal('Floor 1');
   selectedOrderId = signal<number>(1);
+  selectedLinenDispatchId = signal<number>(1);
   editingCatalogueId = signal<number | null>(null);
   catalogueDraft = signal<Partial<LaundryCatalogueItem>>({});
+  linenDraft = signal<Partial<LinenDispatch>>({});
 
   orderDraft = signal<Partial<LaundryOrder>>({
     bookingId: 101,
@@ -79,6 +84,22 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
   readonly selectedOrder = computed(() => {
     return this.laundry.orders().find(order => order.id === this.selectedOrderId()) || this.laundry.orders()[0];
+  });
+
+  readonly selectedLinenDispatch = computed(() => {
+    return this.laundry.linenDispatches().find(dispatch => dispatch.id === this.selectedLinenDispatchId()) || this.laundry.linenDispatches()[0];
+  });
+
+  readonly linenStats = computed(() => {
+    const dispatches = this.laundry.linenDispatches();
+    return {
+      openBatches: dispatches.filter(dispatch => dispatch.status !== 'Returned').length,
+      outPieces: dispatches.reduce((sum, dispatch) => sum + this.laundry.linenDispatchQuantity(dispatch), 0),
+      returnedPieces: dispatches.reduce((sum, dispatch) => sum + this.laundry.linenReturnedQuantity(dispatch), 0),
+      exceptions: dispatches.reduce((sum, dispatch) => sum + this.laundry.linenExceptionQuantity(dispatch), 0),
+      scannedPieces: dispatches.reduce((sum, dispatch) => sum + this.laundry.linenScanCount(dispatch), 0),
+      vendorCost: dispatches.reduce((sum, dispatch) => sum + this.laundry.linenDispatchCost(dispatch), 0)
+    };
   });
 
   readonly dashboardStats = computed(() => {
@@ -168,6 +189,34 @@ export class LaundryComponent implements OnInit, OnDestroy {
     this.syncBookingToDraft();
     this.addOrderLine();
     this.switchTab('create');
+  }
+
+  newLinenDispatch(): void {
+    const firstItem = this.laundry.linenItems().find(item => item.active);
+    this.linenDraft.set({
+      vendorName: this.laundry.linenVendors[0],
+      challanNo: 'CH-NEW',
+      sentAt: '31-05-2026 12:30',
+      expectedReturnAt: '01-06-2026 09:00',
+      vehicleNo: '',
+      handledBy: 'Laundry Supervisor',
+      status: 'Ready for Pickup',
+      billingRecorded: false,
+      lines: firstItem ? [{
+        id: 1,
+        itemId: firstItem.id,
+        itemName: firstItem.itemName,
+        source: 'Room 102',
+        quantity: 1,
+        returnedQty: 0,
+        damagedQty: 0,
+        missingQty: 0,
+        vendorRate: firstItem.defaultVendorRate,
+        scanCodes: [],
+        notes: ''
+      }] : []
+    });
+    this.switchTab('linen');
   }
 
   syncBookingToDraft(): void {
@@ -313,6 +362,82 @@ export class LaundryComponent implements OnInit, OnDestroy {
     if (next === 'Delivered') this.laundry.postOrderToFolio(order.id);
   }
 
+  editLinenDispatch(dispatch: LinenDispatch): void {
+    this.selectedLinenDispatchId.set(dispatch.id);
+    this.linenDraft.set({ ...dispatch, lines: dispatch.lines.map(line => ({ ...line, scanCodes: [...line.scanCodes] })) });
+    this.switchTab('linen');
+  }
+
+  addLinenLine(): void {
+    const item = this.laundry.linenItems().find(value => value.active);
+    if (!item) return;
+    this.linenDraft.update(draft => ({
+      ...draft,
+      lines: [...(draft.lines || []), {
+        id: (draft.lines || []).length + 1,
+        itemId: item.id,
+        itemName: item.itemName,
+        source: 'Linen Room',
+        quantity: 1,
+        returnedQty: 0,
+        damagedQty: 0,
+        missingQty: 0,
+        vendorRate: item.defaultVendorRate,
+        scanCodes: [],
+        notes: ''
+      }]
+    }));
+  }
+
+  updateLinenLineItem(index: number, itemId: number): void {
+    const item = this.laundry.linenItemMap().get(Number(itemId));
+    if (!item) return;
+    this.linenDraft.update(draft => ({
+      ...draft,
+      lines: (draft.lines || []).map((line, i) => i === index ? { ...line, itemId: item.id, itemName: item.itemName, vendorRate: item.defaultVendorRate } : line)
+    }));
+  }
+
+  updateLinenLineField(index: number, field: keyof LinenDispatchLine, value: string | number): void {
+    this.linenDraft.update(draft => ({
+      ...draft,
+      lines: (draft.lines || []).map((line, i) => {
+        if (i !== index) return line;
+        if (['quantity', 'returnedQty', 'damagedQty', 'missingQty', 'vendorRate'].includes(field)) {
+          return { ...line, [field]: Math.max(0, Number(value) || 0) };
+        }
+        return { ...line, [field]: String(value) };
+      })
+    }));
+  }
+
+  updateLinenScanCodes(index: number, value: string): void {
+    const scanCodes = value.split(',').map(code => code.trim()).filter(Boolean);
+    this.linenDraft.update(draft => ({
+      ...draft,
+      lines: (draft.lines || []).map((line, i) => i === index ? { ...line, scanCodes } : line)
+    }));
+  }
+
+  removeLinenLine(index: number): void {
+    this.linenDraft.update(draft => ({ ...draft, lines: (draft.lines || []).filter((_, i) => i !== index) }));
+  }
+
+  saveLinenDispatch(): void {
+    const saved = this.laundry.saveLinenDispatch(this.linenDraft());
+    this.selectedLinenDispatchId.set(saved.id);
+    this.linenDraft.set({});
+  }
+
+  cancelLinenEdit(): void {
+    this.linenDraft.set({});
+  }
+
+  updateLinenStatus(dispatch: LinenDispatch, status: LinenDispatchStatus): void {
+    this.laundry.updateLinenDispatchStatus(dispatch.id, status);
+    this.selectedLinenDispatchId.set(dispatch.id);
+  }
+
   beginCatalogueEdit(item?: LaundryCatalogueItem): void {
     this.editingCatalogueId.set(item?.id || 0);
     this.catalogueDraft.set(item ? { ...item } : { category: 'Top Wear', itemName: '', washFold: 0, washPress: 0, dryClean: 0, expressSurcharge: 50, active: true });
@@ -345,6 +470,18 @@ export class LaundryComponent implements OnInit, OnDestroy {
     return this.laundry.orderAmount({ lines: this.orderDraft().lines || [] });
   }
 
+  linenDraftTotal(): number {
+    return this.laundry.linenDispatchCost({ lines: this.linenDraft().lines || [] });
+  }
+
+  linenLineTotal(line: LinenDispatchLine): number {
+    return Number(line.quantity || 0) * Number(line.vendorRate || 0);
+  }
+
+  linenReturnBalance(line: LinenDispatchLine): number {
+    return Math.max(0, Number(line.quantity || 0) - Number(line.returnedQty || 0) - Number(line.damagedQty || 0) - Number(line.missingQty || 0));
+  }
+
   stepState(order: LaundryOrder, step: string): 'done' | 'current' | 'pending' {
     const steps = ['Requested', 'Picked Up', 'In Laundry', 'Ready for Delivery', 'Delivered'];
     const statusIndex = order.status === 'Pickup Pending'
@@ -372,7 +509,7 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
   private updateTabFromUrl(url: string): void {
     const last = url.split('/').pop()?.split('?')[0] as LaundryTab;
-    this.activeTab.set(['dashboard', 'create', 'orders', 'detail', 'catalogue', 'reports'].includes(last) ? last : 'dashboard');
+    this.activeTab.set(['dashboard', 'create', 'orders', 'detail', 'linen', 'catalogue', 'reports'].includes(last) ? last : 'dashboard');
     if (this.activeTab() === 'create' && !(this.orderDraft().lines || []).length) this.addOrderLine();
   }
 

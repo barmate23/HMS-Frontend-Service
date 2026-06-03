@@ -5,6 +5,7 @@
       <button class="tab-btn" [class.active]="activeTab() === 'create'" (click)="switchTab('create')"><span class="material-icons-round">add_circle</span>Create Order</button>
       <button class="tab-btn" [class.active]="activeTab() === 'orders'" (click)="switchTab('orders')"><span class="material-icons-round">local_laundry_service</span>Tracking</button>
       <button class="tab-btn" [class.active]="activeTab() === 'detail'" (click)="switchTab('detail')"><span class="material-icons-round">timeline</span>Status Flow</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'linen'" (click)="switchTab('linen')"><span class="material-icons-round">qr_code_scanner</span>Linen Outsource</button>
       <button class="tab-btn" [class.active]="activeTab() === 'catalogue'" (click)="switchTab('catalogue')"><span class="material-icons-round">inventory_2</span>Price Master</button>
       <button class="tab-btn" [class.active]="activeTab() === 'reports'" (click)="switchTab('reports')"><span class="material-icons-round">bar_chart</span>Reports</button>
     </div>
@@ -35,7 +36,8 @@
         <label><span>To</span><input type="date" [ngModel]="toDate()" (ngModelChange)="toDate.set($event)"></label>
       </div>
 
-      <button class="btn-primary" *ngIf="activeTab() !== 'create'" (click)="newOrder()"><span class="material-icons-round">add</span>New Laundry Order</button>
+      <button class="btn-primary" *ngIf="activeTab() !== 'create' && activeTab() !== 'linen'" (click)="newOrder()"><span class="material-icons-round">add</span>New Laundry Order</button>
+      <button class="btn-primary" *ngIf="activeTab() === 'linen'" (click)="newLinenDispatch()"><span class="material-icons-round">add</span>New Linen Dispatch</button>
       <button class="btn-primary" *ngIf="activeTab() === 'catalogue'" (click)="beginCatalogueEdit()"><span class="material-icons-round">add</span>Add Item</button>
       <button class="btn-primary" *ngIf="activeTab() === 'reports'"><span class="material-icons-round">download</span>Export</button>
     </div>
@@ -255,6 +257,163 @@
             <button class="secondary-btn" *ngIf="order.billingMode === 'Room Account' && !order.postedToFolio" (click)="laundry.postOrderToFolio(order.id)"><span class="material-icons-round">receipt_long</span>Post to Folio</button>
             <button class="confirm-btn" [disabled]="!nextStatus(order)" (click)="applyNextStatus(order)"><span class="material-icons-round">arrow_forward</span>{{ nextActionLabel(order) }}</button>
           </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'linen'">
+      <div class="metric-grid">
+        <div class="metric-card amber"><span class="material-icons-round">local_shipping</span><div><strong>{{ linenStats().openBatches }}</strong><small>Open Vendor Batches</small></div></div>
+        <div class="metric-card blue"><span class="material-icons-round">inventory_2</span><div><strong>{{ linenStats().outPieces }}</strong><small>Pieces Sent Out</small></div></div>
+        <div class="metric-card teal"><span class="material-icons-round">assignment_return</span><div><strong>{{ linenStats().returnedPieces }}</strong><small>Returned Pieces</small></div></div>
+        <div class="metric-card coral"><span class="material-icons-round">report_problem</span><div><strong>{{ linenStats().exceptions }}</strong><small>Missing / Damaged</small></div></div>
+        <div class="metric-card green"><span class="material-icons-round">qr_code_scanner</span><div><strong>{{ linenStats().scannedPieces }}</strong><small>Scan IDs Captured</small></div></div>
+        <div class="metric-card green"><span class="material-icons-round">currency_rupee</span><div><strong>{{ money(linenStats().vendorCost) }}</strong><small>Vendor Billing Cost</small></div></div>
+      </div>
+
+      <div class="linen-layout">
+        <div class="modern-card">
+          <div class="card-header">
+            <h2 class="card-title">Outsourced Linen Dispatches</h2>
+            <span class="total-badge">{{ laundry.linenDispatches().length }} Batches</span>
+          </div>
+          <div class="linen-batch-list">
+            <button class="linen-batch-card" *ngFor="let dispatch of laundry.linenDispatches()" [class.active]="selectedLinenDispatch().id === dispatch.id" (click)="selectedLinenDispatchId.set(dispatch.id)">
+              <div>
+                <strong>{{ dispatch.batchNo }}</strong>
+                <span>{{ dispatch.vendorName }} · {{ dispatch.challanNo }}</span>
+              </div>
+              <span class="status-chip" [class]="statusClass(dispatch.status)">{{ dispatch.status }}</span>
+              <small>{{ laundry.linenDispatchQuantity(dispatch) }} pcs · {{ laundry.linenScanCount(dispatch) }} scans · {{ money(laundry.linenDispatchCost(dispatch)) }}</small>
+            </button>
+          </div>
+        </div>
+
+        <div class="modern-card linen-detail-card" *ngIf="selectedLinenDispatch() as dispatch">
+          <div class="card-header">
+            <h2 class="card-title">Selected Batch</h2>
+            <span class="total-badge">{{ dispatch.batchNo }}</span>
+          </div>
+          <div class="metadata-grid linen-meta">
+            <div><span>Vendor</span><strong>{{ dispatch.vendorName }}</strong><small>{{ dispatch.vehicleNo || 'Vehicle not captured' }}</small></div>
+            <div><span>Dispatch / Return</span><strong>{{ dispatch.sentAt }}</strong><small>Due {{ dispatch.expectedReturnAt }}</small></div>
+            <div><span>Challan</span><strong>{{ dispatch.challanNo }}</strong><small>{{ dispatch.handledBy }}</small></div>
+            <div><span>Billing</span><strong>{{ money(laundry.linenDispatchCost(dispatch)) }}</strong><small>{{ dispatch.billingRecorded ? 'Recorded' : 'Pending vendor bill' }}</small></div>
+          </div>
+          <div class="detail-footer linen-actions">
+            <button class="secondary-btn" type="button" (click)="editLinenDispatch(dispatch)"><span class="material-icons-round">edit</span>Edit / Reconcile</button>
+            <button class="secondary-btn" type="button" (click)="updateLinenStatus(dispatch, 'Sent to Vendor')"><span class="material-icons-round">logout</span>Mark Sent</button>
+            <button class="secondary-btn" type="button" (click)="updateLinenStatus(dispatch, 'Partially Returned')"><span class="material-icons-round">assignment_return</span>Partial Return</button>
+            <button class="confirm-btn" type="button" (click)="updateLinenStatus(dispatch, 'Returned'); laundry.recordLinenBilling(dispatch.id)"><span class="material-icons-round">done_all</span>Close Batch</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="order-form-card linen-editor" *ngIf="linenDraft().lines">
+        <div class="form-header">
+          <div>
+            <h2>{{ linenDraft().id ? 'Edit Linen Dispatch' : 'Create Linen Dispatch' }}</h2>
+            <p>Track room linen going outside with scan IDs, challan details, vendor costs and return exceptions.</p>
+          </div>
+          <span class="total-badge">{{ money(linenDraftTotal()) }}</span>
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>Vendor</span>
+            <select [(ngModel)]="linenDraft().vendorName">
+              <option *ngFor="let vendor of laundry.linenVendors" [value]="vendor">{{ vendor }}</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Challan No.</span>
+            <input [(ngModel)]="linenDraft().challanNo">
+          </label>
+          <label class="field">
+            <span>Dispatch Time</span>
+            <input [(ngModel)]="linenDraft().sentAt" placeholder="dd-mm-yyyy hh:mm">
+          </label>
+          <label class="field">
+            <span>Expected Return</span>
+            <input [(ngModel)]="linenDraft().expectedReturnAt" placeholder="dd-mm-yyyy hh:mm">
+          </label>
+          <label class="field">
+            <span>Vehicle No.</span>
+            <input [(ngModel)]="linenDraft().vehicleNo" placeholder="Vehicle / pickup ref">
+          </label>
+          <label class="field">
+            <span>Handled By</span>
+            <input [(ngModel)]="linenDraft().handledBy">
+          </label>
+          <label class="field">
+            <span>Status</span>
+            <select [(ngModel)]="linenDraft().status">
+              <option *ngFor="let status of laundry.linenStatuses" [value]="status">{{ status }}</option>
+            </select>
+          </label>
+          <label class="toggle-option linen-toggle">
+            <input type="checkbox" [(ngModel)]="linenDraft().billingRecorded">
+            Vendor billing recorded
+          </label>
+        </div>
+
+        <div class="line-toolbar">
+          <strong>Item Scan / Return Reconciliation</strong>
+          <button class="mini-add-btn" type="button" (click)="addLinenLine()"><span class="material-icons-round">add</span>Add Linen Item</button>
+        </div>
+
+        <div class="table-container">
+          <table class="hms-table linen-table">
+            <thead><tr><th>ITEM / SOURCE</th><th>OUT</th><th>RETURNED</th><th>DAMAGED</th><th>MISSING</th><th>RATE</th><th>COST</th><th>SCAN IDS</th><th>NOTES</th><th></th></tr></thead>
+            <tbody>
+              <tr *ngFor="let line of linenDraft().lines || []; let i = index">
+                <td>
+                  <select [ngModel]="line.itemId" (ngModelChange)="updateLinenLineItem(i, $event)">
+                    <option *ngFor="let item of laundry.linenItems()" [value]="item.id" [disabled]="!item.active">{{ item.itemName }} · {{ item.category }}</option>
+                  </select>
+                  <input class="manual-item-input" [ngModel]="line.source" (ngModelChange)="updateLinenLineField(i, 'source', $event)" placeholder="Room 102 / Floor pantry / F&B">
+                </td>
+                <td><input type="number" min="1" [ngModel]="line.quantity" (ngModelChange)="updateLinenLineField(i, 'quantity', $event)"></td>
+                <td><input type="number" min="0" [ngModel]="line.returnedQty" (ngModelChange)="updateLinenLineField(i, 'returnedQty', $event)"></td>
+                <td><input type="number" min="0" [ngModel]="line.damagedQty" (ngModelChange)="updateLinenLineField(i, 'damagedQty', $event)"></td>
+                <td><input type="number" min="0" [ngModel]="line.missingQty" (ngModelChange)="updateLinenLineField(i, 'missingQty', $event)"></td>
+                <td><input type="number" min="0" [ngModel]="line.vendorRate" (ngModelChange)="updateLinenLineField(i, 'vendorRate', $event)"></td>
+                <td><strong>{{ money(linenLineTotal(line)) }}</strong><span class="subline" *ngIf="linenReturnBalance(line)">Bal {{ linenReturnBalance(line) }}</span></td>
+                <td><input [ngModel]="line.scanCodes.join(', ')" (ngModelChange)="updateLinenScanCodes(i, $event)" placeholder="RFID / barcode IDs"></td>
+                <td><input [ngModel]="line.notes" (ngModelChange)="updateLinenLineField(i, 'notes', $event)" placeholder="Vendor / damage notes"></td>
+                <td><button class="btn-icon delete" type="button" (click)="removeLinenLine(i)"><span class="material-icons-round">delete_outline</span></button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="form-footer">
+          <button class="secondary-btn" type="button" (click)="cancelLinenEdit()">Cancel</button>
+          <button class="confirm-btn" type="button" [disabled]="!(linenDraft().lines || []).length" (click)="saveLinenDispatch()"><span class="material-icons-round">save</span>Save Dispatch</button>
+        </div>
+      </div>
+
+      <div class="modern-card full-span">
+        <div class="card-header"><h2 class="card-title">Linen Item-Level Audit</h2><span class="total-badge">Mobile scan ready</span></div>
+        <div class="table-container">
+          <table class="hms-table">
+            <thead><tr><th>BATCH</th><th>ITEM</th><th>SOURCE</th><th>OUT</th><th>RETURNED</th><th>DAMAGED</th><th>MISSING</th><th>SCAN COUNT</th><th>VENDOR COST</th></tr></thead>
+            <tbody>
+              <ng-container *ngFor="let dispatch of laundry.linenDispatches()">
+                <tr *ngFor="let line of dispatch.lines">
+                  <td><strong>{{ dispatch.batchNo }}</strong><span class="subline">{{ dispatch.status }}</span></td>
+                  <td>{{ line.itemName }}</td>
+                  <td>{{ line.source }}</td>
+                  <td>{{ line.quantity }}</td>
+                  <td>{{ line.returnedQty }}</td>
+                  <td>{{ line.damagedQty }}</td>
+                  <td>{{ line.missingQty }}</td>
+                  <td>{{ line.scanCodes.length }}</td>
+                  <td>{{ money(linenLineTotal(line)) }}</td>
+                </tr>
+              </ng-container>
+            </tbody>
+          </table>
         </div>
       </div>
     </ng-container>

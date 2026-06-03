@@ -1,0 +1,964 @@
+
+> hms-modern-app@0.0.0 start
+> ng serve --proxy-config proxy.conf.json --host 0.0.0.0 --port 4200
+
+
+[1mInitial chunk files[22m                                         [2m | [22m[1mNames[22m                                         [2m | [22m [1mRaw size[22m
+[32mvendor.js[39m                                                   [2m | [22m[2mvendor[22m                                        [2m | [22m  [36m3.49 MB[39m[2m | [22m
+[32mmain.js[39m                                                     [2m | [22m[2mmain[22m                                          [2m | [22m[36m797.04 kB[39m[2m | [22m
+[32mpolyfills.js[39m                                                [2m | [22m[2mpolyfills[22m                                     [2m | [22m[36m239.72 kB[39m[2m | [22m
+[32mstyles.css, styles.js[39m                                       [2m | [22m[2mstyles[22m                                        [2m | [22m[36m129.57 kB[39m[2m | [22m
+[32mruntime.js[39m                                                  [2m | [22m[2mruntime[22m                                       [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1m [22m                                                           [2m | [22m[1mInitial total[22m                                 [2m | [22m  [1m4.67 MB[22m
+
+[1mLazy chunk files[22m                                            [2m | [22m[1mNames[22m                                         [2m | [22m [1mRaw size[22m
+[32msrc_app_masters_hotel-masters_component_ts.js[39m               [2m | [22m[2mmasters-hotel-masters-component[22m               [2m | [22m[36m290.88 kB[39m[2m | [22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m           [2m | [22m[2mhousekeeping-housekeeping-component[22m           [2m | [22m[36m272.44 kB[39m[2m | [22m
+[32mnode_modules_angular_animations_fesm2022_browser_mjs.js[39m     [2m | [22m[2mangular-animations-browser[22m                    [2m | [22m[36m229.94 kB[39m[2m | [22m
+[32msrc_app_reservations_departures_departures_component_ts.js[39m  [2m | [22m[2mreservations-departures-departures-component[22m  [2m | [22m[36m149.17 kB[39m[2m | [22m
+[32msrc_app_guests_guest-profiles_component_ts.js[39m               [2m | [22m[2mguests-guest-profiles-component[22m               [2m | [22m[36m107.53 kB[39m[2m | [22m
+[32msrc_app_reservations_gantt-chart_gantt-chart_component_ts.js[39m[2m | [22m[2mreservations-gantt-chart-gantt-chart-component[22m[2m | [22m [36m75.01 kB[39m[2m | [22m
+[32mcommon.js[39m                                                   [2m | [22m[2mcommon[22m                                        [2m | [22m [36m13.59 kB[39m[2m | [22m
+
+Build at: 2026-05-27T07:31:07.464Z - Hash: 6b184977be5bca9f - Time: 13587ms
+
+** Angular Live Development Server is listening on 0.0.0.0:4200, open your browser on http://localhost:4200/ **
+
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m798.31 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m12.93 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T07:33:37.317Z - Hash: e320e385ee32fe7b - Time: 3386ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m798.31 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m12.93 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T07:35:12.900Z - Hash: b4c3988ea96adbc0 - Time: 4280ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m798.31 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m12.93 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T07:35:47.955Z - Hash: c4a4eec319a78e00 - Time: 2541ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m798.40 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m12.93 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T07:40:01.101Z - Hash: 1454c021f8f0f8c1 - Time: 1525ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m272.49 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T07:47:27.771Z - Hash: f53af3e8fb383717 - Time: 3535ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m276.56 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T07:47:41.514Z - Hash: 589343e61582f0a7 - Time: 3217ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m276.56 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T07:49:57.835Z - Hash: e8e979372d79acf3 - Time: 1768ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m276.81 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T07:53:46.519Z - Hash: 28014f8d9e9d8270 - Time: 1412ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m280.53 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T07:54:07.780Z - Hash: 5a31a90df121db01 - Time: 1326ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m281.30 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T07:54:38.415Z - Hash: c22218a521e6babb - Time: 1133ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m281.71 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T07:57:54.206Z - Hash: e4fefcd845c99735 - Time: 1333ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m282.31 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T07:58:00.201Z - Hash: 0f2adf126a9fc220 - Time: 1504ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m281.74 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T07:58:58.282Z - Hash: 94ffe7bd080e0eb8 - Time: 1433ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m281.73 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:03:07.049Z - Hash: 88ef466c358fa163 - Time: 1353ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m281.98 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:03:13.443Z - Hash: 08dd341325454d1b - Time: 1320ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m282.08 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:07:10.131Z - Hash: 29dbd83620d7534e - Time: 1334ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m283.65 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:07:20.655Z - Hash: 174765cb4845aaa2 - Time: 1318ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m283.65 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:10:49.766Z - Hash: 08c6ba8f5eaac48d - Time: 1155ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m290.87 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:20:21.052Z - Hash: 8dbef8a5749b0441 - Time: 2729ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m291.52 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:20:34.128Z - Hash: 6c0ce8ee0c392be9 - Time: 1453ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m298.06 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:20:55.892Z - Hash: 3f7b77c61b88a37f - Time: 1518ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m323.23 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:21:38.869Z - Hash: 173770e7dc0f7466 - Time: 1503ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m341.99 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:22:24.070Z - Hash: 1033b2ea794be01a - Time: 1626ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m798.69 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m12.93 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:22:51.667Z - Hash: 0f717a3925e7d237 - Time: 971ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m798.79 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m12.93 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:23:03.274Z - Hash: ae5095a96817b281 - Time: 711ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m342.10 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:23:38.619Z - Hash: 3deeb3e52cafb83f - Time: 1289ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m342.19 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:30:35.101Z - Hash: 64f31ac4bc39e9fd - Time: 2200ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m344.48 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:30:55.514Z - Hash: 30a16a7c2fbf5e8c - Time: 1585ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m344.47 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:31:15.909Z - Hash: 5dce83d952ffe933 - Time: 1609ms
+
+× Failed to compile.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m346.10 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:31:34.077Z - Hash: b1875ba652ef91f3 - Time: 1762ms
+
+× Failed to compile.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m347.34 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:31:46.520Z - Hash: 0d6cf58ade0d35a7 - Time: 1220ms
+
+× Failed to compile.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m348.82 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:34:01.280Z - Hash: e786c6a4066dce07 - Time: 2391ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m363.74 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T08:34:38.750Z - Hash: 58bb72192d3b64ff - Time: 2301ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m361.80 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T09:26:25.778Z - Hash: 0b80dd679a65e3fa - Time: 1985ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m361.58 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T09:26:43.327Z - Hash: 67ff757d757d32aa - Time: 1890ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m361.68 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T09:37:00.787Z - Hash: 1109fe31d9b843b6 - Time: 2455ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m[36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m42.68 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T09:37:16.073Z - Hash: 5ba66b0124366248 - Time: 1186ms
+
+× Failed to compile.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m[36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m[1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m42.68 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T09:37:34.292Z - Hash: 168097809d1522f3 - Time: 1383ms
+
+× Failed to compile.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m366.22 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T09:38:32.414Z - Hash: bf978ed6f437e135 - Time: 1331ms
+
+× Failed to compile.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m366.30 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T09:38:41.657Z - Hash: 86180bc9828344fb - Time: 1580ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mmain.js[39m                                                [2m | [22m[2mmain[22m                                     [2m | [22m[36m799.81 kB[39m[2m | [22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m183.06 kB[39m[2m | [22m
+
+10 unchanged chunks
+
+Build at: 2026-05-27T09:56:06.037Z - Hash: a306ca6f3ca297e4 - Time: 1948ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m800.26 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m12.93 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T09:56:15.875Z - Hash: ece453d396b450fb - Time: 959ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m183.20 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T09:57:09.842Z - Hash: 6cf3d33c881279c4 - Time: 1222ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m183.12 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T09:57:19.506Z - Hash: 3dbb15d1641e5479 - Time: 837ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m183.22 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:01:56.850Z - Hash: faeb249e5be33e86 - Time: 1544ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m183.24 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:02:11.169Z - Hash: c09619adb747d908 - Time: 957ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m183.26 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:02:25.622Z - Hash: 2fcd182186340a37 - Time: 822ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m183.27 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:02:39.532Z - Hash: 5d7584e2622c2d82 - Time: 805ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m183.27 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:02:55.347Z - Hash: c08edc84a77d6cba - Time: 1038ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m183.54 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:10:00.457Z - Hash: 618c8b3fe36df447 - Time: 1375ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m183.72 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:10:15.816Z - Hash: 9072d9e27e752f1f - Time: 986ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m183.91 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:10:30.390Z - Hash: d3e9c3ae9be8d6db - Time: 872ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m183.91 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:12:16.423Z - Hash: 14fdc5387c0d4f29 - Time: 1079ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m183.95 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:15:26.048Z - Hash: ee8dded513449804 - Time: 1054ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m184.07 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:15:47.109Z - Hash: eaa3a1f705f94811 - Time: 1016ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m181.71 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:18:05.340Z - Hash: 6d0ba9e9dc64b378 - Time: 1047ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m181.87 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:18:15.979Z - Hash: e6fc7489dec35d6b - Time: 1294ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m182.37 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:22:21.089Z - Hash: 3ab7d410b8ce2003 - Time: 2875ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m178.76 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:22:37.343Z - Hash: 91bf1e52dd6a5fc5 - Time: 937ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m180.56 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:23:57.337Z - Hash: 1aa545a1ba454a62 - Time: 1051ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m180.38 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:24:39.123Z - Hash: 43d452612e3a9641 - Time: 963ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m180.44 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:27:51.750Z - Hash: 1a6e185e96db35a3 - Time: 960ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m182.83 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:29:53.055Z - Hash: 5e803b9f2d0f428e - Time: 1129ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m183.54 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:30:14.260Z - Hash: ca62e465a132d3bd - Time: 1434ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m184.72 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:30:29.758Z - Hash: f46e3b1fdd96ce1e - Time: 1361ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m181.11 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:31:27.700Z - Hash: d09dca1c2ccb7d9b - Time: 984ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m180.60 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:31:43.982Z - Hash: 9478c3c7795f45ed - Time: 1244ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m180.64 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:33:25.524Z - Hash: 25cc3e6b166f1f8c - Time: 903ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m180.63 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:33:42.512Z - Hash: eb3f9d3c533c4e4a - Time: 939ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                                    [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                             [2m | [22m[2mruntime[22m                                  [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                       [2m | [22m[1mNames[22m                                    [2m | [22m [1mRaw size[22m
+[32msrc_app_user-management_user-management_component_ts.js[39m[2m | [22m[2muser-management-user-management-component[22m[2m | [22m[36m180.75 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:35:08.703Z - Hash: f8f2d9ed80c5ee32 - Time: 957ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m366.31 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:40:41.455Z - Hash: c1664dfba86ec5ce - Time: 1724ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m367.72 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:40:53.016Z - Hash: a95169af8f41efbf - Time: 1717ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m367.89 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:44:16.647Z - Hash: 0f9f7fab3417dc0d - Time: 2030ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m370.22 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:45:24.098Z - Hash: 3219f4ca9046303c - Time: 1750ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m371.09 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:46:29.825Z - Hash: 9b894fe1e84c23d5 - Time: 1419ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m372.97 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:46:57.742Z - Hash: a7b951ba60fce81d - Time: 1674ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m384.86 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:47:23.432Z - Hash: a79477e59f9b555f - Time: 2896ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m386.34 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:48:09.670Z - Hash: 92cdb03a9f92eae8 - Time: 2052ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m                              [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                                       [2m | [22m[2mruntime[22m                            [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m                                 [2m | [22m[1mNames[22m                              [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m[2m | [22m[2mhousekeeping-housekeeping-component[22m[2m | [22m[36m386.57 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-27T10:48:51.949Z - Hash: 57f924fd33f5edfc - Time: 2119ms
+
+√ Compiled successfully.

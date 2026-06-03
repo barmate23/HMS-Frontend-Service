@@ -7,6 +7,7 @@ import { Subscription, filter } from 'rxjs';
 import {
   PermissionAction,
   PermissionMatrix,
+  PermissionModule,
   SystemUser,
   UserManagementService,
   UserRole,
@@ -15,6 +16,18 @@ import {
 
 type UserManagementTab = 'users' | 'roles' | 'activity';
 type ModalMode = 'create' | 'edit';
+type UserValidationKey =
+  'employeeId' |
+  'fullName' |
+  'username' |
+  'email' |
+  'phone' |
+  'department' |
+  'roleId' |
+  'property' |
+  'shift' |
+  'status' |
+  'accessibleFloors';
 
 @Component({
   selector: 'app-user-management',
@@ -40,6 +53,10 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   modalMode = signal<ModalMode>('create');
   currentUser = signal<Partial<SystemUser>>({});
   currentRole = signal<Partial<UserRole>>({});
+  roleDeleteTarget = signal<UserRole | null>(null);
+  userFormSubmitted = signal(false);
+  userValidationErrors = signal<Partial<Record<UserValidationKey, string>>>({});
+  userTouchedFields = signal<Partial<Record<UserValidationKey, boolean>>>({});
 
   readonly userStats = computed(() => {
     const users = this.userService.users();
@@ -121,15 +138,18 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   openCreateUser(): void {
     this.modalMode.set('create');
+    this.userFormSubmitted.set(false);
+    this.userValidationErrors.set({});
+    this.userTouchedFields.set({});
     this.currentUser.set({
       employeeId: '',
       fullName: '',
       username: '',
       email: '',
       phone: '',
-      department: 'Front Office',
+      department: this.userService.departments()[0]?.name || 'Front Office',
       roleId: this.userService.roles()[0]?.id,
-      property: this.userService.properties[0],
+      property: this.userService.properties()[0]?.name,
       shift: this.userService.shifts[0],
       status: 'ACTIVE',
       twoFactorEnabled: false,
@@ -142,18 +162,29 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   openEditUser(user: SystemUser): void {
     this.modalMode.set('edit');
+    this.userFormSubmitted.set(false);
+    this.userValidationErrors.set({});
+    this.userTouchedFields.set({});
     this.currentUser.set({ ...user, accessibleFloors: [...user.accessibleFloors] });
     this.isUserModalOpen.set(true);
     document.body.style.overflow = 'hidden';
+    this.userService.getUserById(user.id, latest => {
+      this.currentUser.set({ ...latest, accessibleFloors: [...latest.accessibleFloors] });
+    });
   }
 
   saveUser(): void {
-    this.userService.saveUser(this.currentUser());
+    this.userFormSubmitted.set(true);
+    if (!this.validateUserForm()) return;
+    this.userService.saveUser(this.normalizedUserForSave());
     this.closeUserModal();
   }
 
   closeUserModal(): void {
     this.isUserModalOpen.set(false);
+    this.userFormSubmitted.set(false);
+    this.userValidationErrors.set({});
+    this.userTouchedFields.set({});
     document.body.style.overflow = '';
   }
 
@@ -162,7 +193,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     this.currentRole.set({
       name: '',
       description: '',
-      department: 'Front Office',
+      department: this.userService.departments()[0]?.name || 'Front Office',
       level: 'Department',
       isActive: true,
       isSystem: false,
@@ -180,6 +211,12 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     });
     this.isRoleModalOpen.set(true);
     document.body.style.overflow = 'hidden';
+    this.userService.getRoleById(role.id, latest => {
+      this.currentRole.set({
+        ...latest,
+        permissions: this.userService.clonePermissions(latest.permissions)
+      });
+    });
   }
 
   saveRole(): void {
@@ -199,17 +236,41 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   deleteRole(role: UserRole): void {
-    if (role.isSystem) {
-      alert('System roles cannot be deleted.');
-      return;
+    if (this.isRoleDeleteFrozen(role)) return;
+    this.roleDeleteTarget.set(role);
+    document.body.style.overflow = 'hidden';
+  }
+
+  isRoleDeleteFrozen(role: UserRole): boolean {
+    return role.isSystem || this.userService.roleUserCount(role.id) > 0;
+  }
+
+  roleDeleteTitle(role: UserRole): string {
+    if (role.isSystem) return 'System roles cannot be deleted';
+    const assignedUsers = this.userService.roleUserCount(role.id);
+    if (assignedUsers > 0) return `Reassign ${assignedUsers} user${assignedUsers === 1 ? '' : 's'} before deleting this role`;
+    return 'Delete role';
+  }
+
+  closeRoleDeleteModal(): void {
+    this.roleDeleteTarget.set(null);
+    document.body.style.overflow = '';
+  }
+
+  confirmDeleteRole(): void {
+    const role = this.roleDeleteTarget();
+    if (!role || this.roleDeleteBlockReason(role)) return;
+    this.userService.deleteRole(role.id);
+    this.closeRoleDeleteModal();
+  }
+
+  roleDeleteBlockReason(role: UserRole): string {
+    if (role.isSystem) return 'System roles are protected and cannot be deleted.';
+    const assignedUsers = this.userService.roleUserCount(role.id);
+    if (assignedUsers > 0) {
+      return `This role is assigned to ${assignedUsers} user${assignedUsers === 1 ? '' : 's'}. Reassign those users before deleting the role.`;
     }
-    if (this.userService.roleUserCount(role.id) > 0) {
-      alert('This role is assigned to users. Reassign those users before deleting the role.');
-      return;
-    }
-    if (confirm(`Delete role "${role.name}"?`)) {
-      this.userService.deleteRole(role.id);
-    }
+    return '';
   }
 
   cloneRole(role: UserRole): void {
@@ -232,10 +293,26 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     if (floor === 'All Floors' && checked) next = ['All Floors'];
     if (floor !== 'All Floors' && checked) next = next.filter(item => item !== 'All Floors');
     this.currentUser.update(value => ({ ...value, accessibleFloors: next.length ? next : ['All Floors'] }));
+    this.revalidateSubmittedUserForm();
   }
 
   hasFloorAccess(floor: string): boolean {
     return !!this.currentUser().accessibleFloors?.includes(floor);
+  }
+
+  updateCurrentUser<K extends keyof SystemUser>(field: K, value: SystemUser[K] | undefined): void {
+    this.currentUser.update(user => ({ ...user, [field]: value }));
+    this.revalidateActiveUserForm();
+  }
+
+  markUserFieldTouched(field: UserValidationKey): void {
+    this.userTouchedFields.update(touched => ({ ...touched, [field]: true }));
+    this.validateUserForm();
+  }
+
+  userFieldError(field: UserValidationKey): string {
+    if (!this.userFormSubmitted() && !this.userTouchedFields()[field]) return '';
+    return this.userValidationErrors()[field] || '';
   }
 
   hasPermission(matrix: PermissionMatrix | undefined, moduleKey: string, action: PermissionAction): boolean {
@@ -266,17 +343,17 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   permissionCount(role: UserRole | Partial<UserRole>): number {
     const matrix = role.permissions;
     if (!matrix) return 0;
-    return this.userService.permissionModules.reduce((count, module) => {
+    return this.userService.permissionModules().reduce((count, module) => {
       return count + this.userService.permissionActions.filter(action => matrix[module.key]?.[action]).length;
     }, 0);
   }
 
   actionCount(role: UserRole, action: PermissionAction): number {
-    return this.userService.permissionModules.filter(module => role.permissions[module.key]?.[action]).length;
+    return this.userService.permissionModules().filter(module => role.permissions[module.key]?.[action]).length;
   }
 
-  assignedPermissionModules(role: UserRole) {
-    return this.userService.permissionModules
+  assignedPermissionModules(role: UserRole): Array<PermissionModule & { actions: PermissionAction[] }> {
+    return this.userService.permissionModules()
       .map(module => ({
         ...module,
         actions: this.userService.permissionActions.filter(action => role.permissions[module.key]?.[action])
@@ -325,5 +402,78 @@ export class UserManagementComponent implements OnInit, OnDestroy {
       this.activeTab.set('users');
     }
     this.searchQuery.set('');
+  }
+
+  private validateUserForm(): boolean {
+    const user = this.currentUser();
+    const errors: Partial<Record<UserValidationKey, string>> = {};
+    const employeeId = this.textValue(user.employeeId);
+    const fullName = this.textValue(user.fullName);
+    const username = this.textValue(user.username);
+    const email = this.textValue(user.email);
+    const phone = this.textValue(user.phone);
+
+    if (!employeeId) {
+      errors.employeeId = 'Employee ID is required.';
+    } else if (!/^[A-Za-z0-9][A-Za-z0-9_-]{2,19}$/.test(employeeId)) {
+      errors.employeeId = 'Use 3-20 letters, numbers, hyphen or underscore.';
+    }
+
+    if (!fullName) {
+      errors.fullName = 'Full name is required.';
+    } else if (!/^[A-Za-z][A-Za-z .'-]{1,58}[A-Za-z.]$/.test(fullName)) {
+      errors.fullName = 'Enter a valid name using letters and spaces.';
+    }
+
+    if (!username) {
+      errors.username = 'Username is required.';
+    } else if (!/^[a-zA-Z][a-zA-Z0-9._-]{2,29}$/.test(username)) {
+      errors.username = 'Use 3-30 characters, starting with a letter.';
+    }
+
+    if (!email) {
+      errors.email = 'Email is required.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      errors.email = 'Enter a valid email address.';
+    }
+
+    if (phone && !/^\+?[0-9][0-9\s-]{8,18}$/.test(phone)) {
+      errors.phone = 'Enter a valid mobile number.';
+    }
+
+    if (!user.department) errors.department = 'Department is required.';
+    if (!Number(user.roleId)) errors.roleId = 'Role is required.';
+    if (!user.property) errors.property = 'Property is required.';
+    if (!user.shift) errors.shift = 'Shift is required.';
+    if (!user.status) errors.status = 'Status is required.';
+    if (!user.accessibleFloors?.length) errors.accessibleFloors = 'Select at least one floor access option.';
+
+    this.userValidationErrors.set(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  private revalidateSubmittedUserForm(): void {
+    if (this.userFormSubmitted()) this.validateUserForm();
+  }
+
+  private revalidateActiveUserForm(): void {
+    if (this.userFormSubmitted() || Object.keys(this.userTouchedFields()).length > 0) this.validateUserForm();
+  }
+
+  private normalizedUserForSave(): Partial<SystemUser> {
+    const user = this.currentUser();
+    return {
+      ...user,
+      employeeId: this.textValue(user.employeeId),
+      fullName: this.textValue(user.fullName).replace(/\s+/g, ' '),
+      username: this.textValue(user.username),
+      email: this.textValue(user.email).toLowerCase(),
+      phone: this.textValue(user.phone),
+      accessibleFloors: user.accessibleFloors?.length ? user.accessibleFloors : ['All Floors']
+    };
+  }
+
+  private textValue(value?: string): string {
+    return String(value || '').trim();
   }
 }

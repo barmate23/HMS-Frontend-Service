@@ -1,9 +1,10 @@
 import { Injectable, computed, signal } from '@angular/core';
 
-export type LaundryTab = 'dashboard' | 'create' | 'orders' | 'detail' | 'catalogue' | 'reports';
+export type LaundryTab = 'dashboard' | 'create' | 'orders' | 'detail' | 'linen' | 'catalogue' | 'reports';
 export type LaundryServiceType = 'Wash & Fold' | 'Wash & Press' | 'Dry Clean' | 'Express';
 export type LaundryStatus = 'Pickup Pending' | 'Processing' | 'Ready for Delivery' | 'Delivered' | 'Overdue' | 'Cancelled';
 export type BillingMode = 'Room Account' | 'Direct Payment';
+export type LinenDispatchStatus = 'Draft' | 'Ready for Pickup' | 'Sent to Vendor' | 'Partially Returned' | 'Returned' | 'Exception';
 
 export interface ActiveBooking {
   bookingId: number;
@@ -52,6 +53,44 @@ export interface LaundryOrder {
   lines: LaundryOrderLine[];
 }
 
+export interface LinenItemMaster {
+  id: number;
+  itemName: string;
+  category: 'Bed Linen' | 'Bath Linen' | 'F&B Linen' | 'Uniform' | 'Other';
+  defaultVendorRate: number;
+  replacementCost: number;
+  active: boolean;
+}
+
+export interface LinenDispatchLine {
+  id: number;
+  itemId: number;
+  itemName: string;
+  source: string;
+  quantity: number;
+  returnedQty: number;
+  damagedQty: number;
+  missingQty: number;
+  vendorRate: number;
+  scanCodes: string[];
+  notes: string;
+}
+
+export interface LinenDispatch {
+  id: number;
+  batchNo: string;
+  vendorName: string;
+  challanNo: string;
+  sentAt: string;
+  expectedReturnAt: string;
+  returnedAt?: string;
+  vehicleNo: string;
+  handledBy: string;
+  status: LinenDispatchStatus;
+  billingRecorded: boolean;
+  lines: LinenDispatchLine[];
+}
+
 export interface FolioPosting {
   id: number;
   orderId: string;
@@ -67,6 +106,8 @@ export class LaundryService {
   readonly serviceTypes: LaundryServiceType[] = ['Wash & Fold', 'Wash & Press', 'Dry Clean', 'Express'];
   readonly statuses: LaundryStatus[] = ['Pickup Pending', 'Processing', 'Ready for Delivery', 'Delivered', 'Overdue', 'Cancelled'];
   readonly categories = ['Top Wear', 'Bottom Wear', 'Ethnic', 'Outerwear', 'Linen', 'Accessories'];
+  readonly linenStatuses: LinenDispatchStatus[] = ['Draft', 'Ready for Pickup', 'Sent to Vendor', 'Partially Returned', 'Returned', 'Exception'];
+  readonly linenVendors = ['Sparkle Linen Services', 'FreshFold Commercial Laundry', 'CityWash Outsource Partner'];
 
   readonly activeBookings = signal<ActiveBooking[]>([
     { bookingId: 101, floor: 'Floor 1', room: '102', guest: 'Rajan Mehta', plan: 'Deluxe CP', folioId: 'FOL-102-26' },
@@ -197,7 +238,55 @@ export class LaundryService {
     { id: 2, orderId: 'LND-1003', folioId: 'FOL-108-26', room: '108', guest: 'Mark Wilson', amount: 330, postedAt: '30-05-2026 15:46' }
   ]);
 
+  readonly linenItems = signal<LinenItemMaster[]>([
+    { id: 1, itemName: 'Bedsheet King', category: 'Bed Linen', defaultVendorRate: 18, replacementCost: 650, active: true },
+    { id: 2, itemName: 'Bedsheet Queen', category: 'Bed Linen', defaultVendorRate: 16, replacementCost: 560, active: true },
+    { id: 3, itemName: 'Pillow Cover', category: 'Bed Linen', defaultVendorRate: 7, replacementCost: 140, active: true },
+    { id: 4, itemName: 'Duvet Cover', category: 'Bed Linen', defaultVendorRate: 28, replacementCost: 1100, active: true },
+    { id: 5, itemName: 'Bath Towel', category: 'Bath Linen', defaultVendorRate: 12, replacementCost: 420, active: true },
+    { id: 6, itemName: 'Hand Towel', category: 'Bath Linen', defaultVendorRate: 6, replacementCost: 180, active: true },
+    { id: 7, itemName: 'Table Napkin', category: 'F&B Linen', defaultVendorRate: 5, replacementCost: 90, active: true },
+    { id: 8, itemName: 'Staff Uniform Shirt', category: 'Uniform', defaultVendorRate: 22, replacementCost: 750, active: true }
+  ]);
+
+  readonly linenDispatches = signal<LinenDispatch[]>([
+    {
+      id: 1,
+      batchNo: 'LIN-OUT-1001',
+      vendorName: 'Sparkle Linen Services',
+      challanNo: 'CH-3112',
+      sentAt: '31-05-2026 10:00',
+      expectedReturnAt: '01-06-2026 08:00',
+      vehicleNo: 'MH 12 AB 4501',
+      handledBy: 'Laundry Supervisor',
+      status: 'Sent to Vendor',
+      billingRecorded: true,
+      lines: [
+        { id: 1, itemId: 1, itemName: 'Bedsheet King', source: 'Room 102', quantity: 6, returnedQty: 0, damagedQty: 0, missingQty: 0, vendorRate: 18, scanCodes: ['RFID-BSK-102-001', 'RFID-BSK-102-002', 'RFID-BSK-102-003', 'RFID-BSK-102-004', 'RFID-BSK-102-005', 'RFID-BSK-102-006'], notes: 'Checkout linen' },
+        { id: 2, itemId: 5, itemName: 'Bath Towel', source: 'Room 102', quantity: 8, returnedQty: 0, damagedQty: 0, missingQty: 0, vendorRate: 12, scanCodes: ['RFID-BTW-102-001', 'RFID-BTW-102-002'], notes: 'Scan pending for 6 pieces' }
+      ]
+    },
+    {
+      id: 2,
+      batchNo: 'LIN-OUT-1002',
+      vendorName: 'FreshFold Commercial Laundry',
+      challanNo: 'CH-3109',
+      sentAt: '30-05-2026 18:30',
+      expectedReturnAt: '31-05-2026 11:00',
+      returnedAt: '31-05-2026 10:40',
+      vehicleNo: 'KA 03 LN 7788',
+      handledBy: 'Housekeeping Desk',
+      status: 'Partially Returned',
+      billingRecorded: true,
+      lines: [
+        { id: 1, itemId: 3, itemName: 'Pillow Cover', source: 'Floor 2 Pantry', quantity: 40, returnedQty: 38, damagedQty: 1, missingQty: 1, vendorRate: 7, scanCodes: ['RFID-PC-203-018', 'RFID-PC-203-019', 'RFID-PC-203-020'], notes: 'One missing from vendor return count' },
+        { id: 2, itemId: 4, itemName: 'Duvet Cover', source: 'Room 203', quantity: 4, returnedQty: 4, damagedQty: 0, missingQty: 0, vendorRate: 28, scanCodes: ['RFID-DC-203-001', 'RFID-DC-203-002', 'RFID-DC-203-003', 'RFID-DC-203-004'], notes: '' }
+      ]
+    }
+  ]);
+
   readonly catalogueMap = computed(() => new Map(this.catalogue().map(item => [item.id, item])));
+  readonly linenItemMap = computed(() => new Map(this.linenItems().map(item => [item.id, item])));
 
   orderAmount(order: Pick<LaundryOrder, 'lines'>): number {
     return order.lines.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0), 0);
@@ -205,6 +294,26 @@ export class LaundryService {
 
   orderItemCount(order: Pick<LaundryOrder, 'lines'>): number {
     return order.lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
+  }
+
+  linenDispatchCost(dispatch: Pick<LinenDispatch, 'lines'>): number {
+    return dispatch.lines.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.vendorRate || 0), 0);
+  }
+
+  linenDispatchQuantity(dispatch: Pick<LinenDispatch, 'lines'>): number {
+    return dispatch.lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
+  }
+
+  linenReturnedQuantity(dispatch: Pick<LinenDispatch, 'lines'>): number {
+    return dispatch.lines.reduce((sum, line) => sum + Number(line.returnedQty || 0), 0);
+  }
+
+  linenExceptionQuantity(dispatch: Pick<LinenDispatch, 'lines'>): number {
+    return dispatch.lines.reduce((sum, line) => sum + Number(line.damagedQty || 0) + Number(line.missingQty || 0), 0);
+  }
+
+  linenScanCount(dispatch: Pick<LinenDispatch, 'lines'>): number {
+    return dispatch.lines.reduce((sum, line) => sum + line.scanCodes.length, 0);
   }
 
   priceFor(item: LaundryCatalogueItem, serviceType: LaundryServiceType): number {
@@ -289,5 +398,48 @@ export class LaundryService {
     };
     this.folioPostings.update(items => [posting, ...items]);
     this.orders.update(items => items.map(item => item.id === id ? { ...item, postedToFolio: true } : item));
+  }
+
+  saveLinenDispatch(input: Partial<LinenDispatch>): LinenDispatch {
+    const nextId = Math.max(0, ...this.linenDispatches().map(item => item.id)) + 1;
+    const dispatch: LinenDispatch = {
+      id: input.id ?? nextId,
+      batchNo: input.batchNo || `LIN-OUT-${1000 + nextId}`,
+      vendorName: input.vendorName || this.linenVendors[0],
+      challanNo: input.challanNo || `CH-${3100 + nextId}`,
+      sentAt: input.sentAt || '31-05-2026 12:30',
+      expectedReturnAt: input.expectedReturnAt || '01-06-2026 09:00',
+      returnedAt: input.returnedAt || '',
+      vehicleNo: input.vehicleNo || '',
+      handledBy: input.handledBy || 'Laundry Supervisor',
+      status: input.status || 'Ready for Pickup',
+      billingRecorded: input.billingRecorded ?? false,
+      lines: (input.lines || []).map((line, index) => ({
+        id: line.id || index + 1,
+        itemId: Number(line.itemId || 0),
+        itemName: line.itemName || this.linenItemMap().get(Number(line.itemId || 0))?.itemName || 'Linen Item',
+        source: line.source || 'Linen Room',
+        quantity: Math.max(1, Number(line.quantity || 1)),
+        returnedQty: Math.max(0, Number(line.returnedQty || 0)),
+        damagedQty: Math.max(0, Number(line.damagedQty || 0)),
+        missingQty: Math.max(0, Number(line.missingQty || 0)),
+        vendorRate: Math.max(0, Number(line.vendorRate || 0)),
+        scanCodes: line.scanCodes || [],
+        notes: line.notes || ''
+      }))
+    };
+    this.linenDispatches.update(items => input.id ? items.map(item => item.id === dispatch.id ? dispatch : item) : [dispatch, ...items]);
+    return dispatch;
+  }
+
+  updateLinenDispatchStatus(id: number, status: LinenDispatchStatus): void {
+    this.linenDispatches.update(items => items.map(dispatch => dispatch.id === id
+      ? { ...dispatch, status, returnedAt: status === 'Returned' || status === 'Partially Returned' ? dispatch.returnedAt || '31-05-2026 18:30' : dispatch.returnedAt }
+      : dispatch
+    ));
+  }
+
+  recordLinenBilling(id: number): void {
+    this.linenDispatches.update(items => items.map(dispatch => dispatch.id === id ? { ...dispatch, billingRecorded: true } : dispatch));
   }
 }

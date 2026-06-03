@@ -28,7 +28,7 @@
 
       <select class="filter-select" *ngIf="activeTab() !== 'activity'" [ngModel]="departmentFilter()" (ngModelChange)="departmentFilter.set($event)">
         <option>All Departments</option>
-        <option *ngFor="let department of userService.departments" [value]="department">{{ department }}</option>
+        <option *ngFor="let department of userService.departments()" [value]="department.name">{{ department.name }}</option>
       </select>
 
       <select class="filter-select" *ngIf="activeTab() === 'users'" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)">
@@ -74,11 +74,6 @@
       <span class="material-icons-round">admin_panel_settings</span>
       <strong>{{ userStats().roles }}</strong>
       <small>Roles</small>
-    </div>
-    <div class="stat-card">
-      <span class="material-icons-round">key</span>
-      <strong>{{ userStats().twoFactor }}</strong>
-      <small>2FA Enabled</small>
     </div>
     <div class="stat-card danger">
       <span class="material-icons-round">security</span>
@@ -143,12 +138,6 @@
                 </button>
                 <button class="icon-btn" title="Reset password" (click)="resetPassword(user)">
                   <span class="material-icons-round">password</span>
-                </button>
-                <button class="icon-btn" title="Lock user" *ngIf="user.status !== 'LOCKED'" (click)="setUserStatus(user, 'LOCKED')">
-                  <span class="material-icons-round">lock</span>
-                </button>
-                <button class="icon-btn" title="Activate user" *ngIf="user.status !== 'ACTIVE'" (click)="setUserStatus(user, 'ACTIVE')">
-                  <span class="material-icons-round">check_circle</span>
                 </button>
                 <button class="icon-btn danger" title="Delete user" (click)="deleteUser(user)">
                   <span class="material-icons-round">delete_outline</span>
@@ -220,7 +209,7 @@
           <button class="icon-btn" title="Clone role" (click)="cloneRole(role)">
             <span class="material-icons-round">content_copy</span>
           </button>
-          <button class="icon-btn danger" title="Delete role" (click)="deleteRole(role)" [disabled]="role.isSystem || userService.roleUserCount(role.id) > 0">
+          <button class="icon-btn danger" [title]="roleDeleteTitle(role)" (click)="deleteRole(role)" [disabled]="isRoleDeleteFrozen(role)">
             <span class="material-icons-round">delete_outline</span>
           </button>
         </div>
@@ -257,6 +246,53 @@
   </div>
 </div>
 
+<div class="modal-overlay" *ngIf="roleDeleteTarget() as role" (click)="closeRoleDeleteModal()">
+  <div class="admin-modal confirm-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h2>Delete Role</h2>
+        <p>Review this warning before confirming.</p>
+      </div>
+      <button class="close-btn" (click)="closeRoleDeleteModal()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="modal-body confirm-body">
+      <div class="confirm-icon danger">
+        <span class="material-icons-round">warning</span>
+      </div>
+      <div class="confirm-copy">
+        <h3>{{ role.name }}</h3>
+        <p>
+          Deleting this role removes its permission template from role management.
+          This action cannot be undone after confirmation.
+        </p>
+      </div>
+
+      <div class="warning-panel" *ngIf="roleDeleteBlockReason(role); else roleDeleteReady">
+        <span class="material-icons-round">error</span>
+        <strong>{{ roleDeleteBlockReason(role) }}</strong>
+      </div>
+
+      <ng-template #roleDeleteReady>
+        <div class="warning-panel">
+          <span class="material-icons-round">priority_high</span>
+          <strong>Confirm only after verifying this role is no longer needed.</strong>
+        </div>
+      </ng-template>
+    </div>
+
+    <div class="modal-footer">
+      <button class="secondary-btn" (click)="closeRoleDeleteModal()">Cancel</button>
+      <button class="danger-btn" (click)="confirmDeleteRole()" [disabled]="!!roleDeleteBlockReason(role)">
+        <span class="material-icons-round">delete_outline</span>
+        Delete Role
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" *ngIf="isUserModalOpen()" (click)="closeUserModal()">
   <div class="admin-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -271,69 +307,85 @@
 
     <div class="modal-body">
       <div class="form-grid">
-        <label>
+        <label [class.has-error]="userFieldError('employeeId')">
           Employee ID
-          <input type="text" [(ngModel)]="currentUser().employeeId" placeholder="EMP-050">
+          <input type="text" [ngModel]="currentUser().employeeId" (ngModelChange)="updateCurrentUser('employeeId', $event)" (blur)="markUserFieldTouched('employeeId')" placeholder="EMP-050">
+          <small class="field-error" *ngIf="userFieldError('employeeId')">{{ userFieldError('employeeId') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="userFieldError('fullName')">
           Full Name
-          <input type="text" [(ngModel)]="currentUser().fullName" placeholder="Staff full name">
+          <input type="text" [ngModel]="currentUser().fullName" (ngModelChange)="updateCurrentUser('fullName', $event)" (blur)="markUserFieldTouched('fullName')" placeholder="Staff full name">
+          <small class="field-error" *ngIf="userFieldError('fullName')">{{ userFieldError('fullName') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="userFieldError('username')">
           Username
-          <input type="text" [(ngModel)]="currentUser().username" placeholder="firstname.lastname">
+          <input type="text" [ngModel]="currentUser().username" (ngModelChange)="updateCurrentUser('username', $event)" (blur)="markUserFieldTouched('username')" placeholder="firstname.lastname">
+          <small class="field-error" *ngIf="userFieldError('username')">{{ userFieldError('username') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="userFieldError('email')">
           Email
-          <input type="email" [(ngModel)]="currentUser().email" placeholder="user@hotel.com">
+          <input type="email" [ngModel]="currentUser().email" (ngModelChange)="updateCurrentUser('email', $event)" (blur)="markUserFieldTouched('email')" placeholder="user@hotel.com">
+          <small class="field-error" *ngIf="userFieldError('email')">{{ userFieldError('email') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="userFieldError('phone')">
           Phone
-          <input type="text" [(ngModel)]="currentUser().phone" placeholder="+91 ...">
+          <input type="text" [ngModel]="currentUser().phone" (ngModelChange)="updateCurrentUser('phone', $event)" (blur)="markUserFieldTouched('phone')" placeholder="+91 ...">
+          <small class="field-error" *ngIf="userFieldError('phone')">{{ userFieldError('phone') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="userFieldError('department')">
           Department
-          <select [(ngModel)]="currentUser().department">
-            <option *ngFor="let department of userService.departments" [value]="department">{{ department }}</option>
+          <select [ngModel]="currentUser().department" (ngModelChange)="updateCurrentUser('department', $event)" (blur)="markUserFieldTouched('department')">
+            <option *ngFor="let department of userService.departments()" [value]="department.name">{{ department.name }}</option>
           </select>
+          <small class="field-error" *ngIf="userFieldError('department')">{{ userFieldError('department') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="userFieldError('roleId')">
           Role
-          <select [(ngModel)]="currentUser().roleId">
-            <option *ngFor="let role of userService.roles()" [value]="role.id">{{ role.name }}</option>
+          <select [ngModel]="currentUser().roleId" (ngModelChange)="updateCurrentUser('roleId', $event)" (blur)="markUserFieldTouched('roleId')">
+            <option [ngValue]="undefined" disabled>Select role</option>
+            <option *ngFor="let role of userService.roles()" [ngValue]="role.id">{{ role.name }}</option>
           </select>
+          <small class="field-error" *ngIf="userFieldError('roleId')">{{ userFieldError('roleId') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="userFieldError('property')">
           Property
-          <select [(ngModel)]="currentUser().property">
-            <option *ngFor="let property of userService.properties" [value]="property">{{ property }}</option>
+          <select [ngModel]="currentUser().property" (ngModelChange)="updateCurrentUser('property', $event)" (blur)="markUserFieldTouched('property')">
+            <option *ngFor="let property of userService.properties()" [value]="property.name">{{ property.name }}</option>
           </select>
+          <small class="field-error" *ngIf="userFieldError('property')">{{ userFieldError('property') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="userFieldError('shift')">
           Shift
-          <select [(ngModel)]="currentUser().shift">
+          <select [ngModel]="currentUser().shift" (ngModelChange)="updateCurrentUser('shift', $event)" (blur)="markUserFieldTouched('shift')">
             <option *ngFor="let shift of userService.shifts" [value]="shift">{{ shift }}</option>
           </select>
+          <small class="field-error" *ngIf="userFieldError('shift')">{{ userFieldError('shift') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="userFieldError('status')">
           Status
-          <select [(ngModel)]="currentUser().status">
+          <select [ngModel]="currentUser().status" (ngModelChange)="updateCurrentUser('status', $event)" (blur)="markUserFieldTouched('status')">
             <option *ngFor="let status of userService.statuses" [value]="status">{{ status }}</option>
           </select>
+          <small class="field-error" *ngIf="userFieldError('status')">{{ userFieldError('status') }}</small>
         </label>
       </div>
 
       <div class="section-title">Floor Access</div>
-      <div class="checkbox-grid">
-        <label *ngFor="let floor of userService.floors">
-          <input type="checkbox" [ngModel]="hasFloorAccess(floor)" (ngModelChange)="updateFloorAccess(floor, $event)">
-          {{ floor }}
+      <div class="checkbox-grid" [class.has-error]="userFieldError('accessibleFloors')">
+        <label *ngFor="let floor of userService.floors()">
+          <input type="checkbox" [ngModel]="hasFloorAccess(floor.name)" (ngModelChange)="updateFloorAccess(floor.name, $event)" (blur)="markUserFieldTouched('accessibleFloors')">
+          {{ floor.name }}
+        </label>
+        <label>
+          <input type="checkbox" [ngModel]="hasFloorAccess('All Floors')" (ngModelChange)="updateFloorAccess('All Floors', $event)" (blur)="markUserFieldTouched('accessibleFloors')">
+          All Floors
         </label>
       </div>
+      <small class="field-error block-error" *ngIf="userFieldError('accessibleFloors')">{{ userFieldError('accessibleFloors') }}</small>
 
       <label class="notes-field">
         Notes
-        <textarea rows="3" [(ngModel)]="currentUser().notes" placeholder="Internal notes for this user..."></textarea>
+        <textarea rows="3" [ngModel]="currentUser().notes" (ngModelChange)="updateCurrentUser('notes', $event)" placeholder="Internal notes for this user..."></textarea>
       </label>
     </div>
 
@@ -368,7 +420,7 @@
         <label>
           Department
           <select [(ngModel)]="currentRole().department">
-            <option *ngFor="let department of userService.departments" [value]="department">{{ department }}</option>
+            <option *ngFor="let department of userService.departments()" [value]="department.name">{{ department.name }}</option>
           </select>
         </label>
         <label>
@@ -398,7 +450,7 @@
           <span>All</span>
           <span *ngFor="let action of userService.permissionActions">{{ action }}</span>
         </div>
-        <div class="permission-row" *ngFor="let module of userService.permissionModules">
+        <div class="permission-row" *ngFor="let module of userService.permissionModules()">
           <span class="module-name">
             <span class="material-icons-round">{{ module.icon }}</span>
             <strong>{{ module.label }}</strong>

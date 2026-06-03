@@ -1,0 +1,1005 @@
+
+> hms-modern-app@0.0.0 start
+> ng serve --proxy-config proxy.conf.json
+
+
+Initial chunk files                                          | Names                                          |  Raw size
+vendor.js                                                    | vendor                                         |   3.49 MB | 
+main.js                                                      | main                                           | 805.11 kB | 
+polyfills.js                                                 | polyfills                                      | 239.72 kB | 
+styles.css, styles.js                                        | styles                                         | 129.57 kB | 
+runtime.js                                                   | runtime                                        |  12.93 kB | 
+
+                                                             | Initial total                                  |   4.67 MB
+
+Lazy chunk files                                             | Names                                          |  Raw size
+src_app_housekeeping_housekeeping_component_ts.js            | housekeeping-housekeeping-component            | 386.57 kB | 
+src_app_pos_pos_component_ts.js                              | pos-pos-component                              | 343.58 kB | 
+src_app_masters_hotel-masters_component_ts.js                | masters-hotel-masters-component                | 290.88 kB | 
+src_app_laundry_laundry_component_ts.js                      | laundry-laundry-component                      | 285.85 kB | 
+node_modules_angular_animations_fesm2022_browser_mjs.js      | angular-animations-browser                     | 229.94 kB | 
+src_app_user-management_user-management_component_ts.js      | user-management-user-management-component      | 185.31 kB | 
+src_app_reservations_departures_departures_component_ts.js   | reservations-departures-departures-component   | 149.17 kB | 
+src_app_guests_guest-profiles_component_ts.js                | guests-guest-profiles-component                | 107.53 kB | 
+src_app_reservations_gantt-chart_gantt-chart_component_ts.js | reservations-gantt-chart-gantt-chart-component |  75.01 kB | 
+common.js                                                    | common                                         |  13.59 kB | 
+
+Build at: 2026-06-03T06:44:35.919Z - Hash: 482bbcc5fac56cf9 - Time: 17533ms
+
+** Angular Live Development Server is listening on localhost:4200, open your browser on http://localhost:4200/ **
+
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 185.38 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T06:49:11.063Z - Hash: debbdc62a839be6b - Time: 13129ms
+
+× Failed to compile.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 185.39 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T06:49:12.853Z - Hash: 4b1cfd47a84915ed - Time: 1721ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 185.39 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T06:50:47.074Z - Hash: 0a894f1be1921665 - Time: 3158ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 186.13 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T06:57:32.104Z - Hash: c3a7cd1a03017710 - Time: 7829ms
+
+× Failed to compile.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 186.14 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T06:57:44.820Z - Hash: 34c77d8f3e7dd6ed - Time: 3323ms
+
+× Failed to compile.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 186.15 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T06:57:47.499Z - Hash: 69451a6aeb43e764 - Time: 2529ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 187.54 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T07:41:45.109Z - Hash: a9ed0a559316a5b1 - Time: 13304ms
+
+× Failed to compile.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 187.62 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T07:41:58.746Z - Hash: 3be9b734be64f460 - Time: 2943ms
+
+× Failed to compile.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 187.66 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T07:42:01.462Z - Hash: e081e5c57103f949 - Time: 2629ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 188.42 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T07:49:22.223Z - Hash: 34f1ae405753d480 - Time: 7158ms
+
+× Failed to compile.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 189.32 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T07:49:36.580Z - Hash: 3331091f59570789 - Time: 1551ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 190.12 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T07:54:43.102Z - Hash: e6450ce0f28e1bae - Time: 8131ms
+
+× Failed to compile.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 192.57 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T07:55:04.676Z - Hash: f81442d6fea9d94d - Time: 1677ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 204.12 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T07:55:52.450Z - Hash: 02ea391b319c2241 - Time: 1702ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 204.16 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T07:56:18.519Z - Hash: 5609086b5d6a3d76 - Time: 1840ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 205.54 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T07:56:21.396Z - Hash: f93059586b021f57 - Time: 2806ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 206.12 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T08:00:36.704Z - Hash: 9f3179540851b41c - Time: 8054ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 210.69 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T08:00:59.922Z - Hash: 411897a421a5bccd - Time: 1474ms
+
+√ Compiled successfully.
+
+Initial chunk files                                          | Names                                          |  Raw size
+main.js                                                      | main                                           | 805.34 kB | 
+runtime.js                                                   | runtime                                        |  12.93 kB | 
+
+Lazy chunk files                                             | Names                                          |  Raw size
+src_app_reservations_gantt-chart_gantt-chart_component_ts.js | reservations-gantt-chart-gantt-chart-component |  75.01 kB | 
+
+12 unchanged chunks
+
+Build at: 2026-06-03T08:26:28.662Z - Hash: 92a6c60f7ef5a4ea - Time: 10444ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_pos_pos_component_ts.js                         | pos-pos-component                         | 343.58 kB | 
+src_app_masters_hotel-masters_component_ts.js           | masters-hotel-masters-component           | 290.88 kB | 
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 210.88 kB | 
+common.js                                               | common                                    |  13.60 kB | 
+
+10 unchanged chunks
+
+Build at: 2026-06-03T08:26:37.680Z - Hash: af4e3d95effdf20d - Time: 8917ms
+
+√ Compiled successfully.
+
+Initial chunk files | Names   |  Raw size
+main.js             | main    | 805.48 kB | 
+runtime.js          | runtime |  12.93 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T08:26:55.471Z - Hash: 2defe2f7830a5e83 - Time: 3001ms
+
+√ Compiled successfully.
+
+Initial chunk files | Names   |  Raw size
+main.js             | main    | 805.63 kB | 
+runtime.js          | runtime |  12.93 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T08:27:03.466Z - Hash: bed41e74282a4661 - Time: 7920ms
+
+√ Compiled successfully.
+
+Initial chunk files | Names   |  Raw size
+main.js             | main    | 805.62 kB | 
+runtime.js          | runtime |  12.93 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T10:16:02.022Z - Hash: b7e32ad1cd90fabc - Time: 11575ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 211.38 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T10:41:40.394Z - Hash: 0d88fbeeabd7ae3e - Time: 16123ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 219.05 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T10:41:57.708Z - Hash: f0e4339157ac8d25 - Time: 5153ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 224.26 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T10:44:37.059Z - Hash: f6d6c8d2dee88398 - Time: 4308ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 224.73 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T11:06:52.199Z - Hash: 0d4e8ad1cbea2b78 - Time: 25840ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 224.95 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T11:06:58.342Z - Hash: 05f5942664c4e9fd - Time: 6017ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 225.20 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T11:09:55.191Z - Hash: e3aa6f7849137cca - Time: 8721ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 222.30 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T11:13:52.989Z - Hash: b28507d40e2e959c - Time: 9836ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 222.27 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T11:14:13.172Z - Hash: c8ea3efdd7e41f11 - Time: 5622ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 222.02 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T11:16:37.680Z - Hash: 7de5b40f3785d635 - Time: 6588ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 222.07 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T11:18:39.050Z - Hash: 7378eee3a82f6ac0 - Time: 5427ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 222.18 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T11:30:55.042Z - Hash: 572997e2a29a4270 - Time: 10911ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 221.27 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T11:43:05.036Z - Hash: b4cb8ab3fc2dcc89 - Time: 11343ms
+
+√ Compiled successfully.
+
+Initial chunk files                                     | Names                                     |  Raw size
+runtime.js                                              | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                        | Names                                     |  Raw size
+src_app_user-management_user-management_component_ts.js | user-management-user-management-component | 221.27 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T11:45:57.256Z - Hash: 5a686e8aed270244 - Time: 6222ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 350.60 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T12:00:05.113Z - Hash: af3cb2343f7e6373 - Time: 17519ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 350.62 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T12:00:11.458Z - Hash: 67d8467b1067c8c4 - Time: 5620ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 351.52 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T12:33:16.086Z - Hash: 9888e72a08bba834 - Time: 13825ms
+
+× Failed to compile.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 351.55 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T12:33:20.755Z - Hash: b91b7572735d78b6 - Time: 4582ms
+
+× Failed to compile.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 351.55 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T12:33:31.331Z - Hash: c9c0b502a596fef6 - Time: 3878ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 352.35 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T12:41:25.231Z - Hash: a05f068427805794 - Time: 12502ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 352.38 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T12:41:31.267Z - Hash: dfc90feb809f87d4 - Time: 5258ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 353.31 kB | 
+
+13 unchanged chunks
+
+Build at: 2026-06-03T12:41:44.701Z - Hash: ab6ba3dd719a5bb4 - Time: 4943ms
+
+√ Compiled successfully.
+
+Initial chunk files                                           | Names                                     |  Raw size
+main.js                                                       | main                                      | 806.34 kB | 
+runtime.js                                                    | runtime                                   |  12.93 kB | 
+
+Lazy chunk files                                              | Names                                     |  Raw size
+src_app_pos_pos_component_ts.js                               | pos-pos-component                         | 353.94 kB | 
+src_app_user-management_user-management_component_ts.js       | user-management-user-management-component | 199.21 kB | 
+default-src_app_user-management_user-management_service_ts.js | user-management-user-management-component |  22.31 kB | 
+
+11 unchanged chunks
+
+Build at: 2026-06-03T12:44:36.377Z - Hash: 6d889281732c08fb - Time: 8745ms
+
+× Failed to compile.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 353.95 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T12:44:58.372Z - Hash: 3eadefd586203b90 - Time: 5396ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 354.73 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T12:56:26.835Z - Hash: 1df6b81e158480ec - Time: 14172ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 354.71 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T12:56:35.340Z - Hash: 412cb38502b44149 - Time: 2615ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 355.86 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:01:26.183Z - Hash: 18b4fabfe8b834ad - Time: 13436ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 362.26 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:01:39.475Z - Hash: 7501b9c312cd6bb9 - Time: 6693ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 366.27 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:02:46.275Z - Hash: 2a3006327db3480b - Time: 5308ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 367.78 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:14:19.355Z - Hash: c61fd90163dfa5cd - Time: 14044ms
+
+× Failed to compile.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 367.84 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:14:29.523Z - Hash: 69ecdb62f887ecd3 - Time: 6267ms
+
+× Failed to compile.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 369.00 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:14:47.630Z - Hash: d170fc3f1e93c3a9 - Time: 4319ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 370.45 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:15:07.505Z - Hash: 99b17477c4473a8a - Time: 7360ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 364.58 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:23:51.478Z - Hash: 8757d4fd74d798f3 - Time: 12794ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 363.56 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:25:10.556Z - Hash: fd0146e642a9696f - Time: 6453ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 362.32 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:27:01.700Z - Hash: 6b7527444839801b - Time: 8488ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 362.52 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:28:19.547Z - Hash: 66948289d8fd6ca9 - Time: 8969ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 362.52 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:36:40.298Z - Hash: 2b5f553673adcb4d - Time: 10701ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 363.39 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:38:42.473Z - Hash: 49b0929860e1c066 - Time: 7608ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 363.55 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:39:02.925Z - Hash: 60ce5d36ba255716 - Time: 10598ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 366.24 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:39:27.925Z - Hash: 60146014396b972f - Time: 6212ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 371.96 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:39:54.664Z - Hash: 0b5e241b14b97c93 - Time: 4920ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 372.03 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:41:33.335Z - Hash: aece1c275f190c70 - Time: 8650ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 372.72 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:45:22.757Z - Hash: 781083fa84cb9381 - Time: 9858ms
+
+× Failed to compile.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 372.75 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:45:34.457Z - Hash: 616d85096d1cf85b - Time: 6049ms
+
+× Failed to compile.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 372.75 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:45:49.595Z - Hash: 2b30aae5223f1b67 - Time: 5042ms
+
+× Failed to compile.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 372.75 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:47:32.604Z - Hash: 976fa2ee66f3f096 - Time: 10595ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 374.94 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:59:16.955Z - Hash: f953e87f066c91e0 - Time: 15656ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 375.19 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:59:24.844Z - Hash: 22d7c3bca625240c - Time: 7158ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 377.31 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T13:59:44.365Z - Hash: 6e96a198e54d0b85 - Time: 5211ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 377.46 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T14:06:07.334Z - Hash: 1241faf417f83425 - Time: 12841ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 378.63 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T14:06:21.096Z - Hash: 1132cd750b17a3d7 - Time: 8299ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 378.94 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T14:06:36.855Z - Hash: 7c3b422e19dce019 - Time: 6666ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 380.90 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T14:07:02.869Z - Hash: 6f978ffac18340e2 - Time: 7986ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 391.02 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T14:07:26.530Z - Hash: 18f3ef729f0cd884 - Time: 7467ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 391.46 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T14:07:58.560Z - Hash: 2a4822917ffade18 - Time: 6937ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 392.13 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T14:08:17.464Z - Hash: 7659a7ce89eb1365 - Time: 5826ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 392.12 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T14:11:06.929Z - Hash: 0d2da3b9d295f3ce - Time: 8192ms
+
+√ Compiled successfully.
+
+Initial chunk files             | Names             |  Raw size
+runtime.js                      | runtime           |  12.93 kB | 
+
+Lazy chunk files                | Names             |  Raw size
+src_app_pos_pos_component_ts.js | pos-pos-component | 390.94 kB | 
+
+14 unchanged chunks
+
+Build at: 2026-06-03T19:27:11.334Z - Hash: b2597cc1d72a560f - Time: 17966ms
+
+√ Compiled successfully.

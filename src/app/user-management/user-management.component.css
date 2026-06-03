@@ -55,6 +55,7 @@
 
 .tab-btn,
 .btn-primary,
+.danger-btn,
 .secondary-btn,
 .icon-btn,
 .filter-select {
@@ -153,14 +154,42 @@
   white-space: nowrap;
 }
 
+.danger-btn {
+  height: 34px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #b91c1c;
+  border-radius: 6px;
+  background: #b91c1c;
+  color: white;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.danger-btn:hover:not(:disabled) {
+  background: #991b1b;
+  border-color: #991b1b;
+}
+
+.danger-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .btn-primary .material-icons-round,
+.danger-btn .material-icons-round,
 .secondary-btn .material-icons-round {
   font-size: 14px;
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
   flex-shrink: 0;
   min-width: 0;
@@ -278,23 +307,22 @@
 }
 
 .users-table th:nth-child(1),
-.users-table td:nth-child(1) { width: 25%; }
-
+.users-table td:nth-child(1),
 .users-table th:nth-child(2),
-.users-table td:nth-child(2) { width: 20%; }
-
+.users-table td:nth-child(2),
 .users-table th:nth-child(3),
-.users-table td:nth-child(3) { width: 21%; }
-
+.users-table td:nth-child(3),
 .users-table th:nth-child(4),
-.users-table td:nth-child(4) { width: 10%; }
-
+.users-table td:nth-child(4),
 .users-table th:nth-child(5),
-.users-table td:nth-child(5) { width: 14%; }
+.users-table td:nth-child(5),
+.users-table th:nth-child(6),
+.users-table td:nth-child(6) {
+  width: 16.666%;
+}
 
 .users-table th:nth-child(6),
 .users-table td:nth-child(6) {
-  width: 10%;
   text-align: center;
 }
 
@@ -439,8 +467,9 @@
 .users-table .action-row {
   justify-content: center;
   flex-wrap: nowrap;
-  gap: 4px;
-  min-width: 0;
+  gap: 10px;
+  width: 104px;
+  min-width: 104px;
   white-space: nowrap;
   margin: 0 auto;
 }
@@ -451,6 +480,8 @@
 
 .users-table td:nth-child(6) {
   overflow: visible;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .icon-btn {
@@ -794,6 +825,10 @@
   width: min(1120px, 100%);
 }
 
+.confirm-modal {
+  width: min(520px, 100%);
+}
+
 .modal-header {
   min-height: 76px;
   padding: 16px 20px;
@@ -832,6 +867,65 @@
   overflow: auto;
 }
 
+.confirm-body {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.confirm-icon {
+  width: 54px;
+  height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.confirm-icon .material-icons-round {
+  font-size: 30px;
+}
+
+.confirm-copy h3 {
+  margin: 0 0 8px;
+  color: var(--surface-950);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.confirm-copy p {
+  margin: 0;
+  color: var(--surface-600);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.warning-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff7f7;
+  color: #991b1b;
+}
+
+.warning-panel .material-icons-round {
+  font-size: 20px;
+}
+
+.warning-panel strong {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -860,6 +954,25 @@
   font-family: var(--font-poppins);
   font-size: 13px;
   text-transform: none;
+}
+
+.form-grid label.has-error input,
+.form-grid label.has-error select {
+  border-color: #dc2626;
+  background: #fff7f7;
+}
+
+.field-error {
+  color: #b91c1c;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.3;
+  text-transform: none;
+}
+
+.block-error {
+  display: block;
+  margin-top: 6px;
 }
 
 .notes-field {
@@ -898,6 +1011,11 @@
   font-size: 12px;
   font-weight: 700;
   text-transform: none;
+}
+
+.checkbox-grid.has-error label {
+  border-color: #dc2626;
+  background: #fff7f7;
 }
 
 .permission-editor {
@@ -980,7 +1098,7 @@
 
 @media (max-width: 1280px) {
   .stats-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .role-list {

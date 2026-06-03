@@ -623,22 +623,32 @@
 }
 
 .status-chip.processing,
-.status-chip.ready-for-delivery {
+.status-chip.ready-for-delivery,
+.status-chip.sent-to-vendor,
+.status-chip.partially-returned {
   background: #EFF6FF;
   color: #1D4ED8;
 }
 
 .status-chip.delivered,
 .status-chip.completed,
-.status-chip.active {
+.status-chip.active,
+.status-chip.returned,
+.status-chip.ready-for-pickup {
   background: #ECFDF5;
   color: #047857;
 }
 
 .status-chip.overdue,
-.status-chip.cancelled {
+.status-chip.cancelled,
+.status-chip.exception {
   background: #FEF2F2;
   color: #DC2626;
+}
+
+.status-chip.draft {
+  background: #F8FAFC;
+  color: #475569;
 }
 
 .btn-icon {
@@ -828,6 +838,98 @@
   grid-column: 1 / -1;
 }
 
+.linen-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.linen-batch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px;
+  max-height: 310px;
+  overflow-y: auto;
+}
+
+.linen-batch-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 8px;
+  width: 100%;
+  padding: 9px;
+  border: 1px solid var(--surface-200);
+  border-radius: 8px;
+  background: white;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-poppins);
+}
+
+.linen-batch-card.active,
+.linen-batch-card:hover {
+  border-color: #1D9E75;
+  background: var(--primary-light);
+}
+
+.linen-batch-card strong {
+  display: block;
+  color: var(--primary-color);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.linen-batch-card span:not(.status-chip),
+.linen-batch-card small {
+  display: block;
+  color: var(--surface-500);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.linen-batch-card small {
+  grid-column: 1 / -1;
+}
+
+.linen-detail-card {
+  min-height: 100%;
+}
+
+.linen-meta {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 10px;
+}
+
+.linen-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.linen-editor {
+  margin-bottom: 8px;
+}
+
+.linen-toggle {
+  align-self: end;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  background: white;
+}
+
+.linen-table th:nth-child(1),
+.linen-table td:nth-child(1) {
+  min-width: 210px;
+}
+
+.linen-table th:nth-child(8),
+.linen-table td:nth-child(8) {
+  min-width: 240px;
+}
+
 .catalogue-editor {
   display: grid;
   grid-template-columns: 130px minmax(160px, 1fr) repeat(4, 120px) auto auto;
@@ -897,7 +999,8 @@
 
   .dashboard-grid,
   .reports-grid,
-  .detail-layout {
+  .detail-layout,
+  .linen-layout {
     grid-template-columns: 1fr;
   }
 

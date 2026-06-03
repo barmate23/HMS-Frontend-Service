@@ -1,24 +1,6 @@
 {
-  "/api/v1/frontOffice": {
-    "target": "http://100.120.107.63:9001",
-    "secure": false,
-    "changeOrigin": true,
-    "logLevel": "debug"
-  },
-  "/api/v1/guests": {
-    "target": "http://100.120.107.63:9001",
-    "secure": false,
-    "changeOrigin": true,
-    "logLevel": "debug"
-  },
-  "/api/v1/rooms/available": {
-    "target": "http://100.120.107.63:9001",
-    "secure": false,
-    "changeOrigin": true,
-    "logLevel": "debug"
-  },
   "/api": {
-    "target": "http://100.120.107.63:9002",
+    "target": "http://100.120.107.63:9093",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"

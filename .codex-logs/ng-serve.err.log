@@ -1,0 +1,2389 @@
+[1m[33mOption "browserTarget" is deprecated: Use 'buildTarget' instead.[39m[22m
+- Generating browser application bundles (phase: setup)...
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+[1m[31m(node:42648) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+[1m[31m
+Error: [96msrc/app/pos/pos.component.html[0m:[93m16[0m:[93m102[0m - [91merror[0m[90m TS2367: [0mThis comparison appears to be unintentional because the types 'PosTab' and '"reports"' have no overlap.
+
+[7m16[0m       <select class="filter-select" *ngIf="activeTab() !== 'outlets' && activeTab() !== 'billing' && activeTab() !== 'reports'" [ngModel]="outletFilter()" (ngModelChange)="outletFilter.set($event === 'ALL' ? 'ALL' : +$event)">
+[7m  [0m [91m                                                                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/pos/pos.component.ts[0m:[93m27[0m:[93m16[0m
+    [7m27[0m   templateUrl: './pos.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component PosComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+[1m[31m
+Error: [96msrc/app/pos/pos.component.html[0m:[93m16[0m:[93m102[0m - [91merror[0m[90m TS2367: [0mThis comparison appears to be unintentional because the types 'PosTab' and '"reports"' have no overlap.
+
+[7m16[0m       <select class="filter-select" *ngIf="activeTab() !== 'outlets' && activeTab() !== 'billing' && activeTab() !== 'reports'" [ngModel]="outletFilter()" (ngModelChange)="outletFilter.set($event === 'ALL' ? 'ALL' : +$event)">
+[7m  [0m [91m                                                                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/pos/pos.component.ts[0m:[93m27[0m:[93m16[0m
+    [7m27[0m   templateUrl: './pos.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component PosComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+[1m[31m
+Error: [96msrc/app/pos/pos.component.html[0m:[93m16[0m:[93m102[0m - [91merror[0m[90m TS2367: [0mThis comparison appears to be unintentional because the types 'PosTab' and '"reports"' have no overlap.
+
+[7m16[0m       <select class="filter-select" *ngIf="activeTab() !== 'outlets' && activeTab() !== 'billing' && activeTab() !== 'reports'" [ngModel]="outletFilter()" (ngModelChange)="outletFilter.set($event === 'ALL' ? 'ALL' : +$event)">
+[7m  [0m [91m                                                                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/pos/pos.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './pos.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component PosComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+[1m[31m
+Error: [96msrc/app/pos/pos.component.html[0m:[93m113[0m:[93m59[0m - [91merror[0m[90m TS2345: [0mArgument of type '"SPLIT"' is not assignable to parameter of type '"START" | "MERGE" | "RESET"'.
+
+[7m113[0m           <button type="button" (click)="openDiningAction('SPLIT')"><span class="material-icons-round">call_split</span><strong>Split Table</strong><small>Split table or covers into separate checks.</small></button>
+[7m   [0m [91m                                                          ~~~~~~~[0m
+
+  [96msrc/app/pos/pos.component.ts[0m:[93m26[0m:[93m16[0m
+    [7m26[0m   templateUrl: './pos.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component PosComponent.
+
+
+Error: [96msrc/app/pos/pos.component.html[0m:[93m114[0m:[93m59[0m - [91merror[0m[90m TS2345: [0mArgument of type '"ASSIGN"' is not assignable to parameter of type '"START" | "MERGE" | "RESET"'.
+
+[7m114[0m           <button type="button" (click)="openDiningAction('ASSIGN')"><span class="material-icons-round">person_add</span><strong>Assign Server</strong><small>Set waiter and guest covers.</small></button>
+[7m   [0m [91m                                                          ~~~~~~~~[0m
+
+  [96msrc/app/pos/pos.component.ts[0m:[93m26[0m:[93m16[0m
+    [7m26[0m   templateUrl: './pos.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component PosComponent.
+
+
+Error: [96msrc/app/pos/pos.component.html[0m:[93m201[0m:[93m70[0m - [91merror[0m[90m TS2367: [0mThis comparison appears to be unintentional because the types '"START" | "MERGE" | "RESET" | null' and '"ASSIGN"' have no overlap.
+
+[7m201[0m       <div class="ci-form-grid" *ngIf="diningAction() === 'START' || diningAction() === 'ASSIGN'">
+[7m   [0m [91m                                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/pos/pos.component.ts[0m:[93m26[0m:[93m16[0m
+    [7m26[0m   templateUrl: './pos.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component PosComponent.
+
+
+Error: [96msrc/app/pos/pos.component.html[0m:[93m250[0m:[93m40[0m - [91merror[0m[90m TS2367: [0mThis comparison appears to be unintentional because the types '"START" | "MERGE" | "RESET" | null' and '"SPLIT"' have no overlap.
+
+[7m250[0m       <div class="ci-form-grid" *ngIf="diningAction() === 'SPLIT'">
+[7m   [0m [91m                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/pos/pos.component.ts[0m:[93m26[0m:[93m16[0m
+    [7m26[0m   templateUrl: './pos.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component PosComponent.
+
+
+Error: [96msrc/app/pos/pos.component.html[0m:[93m252[0m:[93m119[0m - [91merror[0m[90m TS2339: [0mProperty 'splitCovers' does not exist on type '{ server: string; covers: number; secondaryTableId: number | null; }'.
+
+[7m252[0m         <div class="ci-input-group"><label>Split Covers</label><input type="number" min="1" [(ngModel)]="diningForm().splitCovers"></div>
+[7m   [0m [91m                                                                                                                      ~~~~~~~~~~~[0m
+
+  [96msrc/app/pos/pos.component.ts[0m:[93m26[0m:[93m16[0m
+    [7m26[0m   templateUrl: './pos.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component PosComponent.
+
+
+Error: [96msrc/app/pos/pos.component.html[0m:[93m252[0m:[93m119[0m - [91merror[0m[90m TS2339: [0mProperty 'splitCovers' does not exist on type '{ server: string; covers: number; secondaryTableId: number | null; }'.
+
+[7m252[0m         <div class="ci-input-group"><label>Split Covers</label><input type="number" min="1" [(ngModel)]="diningForm().splitCovers"></div>
+[7m   [0m [91m                                                                                                                      ~~~~~~~~~~~[0m
+
+  [96msrc/app/pos/pos.component.ts[0m:[93m26[0m:[93m16[0m
+    [7m26[0m   templateUrl: './pos.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component PosComponent.
+
+
+Error: [96msrc/app/pos/pos.component.html[0m:[93m259[0m:[93m19[0m - [91merror[0m[90m TS2367: [0mThis comparison appears to be unintentional because the types '"START" | "MERGE" | "RESET" | null' and '"SPLIT"' have no overlap.
+
+[7m259[0m         <p *ngIf="diningAction() === 'SPLIT'">This simulates splitting covers into a separate check.</p>
+[7m   [0m [91m                  ~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/pos/pos.component.ts[0m:[93m26[0m:[93m16[0m
+    [7m26[0m   templateUrl: './pos.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component PosComponent.
+
+
+Error: [96msrc/app/pos/pos.component.html[0m:[93m260[0m:[93m19[0m - [91merror[0m[90m TS2367: [0mThis comparison appears to be unintentional because the types '"START" | "MERGE" | "RESET" | null' and '"ASSIGN"' have no overlap.
+
+[7m260[0m         <p *ngIf="diningAction() === 'ASSIGN'">This updates the server and covers for the selected table.</p>
+[7m   [0m [91m                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/pos/pos.component.ts[0m:[93m26[0m:[93m16[0m
+    [7m26[0m   templateUrl: './pos.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component PosComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m
+√ Browser application bundle generation complete.
+[1m[33m
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m95[0m:[93m46[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m95[0m                 <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
+[7m  [0m [93m                                             ~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m97[0m:[93m69[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m97[0m               <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
+[7m  [0m [93m                                                                    ~~~~~~~~~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m80[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                               ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+Warning: [96msrc/app/reservations/gantt-chart/gantt-chart.component.html[0m:[93m103[0m:[93m129[0m - [93mwarning[0m[90m NG8107: [0mThe left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+[7m103[0m             <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
+[7m   [0m [93m                                                                                                                                ~~~~~~[0m
+
+  [96msrc/app/reservations/gantt-chart/gantt-chart.component.ts[0m:[93m25[0m:[93m16[0m
+    [7m25[0m   templateUrl: './gantt-chart.component.html',
+    [7m  [0m [96m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    Error occurs in the template of component GanttChartComponent.
+
+
+[39m[22m

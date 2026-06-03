@@ -1,0 +1,586 @@
+
+> hms-modern-app@0.0.0 start
+> ng serve --proxy-config proxy.conf.json
+
+
+[1mInitial chunk files[22m                                         [2m | [22m[1mNames[22m                                         [2m | [22m [1mRaw size[22m
+[32mvendor.js[39m                                                   [2m | [22m[2mvendor[22m                                        [2m | [22m  [36m3.49 MB[39m[2m | [22m
+[32mmain.js[39m                                                     [2m | [22m[2mmain[22m                                          [2m | [22m[36m800.27 kB[39m[2m | [22m
+[32mpolyfills.js[39m                                                [2m | [22m[2mpolyfills[22m                                     [2m | [22m[36m239.72 kB[39m[2m | [22m
+[32mstyles.css, styles.js[39m                                       [2m | [22m[2mstyles[22m                                        [2m | [22m[36m129.57 kB[39m[2m | [22m
+[32mruntime.js[39m                                                  [2m | [22m[2mruntime[22m                                       [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1m [22m                                                           [2m | [22m[1mInitial total[22m                                 [2m | [22m  [1m4.67 MB[22m
+
+[1mLazy chunk files[22m                                            [2m | [22m[1mNames[22m                                         [2m | [22m [1mRaw size[22m
+[32msrc_app_housekeeping_housekeeping_component_ts.js[39m           [2m | [22m[2mhousekeeping-housekeeping-component[22m           [2m | [22m[36m386.57 kB[39m[2m | [22m
+[32msrc_app_masters_hotel-masters_component_ts.js[39m               [2m | [22m[2mmasters-hotel-masters-component[22m               [2m | [22m[36m290.88 kB[39m[2m | [22m
+[32mnode_modules_angular_animations_fesm2022_browser_mjs.js[39m     [2m | [22m[2mangular-animations-browser[22m                    [2m | [22m[36m229.94 kB[39m[2m | [22m
+[32msrc_app_user-management_user-management_component_ts.js[39m     [2m | [22m[2muser-management-user-management-component[22m     [2m | [22m[36m180.75 kB[39m[2m | [22m
+[32msrc_app_reservations_departures_departures_component_ts.js[39m  [2m | [22m[2mreservations-departures-departures-component[22m  [2m | [22m[36m149.17 kB[39m[2m | [22m
+[32msrc_app_guests_guest-profiles_component_ts.js[39m               [2m | [22m[2mguests-guest-profiles-component[22m               [2m | [22m[36m107.53 kB[39m[2m | [22m
+[32msrc_app_reservations_gantt-chart_gantt-chart_component_ts.js[39m[2m | [22m[2mreservations-gantt-chart-gantt-chart-component[22m[2m | [22m [36m75.01 kB[39m[2m | [22m
+[32mcommon.js[39m                                                   [2m | [22m[2mcommon[22m                                        [2m | [22m [36m13.59 kB[39m[2m | [22m
+
+Build at: 2026-05-29T20:01:43.084Z - Hash: 33fe767784af1e5a - Time: 59898ms
+
+** Angular Live Development Server is listening on localhost:4200, open your browser on http://localhost:4200/ **
+
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mmain.js[39m                        [2m | [22m[2mmain[22m             [2m | [22m[36m801.76 kB[39m[2m | [22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m253.71 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-29T20:15:54.454Z - Hash: 7d1fd757161e7c3e - Time: 51097ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m802.45 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m12.93 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-29T20:16:08.727Z - Hash: 6a2bdb039169199d - Time: 14030ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m253.84 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-29T20:25:04.269Z - Hash: 693c822b7faf129d - Time: 23100ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m254.46 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-29T20:25:20.092Z - Hash: f31258a259edeb02 - Time: 15413ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m802.25 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m12.93 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:07:23.757Z - Hash: c1bb20bcb46b704f - Time: 12505ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m801.78 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m12.93 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:07:40.694Z - Hash: 93b1a02842315b62 - Time: 4356ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m218.71 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:08:28.415Z - Hash: babc2ec491f9d7b4 - Time: 6209ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m218.71 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:09:01.596Z - Hash: 52675417233f1cef - Time: 18482ms
+
+× Failed to compile.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mmain.js[39m                        [2m | [22m[2mmain[22m             [2m | [22m[36m801.78 kB[39m[2m | [22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m218.14 kB[39m[2m | [22m
+
+11 unchanged chunks
+
+Build at: 2026-05-30T19:09:27.095Z - Hash: 1bddbbf5199ecd94 - Time: 14028ms
+
+× Failed to compile.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m217.59 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:12:35.044Z - Hash: 26190d7c7873ede2 - Time: 24426ms
+
+× Failed to compile.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m217.56 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:13:33.772Z - Hash: 687055e31d6153de - Time: 11393ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m217.56 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:19:16.260Z - Hash: ad0d5c7e60c91699 - Time: 25804ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m217.61 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:19:22.437Z - Hash: 3d42d93551d397e6 - Time: 5462ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m224.15 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:20:04.713Z - Hash: 829f1a2d7b1b9c68 - Time: 4321ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m229.82 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:20:36.087Z - Hash: 2dceab391001e911 - Time: 6718ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m802.01 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m12.93 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:20:49.747Z - Hash: f0f24b45d0e875c7 - Time: 3752ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m  [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m   [2m | [22m[36m802.12 kB[39m[2m | [22m
+[32mruntime.js[39m         [2m | [22m[2mruntime[22m[2m | [22m [36m12.93 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:21:03.056Z - Hash: 59369adba00243c5 - Time: 2356ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m231.66 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:25:56.409Z - Hash: 0818a84569a71632 - Time: 13197ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m234.56 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:26:24.928Z - Hash: 085c175131e07ccc - Time: 7405ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m256.76 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:27:07.308Z - Hash: 54386db87f1ca877 - Time: 5246ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m260.09 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:27:37.384Z - Hash: 464c77ea43e12799 - Time: 6636ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m260.88 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:31:28.279Z - Hash: 2a8d6563d37d25be - Time: 18756ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m261.57 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:31:47.576Z - Hash: 6682bc2fc72c0114 - Time: 10832ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m264.33 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:36:49.549Z - Hash: 10b6fd2f65155570 - Time: 26146ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m276.44 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:37:16.109Z - Hash: a5a3751d04ae8e1c - Time: 14317ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m280.12 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:37:54.492Z - Hash: 2573b9399ae376cd - Time: 11627ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m280.13 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:41:10.189Z - Hash: 90bfeccded7f21e8 - Time: 10748ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m280.18 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:46:49.848Z - Hash: a9ea6d556ff041c1 - Time: 12118ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m282.29 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:47:14.372Z - Hash: 8c9a8fea016c8a5c - Time: 8131ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m292.46 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:47:43.196Z - Hash: e23763a0ca03de2b - Time: 7196ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m299.00 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:49:05.391Z - Hash: 44a0264275d762dc - Time: 8924ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m299.24 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:49:21.560Z - Hash: 5c56830a43e542ed - Time: 8070ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m299.43 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:50:11.650Z - Hash: f1860e62df0ec364 - Time: 7535ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m300.50 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:56:31.495Z - Hash: c0864aa32e92790a - Time: 17663ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m300.24 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:56:51.833Z - Hash: e00545ea4990b8ad - Time: 9312ms
+
+× Failed to compile.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m296.18 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:57:17.044Z - Hash: dba055501652b4b7 - Time: 7409ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m296.26 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T19:59:52.484Z - Hash: a82ca5538b4b0e3c - Time: 16839ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m297.74 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T20:00:14.668Z - Hash: 5c64f477d05ef831 - Time: 11507ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m298.34 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T20:02:27.768Z - Hash: 68d39c41288f3eda - Time: 10361ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m298.50 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T20:02:50.656Z - Hash: 5a2fec39e98889c0 - Time: 12235ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m300.69 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T20:03:17.508Z - Hash: 534149f866ab0e06 - Time: 11251ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m304.08 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T20:03:51.462Z - Hash: b5e693c2e18f0d56 - Time: 16419ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m304.43 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T20:08:40.603Z - Hash: 0af5ff6c5ea7c915 - Time: 32170ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m306.04 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T20:08:55.866Z - Hash: de8708fe898d619d - Time: 14994ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m308.97 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T20:09:15.564Z - Hash: dd153c9aa023310a - Time: 19419ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m310.10 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T20:12:35.763Z - Hash: ca0e8e2e7630c334 - Time: 26111ms
+
+√ Compiled successfully.
+
+[1mInitial chunk files[22m            [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32mruntime.js[39m                     [2m | [22m[2mruntime[22m          [2m | [22m [36m12.93 kB[39m[2m | [22m
+
+[1mLazy chunk files[22m               [2m | [22m[1mNames[22m            [2m | [22m [1mRaw size[22m
+[32msrc_app_pos_pos_component_ts.js[39m[2m | [22m[2mpos-pos-component[22m[2m | [22m[36m312.79 kB[39m[2m | [22m
+
+12 unchanged chunks
+
+Build at: 2026-05-30T20:12:58.113Z - Hash: fdacb757da63bd61 - Time: 12637ms
+
+√ Compiled successfully.

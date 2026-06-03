@@ -88,7 +88,8 @@ interface ApiGanttItem {
 export class ReservationCenter implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
-  private readonly baseUrl = '/api/v1';
+  private readonly frontOfficeBaseUrl = '/api/frontOfficeService/v1';
+  private readonly masterBaseUrl = '/api/masterService/v1';
 
   viewMode = signal<'LIST' | 'STAY' | 'MAP'>('LIST');
   selectedFloor = signal('Floor 1');
@@ -308,7 +309,7 @@ export class ReservationCenter implements OnInit {
     if (this.rangeStart()) params = params.set('fromDate', this.toApiDate(this.rangeStart()!));
     if (this.rangeEnd()) params = params.set('toDate', this.toApiDate(this.rangeEnd()!));
 
-    this.http.get<StandardResponse<any[]>>(`${this.baseUrl}/frontOffice/getAllReservations`, { params }).subscribe({
+    this.http.get<StandardResponse<any[]>>(`${this.frontOfficeBaseUrl}/frontOffice/getAllReservations`, { params }).subscribe({
       next: (response) => {
         this.reservations.set((response.data ?? []).map(item => this.mapReservation(item)));
         this.totalReservationRecords.set(response.metadata?.totalRecords ?? response.data?.length ?? 0);
@@ -339,7 +340,7 @@ export class ReservationCenter implements OnInit {
     this.isLoadingReservationDetails.set(true);
     this.isReservationDetailsOpen.set(true);
 
-    this.http.get<StandardResponse<any>>(`${this.baseUrl}/frontOffice/getReservationById/${id}`).subscribe({
+    this.http.get<StandardResponse<any>>(`${this.frontOfficeBaseUrl}/frontOffice/getReservationById/${id}`).subscribe({
       next: (response) => {
         this.selectedReservationDetails.set(response.data ?? {});
         this.isLoadingReservationDetails.set(false);
@@ -368,7 +369,7 @@ export class ReservationCenter implements OnInit {
     this.reservationError.set(null);
     this.reservationMessage.set(null);
 
-    this.http.put<StandardResponse<any>>(`${this.baseUrl}/frontOffice/cancelReservation/${id}`, {}).subscribe({
+    this.http.put<StandardResponse<any>>(`${this.frontOfficeBaseUrl}/frontOffice/cancelReservation/${id}`, {}).subscribe({
       next: (response) => {
         this.reservationMessage.set(response.message || 'Reservation cancelled.');
         this.loadReservations();
@@ -508,10 +509,10 @@ export class ReservationCenter implements OnInit {
     const params = new HttpParams().set('startDate', date).set('endDate', date);
 
     forkJoin({
-      floorsRes: this.http.get<StandardResponse<ApiFloor[]>>(`${this.baseUrl}/floors/getAllFloors`),
-      roomTypesRes: this.http.get<StandardResponse<ApiRoomType[]>>(`${this.baseUrl}/roomTypes/getAllRoomTypes`),
-      roomsRes: this.http.get<StandardResponse<ApiRoom[]>>(`${this.baseUrl}/rooms/getAllRooms`),
-      ganttRes: this.http.get<StandardResponse<ApiGanttItem[]>>(`${this.baseUrl}/frontOffice/getGanttChartData`, { params })
+      floorsRes: this.http.get<StandardResponse<ApiFloor[]>>(`${this.masterBaseUrl}/floors/getAllFloors`),
+      roomTypesRes: this.http.get<StandardResponse<ApiRoomType[]>>(`${this.masterBaseUrl}/roomTypes/getAllRoomTypes`),
+      roomsRes: this.http.get<StandardResponse<ApiRoom[]>>(`${this.masterBaseUrl}/rooms/getAllRooms`),
+      ganttRes: this.http.get<StandardResponse<ApiGanttItem[]>>(`${this.frontOfficeBaseUrl}/frontOffice/getGanttChartData`, { params })
     }).subscribe({
       next: ({ floorsRes, roomTypesRes, roomsRes, ganttRes }) => {
         const floors = (floorsRes.data || []).filter(f => f.isActive);

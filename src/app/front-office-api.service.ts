@@ -114,6 +114,8 @@ export interface GanttChartItem {
 
 @Injectable({ providedIn: 'root' })
 export class FrontOfficeApiService {
+  private readonly frontOfficeBaseUrl = '/api/frontOfficeService/v1';
+
   constructor(private readonly http: HttpClient) {}
 
   getArrivals(searchText = '', checkout = false): Observable<ApiResponse<ArrivalApiData>> {
@@ -126,41 +128,41 @@ export class FrontOfficeApiService {
       params = params.set('searchText', searchText.trim());
     }
 
-    return this.http.get<ApiResponse<ArrivalApiData>>('/api/v1/frontOffice/arrivals', { params });
+    return this.http.get<ApiResponse<ArrivalApiData>>(`${this.frontOfficeBaseUrl}/frontOffice/arrivals`, { params });
   }
 
   checkIn(payload: CheckInRequest): Observable<ApiResponse<unknown>> {
-    return this.http.post<ApiResponse<unknown>>('/api/v1/frontOffice/checkin', payload);
+    return this.http.post<ApiResponse<unknown>>(`${this.frontOfficeBaseUrl}/frontOffice/checkin`, payload);
   }
 
   getCheckInDetails(bookingId: number): Observable<ApiResponse<CheckInDetails>> {
-    return this.http.get<ApiResponse<CheckInDetails>>(`/api/v1/frontOffice/checkin-details/${bookingId}`);
+    return this.http.get<ApiResponse<CheckInDetails>>(`${this.frontOfficeBaseUrl}/frontOffice/checkin-details/${bookingId}`);
   }
 
   checkOut(payload: CheckOutRequest): Observable<ApiResponse<unknown>> {
-    return this.http.post<ApiResponse<unknown>>('/api/v1/frontOffice/checkout', payload);
+    return this.http.post<ApiResponse<unknown>>(`${this.frontOfficeBaseUrl}/frontOffice/checkout`, payload);
   }
 
   getGanttChartData(startDate: string, endDate: string): Observable<ApiResponse<GanttChartItem[]>> {
     const params = new HttpParams()
       .set('startDate', startDate)
       .set('endDate', endDate);
-    return this.http.get<ApiResponse<GanttChartItem[]>>('/api/v1/frontOffice/getGanttChartData', { params });
+    return this.http.get<ApiResponse<GanttChartItem[]>>(`${this.frontOfficeBaseUrl}/frontOffice/getGanttChartData`, { params });
   }
 
   getGuests(): Observable<ApiResponse<GuestApiItem[]>> {
-    return this.http.get<ApiResponse<GuestApiItem[]>>('/api/v1/guests/getAllGuests');
+    return this.http.get<ApiResponse<GuestApiItem[]>>(`${this.frontOfficeBaseUrl}/guests/getAllGuests`);
   }
 
   createGuest(payload: GuestRequest): Observable<ApiResponse<unknown>> {
-    return this.http.post<ApiResponse<unknown>>('/api/v1/guests/createGuest', payload);
+    return this.http.post<ApiResponse<unknown>>(`${this.frontOfficeBaseUrl}/guests/createGuest`, payload);
   }
 
   updateGuest(id: number, payload: GuestRequest): Observable<ApiResponse<unknown>> {
-    return this.http.put<ApiResponse<unknown>>(`/api/v1/guests/updateGuest/${id}`, payload);
+    return this.http.put<ApiResponse<unknown>>(`${this.frontOfficeBaseUrl}/guests/updateGuest/${id}`, payload);
   }
 
   deleteGuest(id: number): Observable<ApiResponse<unknown>> {
-    return this.http.delete<ApiResponse<unknown>>(`/api/v1/guests/deleteGuest/${id}`);
+    return this.http.delete<ApiResponse<unknown>>(`${this.frontOfficeBaseUrl}/guests/deleteGuest/${id}`);
   }
 }

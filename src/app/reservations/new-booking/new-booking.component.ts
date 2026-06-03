@@ -132,7 +132,8 @@ export class NewBookingComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly baseUrl = '/api/v1';
+  private readonly frontOfficeBaseUrl = '/api/frontOfficeService/v1';
+  private readonly masterBaseUrl = '/api/masterService/v1';
   readonly todayIso = this.toDateInputValue(new Date());
 
   checkIn = signal('');
@@ -266,8 +267,8 @@ export class NewBookingComponent implements OnInit {
     this.roomInventoryError.set(null);
 
     forkJoin({
-      roomTypes: this.http.get<StandardResponse<ApiRoomType[]>>(`${this.baseUrl}/roomTypes/getAllRoomTypes?page=0&size=50`),
-      rooms: this.http.get<StandardResponse<ApiRoom[]>>(`${this.baseUrl}/rooms/getAllRooms?page=0&size=10`)
+      roomTypes: this.http.get<StandardResponse<ApiRoomType[]>>(`${this.masterBaseUrl}/roomTypes/getAllRoomTypes?page=0&size=50`),
+      rooms: this.http.get<StandardResponse<ApiRoom[]>>(`${this.masterBaseUrl}/rooms/getAllRooms?page=0&size=10`)
     }).subscribe({
       next: ({ roomTypes, rooms }) => {
         const activeTypes = (roomTypes.data ?? []).filter(rt => rt.isActive !== false);
@@ -310,7 +311,7 @@ export class NewBookingComponent implements OnInit {
     this.roomInventoryError.set(null);
 
     const floorId = this.selectedFloor();
-    this.http.get<StandardResponse<ApiRoom[]>>(`${this.baseUrl}/rooms/available?floorId=${floorId}&checkIn=${this.checkIn()}&checkOut=${this.checkOut()}`).subscribe({
+    this.http.get<StandardResponse<ApiRoom[]>>(`${this.frontOfficeBaseUrl}/rooms/available?checkIn=${this.checkIn()}&checkOut=${this.checkOut()}`).subscribe({
       next: (response) => {
         const typeMap = this.buildRoomTypeMap();
         this.mergeAvailableRoomsForFloor(response.data ?? [], typeMap, floorId);
@@ -367,7 +368,7 @@ export class NewBookingComponent implements OnInit {
     this.isRatePlanLoading.set(true);
     this.ratePlanError.set(null);
 
-    this.http.get<StandardResponse<ApiRatePlan[]>>(`${this.baseUrl}/ratePlans/getAllRatePlans?page=0&size=50`).subscribe({
+    this.http.get<StandardResponse<ApiRatePlan[]>>(`${this.masterBaseUrl}/ratePlans/getAllRatePlans?page=0&size=50`).subscribe({
       next: (response) => {
         const plans = (response.data ?? [])
           .filter(plan => plan.isActive !== false)
@@ -474,7 +475,7 @@ export class NewBookingComponent implements OnInit {
     this.isLoadingReservationForEdit.set(true);
     this.reservationError.set(null);
 
-    this.http.get<StandardResponse<any>>(`${this.baseUrl}/frontOffice/getReservationById/${id}`).subscribe({
+    this.http.get<StandardResponse<any>>(`${this.frontOfficeBaseUrl}/frontOffice/getReservationById/${id}`).subscribe({
       next: (response) => {
         const details = response.data;
         this.pendingEditDetails = details;
@@ -850,8 +851,8 @@ export class NewBookingComponent implements OnInit {
 
     const reservationId = this.editReservationId();
     const request$ = reservationId
-      ? this.http.put<StandardResponse<any>>(`${this.baseUrl}/frontOffice/updateReservation/${reservationId}`, payload)
-      : this.http.post<StandardResponse<any>>(`${this.baseUrl}/frontOffice/createReservation`, payload);
+      ? this.http.put<StandardResponse<any>>(`${this.frontOfficeBaseUrl}/frontOffice/updateReservation/${reservationId}`, payload)
+      : this.http.post<StandardResponse<any>>(`${this.frontOfficeBaseUrl}/frontOffice/createReservation`, payload);
 
     request$.subscribe({
       next: (response) => {
@@ -880,7 +881,7 @@ export class NewBookingComponent implements OnInit {
     const payload = this.buildReservationPayload('PENDING');
     this.isCreatingReservation.set(true);
 
-    this.http.post<StandardResponse<any>>(`${this.baseUrl}/frontOffice/createReservation`, payload).subscribe({
+    this.http.post<StandardResponse<any>>(`${this.frontOfficeBaseUrl}/frontOffice/createReservation`, payload).subscribe({
       next: (response) => {
         this.isCreatingReservation.set(false);
         this.reservationSuccess.set(response.message || 'Reservation draft saved.');

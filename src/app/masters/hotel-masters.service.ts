@@ -129,7 +129,7 @@ interface StandardResponse<T = any> {
 @Injectable({ providedIn: 'root' })
 export class HotelMastersService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/api/v1';
+  private readonly baseUrl = '/api/masterService/v1';
 
   // ── Reactive Signals ──
   private _hotels = signal<Hotel[]>([]);

@@ -3,6 +3,7 @@ import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
+import { HotelMastersService } from '../masters/hotel-masters.service';
 import {
   OrderStatus,
   PosBill,
@@ -18,6 +19,8 @@ import {
 
 type ModalKind = 'outlet' | 'menu' | 'order' | 'bill' | 'table';
 type ModalMode = 'create' | 'edit';
+type DiningAction = 'START' | 'ROOM' | 'BOOK' | 'MERGE' | 'RESET';
+type DeleteTarget = { kind: 'outlet' | 'menu' | 'table'; id: number; title: string; message: string };
 
 @Component({
   selector: 'app-pos',
@@ -28,6 +31,7 @@ type ModalMode = 'create' | 'edit';
 })
 export class PosComponent implements OnInit, OnDestroy {
   readonly pos = inject(PosService);
+  readonly masters = inject(HotelMastersService);
   private readonly router = inject(Router);
   private routerSub?: Subscription;
 
@@ -45,12 +49,19 @@ export class PosComponent implements OnInit, OnDestroy {
   currentBill = signal<Partial<PosBill>>({});
   currentTable = signal<Partial<PosTable>>({});
   selectedTable = signal<PosTable | null>(null);
-  diningAction = signal<'START' | 'MERGE' | 'RESET' | null>(null);
+  diningAction = signal<DiningAction | null>(null);
   isDiningActionOpen = signal(false);
-  diningForm = signal<{ server: string; covers: number; secondaryTableId: number | null }>({
+  deleteTarget = signal<DeleteTarget | null>(null);
+  diningForm = signal<{ server: string; covers: number; secondaryTableId: number | null; floorId: number | null; roomId: number | null; roomNo: string; guestName: string; bookingTime: string; notes: string }>({
     server: 'Arjun Menon',
     covers: 2,
-    secondaryTableId: null
+    secondaryTableId: null,
+    floorId: null,
+    roomId: null,
+    roomNo: '102',
+    guestName: 'Rajan Mehta',
+    bookingTime: 'Today, 08:00 PM',
+    notes: ''
   });
   startOrderLines = signal<PosOrderLine[]>([]);
 
@@ -126,9 +137,70 @@ export class PosComponent implements OnInit, OnDestroy {
     return this.pos.menuItems().filter(item => item.outletId === outletId && item.available);
   });
 
+  diningMenuItems = computed(() => {
+    const action = this.diningAction();
+    const outletId = action === 'ROOM' ? this.roomServiceOutletId() : (this.selectedTable()?.outletId || this.defaultOutletId());
+    return this.pos.menuItems().filter(item => item.outletId === outletId && item.available);
+  });
+
+  roomServiceFloors = computed(() => this.masters.floors().filter(floor => floor.isActive));
+
+  roomServiceRooms = computed(() => {
+    const floorId = Number(this.diningForm().floorId || 0);
+    return this.masters.rooms()
+      .filter(room => room.isActive)
+      .filter(room => !floorId || room.floorId === floorId)
+      .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }));
+  });
+
+  selectedRoomServiceRoom = computed(() => {
+    const roomId = Number(this.diningForm().roomId || 0);
+    return this.masters.rooms().find(room => room.id === roomId) || this.roomServiceRooms()[0] || null;
+  });
+
+  orderTables = computed(() => {
+    const outletId = Number(this.currentOrder().outletId || this.defaultOutletId());
+    return this.pos.tables()
+      .filter(table => table.outletId === outletId)
+      .sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }));
+  });
+
+  orderRoomFloors = computed(() => this.masters.floors().filter(floor => floor.isActive));
+
+  orderRooms = computed(() => {
+    const floorId = Number(this.currentOrder().floorId || 0);
+    return this.masters.rooms()
+      .filter(room => room.isActive)
+      .filter(room => !floorId || room.floorId === floorId)
+      .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }));
+  });
+
   orderMenuItems = computed(() => {
     const outletId = Number(this.currentOrder().outletId || this.defaultOutletId());
     return this.pos.menuItems().filter(item => item.outletId === outletId && item.available);
+  });
+
+  billOrders = computed(() => {
+    const type = this.currentBill().orderType;
+    return this.pos.orders().filter(order => !type || order.type === type);
+  });
+
+  billTables = computed(() => {
+    const order = this.pos.orders().find(item => item.id === Number(this.currentBill().orderId));
+    const outletId = Number(order?.outletId || this.defaultOutletId());
+    return this.pos.tables()
+      .filter(table => table.outletId === outletId)
+      .sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }));
+  });
+
+  billRoomFloors = computed(() => this.masters.floors().filter(floor => floor.isActive));
+
+  billRooms = computed(() => {
+    const floorId = Number(this.currentBill().floorId || 0);
+    return this.masters.rooms()
+      .filter(room => room.isActive)
+      .filter(room => !floorId || room.floorId === floorId)
+      .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }));
   });
 
   startOrderTotal = computed(() => this.startOrderLines().reduce((sum, line) => sum + line.qty * line.price, 0));
@@ -152,11 +224,18 @@ export class PosComponent implements OnInit, OnDestroy {
   openCreate(kind: ModalKind): void {
     this.modalKind.set(kind);
     this.modalMode.set('create');
-    if (kind === 'outlet') this.currentOutlet.set({ name: '', type: 'Restaurant', location: '', timing: '09:00 AM - 09:00 PM', taxProfile: 'GST 5%', active: true, manager: 'Outlet Manager' });
+    if (kind === 'outlet') this.currentOutlet.set({ name: '', type: this.pos.outletTypes()[0] || 'Restaurant', location: '', timing: this.pos.shiftSchedules()[0] || '09:00 AM - 09:00 PM', taxProfile: 'GST 5%', active: true, manager: 'Outlet Manager' });
     if (kind === 'menu') this.currentMenuItem.set({ outletId: this.defaultOutletId(), name: '', category: 'Food', subcategory: '', price: 0, taxPercent: 5, variants: [], modifiers: [], available: true, featured: false, stockItem: '', imageUrl: '' });
-    if (kind === 'order') this.currentOrder.set({ outletId: this.defaultOutletId(), type: 'TABLE', tableNo: '', roomNo: '', guestName: '', server: 'Unassigned', status: 'OPEN', notes: '', lines: [] });
-    if (kind === 'bill') this.currentBill.set({ orderId: this.pos.orders()[0]?.id, subtotal: 0, discount: 0, tax: 0, paid: 0, status: 'OPEN', paymentModes: ['Cash'], postedToFolio: false });
-    if (kind === 'table') this.currentTable.set({ outletId: this.defaultOutletId(), number: '', section: 'Indoor', status: 'AVAILABLE', covers: 0, server: 'Unassigned', mergedWith: '' });
+    if (kind === 'order') {
+      const outletId = this.defaultOutletId();
+      const table = this.pos.tables().find(item => item.outletId === outletId);
+      this.currentOrder.set({ outletId, type: 'TABLE', tableNo: table?.number || '', roomNo: '', guestName: '', server: 'Unassigned', status: this.pos.orderStatuses()[0] || 'OPEN', notes: '', lines: [] });
+    }
+    if (kind === 'bill') {
+      const order = this.pos.orders()[0];
+      this.currentBill.set({ orderId: order?.id, orderType: order?.type || 'TABLE', tableNo: order?.tableNo || '', floorId: order?.floorId || null, roomId: order?.roomId || null, roomNo: order?.roomNo || '', guestName: order?.guestName || '', subtotal: 0, discount: 0, tax: 0, paid: 0, status: this.pos.billStatuses()[0] || 'OPEN', paymentModes: [this.pos.paymentModes()[0] || 'Cash'], compReason: this.pos.voidReasons()[0] || '', postedToFolio: false });
+    }
+    if (kind === 'table') this.currentTable.set({ outletId: this.defaultOutletId(), number: '', section: this.pos.tableSections()[0] || 'Indoor', status: this.pos.tableStatuses()[0] || 'AVAILABLE', covers: 0, server: 'Unassigned', bookingTime: this.currentTimeValue(), mergedWith: '' });
     this.isModalOpen.set(true);
     document.body.style.overflow = 'hidden';
   }
@@ -167,10 +246,27 @@ export class PosComponent implements OnInit, OnDestroy {
     if (kind === 'outlet') this.currentOutlet.set({ ...item });
     if (kind === 'menu') this.currentMenuItem.set({ ...item, variants: [...item.variants], modifiers: [...item.modifiers] });
     if (kind === 'order') this.currentOrder.set({ ...item, lines: item.lines.map((line: PosOrderLine) => ({ ...line })) });
-    if (kind === 'bill') this.currentBill.set({ ...item, paymentModes: [...item.paymentModes] });
+    if (kind === 'bill') {
+      const order = this.pos.orders().find(value => value.id === Number(item.orderId));
+      this.currentBill.set({
+        ...item,
+        orderType: item.orderType || order?.type,
+        tableNo: item.tableNo || order?.tableNo || '',
+        floorId: item.floorId || order?.floorId || null,
+        roomId: item.roomId || order?.roomId || null,
+        roomNo: item.roomNo || order?.roomNo || '',
+        guestName: item.guestName || order?.guestName || '',
+        paymentModes: [...item.paymentModes]
+      });
+    }
     if (kind === 'table') this.currentTable.set({ ...item });
     this.isModalOpen.set(true);
     document.body.style.overflow = 'hidden';
+  }
+
+  private currentTimeValue(): string {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   }
 
   closeModal(): void {
@@ -189,19 +285,55 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   deleteOutlet(id: number): void {
-    if (confirm('Delete this outlet?')) this.pos.deleteOutlet(id);
+    const outlet = this.pos.outlets().find(item => item.id === id);
+    this.openDeleteConfirm({
+      kind: 'outlet',
+      id,
+      title: outlet?.name || 'Outlet',
+      message: 'This outlet will be removed from POS outlet management.'
+    });
   }
 
   deleteMenuItem(id: number): void {
-    if (confirm('Delete this menu item?')) this.pos.deleteMenuItem(id);
+    const item = this.pos.menuItems().find(value => value.id === id);
+    this.openDeleteConfirm({
+      kind: 'menu',
+      id,
+      title: item?.name || 'Menu item',
+      message: 'This menu item will be removed from the selected outlet menu.'
+    });
   }
 
   deleteTable(table: PosTable, event?: Event): void {
     event?.stopPropagation();
-    if (confirm(`Delete table ${table.number}?`)) {
-      this.pos.deleteTable(table.id);
-      if (this.selectedTable()?.id === table.id) this.selectedTable.set(null);
+    this.openDeleteConfirm({
+      kind: 'table',
+      id: table.id,
+      title: `Table ${table.number}`,
+      message: 'This table will be removed from the dining layout.'
+    });
+  }
+
+  openDeleteConfirm(target: DeleteTarget): void {
+    this.deleteTarget.set(target);
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeDeleteConfirm(): void {
+    this.deleteTarget.set(null);
+    if (!this.isModalOpen() && !this.isDiningActionOpen()) document.body.style.overflow = '';
+  }
+
+  confirmDelete(): void {
+    const target = this.deleteTarget();
+    if (!target) return;
+    if (target.kind === 'outlet') this.pos.deleteOutlet(target.id);
+    if (target.kind === 'menu') this.pos.deleteMenuItem(target.id);
+    if (target.kind === 'table') {
+      this.pos.deleteTable(target.id);
+      if (this.selectedTable()?.id === target.id) this.selectedTable.set(null);
     }
+    this.closeDeleteConfirm();
   }
 
   toggleOutlet(outlet: PosOutlet): void {
@@ -248,22 +380,99 @@ export class PosComponent implements OnInit, OnDestroy {
     this.currentOrder.update(order => ({ ...order, lines: (order.lines || []).map((line, i) => i === index ? { ...line, notes: value } : line) }));
   }
 
+  updateOrderOutlet(value: number | string): void {
+    const outletId = Number(value || this.defaultOutletId());
+    const firstTable = this.pos.tables().find(table => table.outletId === outletId);
+    this.currentOrder.update(order => ({
+      ...order,
+      outletId,
+      tableNo: order.type === 'TABLE' ? firstTable?.number || '' : order.tableNo,
+      roomNo: order.type === 'TABLE' ? '' : order.roomNo,
+      roomId: order.type === 'TABLE' ? null : order.roomId,
+      floorId: order.type === 'TABLE' ? null : order.floorId
+    }));
+  }
+
+  updateOrderType(value: 'TABLE' | 'TAKEAWAY' | 'ROOM'): void {
+    if (value === 'TABLE') {
+      const outletId = Number(this.currentOrder().outletId || this.defaultOutletId());
+      const firstTable = this.pos.tables().find(table => table.outletId === outletId);
+      this.currentOrder.update(order => ({ ...order, type: value, tableNo: firstTable?.number || '', roomNo: '', roomId: null, floorId: null, guestName: '' }));
+      return;
+    }
+
+    if (value === 'ROOM') {
+      const firstFloor = this.orderRoomFloors()[0] || null;
+      const firstRoom = this.masters.rooms()
+        .filter(room => room.isActive)
+        .filter(room => !firstFloor || room.floorId === firstFloor.id)
+        .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }))[0];
+      this.currentOrder.update(order => ({
+        ...order,
+        type: value,
+        outletId: this.roomServiceOutletId(),
+        tableNo: '',
+        floorId: firstFloor?.id || null,
+        roomId: firstRoom?.id || null,
+        roomNo: firstRoom?.roomNumber || '',
+        guestName: order.guestName || ''
+      }));
+      return;
+    }
+
+    this.currentOrder.update(order => ({ ...order, type: value, tableNo: '', roomNo: '', roomId: null, floorId: null, guestName: '' }));
+  }
+
+  updateOrderTable(value: string): void {
+    this.currentOrder.update(order => ({ ...order, tableNo: value }));
+  }
+
+  updateOrderFloor(value: number | string): void {
+    const floorId = Number(value) || null;
+    const firstRoom = this.masters.rooms()
+      .filter(room => room.isActive && (!floorId || room.floorId === floorId))
+      .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }))[0];
+    this.currentOrder.update(order => ({
+      ...order,
+      floorId,
+      roomId: firstRoom?.id || null,
+      roomNo: firstRoom?.roomNumber || ''
+    }));
+  }
+
+  updateOrderRoom(value: number | string): void {
+    const roomId = Number(value) || null;
+    const room = this.masters.rooms().find(item => item.id === roomId);
+    this.currentOrder.update(order => ({
+      ...order,
+      roomId,
+      roomNo: room?.roomNumber || ''
+    }));
+  }
+
   selectDiningTable(table: PosTable): void {
     this.selectedTable.set(table);
     this.diningForm.set({
       server: table.server === 'Unassigned' ? 'Arjun Menon' : table.server,
       covers: table.covers || 2,
-      secondaryTableId: this.mergeCandidates()[0]?.id || null
+      secondaryTableId: this.mergeCandidates()[0]?.id || null,
+      floorId: this.diningForm().floorId,
+      roomId: this.diningForm().roomId,
+      roomNo: '102',
+      guestName: table.guestName || (table.server !== 'Unassigned' ? table.server : 'Guest'),
+      bookingTime: table.bookingTime || 'Today, 08:00 PM',
+      notes: ''
     });
   }
 
-  openDiningAction(action: 'START' | 'MERGE' | 'RESET'): void {
-    if (action !== 'RESET' && !this.selectedTable()) {
+  openDiningAction(action: DiningAction): void {
+    if (action !== 'RESET' && action !== 'ROOM' && !this.selectedTable()) {
       const first = this.outletTables()[0];
       if (first) this.selectDiningTable(first);
     }
     this.diningAction.set(action);
-    if (action === 'START') this.seedStartOrderLines();
+    if (action === 'ROOM') this.prepareRoomServiceDefaults();
+    if (action === 'START' || action === 'ROOM') this.seedStartOrderLines();
     this.isDiningActionOpen.set(true);
     document.body.style.overflow = 'hidden';
   }
@@ -286,11 +495,33 @@ export class PosComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (action === 'ROOM') {
+      const room = this.selectedRoomServiceRoom();
+      const roomNo = room?.roomNumber || form.roomNo;
+      this.pos.startRoomOrder({
+        outletId: this.roomServiceOutletId(),
+        roomNo,
+        guestName: form.guestName,
+        server: form.server,
+        notes: form.notes || `Deliver to room ${roomNo}.`
+      }, this.startOrderLines());
+      this.closeDiningAction();
+      return;
+    }
+
     const table = this.selectedTable();
     if (!table) return;
 
     if (action === 'START') {
-      this.pos.startTableOrder({ ...table, server: form.server, covers: form.covers }, this.startOrderLines());
+      this.pos.startTableOrder({ ...table, server: form.server, covers: form.covers, guestName: form.guestName }, this.startOrderLines());
+    }
+    if (action === 'BOOK') {
+      this.pos.bookTable(table, {
+        guestName: form.guestName,
+        covers: form.covers,
+        server: form.server,
+        bookingTime: form.bookingTime
+      });
     }
     if (action === 'MERGE') {
       const secondary = this.pos.tables().find(item => item.id === Number(form.secondaryTableId));
@@ -320,6 +551,30 @@ export class PosComponent implements OnInit, OnDestroy {
     this.startOrderLines.update(lines => lines.map((line, i) => i === index ? { ...line, notes: value } : line));
   }
 
+  updateRoomServiceFloor(value: number | string): void {
+    const floorId = Number(value) || null;
+    const firstRoom = this.masters.rooms()
+      .filter(room => room.isActive && (!floorId || room.floorId === floorId))
+      .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }))[0];
+
+    this.diningForm.update(form => ({
+      ...form,
+      floorId,
+      roomId: firstRoom?.id || null,
+      roomNo: firstRoom?.roomNumber || ''
+    }));
+  }
+
+  updateRoomServiceRoom(value: number | string): void {
+    const roomId = Number(value) || null;
+    const room = this.masters.rooms().find(item => item.id === roomId);
+    this.diningForm.update(form => ({
+      ...form,
+      roomId,
+      roomNo: room?.roomNumber || form.roomNo
+    }));
+  }
+
   removeStartLine(index: number): void {
     this.startOrderLines.update(lines => lines.filter((_, i) => i !== index));
   }
@@ -332,6 +587,66 @@ export class PosComponent implements OnInit, OnDestroy {
   updatePaymentModes(value: string): void {
     const modes = value.split(',').map(item => item.trim()).filter(Boolean) as any;
     this.currentBill.update(bill => ({ ...bill, paymentModes: modes }));
+  }
+
+  updatePaymentMode(value: string): void {
+    this.currentBill.update(bill => ({ ...bill, paymentModes: value ? [value] : [] }));
+  }
+
+  updateBillOrderType(value: 'TABLE' | 'TAKEAWAY' | 'ROOM'): void {
+    const order = this.pos.orders().find(item => item.type === value);
+    this.currentBill.update(bill => ({
+      ...bill,
+      orderType: value,
+      orderId: order?.id,
+      tableNo: value === 'TABLE' ? order?.tableNo || '' : '',
+      floorId: value === 'ROOM' ? order?.floorId || null : null,
+      roomId: value === 'ROOM' ? order?.roomId || null : null,
+      roomNo: value === 'ROOM' ? order?.roomNo || '' : '',
+      guestName: value === 'ROOM' ? order?.guestName || bill.guestName || '' : bill.guestName || ''
+    }));
+  }
+
+  updateBillOrder(value: number | string): void {
+    const order = this.pos.orders().find(item => item.id === Number(value));
+    if (!order) return;
+    this.currentBill.update(bill => ({
+      ...bill,
+      orderId: order.id,
+      orderType: order.type,
+      tableNo: order.type === 'TABLE' ? order.tableNo || '' : '',
+      floorId: order.type === 'ROOM' ? order.floorId || null : null,
+      roomId: order.type === 'ROOM' ? order.roomId || null : null,
+      roomNo: order.type === 'ROOM' ? order.roomNo || '' : '',
+      guestName: order.guestName || bill.guestName || ''
+    }));
+  }
+
+  updateBillTable(value: string): void {
+    this.currentBill.update(bill => ({ ...bill, tableNo: value }));
+  }
+
+  updateBillFloor(value: number | string): void {
+    const floorId = Number(value) || null;
+    const firstRoom = this.masters.rooms()
+      .filter(room => room.isActive && (!floorId || room.floorId === floorId))
+      .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }))[0];
+    this.currentBill.update(bill => ({
+      ...bill,
+      floorId,
+      roomId: firstRoom?.id || null,
+      roomNo: firstRoom?.roomNumber || ''
+    }));
+  }
+
+  updateBillRoom(value: number | string): void {
+    const roomId = Number(value) || null;
+    const room = this.masters.rooms().find(item => item.id === roomId);
+    this.currentBill.update(bill => ({
+      ...bill,
+      roomId,
+      roomNo: room?.roomNumber || ''
+    }));
   }
 
   handleMenuImageUpload(event: Event): void {
@@ -369,18 +684,54 @@ export class PosComponent implements OnInit, OnDestroy {
   diningActionTitle(): string {
     const action = this.diningAction();
     if (action === 'START') return 'Start Table Order';
+    if (action === 'ROOM') return 'Room Service Order';
+    if (action === 'BOOK') return 'Book Table';
     if (action === 'MERGE') return 'Merge Tables';
     if (action === 'RESET') return 'Reset Paid Tables';
     return 'Dining Action';
+  }
+
+  roomServiceFloorLabel(): string {
+    const room = this.selectedRoomServiceRoom();
+    if (!room) return 'Select Floor / Room';
+    const floor = this.masters.floorsMap().get(room.floorId);
+    return `Floor ${floor?.floorNumber || room.floorId}`;
+  }
+
+  roomServiceRoomNumber(): string {
+    return this.selectedRoomServiceRoom()?.roomNumber || this.diningForm().roomNo || 'No.';
   }
 
   private defaultOutletId(): number {
     return this.outletFilter() === 'ALL' ? this.pos.outlets()[0]?.id || 1 : Number(this.outletFilter());
   }
 
+  private roomServiceOutletId(): number {
+    return this.pos.outlets().find(outlet => outlet.type === 'Room Service' && outlet.active)?.id || this.defaultOutletId();
+  }
+
+  private prepareRoomServiceDefaults(): void {
+    const current = this.diningForm();
+    const floors = this.roomServiceFloors();
+    const floorId = current.floorId || floors[0]?.id || null;
+    const rooms = this.masters.rooms()
+      .filter(room => room.isActive && (!floorId || room.floorId === floorId))
+      .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }));
+    const room = rooms.find(item => item.id === current.roomId) || rooms[0] || null;
+
+    this.diningForm.set({
+      ...current,
+      floorId,
+      roomId: room?.id || null,
+      roomNo: room?.roomNumber || current.roomNo || '',
+      guestName: current.guestName || 'Guest',
+      server: current.server || 'Meena Pillai'
+    });
+  }
+
   private seedStartOrderLines(): void {
     if (this.startOrderLines().length) return;
-    const featured = this.tableMenuItems().filter(item => item.featured).slice(0, 2);
+    const featured = this.diningMenuItems().filter(item => item.featured).slice(0, 2);
     this.startOrderLines.set(featured.map(item => ({
       itemId: item.id,
       name: item.name,

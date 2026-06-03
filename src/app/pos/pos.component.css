@@ -666,6 +666,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
 }
 
 .dining-action-list button {
@@ -680,6 +681,7 @@
   text-align: left;
   font-family: var(--font-poppins);
   cursor: pointer;
+  min-height: 72px;
 }
 
 .dining-action-list .material-icons-round {
@@ -964,6 +966,10 @@
   max-width: 760px;
 }
 
+.delete-confirm-modal {
+  max-width: 500px;
+}
+
 .ci-header {
   display: flex;
   align-items: center;
@@ -1046,6 +1052,36 @@
   color: var(--surface-800);
 }
 
+.clock-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--surface-200);
+  background: white;
+  min-height: 37px;
+}
+
+.clock-input .material-icons-round {
+  color: var(--primary-color);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.clock-input input {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  min-height: auto;
+  flex: 1;
+}
+
+.room-note-field {
+  grid-column: 1 / -1;
+}
+
 .line-editor {
   border: 1px solid var(--surface-200);
   border-radius: 8px;
@@ -1118,7 +1154,8 @@
 }
 
 .ci-btn-cancel,
-.ci-btn-confirm {
+.ci-btn-confirm,
+.ci-btn-danger {
   height: 32px;
   border-radius: 6px;
   font-family: var(--font-poppins);
@@ -1147,6 +1184,73 @@
 .ci-btn-confirm:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.ci-btn-danger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  border: none;
+  background: #b91c1c;
+  color: white;
+}
+
+.delete-confirm-body {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.delete-confirm-icon {
+  width: 54px;
+  height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.delete-confirm-icon .material-icons-round {
+  font-size: 30px;
+}
+
+.delete-confirm-copy h3 {
+  margin: 0 0 6px;
+  color: var(--surface-900);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.delete-confirm-copy p {
+  margin: 0;
+  color: var(--surface-600);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.delete-warning-panel {
+  margin-top: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  background: #fff7f7;
+  color: #991b1b;
+}
+
+.delete-warning-panel .material-icons-round {
+  font-size: 18px;
+}
+
+.delete-warning-panel strong {
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .mt-3 { margin-top: 8px; }

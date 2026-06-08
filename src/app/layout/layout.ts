@@ -85,6 +85,7 @@ export class Layout {
         { label: 'Table Dining', icon: 'table_restaurant', route: '/pos/dining' },
         { label: 'Orders', icon: 'restaurant_menu', route: '/pos/orders' },
         { label: 'Billing', icon: 'receipt_long', route: '/pos/billing' },
+        { label: 'Billing Setup', icon: 'request_quote', route: '/pos/billing-setup' },
         { label: 'Menu Management', icon: 'menu_book', route: '/pos/menu' }
       ]
     },

@@ -16,6 +16,19 @@ import {
   LaundryTab
 } from './laundry.service';
 
+type LinenSection = 'vendors' | 'requests' | 'ledger';
+type LinenVendorStatus = 'Active' | 'Inactive';
+type LinenVendor = {
+  id: number;
+  name: string;
+  contactPerson: string;
+  phone: string;
+  gstNumber: string;
+  pickupWindow: string;
+  paymentTerms: string;
+  status: LinenVendorStatus;
+};
+
 @Component({
   selector: 'app-laundry',
   standalone: true,
@@ -38,9 +51,18 @@ export class LaundryComponent implements OnInit, OnDestroy {
   selectedFloor = signal('Floor 1');
   selectedOrderId = signal<number>(1);
   selectedLinenDispatchId = signal<number>(1);
+  selectedLinenVendorId = signal<number>(1);
+  viewingVendorId = signal<number | null>(null);
   editingCatalogueId = signal<number | null>(null);
+  linenSection = signal<LinenSection>('requests');
+  editingVendorId = signal<number | null>(null);
   catalogueDraft = signal<Partial<LaundryCatalogueItem>>({});
   linenDraft = signal<Partial<LinenDispatch>>({});
+  vendorDraft = signal<Partial<LinenVendor>>({});
+  linenVendors = signal<LinenVendor[]>([
+    { id: 1, name: 'Sparkle Linen Services', contactPerson: 'Akshay Patil', phone: '+91 98765 43210', gstNumber: '27SPARK1234F1Z5', pickupWindow: 'Daily 10:00 AM - 12:00 PM', paymentTerms: 'Monthly settlement', status: 'Active' },
+    { id: 2, name: 'FreshFold Commercial Laundry', contactPerson: 'Nisha Shah', phone: '+91 99887 76655', gstNumber: '27FRESH5678H1Z2', pickupWindow: 'Alternate days 09:00 AM', paymentTerms: '15 days credit', status: 'Active' }
+  ]);
 
   orderDraft = signal<Partial<LaundryOrder>>({
     bookingId: 101,
@@ -100,6 +122,22 @@ export class LaundryComponent implements OnInit, OnDestroy {
       scannedPieces: dispatches.reduce((sum, dispatch) => sum + this.laundry.linenScanCount(dispatch), 0),
       vendorCost: dispatches.reduce((sum, dispatch) => sum + this.laundry.linenDispatchCost(dispatch), 0)
     };
+  });
+
+  readonly selectedVendor = computed(() => this.linenVendors().find(vendor => vendor.id === this.selectedLinenVendorId()) || this.linenVendors()[0]);
+
+  readonly linenLedgerRows = computed(() => {
+    return this.laundry.linenDispatches().map(dispatch => ({
+      period: dispatch.sentAt.slice(3, 10),
+      vendor: dispatch.vendorName,
+      batchNo: dispatch.batchNo,
+      sentAt: dispatch.sentAt,
+      expectedReturnAt: dispatch.expectedReturnAt,
+      pieces: this.laundry.linenDispatchQuantity(dispatch),
+      exceptions: this.laundry.linenExceptionQuantity(dispatch),
+      cost: this.laundry.linenDispatchCost(dispatch),
+      status: dispatch.billingRecorded ? 'Recorded' : 'Pending'
+    }));
   });
 
   readonly dashboardStats = computed(() => {
@@ -194,7 +232,7 @@ export class LaundryComponent implements OnInit, OnDestroy {
   newLinenDispatch(): void {
     const firstItem = this.laundry.linenItems().find(item => item.active);
     this.linenDraft.set({
-      vendorName: this.laundry.linenVendors[0],
+      vendorName: this.linenVendors().find(vendor => vendor.status === 'Active')?.name || this.laundry.linenVendors[0],
       challanNo: 'CH-NEW',
       sentAt: '31-05-2026 12:30',
       expectedReturnAt: '01-06-2026 09:00',
@@ -216,7 +254,85 @@ export class LaundryComponent implements OnInit, OnDestroy {
         notes: ''
       }] : []
     });
+    this.linenSection.set('requests');
     this.switchTab('linen');
+  }
+
+  switchLinenSection(section: LinenSection): void {
+    this.linenSection.set(section);
+  }
+
+  selectLinenVendor(vendorId: number): void {
+    this.selectedLinenVendorId.set(vendorId);
+  }
+
+  viewVendor(vendor: LinenVendor): void {
+    this.selectedLinenVendorId.set(vendor.id);
+    this.viewingVendorId.set(vendor.id);
+    this.editingVendorId.set(null);
+    this.vendorDraft.set({});
+  }
+
+  closeVendorView(): void {
+    this.viewingVendorId.set(null);
+  }
+
+  beginVendorEdit(vendor?: LinenVendor): void {
+    this.editingVendorId.set(vendor?.id || 0);
+    if (vendor?.id) this.selectedLinenVendorId.set(vendor.id);
+    this.viewingVendorId.set(null);
+    this.vendorDraft.set(vendor ? { ...vendor } : {
+      name: '',
+      contactPerson: '',
+      phone: '',
+      gstNumber: '',
+      pickupWindow: '',
+      paymentTerms: 'Monthly settlement',
+      status: 'Active'
+    });
+    this.linenSection.set('vendors');
+  }
+
+  saveVendor(): void {
+    const draft = this.vendorDraft();
+    if (!draft.name?.trim()) return;
+    if (this.editingVendorId() && this.editingVendorId() !== 0) {
+      this.linenVendors.update(vendors => vendors.map(vendor => vendor.id === this.editingVendorId() ? { ...vendor, ...draft } as LinenVendor : vendor));
+      this.selectedLinenVendorId.set(this.editingVendorId() || this.selectedLinenVendorId());
+    } else {
+      const nextId = Math.max(0, ...this.linenVendors().map(vendor => vendor.id)) + 1;
+      this.linenVendors.update(vendors => [...vendors, {
+        id: nextId,
+        name: draft.name || '',
+        contactPerson: draft.contactPerson || '',
+        phone: draft.phone || '',
+        gstNumber: draft.gstNumber || '',
+        pickupWindow: draft.pickupWindow || '',
+        paymentTerms: draft.paymentTerms || 'Monthly settlement',
+        status: (draft.status as LinenVendorStatus) || 'Active'
+      }]);
+      this.selectedLinenVendorId.set(nextId);
+    }
+    this.editingVendorId.set(null);
+    this.vendorDraft.set({});
+    this.viewingVendorId.set(null);
+  }
+
+  cancelVendorEdit(): void {
+    this.editingVendorId.set(null);
+    this.vendorDraft.set({});
+  }
+
+  deleteVendor(vendorId: number): void {
+    this.linenVendors.update(vendors => vendors.filter(vendor => vendor.id !== vendorId));
+    const fallback = this.linenVendors().find(vendor => vendor.id !== vendorId);
+    if (this.selectedLinenVendorId() === vendorId && fallback) this.selectedLinenVendorId.set(fallback.id);
+    if (this.viewingVendorId() === vendorId) this.viewingVendorId.set(null);
+  }
+
+  toggleVendorStatus(vendor: LinenVendor): void {
+    const status: LinenVendorStatus = vendor.status === 'Active' ? 'Inactive' : 'Active';
+    this.linenVendors.update(vendors => vendors.map(item => item.id === vendor.id ? { ...item, status } : item));
   }
 
   syncBookingToDraft(): void {

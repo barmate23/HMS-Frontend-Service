@@ -37,7 +37,8 @@
       </div>
 
       <button class="btn-primary" *ngIf="activeTab() !== 'create' && activeTab() !== 'linen'" (click)="newOrder()"><span class="material-icons-round">add</span>New Laundry Order</button>
-      <button class="btn-primary" *ngIf="activeTab() === 'linen'" (click)="newLinenDispatch()"><span class="material-icons-round">add</span>New Linen Dispatch</button>
+      <button class="btn-primary" *ngIf="activeTab() === 'linen' && linenSection() === 'vendors' && editingVendorId() === null && viewingVendorId() === null" (click)="beginVendorEdit()"><span class="material-icons-round">add</span>Add Vendor</button>
+      <button class="btn-primary" *ngIf="activeTab() === 'linen' && linenSection() === 'requests'" (click)="newLinenDispatch()"><span class="material-icons-round">add</span>New Service Request</button>
       <button class="btn-primary" *ngIf="activeTab() === 'catalogue'" (click)="beginCatalogueEdit()"><span class="material-icons-round">add</span>Add Item</button>
       <button class="btn-primary" *ngIf="activeTab() === 'reports'"><span class="material-icons-round">download</span>Export</button>
     </div>
@@ -262,20 +263,186 @@
     </ng-container>
 
     <ng-container *ngSwitchCase="'linen'">
-      <div class="metric-grid">
-        <div class="metric-card amber"><span class="material-icons-round">local_shipping</span><div><strong>{{ linenStats().openBatches }}</strong><small>Open Vendor Batches</small></div></div>
-        <div class="metric-card blue"><span class="material-icons-round">inventory_2</span><div><strong>{{ linenStats().outPieces }}</strong><small>Pieces Sent Out</small></div></div>
-        <div class="metric-card teal"><span class="material-icons-round">assignment_return</span><div><strong>{{ linenStats().returnedPieces }}</strong><small>Returned Pieces</small></div></div>
-        <div class="metric-card coral"><span class="material-icons-round">report_problem</span><div><strong>{{ linenStats().exceptions }}</strong><small>Missing / Damaged</small></div></div>
-        <div class="metric-card green"><span class="material-icons-round">qr_code_scanner</span><div><strong>{{ linenStats().scannedPieces }}</strong><small>Scan IDs Captured</small></div></div>
-        <div class="metric-card green"><span class="material-icons-round">currency_rupee</span><div><strong>{{ money(linenStats().vendorCost) }}</strong><small>Vendor Billing Cost</small></div></div>
+      <div class="modern-card linen-workflow-card">
+        <div class="card-header">
+          <h2 class="card-title">Linen Outsource Management</h2>
+          <span class="total-badge">{{ linenSection() | titlecase }}</span>
+        </div>
+        <div class="linen-subnav">
+          <button type="button" [class.active]="linenSection() === 'vendors'" (click)="switchLinenSection('vendors')"><span class="material-icons-round">storefront</span>Vendor Management</button>
+          <button type="button" [class.active]="linenSection() === 'requests'" (click)="switchLinenSection('requests')"><span class="material-icons-round">assignment_add</span>Laundry Service Requests</button>
+          <button type="button" [class.active]="linenSection() === 'ledger'" (click)="switchLinenSection('ledger')"><span class="material-icons-round">account_balance_wallet</span>Vendor Ledger</button>
+        </div>
+
+        <div class="linen-section" *ngIf="linenSection() === 'vendors'">
+          <div class="section-intro" *ngIf="editingVendorId() === null && viewingVendorId() === null">
+            <div><h3>Vendor Management</h3><p>Maintain outsource vendor details and review the selected vendor's linen price listing.</p></div>
+            <button class="mini-add-btn" type="button" (click)="beginVendorEdit()"><span class="material-icons-round">add</span>Add Vendor</button>
+          </div>
+
+          <div class="section-intro" *ngIf="editingVendorId() !== null">
+            <div><h3>{{ editingVendorId() === 0 ? 'Create Vendor' : 'Edit Vendor' }}</h3><p>Capture vendor details first, then maintain the vendor price section.</p></div>
+          </div>
+
+          <div class="catalogue-editor vendor-editor" *ngIf="editingVendorId() !== null">
+            <label><span>Vendor Name</span><input [(ngModel)]="vendorDraft().name"></label>
+            <label><span>Contact Person</span><input [(ngModel)]="vendorDraft().contactPerson"></label>
+            <label><span>Phone</span><input [(ngModel)]="vendorDraft().phone"></label>
+            <label><span>GST Number</span><input [(ngModel)]="vendorDraft().gstNumber"></label>
+            <label><span>Pickup Window</span><input [(ngModel)]="vendorDraft().pickupWindow"></label>
+            <label><span>Payment Terms</span><input [(ngModel)]="vendorDraft().paymentTerms"></label>
+            <label><span>Status</span><select [(ngModel)]="vendorDraft().status"><option>Active</option><option>Inactive</option></select></label>
+            <div class="vendor-price-form">
+              <strong>Price Section</strong>
+              <table class="hms-table compact-table">
+                <thead><tr><th>ITEM</th><th>CATEGORY</th><th>VENDOR RATE</th><th>REPLACEMENT</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let item of laundry.linenItems()">
+                    <td><strong>{{ item.itemName }}</strong></td>
+                    <td>{{ item.category }}</td>
+                    <td><input type="number" [ngModel]="item.defaultVendorRate"></td>
+                    <td>{{ money(item.replacementCost) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <button class="confirm-btn" type="button" (click)="saveVendor()">Save Vendor</button>
+            <button class="secondary-btn" type="button" (click)="cancelVendorEdit()">Cancel</button>
+          </div>
+
+          <div class="vendor-management-grid" *ngIf="editingVendorId() === null">
+            <div class="modern-card vendor-list-card" *ngIf="viewingVendorId() === null">
+              <div class="card-header"><h2 class="card-title">Vendor List</h2><span class="total-badge">{{ linenVendors().length }} Vendors</span></div>
+              <div class="table-container">
+                <table class="hms-table">
+                  <thead><tr><th>VENDOR</th><th>CONTACT</th><th>GST</th><th>PAYMENT TERMS</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+                  <tbody>
+                    <tr *ngFor="let vendor of linenVendors()" [class.selected-row]="viewingVendorId() === vendor.id">
+                      <td><strong>{{ vendor.name }}</strong><span class="subline">{{ vendor.pickupWindow || '-' }}</span></td>
+                      <td>{{ vendor.contactPerson }}<span class="subline">{{ vendor.phone }}</span></td>
+                      <td>{{ vendor.gstNumber || '-' }}</td>
+                      <td>{{ vendor.paymentTerms || '-' }}</td>
+                      <td><span class="status-chip" [class.delivered]="vendor.status === 'Active'" [class.cancelled]="vendor.status !== 'Active'">{{ vendor.status }}</span></td>
+                      <td>
+                        <div class="action-buttons">
+                          <button class="btn-icon check" type="button" [title]="vendor.status === 'Active' ? 'Mark inactive' : 'Mark active'" (click)="toggleVendorStatus(vendor); $event.stopPropagation()"><span class="material-icons-round">{{ vendor.status === 'Active' ? 'toggle_on' : 'toggle_off' }}</span></button>
+                          <button class="btn-icon view" type="button" title="View overview" (click)="viewVendor(vendor); $event.stopPropagation()"><span class="material-icons-round">visibility</span></button>
+                          <button class="btn-icon edit" type="button" title="Edit vendor" (click)="beginVendorEdit(vendor); $event.stopPropagation()"><span class="material-icons-round">edit</span></button>
+                          <button class="btn-icon delete" type="button" title="Delete vendor" (click)="deleteVendor(vendor.id); $event.stopPropagation()"><span class="material-icons-round">delete_outline</span></button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="modern-card vendor-overview-card" *ngIf="viewingVendorId() !== null && selectedVendor() as vendor">
+              <div class="card-header"><h2 class="card-title">Vendor Overview</h2><div class="header-actions"><span class="total-badge">{{ vendor.status }}</span><button class="mini-add-btn" type="button" (click)="closeVendorView()"><span class="material-icons-round">arrow_back</span>Back</button></div></div>
+              <div class="metadata-grid compact-meta">
+                <div><span>Vendor</span><strong>{{ vendor.name }}</strong><small>{{ vendor.contactPerson }} • {{ vendor.phone }}</small></div>
+                <div><span>GST</span><strong>{{ vendor.gstNumber || '-' }}</strong></div>
+                <div><span>Pickup Window</span><strong>{{ vendor.pickupWindow || '-' }}</strong></div>
+                <div><span>Payment Terms</span><strong>{{ vendor.paymentTerms || '-' }}</strong></div>
+              </div>
+              <div class="line-toolbar"><strong>Price Listing</strong><button class="mini-add-btn" type="button" (click)="beginVendorEdit(vendor)"><span class="material-icons-round">edit</span>Edit Prices</button></div>
+              <table class="hms-table compact-table">
+                <thead><tr><th>ITEM</th><th>CATEGORY</th><th>VENDOR RATE</th><th>REPLACEMENT</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let item of laundry.linenItems()">
+                    <td><strong>{{ item.itemName }}</strong></td>
+                    <td>{{ item.category }}</td>
+                    <td>{{ money(item.defaultVendorRate) }}</td>
+                    <td>{{ money(item.replacementCost) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="linen-section legacy-vendor-section" *ngIf="false">
+          <div class="catalogue-editor vendor-editor" *ngIf="editingVendorId() !== null">
+            <label><span>Vendor Name</span><input [(ngModel)]="vendorDraft().name"></label>
+            <label><span>Contact Person</span><input [(ngModel)]="vendorDraft().contactPerson"></label>
+            <label><span>Phone</span><input [(ngModel)]="vendorDraft().phone"></label>
+            <label><span>GST Number</span><input [(ngModel)]="vendorDraft().gstNumber"></label>
+            <label><span>Pickup Window</span><input [(ngModel)]="vendorDraft().pickupWindow"></label>
+            <label><span>Payment Terms</span><input [(ngModel)]="vendorDraft().paymentTerms"></label>
+            <label><span>Status</span><select [(ngModel)]="vendorDraft().status"><option>Active</option><option>Inactive</option></select></label>
+            <button class="confirm-btn" type="button" (click)="saveVendor()">Save Vendor</button>
+            <button class="secondary-btn" type="button" (click)="cancelVendorEdit()">Cancel</button>
+          </div>
+          <div class="vendor-grid">
+            <div class="vendor-card" *ngFor="let vendor of linenVendors()">
+              <div class="vendor-card-head">
+                <div><strong>{{ vendor.name }}</strong><span>{{ vendor.contactPerson }} • {{ vendor.phone }}</span></div>
+                <span class="status-chip" [class.delivered]="vendor.status === 'Active'" [class.cancelled]="vendor.status !== 'Active'">{{ vendor.status }}</span>
+              </div>
+              <div class="metadata-grid compact-meta">
+                <div><span>GST</span><strong>{{ vendor.gstNumber || '-' }}</strong></div>
+                <div><span>Pickup Window</span><strong>{{ vendor.pickupWindow || '-' }}</strong></div>
+                <div><span>Payment Terms</span><strong>{{ vendor.paymentTerms || '-' }}</strong></div>
+              </div>
+              <div class="action-buttons">
+                <button class="btn-icon edit" type="button" title="Edit vendor" (click)="beginVendorEdit(vendor)"><span class="material-icons-round">edit</span></button>
+                <button class="btn-icon delete" type="button" title="Delete vendor" (click)="deleteVendor(vendor.id)"><span class="material-icons-round">delete_outline</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="linen-section legacy-price-section" *ngIf="false">
+          <div class="section-intro"><div><h3>Vendor Price Configuration</h3><p>Configure outsource laundry rates by vendor, category and linen item.</p></div><span class="total-badge">{{ laundry.linenItems().length }} Items</span></div>
+          <div class="price-setup-grid">
+            <div class="vendor-price-panel" *ngFor="let vendor of linenVendors()">
+              <div class="vendor-card-head"><div><strong>{{ vendor.name }}</strong><span>{{ vendor.paymentTerms }}</span></div><span class="soft-pill">{{ vendor.status }}</span></div>
+              <table class="hms-table compact-table">
+                <thead><tr><th>ITEM</th><th>CATEGORY</th><th>VENDOR RATE</th><th>REPLACEMENT</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let item of laundry.linenItems()">
+                    <td><strong>{{ item.itemName }}</strong></td>
+                    <td>{{ item.category }}</td>
+                    <td><input type="number" [ngModel]="item.defaultVendorRate"></td>
+                    <td>{{ money(item.replacementCost) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="linen-section" *ngIf="linenSection() === 'ledger'">
+          <div class="section-intro">
+            <div><h3>Vendor Billing Ledger</h3><p>Review vendor-wise monthly cost or reconcile by selected date range.</p></div>
+            <div class="date-range"><label><span>From</span><input type="date" [ngModel]="fromDate()" (ngModelChange)="fromDate.set($event)"></label><label><span>To</span><input type="date" [ngModel]="toDate()" (ngModelChange)="toDate.set($event)"></label></div>
+          </div>
+          <div class="table-container">
+            <table class="hms-table">
+              <thead><tr><th>PERIOD</th><th>VENDOR</th><th>REQUEST</th><th>DISPATCH</th><th>EXPECTED ARRIVAL</th><th>PIECES</th><th>EXCEPTIONS</th><th>COST</th><th>LEDGER STATUS</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let row of linenLedgerRows()">
+                  <td>{{ row.period }}</td>
+                  <td>{{ row.vendor }}</td>
+                  <td><strong>{{ row.batchNo }}</strong></td>
+                  <td>{{ row.sentAt }}</td>
+                  <td>{{ row.expectedReturnAt }}</td>
+                  <td>{{ row.pieces }}</td>
+                  <td>{{ row.exceptions }}</td>
+                  <td><strong>{{ money(row.cost) }}</strong></td>
+                  <td><span class="status-chip" [class.delivered]="row.status === 'Recorded'" [class.ready-for-pickup]="row.status !== 'Recorded'">{{ row.status }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
-      <div class="linen-layout">
+      <div class="linen-layout" *ngIf="linenSection() === 'requests'">
         <div class="modern-card">
           <div class="card-header">
-            <h2 class="card-title">Outsourced Linen Dispatches</h2>
-            <span class="total-badge">{{ laundry.linenDispatches().length }} Batches</span>
+            <h2 class="card-title">Outsource Laundry Service Requests</h2>
+            <span class="total-badge">{{ laundry.linenDispatches().length }} Requests</span>
           </div>
           <div class="linen-batch-list">
             <button class="linen-batch-card" *ngFor="let dispatch of laundry.linenDispatches()" [class.active]="selectedLinenDispatch().id === dispatch.id" (click)="selectedLinenDispatchId.set(dispatch.id)">
@@ -291,7 +458,7 @@
 
         <div class="modern-card linen-detail-card" *ngIf="selectedLinenDispatch() as dispatch">
           <div class="card-header">
-            <h2 class="card-title">Selected Batch</h2>
+            <h2 class="card-title">Selected Request</h2>
             <span class="total-badge">{{ dispatch.batchNo }}</span>
           </div>
           <div class="metadata-grid linen-meta">
@@ -309,11 +476,11 @@
         </div>
       </div>
 
-      <div class="order-form-card linen-editor" *ngIf="linenDraft().lines">
+      <div class="order-form-card linen-editor" *ngIf="linenSection() === 'requests' && linenDraft().lines">
         <div class="form-header">
           <div>
-            <h2>{{ linenDraft().id ? 'Edit Linen Dispatch' : 'Create Linen Dispatch' }}</h2>
-            <p>Track room linen going outside with scan IDs, challan details, vendor costs and return exceptions.</p>
+            <h2>{{ linenDraft().id ? 'Reconcile Laundry Service Request' : 'Create Laundry Service Request' }}</h2>
+            <p>Mobile app captures dispatch quantity, scan IDs, expected arrival, vendor cost and return exceptions.</p>
           </div>
           <span class="total-badge">{{ money(linenDraftTotal()) }}</span>
         </div>
@@ -322,7 +489,7 @@
           <label class="field">
             <span>Vendor</span>
             <select [(ngModel)]="linenDraft().vendorName">
-              <option *ngFor="let vendor of laundry.linenVendors" [value]="vendor">{{ vendor }}</option>
+              <option *ngFor="let vendor of linenVendors()" [value]="vendor.name">{{ vendor.name }}</option>
             </select>
           </label>
           <label class="field">
@@ -334,7 +501,7 @@
             <input [(ngModel)]="linenDraft().sentAt" placeholder="dd-mm-yyyy hh:mm">
           </label>
           <label class="field">
-            <span>Expected Return</span>
+            <span>Expected Arrival</span>
             <input [(ngModel)]="linenDraft().expectedReturnAt" placeholder="dd-mm-yyyy hh:mm">
           </label>
           <label class="field">
@@ -389,11 +556,11 @@
 
         <div class="form-footer">
           <button class="secondary-btn" type="button" (click)="cancelLinenEdit()">Cancel</button>
-          <button class="confirm-btn" type="button" [disabled]="!(linenDraft().lines || []).length" (click)="saveLinenDispatch()"><span class="material-icons-round">save</span>Save Dispatch</button>
+          <button class="confirm-btn" type="button" [disabled]="!(linenDraft().lines || []).length" (click)="saveLinenDispatch()"><span class="material-icons-round">save</span>Save Request</button>
         </div>
       </div>
 
-      <div class="modern-card full-span">
+      <div class="modern-card full-span" *ngIf="linenSection() === 'requests'">
         <div class="card-header"><h2 class="card-title">Linen Item-Level Audit</h2><span class="total-badge">Mobile scan ready</span></div>
         <div class="table-container">
           <table class="hms-table">

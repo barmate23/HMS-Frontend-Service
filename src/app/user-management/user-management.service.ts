@@ -52,6 +52,18 @@ export interface SystemUser {
   notes: string;
 }
 
+export interface UserShift {
+  id: number;
+  name: string;
+  code: string;
+  startTime: string;
+  endTime: string;
+  department: UserDepartment;
+  property: string;
+  isActive: boolean;
+  notes: string;
+}
+
 export interface AccessActivity {
   id: number;
   at: string;
@@ -220,7 +232,8 @@ export class UserManagementService {
     { id: 2, name: 'HMS Cloud - Annex' },
     { id: 3, name: 'HMS Cloud - Banquet Wing' }
   ]);
-  readonly shifts = ['Morning Shift', 'Evening Shift', 'Night Shift', 'General Shift'];
+  readonly shiftConfigs = signal<UserShift[]>(this.loadStoredShifts());
+  readonly shifts = computed(() => this.shiftConfigs().filter(shift => shift.isActive).map(shift => shift.name));
   readonly floors = signal<FloorOption[]>([
     { id: 1, name: 'Floor 1' },
     { id: 2, name: 'Floor 2' },
@@ -323,6 +336,53 @@ export class UserManagementService {
   resetPassword(id: number): void {
     const user = this.users().find(item => item.id === id);
     if (user) this.addActivity('System', 'Password reset requested; API endpoint not available', user.fullName, 'Users', 'WARNING');
+  }
+
+  saveShift(input: Partial<UserShift>): void {
+    const current = this.shiftConfigs();
+    const existing = current.find(shift => shift.id === Number(input.id));
+    const normalized = this.normalizedShift(input, existing);
+
+    this.shiftConfigs.update(shifts => {
+      const next = existing
+        ? shifts.map(shift => shift.id === existing.id ? normalized : shift)
+        : [normalized, ...shifts];
+      this.storeShifts(next);
+      return next;
+    });
+
+    if (existing && existing.name !== normalized.name) {
+      this.users.update(users => users.map(user => user.shift === existing.name ? { ...user, shift: normalized.name } : user));
+    }
+    this.addActivity('System', existing ? 'Shift configuration updated' : 'Shift configuration created', normalized.name, 'User Shifts', 'INFO');
+  }
+
+  deleteShift(id: number): boolean {
+    const target = this.shiftConfigs().find(shift => shift.id === Number(id));
+    if (!target) return false;
+    const assignedUsers = this.shiftUserCount(target.name);
+    if (assignedUsers > 0) {
+      this.apiError.set(`Reassign ${assignedUsers} user${assignedUsers === 1 ? '' : 's'} before deleting ${target.name}.`);
+      return false;
+    }
+
+    this.shiftConfigs.update(shifts => {
+      const next = shifts.filter(shift => shift.id !== target.id);
+      this.storeShifts(next);
+      return next;
+    });
+    this.addActivity('System', 'Shift configuration deleted', target.name, 'User Shifts', 'WARNING');
+    return true;
+  }
+
+  shiftUserCount(shiftName: string): number {
+    return this.users().filter(user => user.shift === shiftName).length;
+  }
+
+  setUserShift(user: SystemUser, shift: string): void {
+    if (!shift || user.shift === shift) return;
+    this.users.update(users => users.map(item => item.id === user.id ? { ...item, shift } : item));
+    this.saveUser({ ...user, shift });
   }
 
   saveRole(input: Partial<UserRole>): void {
@@ -481,7 +541,7 @@ export class UserManagementService {
       department: this.departmentFromApi(user.department, user.departmentId),
       roleId: Number(user.roleId || user.role?.id || this.roles()[0]?.id || 0),
       property: this.propertyFromApi(user.property, user.propertyId),
-      shift: user.shift || this.shifts[0],
+      shift: user.shift || this.defaultShift(),
       status: this.statusFromApi(user.status),
       twoFactorEnabled: !!user.twoFactorEnabled,
       accessibleFloors: user.floorAccess?.length ? user.floorAccess : user.accessibleFloors?.length ? user.accessibleFloors : ['All Floors'],
@@ -549,7 +609,7 @@ export class UserManagementService {
       departmentId: this.departmentId(input.department),
       roleId: Number(input.roleId || this.roles()[0]?.id || 0),
       propertyId: this.propertyId(input.property),
-      shift: input.shift || this.shifts[0],
+      shift: input.shift || this.defaultShift(),
       status: input.status || 'ACTIVE',
       floorAccess: input.accessibleFloors || ['All Floors'],
       notes: input.notes || '',
@@ -656,5 +716,67 @@ export class UserManagementService {
       severity,
       ipAddress: 'local'
     }, ...log]);
+  }
+
+  private defaultShift(): string {
+    return this.shifts()[0] || this.shiftConfigs()[0]?.name || 'General Shift';
+  }
+
+  private normalizedShift(input: Partial<UserShift>, existing?: UserShift): UserShift {
+    const name = String(input.name || existing?.name || '').trim() || 'General Shift';
+    const code = String(input.code || existing?.code || this.shiftCode(name)).trim().toUpperCase();
+    return {
+      id: Number(input.id || existing?.id || this.nextShiftId()),
+      name,
+      code,
+      startTime: String(input.startTime || existing?.startTime || '09:00'),
+      endTime: String(input.endTime || existing?.endTime || '18:00'),
+      department: input.department || existing?.department || this.departments()[0]?.name || 'Front Office',
+      property: input.property || existing?.property || this.properties()[0]?.name || 'HMS Cloud - Main Hotel',
+      isActive: input.isActive ?? existing?.isActive ?? true,
+      notes: String(input.notes || existing?.notes || '').trim()
+    };
+  }
+
+  private nextShiftId(): number {
+    return Math.max(0, ...this.shiftConfigs().map(shift => shift.id)) + 1;
+  }
+
+  private shiftCode(name: string): string {
+    return String(name || 'Shift')
+      .split(/\s+/)
+      .map(part => part.charAt(0))
+      .join('')
+      .slice(0, 4)
+      .toUpperCase() || 'SHIFT';
+  }
+
+  private loadStoredShifts(): UserShift[] {
+    const defaults = this.defaultShiftConfigs();
+    try {
+      const stored = localStorage.getItem('hms-user-management-shifts');
+      if (!stored) return defaults;
+      const parsed = JSON.parse(stored) as UserShift[];
+      return Array.isArray(parsed) && parsed.length ? parsed : defaults;
+    } catch {
+      return defaults;
+    }
+  }
+
+  private storeShifts(shifts: UserShift[]): void {
+    try {
+      localStorage.setItem('hms-user-management-shifts', JSON.stringify(shifts));
+    } catch {
+      // Local persistence is best-effort only; user assignments still save through the API.
+    }
+  }
+
+  private defaultShiftConfigs(): UserShift[] {
+    return [
+      { id: 1, name: 'Morning Shift', code: 'MORN', startTime: '07:00', endTime: '15:00', department: 'Front Office', property: 'HMS Cloud - Main Hotel', isActive: true, notes: 'Primary day operations shift.' },
+      { id: 2, name: 'Evening Shift', code: 'EVE', startTime: '15:00', endTime: '23:00', department: 'Front Office', property: 'HMS Cloud - Main Hotel', isActive: true, notes: 'Evening operations and handover coverage.' },
+      { id: 3, name: 'Night Shift', code: 'NIGHT', startTime: '23:00', endTime: '07:00', department: 'Front Office', property: 'HMS Cloud - Main Hotel', isActive: true, notes: 'Night audit and overnight coverage.' },
+      { id: 4, name: 'General Shift', code: 'GEN', startTime: '09:00', endTime: '18:00', department: 'Management', property: 'HMS Cloud - Main Hotel', isActive: true, notes: 'Administrative working hours.' }
+    ];
   }
 }

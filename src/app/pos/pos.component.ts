@@ -21,6 +21,34 @@ type ModalKind = 'outlet' | 'menu' | 'order' | 'bill' | 'table';
 type ModalMode = 'create' | 'edit';
 type DiningAction = 'START' | 'ROOM' | 'BOOK' | 'MERGE' | 'RESET';
 type DeleteTarget = { kind: 'outlet' | 'menu' | 'table'; id: number; title: string; message: string };
+type BillingSetupSection = 'identity' | 'taxation' | 'offers';
+type BillingSetup = {
+  legalName: string;
+  gstNumber: string;
+  panNumber: string;
+  invoicePrefix: string;
+  placeOfSupply: string;
+  defaultTaxProfile: string;
+  enableInclusiveTax: boolean;
+  enableRoomPosting: boolean;
+  enableOfferStacking: boolean;
+};
+type TaxRule = { name: string; rate: number; appliesTo: string; code: string; active: boolean };
+type OfferRule = { code: string; name: string; type: string; value: number; validFrom: string; validTo: string; active: boolean };
+type BillLinePreview = PosOrderLine & { taxRate: number; taxableAmount: number; taxAmount: number; totalAmount: number };
+type BillTaxBucket = { rate: number; taxableAmount: number; cgst: number; sgst: number; taxAmount: number };
+type BillBreakdown = {
+  order: PosOrder | null;
+  lines: BillLinePreview[];
+  grossAmount: number;
+  discount: number;
+  taxableSubtotal: number;
+  taxTotal: number;
+  total: number;
+  paid: number;
+  due: number;
+  taxBuckets: BillTaxBucket[];
+};
 
 @Component({
   selector: 'app-pos',
@@ -64,6 +92,32 @@ export class PosComponent implements OnInit, OnDestroy {
     notes: ''
   });
   startOrderLines = signal<PosOrderLine[]>([]);
+  billingSetupSection = signal<BillingSetupSection>('identity');
+  billingSetupEditMode = signal<Record<BillingSetupSection, boolean>>({
+    identity: false,
+    taxation: false,
+    offers: false
+  });
+  billingSetup = signal({
+    legalName: 'HMS Cloud Hospitality Pvt. Ltd.',
+    gstNumber: '27ABCDE1234F1Z5',
+    panNumber: 'ABCDE1234F',
+    invoicePrefix: 'POS',
+    placeOfSupply: 'Maharashtra',
+    defaultTaxProfile: 'GST 5%',
+    enableInclusiveTax: true,
+    enableRoomPosting: true,
+    enableOfferStacking: false
+  });
+  taxRules = signal<TaxRule[]>([
+    { name: 'Restaurant Food GST', rate: 5, appliesTo: 'Restaurant dine-in and takeaway food', code: 'GST_FOOD_5', active: true },
+    { name: 'Bar Beverage GST', rate: 18, appliesTo: 'Alcoholic and premium beverage billing', code: 'GST_BEV_18', active: true },
+    { name: 'Service Charge', rate: 10, appliesTo: 'Optional hotel service charge before GST', code: 'SVC_10', active: false }
+  ]);
+  offerRules = signal<OfferRule[]>([
+    { code: 'WELCOME10', name: 'Welcome dining offer', type: 'Percentage', value: 10, validFrom: '2026-06-01', validTo: '2026-06-30', active: true },
+    { code: 'ROOMDINING', name: 'Room dining credit', type: 'Flat', value: 500, validFrom: '2026-06-01', validTo: '2026-07-15', active: false }
+  ]);
 
   stats = computed(() => {
     const bills = this.pos.bills();
@@ -140,7 +194,8 @@ export class PosComponent implements OnInit, OnDestroy {
   diningMenuItems = computed(() => {
     const action = this.diningAction();
     const outletId = action === 'ROOM' ? this.roomServiceOutletId() : (this.selectedTable()?.outletId || this.defaultOutletId());
-    return this.pos.menuItems().filter(item => item.outletId === outletId && item.available);
+    const items = this.pos.menuItems().filter(item => item.outletId === outletId && item.available);
+    return items.length ? items : this.pos.menuItems().filter(item => item.available);
   });
 
   roomServiceFloors = computed(() => this.masters.floors().filter(floor => floor.isActive));
@@ -177,13 +232,21 @@ export class PosComponent implements OnInit, OnDestroy {
 
   orderMenuItems = computed(() => {
     const outletId = Number(this.currentOrder().outletId || this.defaultOutletId());
-    return this.pos.menuItems().filter(item => item.outletId === outletId && item.available);
+    const items = this.pos.menuItems().filter(item => item.outletId === outletId && item.available);
+    return items.length ? items : this.pos.menuItems().filter(item => item.available);
   });
 
   billOrders = computed(() => {
     const type = this.currentBill().orderType;
     return this.pos.orders().filter(order => !type || order.type === type);
   });
+
+  billableOrders = computed(() => {
+    const billedOrderIds = new Set(this.pos.bills().filter(bill => bill.status !== 'VOID').map(bill => Number(bill.orderId)));
+    return this.pos.orders().filter(order => order.status !== 'CANCELLED' && !billedOrderIds.has(order.id));
+  });
+
+  currentBillBreakdown = computed(() => this.billBreakdown(this.currentBill()));
 
   billTables = computed(() => {
     const order = this.pos.orders().find(item => item.id === Number(this.currentBill().orderId));
@@ -225,17 +288,17 @@ export class PosComponent implements OnInit, OnDestroy {
     this.modalKind.set(kind);
     this.modalMode.set('create');
     if (kind === 'outlet') this.currentOutlet.set({ name: '', type: this.pos.outletTypes()[0] || 'Restaurant', location: '', timing: this.pos.shiftSchedules()[0] || '09:00 AM - 09:00 PM', taxProfile: 'GST 5%', active: true, manager: 'Outlet Manager' });
-    if (kind === 'menu') this.currentMenuItem.set({ outletId: this.defaultOutletId(), name: '', category: 'Food', subcategory: '', price: 0, taxPercent: 5, variants: [], modifiers: [], available: true, featured: false, stockItem: '', imageUrl: '' });
+    if (kind === 'menu') this.currentMenuItem.set({ outletId: this.defaultOutletId(), name: '', category: this.pos.menuCategories()[0] || 'Food', subcategory: this.pos.menuSubcategories()[0] || '', price: 0, taxPercent: 5, variants: [], modifiers: [], available: true, featured: false, stockItem: '', imageUrl: '' });
     if (kind === 'order') {
       const outletId = this.defaultOutletId();
       const table = this.pos.tables().find(item => item.outletId === outletId);
       this.currentOrder.set({ outletId, type: 'TABLE', tableNo: table?.number || '', roomNo: '', guestName: '', server: 'Unassigned', status: this.pos.orderStatuses()[0] || 'OPEN', notes: '', lines: [] });
     }
     if (kind === 'bill') {
-      const order = this.pos.orders()[0];
-      this.currentBill.set({ orderId: order?.id, orderType: order?.type || 'TABLE', tableNo: order?.tableNo || '', floorId: order?.floorId || null, roomId: order?.roomId || null, roomNo: order?.roomNo || '', guestName: order?.guestName || '', subtotal: 0, discount: 0, tax: 0, paid: 0, status: this.pos.billStatuses()[0] || 'OPEN', paymentModes: [this.pos.paymentModes()[0] || 'Cash'], compReason: this.pos.voidReasons()[0] || '', postedToFolio: false });
+      const order = this.billableOrders()[0] || this.pos.orders()[0];
+      this.currentBill.set(this.billDraftForOrder(order, { status: this.pos.billStatuses()[0] || 'OPEN', paymentModes: [this.pos.paymentModes()[0] || 'Cash'], discount: 0, paid: 0 }));
     }
-    if (kind === 'table') this.currentTable.set({ outletId: this.defaultOutletId(), number: '', section: this.pos.tableSections()[0] || 'Indoor', status: this.pos.tableStatuses()[0] || 'AVAILABLE', covers: 0, server: 'Unassigned', bookingTime: this.currentTimeValue(), mergedWith: '' });
+    if (kind === 'table') this.currentTable.set({ outletId: this.defaultOutletId(), number: '', section: this.pos.tableSections()[0] || 'Indoor', status: this.pos.tableStatuses()[0] || 'AVAILABLE', covers: 0, server: 'Unassigned', mergedWith: '' });
     this.isModalOpen.set(true);
     document.body.style.overflow = 'hidden';
   }
@@ -248,18 +311,27 @@ export class PosComponent implements OnInit, OnDestroy {
     if (kind === 'order') this.currentOrder.set({ ...item, lines: item.lines.map((line: PosOrderLine) => ({ ...line })) });
     if (kind === 'bill') {
       const order = this.pos.orders().find(value => value.id === Number(item.orderId));
+      const synced = this.billDraftForOrder(order, item);
       this.currentBill.set({
-        ...item,
-        orderType: item.orderType || order?.type,
-        tableNo: item.tableNo || order?.tableNo || '',
-        floorId: item.floorId || order?.floorId || null,
-        roomId: item.roomId || order?.roomId || null,
-        roomNo: item.roomNo || order?.roomNo || '',
-        guestName: item.guestName || order?.guestName || '',
+        ...synced,
+        orderType: item.orderType || order?.type || synced.orderType,
+        tableNo: item.tableNo || order?.tableNo || synced.tableNo || '',
+        floorId: item.floorId || order?.floorId || synced.floorId || null,
+        roomId: item.roomId || order?.roomId || synced.roomId || null,
+        roomNo: item.roomNo || order?.roomNo || synced.roomNo || '',
+        guestName: item.guestName || order?.guestName || synced.guestName || '',
         paymentModes: [...item.paymentModes]
       });
     }
     if (kind === 'table') this.currentTable.set({ ...item });
+    this.isModalOpen.set(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  openBillFromOrder(order: PosOrder): void {
+    this.modalKind.set('bill');
+    this.modalMode.set('create');
+    this.currentBill.set(this.billDraftForOrder(order, { status: this.pos.billStatuses()[0] || 'OPEN', paymentModes: [this.pos.paymentModes()[0] || 'Cash'], discount: 0, paid: 0 }));
     this.isModalOpen.set(true);
     document.body.style.overflow = 'hidden';
   }
@@ -279,7 +351,7 @@ export class PosComponent implements OnInit, OnDestroy {
     if (kind === 'outlet') this.pos.saveOutlet(this.currentOutlet());
     if (kind === 'menu') this.pos.saveMenuItem(this.currentMenuItem());
     if (kind === 'order') this.pos.saveOrder(this.currentOrder());
-    if (kind === 'bill') this.pos.saveBill(this.currentBill());
+    if (kind === 'bill') this.pos.saveBill(this.billDraftForOrder(this.billOrder(this.currentBill()), this.currentBill()));
     if (kind === 'table') this.pos.saveTable(this.currentTable() as PosTable);
     this.closeModal();
   }
@@ -593,33 +665,69 @@ export class PosComponent implements OnInit, OnDestroy {
     this.currentBill.update(bill => ({ ...bill, paymentModes: value ? [value] : [] }));
   }
 
+  updateBillDiscount(value: number | string): void {
+    this.currentBill.update(bill => this.billDraftForOrder(this.billOrder(bill), { ...bill, discount: Number(value || 0) }));
+  }
+
+  updateBillPaid(value: number | string): void {
+    this.currentBill.update(bill => ({ ...bill, paid: Number(value || 0) }));
+  }
+
+  switchBillingSetupSection(section: BillingSetupSection): void {
+    this.billingSetupSection.set(section);
+  }
+
+  setBillingSetupEdit(section: BillingSetupSection, editable: boolean): void {
+    this.billingSetupEditMode.update(state => ({ ...state, [section]: editable }));
+  }
+
+  saveBillingSetupSection(section: BillingSetupSection): void {
+    this.setBillingSetupEdit(section, false);
+  }
+
+  updateBillingSetup(field: keyof BillingSetup, value: string | boolean): void {
+    this.billingSetup.update(setup => ({ ...setup, [field]: value }));
+  }
+
+  updateTaxRule(index: number, field: keyof TaxRule, value: string | number | boolean): void {
+    this.taxRules.update(rules => rules.map((rule, i) => i === index ? { ...rule, [field]: field === 'rate' ? Number(value) : value } as TaxRule : rule));
+  }
+
+  updateOfferRule(index: number, field: keyof OfferRule, value: string | number | boolean): void {
+    this.offerRules.update(offers => offers.map((offer, i) => i === index ? { ...offer, [field]: field === 'value' ? Number(value) : value } as OfferRule : offer));
+  }
+
+  addOfferRule(): void {
+    const today = new Date().toISOString().slice(0, 10);
+    const nextNumber = this.offerRules().length + 1;
+    this.offerRules.update(offers => [
+      ...offers,
+      {
+        code: `COUPON${nextNumber}`,
+        name: '',
+        type: 'Percentage',
+        value: 0,
+        validFrom: today,
+        validTo: today,
+        active: true
+      }
+    ]);
+    this.setBillingSetupEdit('offers', true);
+  }
+
+  deleteOfferRule(index: number): void {
+    this.offerRules.update(offers => offers.filter((_, i) => i !== index));
+  }
+
   updateBillOrderType(value: 'TABLE' | 'TAKEAWAY' | 'ROOM'): void {
     const order = this.pos.orders().find(item => item.type === value);
-    this.currentBill.update(bill => ({
-      ...bill,
-      orderType: value,
-      orderId: order?.id,
-      tableNo: value === 'TABLE' ? order?.tableNo || '' : '',
-      floorId: value === 'ROOM' ? order?.floorId || null : null,
-      roomId: value === 'ROOM' ? order?.roomId || null : null,
-      roomNo: value === 'ROOM' ? order?.roomNo || '' : '',
-      guestName: value === 'ROOM' ? order?.guestName || bill.guestName || '' : bill.guestName || ''
-    }));
+    this.currentBill.update(bill => this.billDraftForOrder(order, { ...bill, orderType: value }));
   }
 
   updateBillOrder(value: number | string): void {
     const order = this.pos.orders().find(item => item.id === Number(value));
     if (!order) return;
-    this.currentBill.update(bill => ({
-      ...bill,
-      orderId: order.id,
-      orderType: order.type,
-      tableNo: order.type === 'TABLE' ? order.tableNo || '' : '',
-      floorId: order.type === 'ROOM' ? order.floorId || null : null,
-      roomId: order.type === 'ROOM' ? order.roomId || null : null,
-      roomNo: order.type === 'ROOM' ? order.roomNo || '' : '',
-      guestName: order.guestName || bill.guestName || ''
-    }));
+    this.currentBill.update(bill => this.billDraftForOrder(order, bill));
   }
 
   updateBillTable(value: string): void {
@@ -665,8 +773,87 @@ export class PosComponent implements OnInit, OnDestroy {
     return this.pos.outletMap().get(Number(id))?.name || 'Unknown Outlet';
   }
 
+  billOrder(bill: Partial<PosBill>): PosOrder | null {
+    return this.pos.orders().find(order => order.id === Number(bill.orderId || 0)) || null;
+  }
+
+  billBreakdown(bill: Partial<PosBill>): BillBreakdown {
+    const order = this.billOrder(bill);
+    const rawLines = order?.lines || [];
+    const grossAmount = rawLines.reduce((sum, line) => sum + line.qty * line.price, 0);
+    const discount = Math.min(Number(bill.discount || 0), grossAmount);
+    const inclusive = this.billingSetup().enableInclusiveTax;
+    const bucketMap = new Map<number, BillTaxBucket>();
+    let taxableSubtotal = 0;
+    let taxTotal = 0;
+
+    const lines = rawLines.map(line => {
+      const menuItem = this.pos.menuItems().find(item => item.id === line.itemId);
+      const taxRate = Number(menuItem?.taxPercent ?? 0);
+      const grossLineAmount = line.qty * line.price;
+      const discountShare = grossAmount ? discount * (grossLineAmount / grossAmount) : 0;
+      const discountedAmount = Math.max(0, grossLineAmount - discountShare);
+      const taxableAmount = inclusive ? discountedAmount / (1 + taxRate / 100) : discountedAmount;
+      const taxAmount = inclusive ? discountedAmount - taxableAmount : taxableAmount * taxRate / 100;
+      const totalAmount = inclusive ? discountedAmount : taxableAmount + taxAmount;
+      const bucket = bucketMap.get(taxRate) || { rate: taxRate, taxableAmount: 0, cgst: 0, sgst: 0, taxAmount: 0 };
+
+      bucket.taxableAmount += taxableAmount;
+      bucket.taxAmount += taxAmount;
+      bucket.cgst += taxAmount / 2;
+      bucket.sgst += taxAmount / 2;
+      bucketMap.set(taxRate, bucket);
+      taxableSubtotal += taxableAmount;
+      taxTotal += taxAmount;
+
+      return { ...line, taxRate, taxableAmount, taxAmount, totalAmount };
+    });
+
+    const total = taxableSubtotal + taxTotal;
+    const paid = Number(bill.paid || 0);
+
+    return {
+      order,
+      lines,
+      grossAmount,
+      discount,
+      taxableSubtotal,
+      taxTotal,
+      total,
+      paid,
+      due: Math.max(0, total - paid),
+      taxBuckets: Array.from(bucketMap.values()).sort((a, b) => a.rate - b.rate)
+    };
+  }
+
+  billDraftForOrder(order?: PosOrder | null, input: Partial<PosBill> = {}): Partial<PosBill> {
+    const base: Partial<PosBill> = {
+      ...input,
+      orderId: order?.id ?? input.orderId,
+      orderType: order?.type || input.orderType || 'TABLE',
+      tableNo: order?.type === 'TABLE' ? order.tableNo || '' : input.tableNo || '',
+      floorId: order?.type === 'ROOM' ? order.floorId || null : input.floorId || null,
+      roomId: order?.type === 'ROOM' ? order.roomId || null : input.roomId || null,
+      roomNo: order?.type === 'ROOM' ? order.roomNo || '' : input.roomNo || '',
+      guestName: order?.guestName || input.guestName || '',
+      discount: Number(input.discount || 0),
+      paid: Number(input.paid || 0),
+      status: input.status || this.pos.billStatuses()[0] || 'OPEN',
+      paymentModes: input.paymentModes?.length ? input.paymentModes : [this.pos.paymentModes()[0] || 'Cash'],
+      compReason: input.compReason || '',
+      postedToFolio: !!input.postedToFolio
+    };
+    const breakdown = this.billBreakdown(base);
+
+    return {
+      ...base,
+      subtotal: Math.round(breakdown.taxableSubtotal * 100) / 100,
+      tax: Math.round(breakdown.taxTotal * 100) / 100
+    };
+  }
+
   billTotal(bill: Partial<PosBill>): number {
-    return Number(bill.subtotal || 0) - Number(bill.discount || 0) + Number(bill.tax || 0);
+    return this.billBreakdown(bill).total || Number(bill.subtotal || 0) - Number(bill.discount || 0) + Number(bill.tax || 0);
   }
 
   orderTotal(order: PosOrder | Partial<PosOrder>): number {
@@ -744,7 +931,7 @@ export class PosComponent implements OnInit, OnDestroy {
 
   private updateTabFromUrl(url: string): void {
     const last = url.split('/').pop()?.split('?')[0] as PosTab;
-    this.activeTab.set(['outlets', 'dining', 'orders', 'billing', 'menu'].includes(last) ? last : 'outlets');
+    this.activeTab.set(['outlets', 'dining', 'orders', 'billing', 'menu', 'billing-setup'].includes(last) ? last : 'outlets');
     this.search.set('');
     this.statusFilter.set('ALL');
   }

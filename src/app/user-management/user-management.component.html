@@ -9,6 +9,10 @@
         <span class="material-icons-round">admin_panel_settings</span>
         Roles & Permissions
       </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'shifts'" (click)="switchTab('shifts')">
+        <span class="material-icons-round">schedule</span>
+        Shift Configuration
+      </button>
       <button class="tab-btn" [class.active]="activeTab() === 'activity'" (click)="switchTab('activity')">
         <span class="material-icons-round">manage_history</span>
         Access Audit
@@ -20,7 +24,7 @@
         <span class="material-icons-round">search</span>
         <input
           type="text"
-          [placeholder]="activeTab() === 'users' ? 'Search user, employee, role...' : activeTab() === 'roles' ? 'Search role, department...' : 'Search activity, actor, module...'"
+          [placeholder]="activeTab() === 'users' ? 'Search user, employee, role...' : activeTab() === 'roles' ? 'Search role, department...' : activeTab() === 'shifts' ? 'Search shift, code, department...' : 'Search activity, actor, module...'"
           [ngModel]="searchQuery()"
           (ngModelChange)="searchQuery.set($event)"
         >
@@ -51,10 +55,14 @@
         <span class="material-icons-round">add_moderator</span>
         Add Role
       </button>
+      <button class="btn-primary" *ngIf="activeTab() === 'shifts'" (click)="openCreateShift()">
+        <span class="material-icons-round">add_alarm</span>
+        Add Shift
+      </button>
     </div>
   </div>
 
-  <div class="stats-grid">
+  <div class="stats-grid" *ngIf="activeTab() !== 'shifts'">
     <div class="stat-card">
       <span class="material-icons-round">group</span>
       <strong>{{ userStats().total }}</strong>
@@ -79,6 +87,34 @@
       <span class="material-icons-round">security</span>
       <strong>{{ userStats().admins }}</strong>
       <small>Admin Roles</small>
+    </div>
+  </div>
+
+  <div class="stats-grid shift-summary-grid" *ngIf="activeTab() === 'shifts'">
+    <div class="stat-card">
+      <span class="material-icons-round">schedule</span>
+      <strong>{{ shiftStats().total }}</strong>
+      <small>Total Shifts</small>
+    </div>
+    <div class="stat-card">
+      <span class="material-icons-round">verified</span>
+      <strong>{{ shiftStats().active }}</strong>
+      <small>Active Shifts</small>
+    </div>
+    <div class="stat-card warning">
+      <span class="material-icons-round">badge</span>
+      <strong>{{ shiftStats().assigned }}</strong>
+      <small>Assigned Users</small>
+    </div>
+    <div class="stat-card danger">
+      <span class="material-icons-round">person_off</span>
+      <strong>{{ shiftStats().unassigned }}</strong>
+      <small>Unassigned Users</small>
+    </div>
+    <div class="stat-card">
+      <span class="material-icons-round">apartment</span>
+      <strong>{{ userService.properties().length }}</strong>
+      <small>Properties</small>
     </div>
   </div>
 
@@ -213,6 +249,120 @@
             <span class="material-icons-round">delete_outline</span>
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="shift-layout" *ngIf="activeTab() === 'shifts'">
+    <div class="shift-subnav">
+      <button class="shift-tab-btn" [class.active]="activeShiftTab() === 'master'" (click)="activeShiftTab.set('master')">
+        <span class="material-icons-round">schedule</span>
+        Shift Master
+      </button>
+      <button class="shift-tab-btn" [class.active]="activeShiftTab() === 'assignment'" (click)="activeShiftTab.set('assignment')">
+        <span class="material-icons-round">manage_accounts</span>
+        User Shift Assignment
+      </button>
+    </div>
+
+    <div class="shift-master-panel content-card" *ngIf="activeShiftTab() === 'master'">
+      <div class="card-header">
+        <h2>Shift Master</h2>
+        <span>{{ filteredShifts().length }} Shifts</span>
+      </div>
+
+      <div class="shift-card-list">
+        <div class="shift-card" *ngFor="let shift of filteredShifts()">
+          <div class="shift-card-head">
+            <div>
+              <strong>{{ shift.name }}</strong>
+              <small>{{ shift.code }} &middot; {{ shift.department }}</small>
+            </div>
+            <span class="status-pill" [class.active]="shift.isActive" [class.inactive]="!shift.isActive">
+              {{ shift.isActive ? 'ACTIVE' : 'INACTIVE' }}
+            </span>
+          </div>
+          <div class="shift-time">
+            <span class="material-icons-round">schedule</span>
+            {{ shift.startTime }} - {{ shift.endTime }}
+          </div>
+          <p>{{ shift.notes || 'No shift notes configured.' }}</p>
+          <div class="shift-footer">
+            <span>{{ userService.shiftUserCount(shift.name) }} user{{ userService.shiftUserCount(shift.name) === 1 ? '' : 's' }}</span>
+            <div class="action-row">
+              <button class="icon-btn" title="Edit shift" (click)="openEditShift(shift)">
+                <span class="material-icons-round">edit</span>
+              </button>
+              <button class="icon-btn danger" title="Delete shift" (click)="deleteShift(shift)">
+                <span class="material-icons-round">delete_outline</span>
+              </button>
+            </div>
+          </div>
+          <div class="assigned-chips" *ngIf="assignedUsersForShift(shift.name).length">
+            <span *ngFor="let user of assignedUsersForShift(shift.name)">{{ user.fullName }}</span>
+          </div>
+        </div>
+        <div class="empty-state" *ngIf="filteredShifts().length === 0">
+          <span class="material-icons-round">schedule_send</span>
+          No shifts match the selected filters.
+        </div>
+      </div>
+    </div>
+
+    <div class="shift-assignment-panel content-card" *ngIf="activeShiftTab() === 'assignment'">
+      <div class="card-header assignment-header">
+        <h2>User Shift Assignment</h2>
+        <div class="assignment-tools">
+          <div class="search-box assignment-search">
+            <span class="material-icons-round">search</span>
+            <input
+              type="text"
+              placeholder="Search user, employee, role..."
+              [ngModel]="assignmentSearchQuery()"
+              (ngModelChange)="assignmentSearchQuery.set($event)"
+            >
+          </div>
+          <span class="assignment-count">{{ filteredShiftAssignmentUsers().length }} Users</span>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="admin-table assignment-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Department</th>
+              <th>Role</th>
+              <th>Assigned Shift</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of filteredShiftAssignmentUsers()">
+              <td>
+                <div class="user-cell compact">
+                  <div class="avatar">{{ user.fullName.charAt(0) }}</div>
+                  <div>
+                    <strong>{{ user.fullName }}</strong>
+                    <small>{{ user.employeeId }}</small>
+                  </div>
+                </div>
+              </td>
+              <td>{{ user.department }}</td>
+              <td>{{ roleName(user.roleId) }}</td>
+              <td>
+                <select class="inline-select" [ngModel]="user.shift" (ngModelChange)="assignUserShift(user, $event)">
+                  <option *ngFor="let shift of userService.shifts()" [value]="shift">{{ shift }}</option>
+                </select>
+              </td>
+            </tr>
+            <tr *ngIf="filteredShiftAssignmentUsers().length === 0">
+              <td colspan="4" class="empty-state">
+                <span class="material-icons-round">person_off</span>
+                No users available for the selected filters.
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -357,7 +507,7 @@
         <label [class.has-error]="userFieldError('shift')">
           Shift
           <select [ngModel]="currentUser().shift" (ngModelChange)="updateCurrentUser('shift', $event)" (blur)="markUserFieldTouched('shift')">
-            <option *ngFor="let shift of userService.shifts" [value]="shift">{{ shift }}</option>
+            <option *ngFor="let shift of userService.shifts()" [value]="shift">{{ shift }}</option>
           </select>
           <small class="field-error" *ngIf="userFieldError('shift')">{{ userFieldError('shift') }}</small>
         </label>
@@ -394,6 +544,67 @@
       <button class="btn-primary" (click)="saveUser()">
         <span class="material-icons-round">save</span>
         {{ modalMode() === 'create' ? 'Create User' : 'Save User' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="isShiftModalOpen()" (click)="closeShiftModal()">
+  <div class="admin-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h2>{{ modalMode() === 'create' ? 'Create Shift' : 'Edit Shift' }}</h2>
+        <p>Configure working hours and assignable shift options for hotel users.</p>
+      </div>
+      <button class="close-btn" (click)="closeShiftModal()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-grid">
+        <label>
+          Shift Name
+          <input type="text" [(ngModel)]="currentShift().name" placeholder="e.g. Morning Shift">
+        </label>
+        <label>
+          Shift Code
+          <input type="text" [(ngModel)]="currentShift().code" placeholder="MORN">
+        </label>
+        <label>
+          Start Time
+          <input type="time" [(ngModel)]="currentShift().startTime">
+        </label>
+        <label>
+          End Time
+          <input type="time" [(ngModel)]="currentShift().endTime">
+        </label>
+        <label>
+          Property
+          <select [(ngModel)]="currentShift().property">
+            <option *ngFor="let property of userService.properties()" [value]="property.name">{{ property.name }}</option>
+          </select>
+        </label>
+        <label>
+          Status
+          <select [(ngModel)]="currentShift().isActive">
+            <option [ngValue]="true">Active</option>
+            <option [ngValue]="false">Inactive</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="notes-field">
+        Shift Notes
+        <textarea rows="3" [(ngModel)]="currentShift().notes" placeholder="Coverage notes, handover instructions, or role restrictions..."></textarea>
+      </label>
+    </div>
+
+    <div class="modal-footer">
+      <button class="secondary-btn" (click)="closeShiftModal()">Cancel</button>
+      <button class="btn-primary" (click)="saveShift()">
+        <span class="material-icons-round">save</span>
+        {{ modalMode() === 'create' ? 'Create Shift' : 'Save Shift' }}
       </button>
     </div>
   </div>

@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { UserManagementService } from '../user-management/user-management.service';
 
-export type PosTab = 'outlets' | 'dining' | 'orders' | 'billing' | 'menu';
+export type PosTab = 'outlets' | 'dining' | 'orders' | 'billing' | 'menu' | 'billing-setup';
 export type OutletType = string;
 export type OutletStatus = 'ACTIVE' | 'INACTIVE';
 export type TableStatus = string;
@@ -148,8 +148,10 @@ interface ApiDiningTable {
   outletId?: number;
   outletName?: string;
   tableNumber?: string;
-  section?: string;
-  status?: TableStatus;
+  sectionId?: number;
+  sectionName?: string;
+  statusId?: number;
+  statusName?: TableStatus;
   covers?: number;
   serverId?: number;
   serverName?: string;
@@ -162,9 +164,11 @@ interface ApiMenuItem {
   outletId?: number;
   outletName?: string;
   itemName?: string;
-  category?: string;
-  subcategory?: string;
-  imageUrl?: string;
+  categoryId?: number;
+  categoryName?: string;
+  subcategoryId?: number;
+  subcategoryName?: string;
+  itemImage?: string;
   price?: number;
   taxPercent?: number;
   variants?: string;
@@ -176,10 +180,61 @@ interface ApiMenuItem {
   isFeatured?: boolean;
 }
 
+interface ApiOrderLine {
+  itemId?: number;
+  menuId?: number;
+  menuItemId?: number;
+  itemName?: string;
+  quantity?: number;
+  qty?: number;
+  price?: number;
+  rate?: number;
+  course?: string;
+  notes?: string;
+}
+
+interface ApiOrder {
+  id: number;
+  outletId?: number;
+  outletName?: string;
+  orderNo?: string;
+  orderNumber?: string;
+  orderType?: OrderType;
+  type?: OrderType;
+  floorId?: number | null;
+  roomId?: number | null;
+  tableId?: number;
+  tableNo?: string;
+  tableNumber?: string;
+  roomNo?: string;
+  roomNumber?: string;
+  guestName?: string;
+  serverId?: number;
+  serverName?: string;
+  orderTakerId?: number;
+  orderTakerName?: string;
+  status?: OrderStatus;
+  statusName?: OrderStatus;
+  kotNo?: string;
+  kotNumber?: string;
+  openedAt?: string;
+  notes?: string;
+  orderLines?: ApiOrderLine[];
+  lines?: ApiOrderLine[];
+  items?: ApiOrderLine[];
+}
+
 interface StandardResponse<T = any> {
   success: boolean;
   message?: string;
   data: T;
+}
+
+interface ApiListResponse<T = any> {
+  value?: T[];
+  Value?: T[];
+  count?: number;
+  Count?: number;
 }
 
 interface ApiCommonMaster {
@@ -199,6 +254,8 @@ export class PosService {
   private readonly defaultShiftSchedules: string[] = ['09:00 AM - 09:00 PM', '07:00 AM - 11:00 PM', '05:00 PM - 01:00 AM', '24 Hours'];
   private readonly defaultTableStatuses: TableStatus[] = ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'BILLED', 'MOPPING', 'DIRTY'];
   private readonly defaultTableSections: string[] = ['Indoor', 'Patio', 'Lounge', 'Bar Counter'];
+  private readonly defaultMenuCategories: string[] = ['Food', 'Beverage', 'Retail', 'Room Service'];
+  private readonly defaultMenuSubcategories: string[] = ['Starter', 'Main Course', 'Dessert', 'Beverage', 'Room Service'];
   private readonly defaultOrderStatuses: OrderStatus[] = ['OPEN', 'KOT_SENT', 'HELD', 'BILLED', 'CANCELLED'];
   private readonly defaultBillStatuses: BillStatus[] = ['OPEN', 'PARTIAL', 'PAID', 'VOID'];
   private readonly defaultPaymentModes: PaymentMode[] = ['Cash', 'Card', 'UPI', 'Room Charge', 'City Ledger', 'Voucher'];
@@ -209,7 +266,13 @@ export class PosService {
   readonly outletTypeMasters = signal<ApiCommonMaster[]>([]);
   readonly shiftSchedules = signal<string[]>(this.defaultShiftSchedules);
   readonly tableStatuses = signal<TableStatus[]>(this.defaultTableStatuses);
+  readonly tableStatusMasters = signal<ApiCommonMaster[]>([]);
   readonly tableSections = signal<string[]>(this.defaultTableSections);
+  readonly tableSectionMasters = signal<ApiCommonMaster[]>([]);
+  readonly menuCategories = signal<string[]>(this.defaultMenuCategories);
+  readonly menuCategoryMasters = signal<ApiCommonMaster[]>([]);
+  readonly menuSubcategories = signal<string[]>(this.defaultMenuSubcategories);
+  readonly menuSubcategoryMasters = signal<ApiCommonMaster[]>([]);
   readonly orderStatuses = signal<OrderStatus[]>(this.defaultOrderStatuses);
   readonly billStatuses = signal<BillStatus[]>(this.defaultBillStatuses);
   readonly paymentModes = signal<PaymentMode[]>(this.defaultPaymentModes);
@@ -222,78 +285,13 @@ export class PosService {
     return names.length ? names : this.defaultUsers;
   });
 
-  readonly outlets = signal<PosOutlet[]>([
-    { id: 1, name: 'Azure Restaurant', type: 'Restaurant', location: 'Lobby Level', timing: '07:00 AM - 11:00 PM', taxProfile: 'GST 5% Food', active: true, manager: 'Outlet Manager' },
-    { id: 2, name: 'Skyline Bar', type: 'Bar', location: 'Rooftop', timing: '05:00 PM - 01:00 AM', taxProfile: 'GST 18% Beverage', active: true, manager: 'Rajan Mehta' },
-    { id: 3, name: 'In-Room Dining', type: 'Room Service', location: 'Service Pantry', timing: '24 Hours', taxProfile: 'GST Mixed', active: true, manager: 'Meena Pillai' },
-    { id: 4, name: 'Spa Retail', type: 'Spa', location: 'Wellness Floor', timing: '09:00 AM - 09:00 PM', taxProfile: 'GST 18% Services', active: false, manager: 'Deepa Thomas' }
-  ]);
-
-  readonly menuItems = signal<PosMenuItem[]>([
-    { id: 1, outletId: 1, name: 'Paneer Tikka', category: 'Food', subcategory: 'Starter', price: 420, taxPercent: 5, variants: ['Half', 'Full'], modifiers: ['Extra chutney', 'No onion'], available: true, featured: true, happyHourPrice: 360, happyHourWindow: '04:00 PM - 06:00 PM', stockItem: 'Paneer Block', imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=240&q=80' },
-    { id: 2, outletId: 1, name: 'Dal Makhani', category: 'Food', subcategory: 'Main Course', price: 380, taxPercent: 5, variants: ['Regular', 'Large'], modifiers: ['Less spice', 'Extra butter'], available: true, featured: false, stockItem: 'Black Lentil', imageUrl: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=240&q=80' },
-    { id: 3, outletId: 2, name: 'Classic Mojito', category: 'Beverage', subcategory: 'Cocktail', price: 650, taxPercent: 18, variants: ['Classic', 'Virgin'], modifiers: ['Less ice', 'Extra mint'], available: true, featured: true, happyHourPrice: 499, happyHourWindow: '05:00 PM - 07:00 PM', stockItem: 'Mint Syrup', imageUrl: 'https://images.unsplash.com/photo-1551538827-9c037cb4f32a?auto=format&fit=crop&w=240&q=80' },
-    { id: 4, outletId: 3, name: 'Club Sandwich', category: 'Food', subcategory: 'Room Service', price: 520, taxPercent: 5, variants: ['Veg', 'Chicken'], modifiers: ['No mayo', 'Extra fries'], available: true, featured: true, stockItem: 'Bread Loaf', imageUrl: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=240&q=80' },
-    { id: 5, outletId: 4, name: 'Aroma Oil', category: 'Retail', subcategory: 'Spa Product', price: 900, taxPercent: 18, variants: ['Lavender', 'Jasmine'], modifiers: [], available: false, featured: false, stockItem: 'Aroma Oil Bottle', imageUrl: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=240&q=80' }
-  ]);
-
-  readonly tables = signal<PosTable[]>([
-    { id: 1, outletId: 1, number: 'T01', section: 'Indoor', status: 'OCCUPIED', covers: 3, server: 'Arjun Menon' },
-    { id: 2, outletId: 1, number: 'T02', section: 'Indoor', status: 'AVAILABLE', covers: 0, server: 'Unassigned' },
-    { id: 3, outletId: 1, number: 'T03', section: 'Patio', status: 'RESERVED', covers: 4, server: 'Rajan Mehta', guestName: 'Rajan Mehta', bookingTime: 'Today, 08:00 PM' },
-    { id: 4, outletId: 2, number: 'B01', section: 'Bar Counter', status: 'BILLED', covers: 2, server: 'Deepa Thomas' },
-    { id: 5, outletId: 2, number: 'B02', section: 'Lounge', status: 'AVAILABLE', covers: 0, server: 'Unassigned' }
-  ]);
-
-  readonly orders = signal<PosOrder[]>([
-    {
-      id: 1,
-      outletId: 1,
-      orderNo: 'ORD-1001',
-      type: 'TABLE',
-      tableNo: 'T01',
-      server: 'Arjun Menon',
-      status: 'KOT_SENT',
-      kotNo: 'KOT-501',
-      openedAt: 'Today, 01:15 PM',
-      notes: 'Starter first, less spice.',
-      lines: [
-        { itemId: 1, name: 'Paneer Tikka', qty: 2, price: 420, course: 'Starter', notes: 'No onion' },
-        { itemId: 2, name: 'Dal Makhani', qty: 1, price: 380, course: 'Main', notes: 'Extra butter' }
-      ]
-    },
-    {
-      id: 2,
-      outletId: 3,
-      orderNo: 'ORD-1002',
-      type: 'ROOM',
-      roomNo: '102',
-      guestName: 'Rajan Mehta',
-      server: 'Meena Pillai',
-      status: 'OPEN',
-      openedAt: 'Today, 02:05 PM',
-      notes: 'Post to room after guest confirmation.',
-      lines: [
-        { itemId: 4, name: 'Club Sandwich', qty: 2, price: 520, course: 'Main', notes: 'Extra fries' }
-      ]
-    }
-  ]);
-
-  readonly bills = signal<PosBill[]>([
-    { id: 1, orderId: 1, billNo: 'BILL-7001', subtotal: 1220, discount: 100, tax: 56, paid: 1176, status: 'PAID', paymentModes: ['Card'], postedToFolio: false },
-    { id: 2, orderId: 2, billNo: 'BILL-7002', guestName: 'Rajan Mehta', roomNo: '102', subtotal: 1040, discount: 0, tax: 52, paid: 0, status: 'OPEN', paymentModes: ['Room Charge'], postedToFolio: false }
-  ]);
-
-  readonly shifts = signal<PosShift[]>([
-    { id: 1, outletId: 1, name: 'Lunch Shift', cashier: 'Rajan Mehta', openedAt: 'Today, 11:00 AM', openingCash: 5000, cashSales: 4200, cardSales: 11800, upiSales: 3200, roomCharges: 2800, discounts: 700, voids: 1, comps: 0, status: 'OPEN' },
-    { id: 2, outletId: 2, name: 'Bar Evening', cashier: 'Deepa Thomas', openedAt: 'Yesterday, 05:00 PM', closedAt: 'Today, 01:15 AM', openingCash: 8000, cashSales: 9200, cardSales: 26800, upiSales: 5400, roomCharges: 11200, discounts: 1200, voids: 2, comps: 1, status: 'CLOSED' }
-  ]);
-
-  readonly auditLogs = signal<PosAuditLog[]>([
-    { id: 1, at: 'Today, 02:16 PM', user: 'Outlet Manager', action: 'Discount approved', module: 'Billing', reference: 'BILL-7001' },
-    { id: 2, at: 'Today, 02:10 PM', user: 'Meena Pillai', action: 'Room charge validated', module: 'Room Posting', reference: 'Room 102' },
-    { id: 3, at: 'Today, 01:22 PM', user: 'Arjun Menon', action: 'KOT sent to hot kitchen', module: 'KOT', reference: 'KOT-501' }
-  ]);
+  readonly outlets = signal<PosOutlet[]>([]);
+  readonly menuItems = signal<PosMenuItem[]>([]);
+  readonly tables = signal<PosTable[]>([]);
+  readonly orders = signal<PosOrder[]>([]);
+  readonly bills = signal<PosBill[]>([]);
+  readonly shifts = signal<PosShift[]>([]);
+  readonly auditLogs = signal<PosAuditLog[]>([]);
 
   readonly outletMap = computed(() => new Map(this.outlets().map(outlet => [outlet.id, outlet])));
 
@@ -306,6 +304,8 @@ export class PosService {
     this.loadShiftSchedules();
     this.loadTableStatuses();
     this.loadTableSections();
+    this.loadMenuCategories();
+    this.loadMenuSubcategories();
     this.loadOrderStatuses();
     this.loadBillStatuses();
     this.loadPaymentModes();
@@ -313,6 +313,7 @@ export class PosService {
     this.loadOutlets();
     this.loadTables();
     this.loadMenuItems();
+    this.loadOrders();
   }
 
   loadOutletTypes(): void {
@@ -345,6 +346,7 @@ export class PosService {
   loadTableStatuses(): void {
     this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/TABLE_STATUS`).subscribe({
       next: response => {
+        this.tableStatusMasters.set(this.commonMastersData(response));
         const tableStatuses = this.commonMastersData(response)
           .map(item => item.value || item.code || '')
           .map(value => value.trim())
@@ -358,6 +360,7 @@ export class PosService {
   loadTableSections(): void {
     this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/TABLE_SECTION`).subscribe({
       next: response => {
+        this.tableSectionMasters.set(this.commonMastersData(response));
         const tableSections = this.commonMastersData(response)
           .map(item => item.value || item.code || '')
           .map(value => value.trim())
@@ -365,6 +368,36 @@ export class PosService {
         if (tableSections.length) this.tableSections.set(tableSections);
       },
       error: error => this.addAudit('Unable to load table sections from API', 'Table Dining', error?.error?.message || error?.message || 'API error')
+    });
+  }
+
+  loadMenuCategories(): void {
+    this.http.get<ApiCommonMaster[] | ApiListResponse<ApiCommonMaster> | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/FOOD_CATEGORY`).subscribe({
+      next: response => {
+        const masters = this.commonMastersData(response);
+        this.menuCategoryMasters.set(masters);
+        const categories = masters
+          .map(item => item.value || item.code || '')
+          .map(value => value.trim())
+          .filter(Boolean);
+        if (categories.length) this.menuCategories.set(categories);
+      },
+      error: error => this.addAudit('Unable to load menu categories from API', 'Menu', error?.error?.message || error?.message || 'API error')
+    });
+  }
+
+  loadMenuSubcategories(): void {
+    this.http.get<ApiCommonMaster[] | ApiListResponse<ApiCommonMaster> | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/FOOD_SUBCATEGORY`).subscribe({
+      next: response => {
+        const masters = this.commonMastersData(response);
+        this.menuSubcategoryMasters.set(masters);
+        const subcategories = masters
+          .map(item => item.value || item.code || '')
+          .map(value => value.trim())
+          .filter(Boolean);
+        if (subcategories.length) this.menuSubcategories.set(subcategories);
+      },
+      error: error => this.addAudit('Unable to load menu subcategories from API', 'Menu', error?.error?.message || error?.message || 'API error')
     });
   }
 
@@ -421,8 +454,8 @@ export class PosService {
   }
 
   loadOutlets(): void {
-    this.http.get<ApiOutlet[]>(`${this.posBaseUrl}/outlets/getAllOutlets`).subscribe({
-      next: response => this.outlets.set((response || []).map(item => this.mapOutlet(item))),
+    this.http.get<ApiOutlet[] | ApiListResponse<ApiOutlet> | StandardResponse<ApiOutlet[]>>(`${this.posBaseUrl}/outlets/getAllOutlets`).subscribe({
+      next: response => this.outlets.set(this.listData(response).map(item => this.mapOutlet(item))),
       error: error => this.addAudit('Unable to load outlets from API', 'Outlets', error?.error?.message || error?.message || 'API error')
     });
   }
@@ -431,8 +464,8 @@ export class PosService {
     const url = outletId
       ? `${this.posBaseUrl}/tables/getAllTables?outletId=${outletId}`
       : `${this.posBaseUrl}/tables/getAllTables`;
-    this.http.get<ApiDiningTable[]>(url).subscribe({
-      next: response => this.tables.set((response || []).map(item => this.mapTable(item))),
+    this.http.get<ApiDiningTable[] | ApiListResponse<ApiDiningTable> | StandardResponse<ApiDiningTable[]>>(url).subscribe({
+      next: response => this.tables.set(this.listData(response).map(item => this.mapTable(item))),
       error: error => this.addAudit('Unable to load dining tables from API', 'Table Dining', error?.error?.message || error?.message || 'API error')
     });
   }
@@ -441,9 +474,19 @@ export class PosService {
     const url = outletId
       ? `${this.posBaseUrl}/menu/getAllMenu?outletId=${outletId}`
       : `${this.posBaseUrl}/menu/getAllMenu`;
-    this.http.get<ApiMenuItem[]>(url).subscribe({
-      next: response => this.menuItems.set((response || []).map(item => this.mapMenuItem(item))),
+    this.http.get<ApiMenuItem[] | ApiListResponse<ApiMenuItem> | StandardResponse<ApiMenuItem[]>>(url).subscribe({
+      next: response => {
+        const menuItems = this.listData(response).map(item => this.mapMenuItem(item));
+        this.menuItems.set(menuItems);
+      },
       error: error => this.addAudit('Unable to load menu from API', 'Menu', error?.error?.message || error?.message || 'API error')
+    });
+  }
+
+  loadOrders(): void {
+    this.http.get<ApiOrder[] | ApiListResponse<ApiOrder> | StandardResponse<ApiOrder[]>>(`${this.posBaseUrl}/orders/getAllOrders`).subscribe({
+      next: response => this.orders.set(this.listData(response).map(item => this.mapOrder(item))),
+      error: error => this.addAudit('Unable to load orders from API', 'Orders', error?.error?.message || error?.message || 'API error')
     });
   }
 
@@ -462,12 +505,13 @@ export class PosService {
       manager: input.manager || 'Outlet Manager'
     };
     const request$ = input.id
-      ? this.http.put<ApiOutlet>(`${this.posBaseUrl}/outlets/updateOutlet/${input.id}`, this.toApiOutlet(outlet))
-      : this.http.post<ApiOutlet>(`${this.posBaseUrl}/outlets/createOutlet`, this.toApiOutlet(outlet));
+      ? this.http.put<ApiOutlet | StandardResponse<ApiOutlet>>(`${this.posBaseUrl}/outlets/updateOutlet/${input.id}`, this.toApiOutlet(outlet))
+      : this.http.post<ApiOutlet | StandardResponse<ApiOutlet>>(`${this.posBaseUrl}/outlets/createOutlet`, this.toApiOutlet(outlet));
 
     request$.subscribe({
       next: response => {
-        const saved = this.mapOutlet(response);
+        const responseOutlet = this.itemData(response);
+        const saved = responseOutlet ? this.mapOutlet(responseOutlet) : outlet;
         this.outlets.update(items => input.id ? items.map(item => item.id === saved.id ? saved : item) : [saved, ...items]);
         this.addAudit(input.id ? 'Outlet updated' : 'Outlet created', 'Outlets', saved.name);
       },
@@ -506,13 +550,14 @@ export class PosService {
       imageUrl: input.imageUrl || ''
     };
     const request$ = input.id
-      ? this.http.put<ApiMenuItem>(`${this.posBaseUrl}/menu/updateMenu/${input.id}`, this.toApiMenuItem(item))
-      : this.http.post<ApiMenuItem>(`${this.posBaseUrl}/menu/createMenu`, this.toApiMenuItem(item));
+      ? this.http.put<ApiMenuItem | StandardResponse<ApiMenuItem>>(`${this.posBaseUrl}/menu/updateMenu/${input.id}`, this.toApiMenuItem(item))
+      : this.http.post<ApiMenuItem | StandardResponse<ApiMenuItem>>(`${this.posBaseUrl}/menu/createMenu`, this.toApiMenuItem(item));
 
     request$.subscribe({
       next: response => {
-        const saved = this.mapMenuItem(response);
-        this.menuItems.update(items => input.id ? items.map(existing => existing.id === saved.id ? saved : existing) : [saved, ...items]);
+        const responseItem = this.itemData(response);
+        const saved = responseItem ? this.mapMenuItem(responseItem) : item;
+        this.loadMenuItems();
         this.addAudit(input.id ? 'Menu item updated' : 'Menu item created', 'Menu', saved.name);
       },
       error: error => this.addAudit(input.id ? 'Menu item update failed' : 'Menu item create failed', 'Menu', error?.error?.message || error?.message || item.name)
@@ -524,6 +569,7 @@ export class PosService {
     this.http.delete<void>(`${this.posBaseUrl}/menu/deleteMenu/${id}`).subscribe({
       next: () => {
         this.menuItems.update(items => items.filter(value => value.id !== id));
+        this.loadMenuItems();
         if (item) this.addAudit('Menu item deleted', 'Menu', item.name);
       },
       error: error => this.addAudit('Menu item delete failed', 'Menu', error?.error?.message || error?.message || `Menu #${id}`)
@@ -531,6 +577,7 @@ export class PosService {
   }
 
   saveOrder(input: Partial<PosOrder>): void {
+    const isUpdate = !!input.id && this.orders().some(item => item.id === input.id);
     const nextId = Math.max(0, ...this.orders().map(item => item.id)) + 1;
     const order: PosOrder = {
       id: input.id ?? nextId,
@@ -549,8 +596,20 @@ export class PosService {
       notes: input.notes || '',
       lines: input.lines?.length ? input.lines : []
     };
-    this.orders.update(items => input.id ? items.map(existing => existing.id === input.id ? order : existing) : [order, ...items]);
-    this.addAudit(input.id ? 'Order updated' : 'Order created', 'Orders', order.orderNo);
+    const request$ = isUpdate
+      ? this.http.put<ApiOrder | StandardResponse<ApiOrder>>(`${this.posBaseUrl}/orders/updateOrder/${input.id}`, this.toApiOrder(order))
+      : this.http.post<ApiOrder | StandardResponse<ApiOrder>>(`${this.posBaseUrl}/orders/createOrder`, this.toApiOrder(order));
+
+    request$.subscribe({
+      next: response => {
+        const responseOrder = this.itemData(response);
+        const saved = responseOrder ? this.mapOrder(responseOrder) : order;
+        this.orders.update(items => isUpdate ? items.map(existing => existing.id === saved.id ? saved : existing) : [saved, ...items]);
+        this.loadOrders();
+        this.addAudit(isUpdate ? 'Order updated' : 'Order created', 'Orders', saved.orderNo);
+      },
+      error: error => this.addAudit(isUpdate ? 'Order update failed' : 'Order create failed', 'Orders', error?.error?.message || error?.message || order.orderNo)
+    });
   }
 
   updateOrderStatus(id: number, status: OrderStatus): void {
@@ -573,13 +632,14 @@ export class PosService {
       mergedWith: input.mergedWith || ''
     };
     const request$ = input.id
-      ? this.http.put<ApiDiningTable>(`${this.posBaseUrl}/tables/updateTable/${input.id}`, this.toApiTable(table))
-      : this.http.post<ApiDiningTable>(`${this.posBaseUrl}/tables/createTable`, this.toApiTable(table));
+      ? this.http.put<ApiDiningTable | StandardResponse<ApiDiningTable>>(`${this.posBaseUrl}/tables/updateTable/${input.id}`, this.toApiTable(table))
+      : this.http.post<ApiDiningTable | StandardResponse<ApiDiningTable>>(`${this.posBaseUrl}/tables/createTable`, this.toApiTable(table));
 
     request$.subscribe({
       next: response => {
-        const saved = this.mapTable(response);
-        this.tables.update(items => input.id ? items.map(item => item.id === saved.id ? saved : item) : [saved, ...items]);
+        const responseTable = this.itemData(response);
+        const saved = responseTable ? this.mapTable(responseTable) : table;
+        this.loadTables();
         this.addAudit(input.id ? 'Dining table updated' : 'Dining table created', 'Table Dining', saved.number);
       },
       error: error => this.addAudit(input.id ? 'Dining table update failed' : 'Dining table create failed', 'Table Dining', error?.error?.message || error?.message || table.number)
@@ -591,6 +651,7 @@ export class PosService {
     this.http.delete<void>(`${this.posBaseUrl}/tables/deleteTable/${id}`).subscribe({
       next: () => {
         this.tables.update(items => items.filter(item => item.id !== id));
+        this.loadTables();
         if (table) this.addAudit('Dining table deleted', 'Table Dining', table.number);
       },
       error: error => this.addAudit('Dining table delete failed', 'Table Dining', error?.error?.message || error?.message || `Table #${id}`)
@@ -616,7 +677,7 @@ export class PosService {
       notes: `${table.covers || 2} covers at ${outlet?.name || 'Outlet'}.`,
       lines: orderLines
     };
-    this.orders.update(items => [order, ...items]);
+    this.saveOrder(order);
     this.tables.update(items => items.map(item => item.id === table.id ? { ...item, status: 'OCCUPIED', covers: table.covers || item.covers || 2, server: order.server } : item));
     this.addAudit('Started table order', 'Table Dining', `${table.number} / ${order.orderNo}`);
   }
@@ -636,7 +697,7 @@ export class PosService {
       notes: input.notes || 'Room service order created from table dining.',
       lines
     };
-    this.orders.update(items => [order, ...items]);
+    this.saveOrder(order);
     this.addAudit('Started room service order', 'Room Service', `Room ${input.roomNo} / ${order.orderNo}`);
   }
 
@@ -781,8 +842,8 @@ export class PosService {
       id: Number(item.id),
       outletId: Number(item.outletId || this.outlets()[0]?.id || 1),
       number: item.tableNumber || `T${item.id}`,
-      section: item.section || '',
-      status: this.asTableStatus(item.status),
+      section: item.sectionName || '',
+      status: this.asTableStatus(item.statusName),
       covers: Number(item.covers || 0),
       server: item.serverName || 'Unassigned',
       mergedWith: item.linkedTableNumber || ''
@@ -790,14 +851,28 @@ export class PosService {
   }
 
   private toApiTable(item: PosTable): ApiDiningTable {
+    const sectionMaster = this.tableSectionMasters().find(master =>
+      [master.value, master.code].some(value => String(value || '').toLowerCase() === item.section.toLowerCase())
+    );
+    const statusValue = item.status === 'BILLED' ? 'OCCUPIED' : item.status;
+    const statusMaster = this.tableStatusMasters().find(master =>
+      [master.value, master.code].some(value => String(value || '').toLowerCase() === String(statusValue).toLowerCase())
+    );
+    const server = this.userManagement.users().find(user => user.fullName.toLowerCase() === item.server.toLowerCase());
+    const linkedTable = this.tables().find(table => table.number === item.mergedWith);
+
     return {
       id: item.id,
       outletId: item.outletId,
       tableNumber: item.number,
-      section: item.section,
-      status: item.status === 'BILLED' ? 'OCCUPIED' : item.status,
+      sectionId: sectionMaster?.id ? Number(sectionMaster.id) : undefined,
+      sectionName: item.section,
+      statusId: statusMaster?.id ? Number(statusMaster.id) : undefined,
+      statusName: statusValue,
       covers: item.covers,
+      serverId: server?.id,
       serverName: item.server,
+      linkedTableId: linkedTable?.id,
       linkedTableNumber: item.mergedWith || undefined
     };
   }
@@ -807,8 +882,8 @@ export class PosService {
       id: Number(item.id),
       outletId: Number(item.outletId || this.outlets()[0]?.id || 1),
       name: item.itemName || 'Menu Item',
-      category: item.category || 'Food',
-      subcategory: item.subcategory || '',
+      category: item.categoryName || 'Food',
+      subcategory: item.subcategoryName || '',
       price: Number(item.price || 0),
       taxPercent: Number(item.taxPercent ?? 0),
       variants: this.toTokens(item.variants),
@@ -818,18 +893,27 @@ export class PosService {
       happyHourPrice: item.happyHourPrice ? Number(item.happyHourPrice) : undefined,
       happyHourWindow: item.happyHourWindow || '',
       stockItem: item.linkedStockItem || '',
-      imageUrl: item.imageUrl || ''
+      imageUrl: this.toImagePreviewUrl(item.itemImage)
     };
   }
 
   private toApiMenuItem(item: PosMenuItem): ApiMenuItem {
+    const categoryMaster = this.menuCategoryMasters().find(master =>
+      [master.value, master.code].some(value => String(value || '').toLowerCase() === item.category.toLowerCase())
+    );
+    const subcategoryMaster = this.menuSubcategoryMasters().find(master =>
+      [master.value, master.code].some(value => String(value || '').toLowerCase() === item.subcategory.toLowerCase())
+    );
+
     return {
       id: item.id,
       outletId: item.outletId,
       itemName: item.name,
-      category: item.category,
-      subcategory: item.subcategory,
-      imageUrl: item.imageUrl,
+      categoryId: categoryMaster?.id ? Number(categoryMaster.id) : undefined,
+      categoryName: item.category,
+      subcategoryId: subcategoryMaster?.id ? Number(subcategoryMaster.id) : undefined,
+      subcategoryName: item.subcategory,
+      itemImage: this.toImageBase64Payload(item.imageUrl),
       price: item.price,
       taxPercent: item.taxPercent,
       variants: item.variants.join(', '),
@@ -839,6 +923,94 @@ export class PosService {
       linkedStockItem: item.stockItem,
       isAvailable: item.available,
       isFeatured: item.featured
+    };
+  }
+
+  private mapOrder(item: ApiOrder): PosOrder {
+    const lines = item.orderLines || item.lines || item.items || [];
+    const type = item.orderType || item.type || (item.roomNo || item.roomNumber ? 'ROOM' : 'TABLE');
+
+    return {
+      id: Number(item.id),
+      outletId: Number(item.outletId || this.outlets()[0]?.id || 1),
+      orderNo: item.orderNo || item.orderNumber || `ORD-${item.id}`,
+      type,
+      floorId: item.floorId || null,
+      roomId: item.roomId || null,
+      tableNo: item.tableNo || item.tableNumber || '',
+      roomNo: item.roomNo || item.roomNumber || '',
+      guestName: item.guestName || '',
+      server: item.serverName || item.orderTakerName || 'Unassigned',
+      status: item.statusName || item.status || 'OPEN',
+      kotNo: item.kotNo || item.kotNumber || '',
+      openedAt: item.openedAt || 'Just now',
+      notes: item.notes || '',
+      lines: lines.map(line => this.mapOrderLine(line))
+    };
+  }
+
+  private mapOrderLine(line: ApiOrderLine): PosOrderLine {
+    const itemId = Number(line.itemId || line.menuItemId || line.menuId || 0);
+    const menuItem = this.menuItems().find(item => item.id === itemId);
+
+    return {
+      itemId,
+      name: line.itemName || menuItem?.name || 'Menu Item',
+      qty: Number(line.quantity || line.qty || 1),
+      price: Number(line.price || line.rate || menuItem?.price || 0),
+      course: line.course || menuItem?.subcategory || 'Main',
+      notes: line.notes || ''
+    };
+  }
+
+  private toApiOrder(item: PosOrder): ApiOrder {
+    const table = this.tables().find(value => value.outletId === item.outletId && value.number === item.tableNo);
+    const server = this.userManagement.users().find(user => user.fullName.toLowerCase() === item.server.toLowerCase());
+    const lines = item.lines.map(line => this.toApiOrderLine(line));
+
+    return {
+      id: item.id,
+      outletId: item.outletId,
+      orderNo: item.orderNo,
+      orderNumber: item.orderNo,
+      orderType: item.type,
+      type: item.type,
+      floorId: item.floorId || null,
+      roomId: item.roomId || null,
+      tableId: table?.id,
+      tableNo: item.tableNo || '',
+      tableNumber: item.tableNo || '',
+      roomNo: item.roomNo || '',
+      roomNumber: item.roomNo || '',
+      guestName: item.guestName || '',
+      serverId: server?.id,
+      serverName: item.server,
+      orderTakerId: server?.id,
+      orderTakerName: item.server,
+      status: item.status,
+      statusName: item.status,
+      kotNo: item.kotNo || '',
+      kotNumber: item.kotNo || '',
+      openedAt: item.openedAt,
+      notes: item.notes,
+      orderLines: lines,
+      lines,
+      items: lines
+    };
+  }
+
+  private toApiOrderLine(line: PosOrderLine): ApiOrderLine {
+    return {
+      itemId: line.itemId,
+      menuId: line.itemId,
+      menuItemId: line.itemId,
+      itemName: line.name,
+      quantity: Number(line.qty || 1),
+      qty: Number(line.qty || 1),
+      price: Number(line.price || 0),
+      rate: Number(line.price || 0),
+      course: line.course,
+      notes: line.notes
     };
   }
 
@@ -855,8 +1027,37 @@ export class PosService {
     return String(value || '').split(',').map(item => item.trim()).filter(Boolean);
   }
 
-  private commonMastersData(response: ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]> | null): ApiCommonMaster[] {
+  private toImageBase64Payload(value?: string): string {
+    const image = String(value || '').trim();
+    if (!image) return '';
+    const dataUrlMatch = image.match(/^data:image\/[a-zA-Z0-9.+-]+;base64,(.+)$/);
+    if (dataUrlMatch?.[1]) return dataUrlMatch[1];
+    return image.startsWith('http') ? '' : image;
+  }
+
+  private toImagePreviewUrl(value?: string): string {
+    const image = String(value || '').trim();
+    if (!image || image.startsWith('http') || image.startsWith('data:image/')) return image;
+    return `data:image/png;base64,${image}`;
+  }
+
+  private commonMastersData(response: ApiCommonMaster[] | ApiListResponse<ApiCommonMaster> | StandardResponse<ApiCommonMaster[]> | null): ApiCommonMaster[] {
     if (!response) return [];
-    return Array.isArray(response) ? response : response.success ? response.data || [] : [];
+    if (Array.isArray(response)) return response;
+    if ('success' in response) return response.data || [];
+    return response.value || response.Value || [];
+  }
+
+  private listData<T>(response: T[] | ApiListResponse<T> | StandardResponse<T[]> | null): T[] {
+    if (!response) return [];
+    if (Array.isArray(response)) return response;
+    if ('success' in response) return response.data || [];
+    return response.value || response.Value || [];
+  }
+
+  private itemData<T extends object>(response: T | StandardResponse<T> | null): T | null {
+    if (!response) return null;
+    if ('success' in response) return response.data || null;
+    return response;
   }
 }

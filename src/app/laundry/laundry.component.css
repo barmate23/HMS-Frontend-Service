@@ -845,6 +845,153 @@
   margin-bottom: 8px;
 }
 
+.linen-workflow-card {
+  margin-bottom: 8px;
+  padding-bottom: 10px;
+}
+
+.linen-subnav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-top: 1px solid var(--surface-200);
+  border-bottom: 1px solid var(--surface-200);
+}
+
+.linen-subnav button {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--surface-200);
+  border-radius: 7px;
+  background: white;
+  color: var(--surface-700);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-poppins);
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.linen-subnav button.active {
+  background: var(--primary-light);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.linen-section {
+  padding: 12px 14px 2px;
+}
+
+.section-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.section-intro h3 {
+  margin: 0;
+  color: var(--primary-color);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.section-intro p {
+  margin: 2px 0 0;
+  color: var(--surface-500);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.vendor-editor {
+  margin-bottom: 10px;
+}
+
+.vendor-grid,
+.price-setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.vendor-management-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.vendor-list-card,
+.vendor-overview-card {
+  min-height: 0;
+}
+
+.vendor-price-form {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--surface-200);
+  border-radius: 8px;
+  background: white;
+}
+
+.vendor-price-form > strong {
+  color: var(--primary-color);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.selected-row {
+  background: var(--primary-light);
+}
+
+.vendor-card,
+.vendor-price-panel {
+  border: 1px solid var(--surface-200);
+  border-radius: 8px;
+  background: white;
+  padding: 10px;
+}
+
+.vendor-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.vendor-card-head strong {
+  display: block;
+  color: var(--primary-color);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.vendor-card-head span {
+  color: var(--surface-500);
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.compact-meta {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 10px;
+}
+
+.compact-table input {
+  width: 82px;
+  height: 28px;
+  padding: 0 8px;
+}
+
 .linen-batch-list {
   display: flex;
   flex-direction: column;

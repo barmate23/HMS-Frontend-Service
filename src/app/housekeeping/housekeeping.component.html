@@ -58,7 +58,6 @@
             <option value="PENDING">Pending</option>
             <option value="IN_PROGRESS">In Progress</option>
             <option value="COMPLETED">Completed</option>
-            <option value="SKIPPED">Skipped</option>
           </select>
           <button class="btn-primary" (click)="openCreateTaskModal()">
             <span class="material-icons-round">add</span>
@@ -75,10 +74,15 @@
           <select class="filter-select" [ngModel]="auditFloor()" (ngModelChange)="auditFloor.set($event)">
             <option *ngFor="let floor of auditFloors()" [value]="floor">{{ floor }}</option>
           </select>
-          <select class="filter-select" [ngModel]="auditFrequency()" (ngModelChange)="auditFrequency.set($event)">
-            <option value="DAILY">Daily SOP</option>
-            <option value="WEEKLY">Weekly SOP</option>
-            <option value="MONTHLY">Monthly SOP</option>
+          <select class="filter-select" [ngModel]="auditFrequency()" (ngModelChange)="changeAuditFrequency($event)">
+            <ng-container *ngIf="sopFrequencyOptions().length; else fallbackAuditFrequencyOptions">
+              <option *ngFor="let frequency of sopFrequencyOptions()" [value]="frequency.code">{{ frequency.value }} SOP</option>
+            </ng-container>
+            <ng-template #fallbackAuditFrequencyOptions>
+              <option value="DAILY">Daily SOP</option>
+              <option value="WEEKLY">Weekly SOP</option>
+              <option value="MONTHLY">Monthly SOP</option>
+            </ng-template>
           </select>
         </ng-container>
 
@@ -122,68 +126,75 @@
     <!-- BOARD VIEW                                 -->
     <!-- ========================================== -->
     <div class="board-view-container" *ngIf="activeTab() === 'board'">
-      <!-- Mini Stats Cards Grid -->
-      <div class="hk-stats-grid">
-        <div class="hk-stat-card total">
-          <div class="stat-icon"><span class="material-icons-round">meeting_room</span></div>
-          <div class="stat-info">
-            <span class="val">{{ hk.roomStats().total }}</span>
-            <span class="lbl">Total Rooms</span>
+      <section class="room-command-dashboard">
+        <div class="board-command-hero">
+          <div>
+            <span class="board-section-label">Housekeeping Command</span>
+            <h2>Room Readiness Board</h2>
+            <p>Live room health with task load, audit SOP coverage, maintenance blockers and guest recovery signals.</p>
+          </div>
+          <div class="readiness-ring">
+            <strong>{{ boardDashboard().readiness }}%</strong>
+            <span>Ready</span>
           </div>
         </div>
-        <div class="hk-stat-card vacant-dirty">
-          <div class="stat-icon"><span class="material-icons-round">do_not_disturb_on</span></div>
-          <div class="stat-info">
-            <span class="val">{{ hk.roomStats().vacantDirty }}</span>
-            <span class="lbl">Vacant Dirty</span>
-          </div>
-        </div>
-        <div class="hk-stat-card vacant-clean">
-          <div class="stat-icon"><span class="material-icons-round">check_circle</span></div>
-          <div class="stat-info">
-            <span class="val">{{ hk.roomStats().vacantClean }}</span>
-            <span class="lbl">Vacant Clean</span>
-          </div>
-        </div>
-        <div class="hk-stat-card occupied-dirty">
-          <div class="stat-icon"><span class="material-icons-round">bedtime</span></div>
-          <div class="stat-info">
-            <span class="val">{{ hk.roomStats().occupiedDirty }}</span>
-            <span class="lbl">Occupied Dirty</span>
-          </div>
-        </div>
-        <div class="hk-stat-card occupied-clean">
-          <div class="stat-icon"><span class="material-icons-round">hotel</span></div>
-          <div class="stat-info">
-            <span class="val">{{ hk.roomStats().occupiedClean }}</span>
-            <span class="lbl">Occupied Clean</span>
-          </div>
-        </div>
-        <div class="hk-stat-card inspected">
-          <div class="stat-icon"><span class="material-icons-round">verified</span></div>
-          <div class="stat-info">
-            <span class="val">{{ hk.roomStats().inspected }}</span>
-            <span class="lbl">Inspected</span>
-          </div>
-        </div>
-        <div class="hk-stat-card dnd">
-          <div class="stat-icon"><span class="material-icons-round">do_not_disturb</span></div>
-          <div class="stat-info">
-            <span class="val">{{ hk.roomStats().dnd }}</span>
-            <span class="lbl">DND</span>
-          </div>
-        </div>
-        <div class="hk-stat-card oor">
-          <div class="stat-icon"><span class="material-icons-round">cancel</span></div>
-          <div class="stat-info">
-            <span class="val">{{ hk.roomStats().oor }}</span>
-            <span class="lbl">OOR/Maint</span>
-          </div>
-        </div>
-      </div>
 
-      <!-- Floors and Room Grid -->
-      <div class="floors-container">
+        <div class="board-signal-grid">
+          <div class="board-signal-card ready">
+            <span class="material-icons-round">verified</span>
+            <div><strong>{{ boardDashboard().readyRooms }}</strong><small>Ready rooms</small></div>
+          </div>
+          <div class="board-signal-card work">
+            <span class="material-icons-round">cleaning_services</span>
+            <div><strong>{{ boardDashboard().dirtyRooms }}</strong><small>Need service</small></div>
+          </div>
+          <div class="board-signal-card blocked">
+            <span class="material-icons-round">block</span>
+            <div><strong>{{ boardDashboard().blockedRooms }}</strong><small>Blocked/DND</small></div>
+          </div>
+          <div class="board-signal-card tasks">
+            <span class="material-icons-round">assignment</span>
+            <div><strong>{{ boardDashboard().openTasks }}</strong><small>Open tasks</small></div>
+          </div>
+          <div class="board-signal-card maintenance">
+            <span class="material-icons-round">build</span>
+            <div><strong>{{ boardDashboard().openMaintenance }}</strong><small>Repair issues</small></div>
+          </div>
+          <div class="board-signal-card audit">
+            <span class="material-icons-round">fact_check</span>
+            <div><strong>{{ boardDashboard().auditCheckpoints }}</strong><small>SOP checks</small></div>
+          </div>
+        </div>
+
+        <div class="board-workstream-row">
+          <div class="board-workstream-panel">
+            <div class="workstream-head"><span class="material-icons-round">priority_high</span><strong>Attention Queue</strong></div>
+            <div class="workstream-items">
+              <span><b>{{ hk.roomStats().vacantDirty }}</b> vacant dirty</span>
+              <span><b>{{ boardDashboard().openMaintenance }}</b> maintenance blockers</span>
+              <span><b>{{ boardDashboard().storedLostFound }}</b> stored lost & found</span>
+            </div>
+          </div>
+          <div class="board-workstream-panel">
+            <div class="workstream-head"><span class="material-icons-round">groups</span><strong>Team Load</strong></div>
+            <div class="workstream-items">
+              <span><b>{{ hk.taskStats().pending }}</b> pending tasks</span>
+              <span><b>{{ hk.taskStats().inProgress }}</b> in progress</span>
+              <span><b>{{ hk.staff().length }}</b> staff profiles</span>
+            </div>
+          </div>
+          <div class="board-workstream-panel">
+            <div class="workstream-head"><span class="material-icons-round">playlist_add_check</span><strong>Audit Readiness</strong></div>
+            <div class="workstream-items">
+              <span><b>{{ auditFrequency() }}</b> active SOP</span>
+              <span><b>{{ boardDashboard().auditCheckpoints }}</b> checkpoints</span>
+              <span><b>{{ boardDashboard().rooms }}</b> rooms tracked</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="floors-container dashboard-floors">
         <div class="floor-block" *ngFor="let f of roomsByFloor()">
           <h3 class="floor-title">
             <span class="material-icons-round">layers</span>
@@ -191,7 +202,7 @@
             <span class="floor-badge">{{ f.rooms.length }} Rooms</span>
           </h3>
           <div class="rooms-grid">
-            <div class="room-card" *ngFor="let room of f.rooms" (click)="openStatusModal(room)" [class.priority-high]="room.priority === 'HIGH'">
+            <div class="room-card command-room-card" *ngFor="let room of f.rooms" (click)="openStatusModal(room)" [ngClass]="roomBoardClass(room)" [class.priority-high]="room.priority === 'HIGH'">
               
               <!-- Card Header -->
               <div class="rc-header">
@@ -219,6 +230,24 @@
                   <span class="material-icons-round text-muted">cleaning_services</span>
                   <span>Cleaned: {{ room.lastCleaned | date:'shortTime' }}</span>
                 </div>
+              </div>
+
+              <div class="room-module-strip">
+                <span class="module-chip task" *ngIf="roomOpenTaskCount(room)">
+                  <span class="material-icons-round">assignment</span>{{ roomOpenTaskCount(room) }}
+                </span>
+                <span class="module-chip maint" *ngIf="roomOpenMaintenanceCount(room)">
+                  <span class="material-icons-round">build</span>{{ roomOpenMaintenanceCount(room) }}
+                </span>
+                <span class="module-chip found" *ngIf="roomStoredLostFoundCount(room)">
+                  <span class="material-icons-round">manage_search</span>{{ roomStoredLostFoundCount(room) }}
+                </span>
+                <span class="module-chip audit" *ngIf="activeSopCheckpoints().length">
+                  <span class="material-icons-round">fact_check</span>{{ activeSopCheckpoints().length }}
+                </span>
+                <span class="module-chip clear" *ngIf="!roomOpenTaskCount(room) && !roomOpenMaintenanceCount(room) && !roomStoredLostFoundCount(room)">
+                  <span class="material-icons-round">done_all</span>Clear
+                </span>
               </div>
 
               <!-- Card Actions / Quick status change -->
@@ -293,11 +322,11 @@
                 </span>
               </td>
               <td>
-                <div class="staff-cell" *ngIf="t.assignedToId">
-                  <span class="avatar-sm">{{ getStaffAvatar(t.assignedToId) }}</span>
-                  <span class="truncate-hover" [attr.data-full]="getStaffName(t.assignedToId)">{{ getStaffName(t.assignedToId) }}</span>
+                <div class="staff-cell" *ngIf="t.assignedToId || t.assignedToName">
+                  <span class="avatar-sm">{{ getTaskStaffAvatar(t) }}</span>
+                  <span class="truncate-hover" [attr.data-full]="getTaskStaffName(t)">{{ getTaskStaffName(t) }}</span>
                 </div>
-                <span class="none-text" *ngIf="!t.assignedToId">Unassigned</span>
+                <span class="none-text" *ngIf="!t.assignedToId && !t.assignedToName">Unassigned</span>
               </td>
               <td style="text-align: center;"><span class="numeric-badge">{{ t.estimatedMins }}m</span></td>
               <td>
@@ -390,17 +419,13 @@
         </div>
         <div class="sop-checkpoint-grid" *ngIf="isAuditSopExpanded()">
           <div class="sop-checkpoint-card" *ngFor="let check of activeSopCheckpoints()">
-            <div class="sop-card-actions">
-              <button type="button" class="btn-icon edit" title="Edit Checkpoint" (click)="openEditSopModal(check)">
-                <span class="material-icons-round">edit</span>
-              </button>
-              <button type="button" class="btn-icon delete" title="Delete Checkpoint" (click)="deleteSopCheckpoint(check, $event)">
-                <span class="material-icons-round">delete_outline</span>
-              </button>
-            </div>
             <strong>{{ check.id }} • {{ check.area }}</strong>
             <p>{{ check.label }}</p>
             <span>{{ check.owner }}</span>
+          </div>
+          <div class="empty-state" *ngIf="activeSopCheckpoints().length === 0">
+            <span class="material-icons-round">fact_check</span>
+            <p>No SOP checkpoints configured for {{ auditFrequency() }}.</p>
           </div>
         </div>
       </div>
@@ -581,6 +606,9 @@
                   <button class="btn-icon check" *ngIf="item.status === 'STORED'" (click)="updateLFStatus(item.id, 'CLAIMED', $event)" title="Mark Claimed">
                     <span class="material-icons-round text-success">done_all</span>
                   </button>
+                  <button class="btn-icon view" title="View Details" (click)="openViewLFModal(item)">
+                    <span class="material-icons-round">visibility</span>
+                  </button>
                   <button class="btn-icon edit" title="Edit" (click)="openEditLFModal(item)">
                     <span class="material-icons-round">edit</span>
                   </button>
@@ -618,12 +646,12 @@
             <tr>
               <th style="width: 7%;">REPORTED AT</th>
               <th style="width: 5%;">ROOM</th>
-              <th style="width: 30%;">ISSUE DESCRIPTION</th>
+              <th style="width: 24%;">ISSUE DESCRIPTION</th>
               <th style="width: 8%;">CATEGORY</th>
               <th style="width: 9%;">PRIORITY</th>
               <th style="width: 9%;">REPORTED BY</th>
               <th style="width: 14%;">ASSIGNED TO</th>
-              <th style="width: 10%;">STATUS</th>
+              <th style="width: 14%;">STATUS</th>
               <th style="width: 8%; text-align: center;">ACTIONS</th>
             </tr>
           </thead>
@@ -653,15 +681,22 @@
                 <span class="none-text" *ngIf="!m.assignedTo">Unassigned</span>
               </td>
               <td>
-                <span class="status-badge maint-status" [class]="m.status.toLowerCase()">{{ m.status }}</span>
+                <select
+                  *ngIf="maintenanceStatusOptions().length; else maintStatusBadge"
+                  class="inline-status-select"
+                  [ngClass]="m.status.toLowerCase()"
+                  [ngModel]="maintenanceStatusId(m.status)"
+                  (ngModelChange)="updateMaintStatusInline(m, $event)">
+                  <option *ngFor="let status of maintenanceStatusOptions()" [ngValue]="status.id">{{ status.value }}</option>
+                </select>
+                <ng-template #maintStatusBadge>
+                  <span class="status-badge maint-status" [class]="m.status.toLowerCase()">{{ m.status }}</span>
+                </ng-template>
               </td>
               <td style="text-align: center;">
                 <div class="action-buttons">
-                  <button class="btn-icon check" title="Start Progress" *ngIf="m.status === 'OPEN'" (click)="updateMaintStatus(m.id, 'IN_PROGRESS', $event)">
-                    <span class="material-icons-round text-warning">play_arrow</span>
-                  </button>
-                  <button class="btn-icon check" title="Resolve" *ngIf="m.status === 'IN_PROGRESS'" (click)="updateMaintStatus(m.id, 'RESOLVED', $event)">
-                    <span class="material-icons-round text-success">done</span>
+                  <button class="btn-icon view" title="View Details" (click)="openViewMaintModal(m)">
+                    <span class="material-icons-round">visibility</span>
                   </button>
                   <button class="btn-icon edit" title="Edit" (click)="openEditMaintModal(m)">
                     <span class="material-icons-round">edit</span>
@@ -747,10 +782,9 @@
         </div>
         <div class="ci-input-group">
           <label>Frequency *</label>
-          <select [(ngModel)]="currentSop().frequency">
-            <option value="DAILY">Daily SOP</option>
-            <option value="WEEKLY">Weekly SOP</option>
-            <option value="MONTHLY">Monthly SOP</option>
+          <select [ngModel]="currentSopFrequencyId()" (ngModelChange)="updateSopFrequency($event)">
+            <option [ngValue]="undefined" disabled>Select frequency</option>
+            <option *ngFor="let frequency of sopFrequencyOptions()" [ngValue]="frequency.id">{{ frequency.value }} SOP</option>
           </select>
         </div>
       </div>
@@ -758,11 +792,17 @@
       <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
           <label>Audit Area *</label>
-          <input type="text" [(ngModel)]="currentSop().area" placeholder="Bathroom">
+          <select [ngModel]="currentSopAuditAreaId()" (ngModelChange)="updateSopAuditArea($event)">
+            <option [ngValue]="undefined" disabled>Select audit area</option>
+            <option *ngFor="let area of sopAuditAreaOptions()" [ngValue]="area.id">{{ area.value }}</option>
+          </select>
         </div>
         <div class="ci-input-group">
           <label>Responsible Role *</label>
-          <input type="text" [(ngModel)]="currentSop().owner" placeholder="Room Attendant">
+          <select [ngModel]="currentSopResponsibleRoleId()" (ngModelChange)="updateSopResponsibleRole($event)">
+            <option [ngValue]="undefined" disabled>Select role</option>
+            <option *ngFor="let role of sopResponsibleRoleOptions()" [ngValue]="role.id">{{ role.value }}</option>
+          </select>
         </div>
       </div>
 
@@ -800,18 +840,30 @@
     <div class="ci-body">
       <div class="ci-form-grid">
         <div class="ci-input-group">
-          <label>Room Number *</label>
-          <input type="text" [(ngModel)]="currentTask().roomNumber" placeholder="e.g. 101">
+          <label>Floor *</label>
+          <select [ngModel]="currentTask().floor" (ngModelChange)="updateTaskFloor($event)">
+            <option value="" disabled>Select floor</option>
+            <option *ngFor="let floor of taskFloors()" [value]="floor">{{ floor }}</option>
+          </select>
         </div>
+        <div class="ci-input-group">
+          <label>Room Number *</label>
+          <select [ngModel]="currentTask().roomId" (ngModelChange)="updateTaskRoom($event)">
+            <option [ngValue]="undefined" disabled>Select room</option>
+            <option *ngFor="let room of taskRoomsForSelectedFloor()" [ngValue]="room.id">
+              {{ room.roomNumber }} - {{ room.type }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
           <label>Task Type *</label>
           <select [(ngModel)]="currentTask().taskType">
             <option *ngFor="let type of taskTypes" [value]="type">{{ taskTypeLabel(type) }}</option>
           </select>
         </div>
-      </div>
-
-      <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
           <label>Priority *</label>
           <select [(ngModel)]="currentTask().priority">
@@ -820,18 +872,22 @@
             <option value="HIGH">HIGH</option>
           </select>
         </div>
-        <div class="ci-input-group">
-          <label>Assigned Housekeeper</label>
-          <select [(ngModel)]="currentTask().assignedToId">
-            <option [value]="undefined">Unassigned</option>
-            <option *ngFor="let s of hk.staff()" [value]="s.id">{{ s.name }} ({{ s.role }})</option>
-          </select>
-        </div>
       </div>
 
-      <div class="ci-input-group mt-3">
-        <label>Estimated Minutes *</label>
-        <input type="number" [(ngModel)]="currentTask().estimatedMins" min="5" max="300" placeholder="30">
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Estimated Minutes *</label>
+          <input type="number" [(ngModel)]="currentTask().estimatedMins" min="5" max="300" placeholder="30">
+        </div>
+        <div class="ci-input-group">
+          <label>Assigned Housekeeper</label>
+          <select [ngModel]="currentTask().assignedToId" (ngModelChange)="updateTaskAssignee($event)">
+            <option [ngValue]="undefined">Unassigned</option>
+            <option *ngFor="let user of assignedHousekeepers()" [ngValue]="user.id">
+              {{ user.fullName }} ({{ user.department }})
+            </option>
+          </select>
+        </div>
       </div>
 
       <div class="ci-input-group mt-3">
@@ -867,25 +923,52 @@
     <div class="ci-body">
       <div class="ci-form-grid">
         <div class="ci-input-group">
-          <label>Room Number *</label>
-          <input type="text" [(ngModel)]="currentLF().roomNumber" placeholder="e.g. 102">
+          <label>Floor *</label>
+          <select [ngModel]="lfSelectedFloor()" (ngModelChange)="updateLFFloor($event)">
+            <option value="" disabled>Select floor</option>
+            <option *ngFor="let floor of taskFloors()" [value]="floor">{{ floor }}</option>
+          </select>
         </div>
         <div class="ci-input-group">
-          <label>Item Description *</label>
-          <input type="text" [(ngModel)]="currentLF().description" placeholder="e.g. Gold wristwatch">
+          <label>Room Number *</label>
+          <select [ngModel]="currentLF().roomId" (ngModelChange)="updateLFRoom($event)">
+            <option [ngValue]="undefined" disabled>Select room</option>
+            <option *ngFor="let room of lfRoomsForSelectedFloor()" [ngValue]="room.id">
+              {{ room.roomNumber }} - {{ room.type }}
+            </option>
+          </select>
         </div>
       </div>
 
       <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
+          <label>Item Description *</label>
+          <input type="text" [(ngModel)]="currentLF().description" placeholder="e.g. Gold wristwatch">
+        </div>
+        <div class="ci-input-group">
           <label>Category *</label>
-          <select [(ngModel)]="currentLF().category">
-            <option *ngFor="let cat of lfCategories" [value]="cat">{{ cat }}</option>
+          <select [ngModel]="currentLF().categoryId" (ngModelChange)="updateLFCategory($event)">
+            <option [ngValue]="undefined" disabled>Select category</option>
+            <option *ngFor="let category of hk.lostFoundCategories()" [ngValue]="category.id">
+              {{ category.value }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Found By *</label>
+          <select [ngModel]="currentLF().foundById" (ngModelChange)="updateLFFoundBy($event)">
+            <option [ngValue]="undefined" disabled>Select user</option>
+            <option *ngFor="let user of assignedHousekeepers()" [ngValue]="user.id">
+              {{ user.fullName }} ({{ user.department }})
+            </option>
           </select>
         </div>
         <div class="ci-input-group">
-          <label>Found By *</label>
-          <input type="text" [(ngModel)]="currentLF().foundBy" placeholder="e.g. Meena Pillai">
+          <label>Found Date</label>
+          <input type="date" [(ngModel)]="currentLF().foundDate">
         </div>
       </div>
 
@@ -895,8 +978,13 @@
           <input type="text" [(ngModel)]="currentLF().storageLocation" placeholder="e.g. Locker A1">
         </div>
         <div class="ci-input-group">
-          <label>Found Date</label>
-          <input type="date" [(ngModel)]="currentLF().foundDate">
+          <label>Status</label>
+          <select [(ngModel)]="currentLF().status">
+            <option value="STORED">STORED</option>
+            <option value="CLAIMED">CLAIMED</option>
+            <option value="DONATED">DONATED</option>
+            <option value="DISPOSED">DISPOSED</option>
+          </select>
         </div>
       </div>
 
@@ -926,6 +1014,150 @@
   </div>
 </div>
 
+<!-- 3A. LOST & FOUND VIEW MODAL -->
+<div class="modal-overlay" *ngIf="isLFViewModalOpen() && selectedLF() as item" (click)="closeViewLFModal()">
+  <div class="ci-modal lf-view-modal" (click)="$event.stopPropagation()">
+    <div class="ci-header">
+      <div class="ci-title">
+        <span class="material-icons-round">visibility</span>
+        <div>
+          <h2>Lost & Found Details</h2>
+          <p>Registry LF-{{ item.id }} • Room {{ item.roomNumber }}</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="closeViewLFModal()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="ci-body">
+      <div class="lf-detail-hero">
+        <div>
+          <span class="detail-label">Item Description</span>
+          <h3>{{ item.description }}</h3>
+          <p *ngIf="item.notes">{{ item.notes }}</p>
+        </div>
+        <span class="status-badge lf-status" [class]="item.status.toLowerCase()">{{ item.status }}</span>
+      </div>
+
+      <div class="lf-detail-grid">
+        <div class="detail-cell">
+          <span>Room</span>
+          <strong>{{ item.roomNumber }}</strong>
+        </div>
+        <div class="detail-cell">
+          <span>Date Found</span>
+          <strong>{{ item.foundDate }}</strong>
+        </div>
+        <div class="detail-cell">
+          <span>Category</span>
+          <strong>{{ item.category || '-' }}</strong>
+        </div>
+        <div class="detail-cell">
+          <span>Found By</span>
+          <strong>{{ item.foundBy || '-' }}</strong>
+        </div>
+        <div class="detail-cell">
+          <span>Storage Location</span>
+          <strong>{{ item.storageLocation || '-' }}</strong>
+        </div>
+        <div class="detail-cell">
+          <span>Guest Name</span>
+          <strong>{{ item.guestName || '-' }}</strong>
+        </div>
+        <div class="detail-cell">
+          <span>Guest Contact</span>
+          <strong>{{ item.guestContact || '-' }}</strong>
+        </div>
+        <div class="detail-cell">
+          <span>Category ID</span>
+          <strong>{{ item.categoryId || '-' }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" (click)="closeViewLFModal()">Close</button>
+      <button class="ci-btn-confirm" (click)="closeViewLFModal(); openEditLFModal(item)">
+        <span class="material-icons-round">edit</span>
+        Edit Item
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 3B. MAINTENANCE VIEW MODAL -->
+<div class="modal-overlay" *ngIf="isMaintViewModalOpen() && selectedMaint() as item" (click)="closeViewMaintModal()">
+  <div class="ci-modal lf-view-modal" (click)="$event.stopPropagation()">
+    <div class="ci-header">
+      <div class="ci-title">
+        <span class="material-icons-round">visibility</span>
+        <div>
+          <h2>Maintenance Details</h2>
+          <p>Request M-{{ item.id }} • Room {{ item.roomNumber }}</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="closeViewMaintModal()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="ci-body">
+      <div class="lf-detail-hero">
+        <div>
+          <span class="detail-label">Repair Issue</span>
+          <h3>{{ item.issue }}</h3>
+          <p *ngIf="item.notes">{{ item.notes }}</p>
+        </div>
+        <span class="status-badge lf-status" [class]="item.status.toLowerCase()">{{ item.status }}</span>
+      </div>
+
+      <div class="lf-detail-grid">
+        <div class="detail-cell">
+          <span>Room</span>
+          <strong>{{ item.roomNumber }}</strong>
+        </div>
+        <div class="detail-cell">
+          <span>Reported At</span>
+          <strong>{{ item.reportedAt | date:'medium' }}</strong>
+        </div>
+        <div class="detail-cell">
+          <span>Category</span>
+          <strong>{{ item.category || '-' }}</strong>
+        </div>
+        <div class="detail-cell">
+          <span>Priority</span>
+          <strong>{{ item.priority || '-' }}</strong>
+        </div>
+        <div class="detail-cell">
+          <span>Reported By</span>
+          <strong>{{ item.reportedBy || '-' }}</strong>
+        </div>
+        <div class="detail-cell">
+          <span>Assigned To</span>
+          <strong>{{ item.assignedTo || 'Unassigned' }}</strong>
+        </div>
+        <div class="detail-cell">
+          <span>Status</span>
+          <strong>{{ item.status || '-' }}</strong>
+        </div>
+        <div class="detail-cell">
+          <span>Notes</span>
+          <strong>{{ item.notes || '-' }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" (click)="closeViewMaintModal()">Close</button>
+      <button class="ci-btn-confirm" (click)="closeViewMaintModal(); openEditMaintModal(item)">
+        <span class="material-icons-round">edit</span>
+        Edit Issue
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- 4. MAINTENANCE MODAL (Create/Edit) -->
 <div class="modal-overlay" *ngIf="isMaintModalOpen()" (click)="isMaintModalOpen.set(false)">
   <div class="ci-modal" (click)="$event.stopPropagation()">
@@ -944,38 +1176,72 @@
     <div class="ci-body">
       <div class="ci-form-grid">
         <div class="ci-input-group">
-          <label>Room/Location Number *</label>
-          <input type="text" [(ngModel)]="currentMaint().roomNumber" placeholder="e.g. 105">
+          <label>Floor *</label>
+          <select [ngModel]="maintSelectedFloor()" (ngModelChange)="updateMaintFloor($event)">
+            <option value="" disabled>Select floor</option>
+            <option *ngFor="let floor of taskFloors()" [value]="floor">{{ floor }}</option>
+          </select>
         </div>
+        <div class="ci-input-group">
+          <label>Room Number *</label>
+          <select [ngModel]="currentMaint().roomId" (ngModelChange)="updateMaintRoom($event)">
+            <option [ngValue]="undefined" disabled>Select room</option>
+            <option *ngFor="let room of maintRoomsForSelectedFloor()" [ngValue]="room.id">
+              {{ room.roomNumber }} - {{ room.type }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
           <label>Repair Issue *</label>
           <input type="text" [(ngModel)]="currentMaint().issue" placeholder="e.g. AC compressor noise">
         </div>
-      </div>
-
-      <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
           <label>Category *</label>
-          <select [(ngModel)]="currentMaint().category">
-            <option *ngFor="let cat of maintCategories" [value]="cat">{{ cat }}</option>
-          </select>
-        </div>
-        <div class="ci-input-group">
-          <label>Priority *</label>
-          <select [(ngModel)]="currentMaint().priority">
-            <option *ngFor="let pr of maintPriorities" [value]="pr">{{ pr }}</option>
+          <select [ngModel]="currentMaintCategoryId()" (ngModelChange)="updateMaintCategory($event)">
+            <option [ngValue]="undefined" disabled>Select category</option>
+            <option *ngFor="let cat of maintenanceCategoryOptions()" [ngValue]="cat.id">{{ cat.value }}</option>
           </select>
         </div>
       </div>
 
       <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
-          <label>Reported By *</label>
-          <input type="text" [(ngModel)]="currentMaint().reportedBy" placeholder="e.g. Meena Pillai">
+          <label>Priority *</label>
+          <select [ngModel]="currentMaintPriorityId()" (ngModelChange)="updateMaintPriority($event)">
+            <option [ngValue]="undefined" disabled>Select priority</option>
+            <option *ngFor="let pr of maintenancePriorityOptions()" [ngValue]="pr.id">{{ pr.value }}</option>
+          </select>
         </div>
         <div class="ci-input-group">
+          <label>Reported By *</label>
+          <select [ngModel]="currentMaint().reportedById" (ngModelChange)="updateMaintUser('reported', $event)">
+            <option [ngValue]="undefined" disabled>Select user</option>
+            <option *ngFor="let user of activeUsers()" [ngValue]="user.id">
+              {{ user.fullName }} ({{ user.department }})
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
           <label>Assigned Staff/Team</label>
-          <input type="text" [(ngModel)]="currentMaint().assignedTo" placeholder="e.g. Engineering Team">
+          <select [ngModel]="currentMaint().assignedToId" (ngModelChange)="updateMaintUser('assigned', $event)">
+            <option [ngValue]="undefined">Unassigned</option>
+            <option *ngFor="let user of activeUsers()" [ngValue]="user.id">
+              {{ user.fullName }} ({{ user.department }})
+            </option>
+          </select>
+        </div>
+        <div class="ci-input-group">
+          <label>Status</label>
+          <select [ngModel]="currentMaintStatusId()" (ngModelChange)="updateMaintStatusOption($event)">
+            <option [ngValue]="undefined" disabled>Select status</option>
+            <option *ngFor="let status of maintenanceStatusOptions()" [ngValue]="status.id">{{ status.value }}</option>
+          </select>
         </div>
       </div>
 

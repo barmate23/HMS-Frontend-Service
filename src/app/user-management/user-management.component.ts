@@ -11,10 +11,12 @@ import {
   SystemUser,
   UserManagementService,
   UserRole,
+  UserShift,
   UserStatus
 } from './user-management.service';
 
-type UserManagementTab = 'users' | 'roles' | 'activity';
+type UserManagementTab = 'users' | 'roles' | 'shifts' | 'activity';
+type ShiftTab = 'master' | 'assignment';
 type ModalMode = 'create' | 'edit';
 type UserValidationKey =
   'employeeId' |
@@ -42,7 +44,9 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   private routerSub?: Subscription;
 
   activeTab = signal<UserManagementTab>('users');
+  activeShiftTab = signal<ShiftTab>('master');
   searchQuery = signal('');
+  assignmentSearchQuery = signal('');
   departmentFilter = signal('All Departments');
   statusFilter = signal('All Statuses');
   roleFilter = signal('All Roles');
@@ -50,9 +54,11 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   isUserModalOpen = signal(false);
   isRoleModalOpen = signal(false);
+  isShiftModalOpen = signal(false);
   modalMode = signal<ModalMode>('create');
   currentUser = signal<Partial<SystemUser>>({});
   currentRole = signal<Partial<UserRole>>({});
+  currentShift = signal<Partial<UserShift>>({});
   roleDeleteTarget = signal<UserRole | null>(null);
   userFormSubmitted = signal(false);
   userValidationErrors = signal<Partial<Record<UserValidationKey, string>>>({});
@@ -67,6 +73,17 @@ export class UserManagementComponent implements OnInit, OnDestroy {
       twoFactor: users.filter(user => user.twoFactorEnabled).length,
       roles: this.userService.roles().length,
       admins: this.userService.roles().filter(role => role.level === 'Admin').length
+    };
+  });
+
+  readonly shiftStats = computed(() => {
+    const shifts = this.userService.shiftConfigs();
+    const assigned = this.userService.users().filter(user => !!user.shift).length;
+    return {
+      total: shifts.length,
+      active: shifts.filter(shift => shift.isActive).length,
+      assigned,
+      unassigned: this.userService.users().filter(user => !user.shift).length
     };
   });
 
@@ -118,6 +135,34 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     });
   });
 
+  readonly filteredShifts = computed(() => {
+    const query = this.searchQuery().toLowerCase().trim();
+    const department = this.departmentFilter();
+    return this.userService.shiftConfigs().filter(shift => {
+      const matchesQuery = !query ||
+        shift.name.toLowerCase().includes(query) ||
+        shift.code.toLowerCase().includes(query) ||
+        shift.department.toLowerCase().includes(query) ||
+        shift.property.toLowerCase().includes(query);
+      const matchesDepartment = department === 'All Departments' || shift.department === department;
+      return matchesQuery && matchesDepartment;
+    });
+  });
+
+  readonly filteredShiftAssignmentUsers = computed(() => {
+    const query = this.assignmentSearchQuery().toLowerCase().trim();
+    return this.filteredUsers().filter(user => {
+      const roleName = this.roleName(user.roleId).toLowerCase();
+      return !query ||
+        user.fullName.toLowerCase().includes(query) ||
+        user.employeeId.toLowerCase().includes(query) ||
+        user.username.toLowerCase().includes(query) ||
+        user.department.toLowerCase().includes(query) ||
+        user.shift.toLowerCase().includes(query) ||
+        roleName.includes(query);
+    });
+  });
+
   ngOnInit(): void {
     this.updateTabFromUrl(this.router.url);
     this.routerSub = this.router.events.pipe(
@@ -150,7 +195,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
       department: this.userService.departments()[0]?.name || 'Front Office',
       roleId: this.userService.roles()[0]?.id,
       property: this.userService.properties()[0]?.name,
-      shift: this.userService.shifts[0],
+      shift: this.userService.shifts()[0],
       status: 'ACTIVE',
       twoFactorEnabled: false,
       accessibleFloors: ['All Floors'],
@@ -227,6 +272,53 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   closeRoleModal(): void {
     this.isRoleModalOpen.set(false);
     document.body.style.overflow = '';
+  }
+
+  openCreateShift(): void {
+    this.modalMode.set('create');
+    this.currentShift.set({
+      name: '',
+      code: '',
+      startTime: '09:00',
+      endTime: '18:00',
+      department: this.userService.departments()[0]?.name || 'Front Office',
+      property: this.userService.properties()[0]?.name,
+      isActive: true,
+      notes: ''
+    });
+    this.isShiftModalOpen.set(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  openEditShift(shift: UserShift): void {
+    this.modalMode.set('edit');
+    this.currentShift.set({ ...shift });
+    this.isShiftModalOpen.set(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  saveShift(): void {
+    this.userService.saveShift(this.currentShift());
+    this.closeShiftModal();
+  }
+
+  closeShiftModal(): void {
+    this.isShiftModalOpen.set(false);
+    document.body.style.overflow = '';
+  }
+
+  deleteShift(shift: UserShift): void {
+    if (confirm(`Delete shift "${shift.name}"?`)) {
+      this.userService.deleteShift(shift.id);
+    }
+  }
+
+  assignUserShift(user: SystemUser, shift: string): void {
+    this.userService.setUserShift(user, shift);
+  }
+
+  assignedUsersForShift(shiftName: string): SystemUser[] {
+    return this.userService.users().filter(user => user.shift === shiftName);
   }
 
   deleteUser(user: SystemUser): void {
@@ -396,6 +488,8 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   private updateTabFromUrl(url: string): void {
     if (url.includes('/user-management/roles')) {
       this.activeTab.set('roles');
+    } else if (url.includes('/user-management/shifts')) {
+      this.activeTab.set('shifts');
     } else if (url.includes('/user-management/activity')) {
       this.activeTab.set('activity');
     } else {

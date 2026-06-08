@@ -39,13 +39,15 @@ export const routes: Routes = [
       { path: 'user-management', redirectTo: 'user-management/users', pathMatch: 'full' },
       { path: 'user-management/users', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) },
       { path: 'user-management/roles', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) },
+      { path: 'user-management/shifts', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) },
       { path: 'user-management/activity', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) },
       { path: 'pos', redirectTo: 'pos/outlets', pathMatch: 'full' },
       { path: 'pos/outlets', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) },
       { path: 'pos/dining', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) },
       { path: 'pos/orders', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) },
       { path: 'pos/billing', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) },
-      { path: 'pos/menu', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) }
+      { path: 'pos/menu', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) },
+      { path: 'pos/billing-setup', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) }
     ]
   }
 ];

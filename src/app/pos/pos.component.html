@@ -5,10 +5,11 @@
       <button class="tab-btn" [class.active]="activeTab() === 'dining'" (click)="switchTab('dining')"><span class="material-icons-round">table_restaurant</span>Table Dining</button>
       <button class="tab-btn" [class.active]="activeTab() === 'orders'" (click)="switchTab('orders')"><span class="material-icons-round">restaurant_menu</span>Orders</button>
       <button class="tab-btn" [class.active]="activeTab() === 'billing'" (click)="switchTab('billing')"><span class="material-icons-round">receipt_long</span>Billing</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'billing-setup'" (click)="switchTab('billing-setup')"><span class="material-icons-round">request_quote</span>Billing Setup</button>
       <button class="tab-btn" [class.active]="activeTab() === 'menu'" (click)="switchTab('menu')"><span class="material-icons-round">menu_book</span>Menu Management</button>
     </div>
 
-    <div class="nav-right">
+    <div class="nav-right" *ngIf="activeTab() !== 'billing-setup'">
       <div class="search-box">
         <span class="material-icons-round">search</span>
         <input type="text" [placeholder]="activeTab() === 'orders' ? 'Search order, table, room...' : activeTab() === 'dining' ? 'Search table, server, section...' : activeTab() === 'billing' ? 'Search bill, room, guest...' : 'Search outlet, item, category...'" [ngModel]="search()" (ngModelChange)="search.set($event)">
@@ -144,7 +145,7 @@
       <div class="card-header"><h2 class="card-title">Menu & Item Catalog</h2><span class="total-badge">{{ filteredMenu().length }} Items</span></div>
       <div class="table-container">
         <table class="premium-table hk-grid-table menu-table">
-          <thead><tr><th>ITEM</th><th>OUTLET</th><th>CATEGORY</th><th>PRICE</th><th>TAX</th><th>VARIANTS / MODIFIERS</th><th>STOCK</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+          <thead><tr><th>ITEM</th><th>OUTLET</th><th>CATEGORY</th><th>PRICE</th><th>TAX</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
           <tbody>
             <tr *ngFor="let item of filteredMenu()">
               <td>
@@ -157,8 +158,6 @@
               <td>{{ item.category }}<span class="subline">{{ item.subcategory }}</span></td>
               <td>₹{{ item.price }}<span class="subline" *ngIf="item.happyHourPrice">HH ₹{{ item.happyHourPrice }} • {{ item.happyHourWindow }}</span></td>
               <td>{{ item.taxPercent }}%</td>
-              <td><span class="subline">{{ item.variants.join(', ') || 'No variants' }}</span><span class="subline">{{ item.modifiers.join(', ') || 'No modifiers' }}</span></td>
-              <td>{{ item.stockItem }}</td>
               <td><span class="status-badge" [class.completed]="item.available" [class.cancelled]="!item.available">{{ item.available ? 'AVAILABLE' : 'UNAVAILABLE' }}</span></td>
               <td><div class="action-buttons"><button class="btn-icon check" (click)="toggleMenuAvailability(item)" title="Toggle Available"><span class="material-icons-round">{{ item.available ? 'visibility_off' : 'visibility' }}</span></button><button class="btn-icon edit" (click)="openEdit('menu', item)"><span class="material-icons-round">edit</span></button><button class="btn-icon delete" (click)="deleteMenuItem(item.id)"><span class="material-icons-round">delete_outline</span></button></div></td>
             </tr>
@@ -186,6 +185,100 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="modern-card" *ngSwitchCase="'billing-setup'">
+      <div class="card-header">
+        <h2 class="card-title">Billing Setup</h2>
+        <div class="header-actions">
+          <button type="button" class="mini-add-btn" *ngIf="!billingSetupEditMode()[billingSetupSection()]" (click)="setBillingSetupEdit(billingSetupSection(), true)"><span class="material-icons-round">edit</span>Edit</button>
+          <button type="button" class="mini-add-btn" *ngIf="billingSetupEditMode()[billingSetupSection()]" (click)="setBillingSetupEdit(billingSetupSection(), false)"><span class="material-icons-round">visibility</span>View</button>
+          <button type="button" class="btn-primary" *ngIf="billingSetupEditMode()[billingSetupSection()]" (click)="saveBillingSetupSection(billingSetupSection())"><span class="material-icons-round">save</span>Save</button>
+        </div>
+      </div>
+
+      <div class="billing-setup-view">
+        <div class="setup-subnav">
+          <button type="button" [class.active]="billingSetupSection() === 'identity'" (click)="switchBillingSetupSection('identity')"><span class="material-icons-round">verified_receipt</span>Tax Identity</button>
+          <button type="button" [class.active]="billingSetupSection() === 'taxation'" (click)="switchBillingSetupSection('taxation')"><span class="material-icons-round">percent</span>Taxation Rules</button>
+          <button type="button" [class.active]="billingSetupSection() === 'offers'" (click)="switchBillingSetupSection('offers')"><span class="material-icons-round">local_offer</span>Offers & Discounts</button>
+        </div>
+
+        <section class="setup-band" *ngIf="billingSetupSection() === 'identity'">
+          <div class="setup-section-head">
+            <span class="material-icons-round">verified_receipt</span>
+            <div>
+              <h3>Statutory Billing Identity</h3>
+              <p>Configure hotel GST, PAN and invoice identity used on POS bills.</p>
+            </div>
+            <span class="setup-mode-pill">{{ billingSetupEditMode().identity ? 'Edit Mode' : 'View Mode' }}</span>
+          </div>
+          <div class="setup-form-grid">
+            <div class="ci-input-group"><label>Legal Entity Name</label><input [disabled]="!billingSetupEditMode().identity" [ngModel]="billingSetup().legalName" (ngModelChange)="updateBillingSetup('legalName', $event)"></div>
+            <div class="ci-input-group"><label>GST Number</label><input [disabled]="!billingSetupEditMode().identity" [ngModel]="billingSetup().gstNumber" (ngModelChange)="updateBillingSetup('gstNumber', $event)" placeholder="22AAAAA0000A1Z5"></div>
+            <div class="ci-input-group"><label>PAN Number</label><input [disabled]="!billingSetupEditMode().identity" [ngModel]="billingSetup().panNumber" (ngModelChange)="updateBillingSetup('panNumber', $event)" placeholder="AAAAA0000A"></div>
+            <div class="ci-input-group"><label>Invoice Prefix</label><input [disabled]="!billingSetupEditMode().identity" [ngModel]="billingSetup().invoicePrefix" (ngModelChange)="updateBillingSetup('invoicePrefix', $event)"></div>
+            <div class="ci-input-group"><label>Place of Supply</label><input [disabled]="!billingSetupEditMode().identity" [ngModel]="billingSetup().placeOfSupply" (ngModelChange)="updateBillingSetup('placeOfSupply', $event)"></div>
+            <div class="ci-input-group"><label>Default Tax Profile</label><select [disabled]="!billingSetupEditMode().identity" [ngModel]="billingSetup().defaultTaxProfile" (ngModelChange)="updateBillingSetup('defaultTaxProfile', $event)"><option>GST 5%</option><option>GST 12%</option><option>GST 18%</option><option>GST Mixed</option></select></div>
+          </div>
+          <div class="setup-toggle-row">
+            <label class="toggle-option"><input type="checkbox" [disabled]="!billingSetupEditMode().identity" [ngModel]="billingSetup().enableInclusiveTax" (ngModelChange)="updateBillingSetup('enableInclusiveTax', $event)"> Inclusive tax pricing</label>
+            <label class="toggle-option"><input type="checkbox" [disabled]="!billingSetupEditMode().identity" [ngModel]="billingSetup().enableRoomPosting" (ngModelChange)="updateBillingSetup('enableRoomPosting', $event)"> Allow room posting</label>
+            <label class="toggle-option"><input type="checkbox" [disabled]="!billingSetupEditMode().identity" [ngModel]="billingSetup().enableOfferStacking" (ngModelChange)="updateBillingSetup('enableOfferStacking', $event)"> Allow offer stacking</label>
+          </div>
+        </section>
+
+        <section class="setup-band" *ngIf="billingSetupSection() === 'taxation'">
+          <div class="setup-section-head">
+            <span class="material-icons-round">percent</span>
+            <div>
+              <h3>Hotel Taxation Rules</h3>
+              <p>Maintain POS tax rates for food, beverage, service charge and future hotel tax rules.</p>
+            </div>
+            <span class="setup-mode-pill">{{ billingSetupEditMode().taxation ? 'Edit Mode' : 'View Mode' }}</span>
+          </div>
+          <div class="setup-rule-list">
+            <div class="setup-rule-row" *ngFor="let rule of taxRules(); let i = index">
+              <div class="ci-input-group"><label>Rule Name</label><input [disabled]="!billingSetupEditMode().taxation" [ngModel]="rule.name" (ngModelChange)="updateTaxRule(i, 'name', $event)"></div>
+              <div class="ci-input-group"><label>Code</label><input [disabled]="!billingSetupEditMode().taxation" [ngModel]="rule.code" (ngModelChange)="updateTaxRule(i, 'code', $event)"></div>
+              <div class="ci-input-group"><label>Rate %</label><input [disabled]="!billingSetupEditMode().taxation" type="number" [ngModel]="rule.rate" (ngModelChange)="updateTaxRule(i, 'rate', $event)"></div>
+              <div class="ci-input-group"><label>Applies To</label><input [disabled]="!billingSetupEditMode().taxation" [ngModel]="rule.appliesTo" (ngModelChange)="updateTaxRule(i, 'appliesTo', $event)"></div>
+              <label class="toggle-option setup-row-toggle"><input type="checkbox" [disabled]="!billingSetupEditMode().taxation" [ngModel]="rule.active" (ngModelChange)="updateTaxRule(i, 'active', $event)"> Active</label>
+            </div>
+          </div>
+        </section>
+
+        <section class="setup-band" *ngIf="billingSetupSection() === 'offers'">
+          <div class="setup-section-head">
+            <span class="material-icons-round">local_offer</span>
+            <div>
+              <h3>Coupons, Discounts & Offers</h3>
+              <p>Prepare offer configuration with expiry, validity and discount behavior for future POS promotions.</p>
+            </div>
+            <button type="button" class="mini-add-btn" (click)="addOfferRule()"><span class="material-icons-round">add</span>Add Coupon</button>
+            <span class="setup-mode-pill">{{ billingSetupEditMode().offers ? 'Edit Mode' : 'View Mode' }}</span>
+          </div>
+          <div class="offer-grid">
+            <div class="offer-card" *ngFor="let offer of offerRules(); let i = index">
+              <div class="offer-card-head">
+                <span class="soft-pill">{{ offer.code }}</span>
+                <div class="offer-card-actions">
+                  <label class="toggle-option"><input type="checkbox" [disabled]="!billingSetupEditMode().offers" [ngModel]="offer.active" (ngModelChange)="updateOfferRule(i, 'active', $event)"> Active</label>
+                  <button type="button" class="btn-icon delete" *ngIf="billingSetupEditMode().offers" title="Delete coupon" (click)="deleteOfferRule(i)"><span class="material-icons-round">delete_outline</span></button>
+                </div>
+              </div>
+              <div class="setup-form-grid compact">
+                <div class="ci-input-group"><label>Offer Name</label><input [disabled]="!billingSetupEditMode().offers" [ngModel]="offer.name" (ngModelChange)="updateOfferRule(i, 'name', $event)"></div>
+                <div class="ci-input-group"><label>Discount Type</label><select [disabled]="!billingSetupEditMode().offers" [ngModel]="offer.type" (ngModelChange)="updateOfferRule(i, 'type', $event)"><option>Percentage</option><option>Flat</option><option>Complimentary</option></select></div>
+                <div class="ci-input-group"><label>Value</label><input [disabled]="!billingSetupEditMode().offers" type="number" [ngModel]="offer.value" (ngModelChange)="updateOfferRule(i, 'value', $event)"></div>
+                <div class="ci-input-group"><label>Valid From</label><input [disabled]="!billingSetupEditMode().offers" type="date" [ngModel]="offer.validFrom" (ngModelChange)="updateOfferRule(i, 'validFrom', $event)"></div>
+                <div class="ci-input-group"><label>Valid To</label><input [disabled]="!billingSetupEditMode().offers" type="date" [ngModel]="offer.validTo" (ngModelChange)="updateOfferRule(i, 'validTo', $event)"></div>
+                <div class="ci-input-group"><label>Coupon Code</label><input [disabled]="!billingSetupEditMode().offers" [ngModel]="offer.code" (ngModelChange)="updateOfferRule(i, 'code', $event)"></div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
 
@@ -323,7 +416,7 @@
 
       <ng-container *ngSwitchCase="'menu'">
         <div class="ci-form-grid"><div class="ci-input-group"><label>Outlet</label><select [(ngModel)]="currentMenuItem().outletId"><option *ngFor="let outlet of pos.outlets()" [value]="outlet.id">{{ outlet.name }}</option></select></div><div class="ci-input-group"><label>Item Name *</label><input [(ngModel)]="currentMenuItem().name"></div></div>
-        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Category</label><input [(ngModel)]="currentMenuItem().category"></div><div class="ci-input-group"><label>Subcategory</label><input [(ngModel)]="currentMenuItem().subcategory"></div></div>
+        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Category</label><select [(ngModel)]="currentMenuItem().category"><option *ngFor="let category of pos.menuCategories()" [value]="category">{{ category }}</option></select></div><div class="ci-input-group"><label>Subcategory</label><select [(ngModel)]="currentMenuItem().subcategory"><option *ngFor="let subcategory of pos.menuSubcategories()" [value]="subcategory">{{ subcategory }}</option></select></div></div>
         <div class="menu-image-form mt-3">
           <div class="menu-image-preview">
             <img [src]="menuImage(currentMenuItem())" alt="Menu item preview">
@@ -337,7 +430,7 @@
             </label>
           </div>
         </div>
-        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Price</label><input type="number" [(ngModel)]="currentMenuItem().price"></div></div>
+        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Price</label><input type="number" [(ngModel)]="currentMenuItem().price"></div><div class="ci-input-group"><label>Tax %</label><input type="number" min="0" max="100" step="0.01" [(ngModel)]="currentMenuItem().taxPercent"></div></div>
         <div class="toggle-row"><label class="toggle-option"><input type="checkbox" [(ngModel)]="currentMenuItem().available"> Available</label><label class="toggle-option"><input type="checkbox" [(ngModel)]="currentMenuItem().featured"> Featured / Fast moving</label></div>
       </ng-container>
 
@@ -399,8 +492,39 @@
         <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Status</label><select [(ngModel)]="currentBill().status"><option *ngFor="let status of pos.billStatuses()" [value]="status">{{ status }}</option></select></div><div class="ci-input-group" *ngIf="currentBill().orderType === 'TABLE'"><label>Table</label><select [ngModel]="currentBill().tableNo" (ngModelChange)="updateBillTable($event)"><option value="" disabled>Select table</option><option *ngFor="let table of billTables()" [value]="table.number">{{ table.number }} - {{ table.section }}</option></select></div></div>
         <div class="ci-form-grid mt-3" *ngIf="currentBill().orderType === 'ROOM'"><div class="ci-input-group"><label>Floor</label><select [ngModel]="currentBill().floorId" (ngModelChange)="updateBillFloor($event)"><option [ngValue]="null" disabled>Select floor</option><option *ngFor="let floor of billRoomFloors()" [ngValue]="floor.id">{{ floor.floorNumber }}</option></select></div><div class="ci-input-group"><label>Room</label><select [ngModel]="currentBill().roomId" (ngModelChange)="updateBillRoom($event)"><option [ngValue]="null" disabled>Select room</option><option *ngFor="let room of billRooms()" [ngValue]="room.id">{{ room.roomNumber }} - {{ room.status }}</option></select></div></div>
         <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Guest Name</label><input [(ngModel)]="currentBill().guestName"></div><div class="ci-input-group" *ngIf="currentBill().orderType === 'ROOM'"><label>Room No.</label><input [(ngModel)]="currentBill().roomNo"></div></div>
-        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Subtotal</label><input type="number" [(ngModel)]="currentBill().subtotal"></div><div class="ci-input-group"><label>Discount</label><input type="number" [(ngModel)]="currentBill().discount"></div></div>
-        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Tax</label><input type="number" [(ngModel)]="currentBill().tax"></div><div class="ci-input-group"><label>Paid Amount</label><input type="number" [(ngModel)]="currentBill().paid"></div></div>
+        <div class="bill-preview" *ngIf="currentBillBreakdown() as bill">
+          <div class="bill-preview-head">
+            <div><strong>{{ bill.order?.orderNo || 'Select an order' }}</strong><span>{{ billingSetup().enableInclusiveTax ? 'Inclusive tax pricing' : 'Exclusive tax pricing' }} • Item-level GST</span></div>
+            <em>₹{{ bill.total | number:'1.0-0' }}</em>
+          </div>
+          <div class="bill-line-table" *ngIf="bill.lines.length; else noBillLines">
+            <div class="bill-line-row head"><span>Item</span><span>Qty</span><span>Rate</span><span>Tax</span><span>Total</span></div>
+            <div class="bill-line-row" *ngFor="let line of bill.lines">
+              <span><strong>{{ line.name }}</strong><small>{{ line.course }}</small></span>
+              <span>{{ line.qty }}</span>
+              <span>₹{{ line.price | number:'1.0-0' }}</span>
+              <span>{{ line.taxRate }}%<small>₹{{ line.taxAmount | number:'1.2-2' }}</small></span>
+              <span>₹{{ line.totalAmount | number:'1.0-0' }}</span>
+            </div>
+          </div>
+          <ng-template #noBillLines><div class="empty-order-builder">Select an order with menu items to generate bill lines.</div></ng-template>
+          <div class="tax-bucket-list" *ngIf="bill.taxBuckets.length">
+            <div class="tax-bucket" *ngFor="let bucket of bill.taxBuckets">
+              <strong>GST {{ bucket.rate }}%</strong>
+              <span>Taxable ₹{{ bucket.taxableAmount | number:'1.2-2' }}</span>
+              <span>CGST ₹{{ bucket.cgst | number:'1.2-2' }}</span>
+              <span>SGST ₹{{ bucket.sgst | number:'1.2-2' }}</span>
+            </div>
+          </div>
+          <div class="bill-total-stack">
+            <span><small>Gross</small><strong>₹{{ bill.grossAmount | number:'1.0-0' }}</strong></span>
+            <span><small>Discount</small><strong>₹{{ bill.discount | number:'1.0-0' }}</strong></span>
+            <span><small>Taxable</small><strong>₹{{ bill.taxableSubtotal | number:'1.0-0' }}</strong></span>
+            <span><small>Tax</small><strong>₹{{ bill.taxTotal | number:'1.0-0' }}</strong></span>
+            <span><small>Due</small><strong>₹{{ bill.due | number:'1.0-0' }}</strong></span>
+          </div>
+        </div>
+        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Discount</label><input type="number" [ngModel]="currentBill().discount" (ngModelChange)="updateBillDiscount($event)"></div><div class="ci-input-group"><label>Paid Amount</label><input type="number" [ngModel]="currentBill().paid" (ngModelChange)="updateBillPaid($event)"></div></div>
         <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Payment Modes</label><select [ngModel]="currentBill().paymentModes?.[0]" (ngModelChange)="updatePaymentMode($event)"><option *ngFor="let mode of pos.paymentModes()" [value]="mode">{{ mode }}</option></select></div><div class="ci-input-group"><label>Comp / Void Reason</label><select [(ngModel)]="currentBill().compReason"><option value="">Select reason</option><option *ngFor="let reason of pos.voidReasons()" [value]="reason">{{ reason }}</option></select></div></div>
         <label class="toggle-option mt-3"><input type="checkbox" [(ngModel)]="currentBill().postedToFolio"> Posted to guest folio</label>
       </ng-container>
@@ -417,10 +541,6 @@
         <div class="ci-form-grid mt-3">
           <div class="ci-input-group"><label>Covers</label><input type="number" min="0" [(ngModel)]="currentTable().covers"></div>
           <div class="ci-input-group"><label>Server</label><select [(ngModel)]="currentTable().server"><option value="Unassigned">Unassigned</option><option *ngFor="let user of pos.users()" [value]="user">{{ user }}</option></select></div>
-        </div>
-        <div class="ci-form-grid mt-3">
-          <div class="ci-input-group"><label>Guest Name</label><input [(ngModel)]="currentTable().guestName" placeholder="Optional for reserved tables"></div>
-          <div class="ci-input-group"><label>Booking Time</label><div class="clock-input"><span class="material-icons-round">schedule</span><input type="time" [(ngModel)]="currentTable().bookingTime"></div></div>
         </div>
       </ng-container>
 

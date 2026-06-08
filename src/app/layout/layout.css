@@ -177,12 +177,25 @@
 }
 
 .submenu-item {
-  padding: 3px 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  padding: 3px 8px 3px 18px;
   margin-bottom: 2px;
   font-size: 0.85rem;
 }
+
 .submenu-item .material-icons-round {
   font-size: 14px;
+  width: 16px;
+  min-width: 16px;
+  text-align: center;
+}
+
+.submenu-item .nav-label {
+  flex: 0 1 auto;
+  text-align: left;
 }
 
 .nav-label {

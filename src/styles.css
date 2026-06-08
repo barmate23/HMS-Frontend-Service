@@ -31,9 +31,9 @@
   --border-color: var(--surface-200);
 
   /* Layout Variables */
-  --sidebar-width: 190px; /* Slimmer, professional CRM sidebar */
-  --sidebar-collapsed-width: 44px;
-  --topbar-height: 36px; /* Ultra sleek, high-density top bar */
+  --sidebar-width: 176px; /* Compact dashboard shell */
+  --sidebar-collapsed-width: 40px;
+  --topbar-height: 32px; /* Dense top bar for data-heavy screens */
   
   --font-sans: "Poppins", sans-serif;
   --font-poppins: "Poppins", sans-serif;

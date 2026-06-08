@@ -1,0 +1,186 @@
+<section class="setup-shell">
+  <div class="setup-toolbar">
+    <div class="toolbar-head">
+      <div>
+        <span class="eyebrow">Setup</span>
+        <h1>Master Data Configuration</h1>
+      </div>
+      <button type="button" class="btn-primary" (click)="openCreate()">
+        <span class="material-icons-round">add</span>
+        Add Master Data
+      </button>
+    </div>
+
+    <div class="summary-grid">
+      <div>
+        <span class="material-icons-round">database</span>
+        <div>
+          <strong>{{ records().length }}</strong>
+          <small>Total records</small>
+        </div>
+      </div>
+      <div>
+        <span class="material-icons-round">check_circle</span>
+        <div>
+          <strong>{{ activeCount() }}</strong>
+          <small>Active</small>
+        </div>
+      </div>
+      <div>
+        <span class="material-icons-round">pause_circle</span>
+        <div>
+          <strong>{{ inactiveCount() }}</strong>
+          <small>Inactive</small>
+        </div>
+      </div>
+      <div>
+        <span class="material-icons-round">category</span>
+        <div>
+          <strong>{{ categories().length }}</strong>
+          <small>Categories</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="setup-grid">
+    <aside class="category-panel">
+      <div class="panel-head">
+        <h2>Categories</h2>
+        <span>{{ categories().length }}</span>
+      </div>
+      <div class="category-list">
+        <button
+          type="button"
+          class="category-row"
+          *ngFor="let category of categories()"
+          [class.active]="activeCategory() === category.code"
+          (click)="selectCategory(category.code)">
+          <strong>{{ category.label }}</strong>
+          <small>{{ category.code }}</small>
+        </button>
+      </div>
+    </aside>
+
+    <article class="records-panel">
+      <header>
+        <div>
+          <h2>{{ activeCategoryMeta().label }}</h2>
+          <p>{{ activeCategoryMeta().description }}</p>
+        </div>
+        <div class="records-actions">
+          <label class="search-box">
+            <span class="material-icons-round">search</span>
+            <input placeholder="Search code, value, description..." [ngModel]="search()" (ngModelChange)="search.set($event)">
+          </label>
+          <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+            <option value="ALL">All Status</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="notice error" *ngIf="errorMessage()">{{ errorMessage() }}</div>
+      <div class="notice success" *ngIf="successMessage()">{{ successMessage() }}</div>
+
+      <div class="table-wrap" *ngIf="!isLoading(); else loadingState">
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Code</th>
+              <th>Value</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Updated</th>
+              <th class="right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let record of filteredRecords()">
+              <td><span class="soft-pill">{{ record.category }}</span></td>
+              <td><strong>{{ record.code }}</strong></td>
+              <td>{{ record.value }}</td>
+              <td>{{ record.description || '-' }}</td>
+              <td><span class="status-pill" [class.inactive]="!record.isActive">{{ record.isActive ? 'ACTIVE' : 'INACTIVE' }}</span></td>
+              <td>{{ record.updatedAt || record.createdAt || '-' }}</td>
+              <td class="right">
+                <div class="row-actions">
+                  <button type="button" class="icon-btn" [title]="record.isActive ? 'Deactivate' : 'Activate'" (click)="toggleActive(record)">
+                    <span class="material-icons-round">{{ record.isActive ? 'pause' : 'play_arrow' }}</span>
+                  </button>
+                  <button type="button" class="icon-btn edit" title="Edit" (click)="openEdit(record)">
+                    <span class="material-icons-round">edit</span>
+                  </button>
+                  <button type="button" class="icon-btn delete" title="Delete" (click)="deleteRecord(record)">
+                    <span class="material-icons-round">delete_outline</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="empty-state" *ngIf="!filteredRecords().length">
+          <span class="material-icons-round">inventory_2</span>
+          <strong>No master data found</strong>
+          <small>Create a record for {{ activeCategory() }} to start using it in dropdowns.</small>
+        </div>
+      </div>
+
+      <ng-template #loadingState>
+        <div class="loading-state">Loading master data...</div>
+      </ng-template>
+    </article>
+  </div>
+</section>
+
+<div class="modal-overlay" *ngIf="isModalOpen()" (click)="closeModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <header>
+      <div>
+        <span class="eyebrow">{{ modalMode() === 'create' ? 'Create' : 'Edit' }}</span>
+        <h2>{{ modalMode() === 'create' ? 'Add Master Data' : 'Edit Master Data' }}</h2>
+      </div>
+      <button type="button" class="close-btn" (click)="closeModal()"><span class="material-icons-round">close</span></button>
+    </header>
+
+    <div class="form-grid">
+      <label>
+        <span>Category</span>
+        <input [ngModel]="currentRecord().category" (ngModelChange)="updateCurrent('category', $event)" placeholder="DEPARTMENT">
+        <em *ngIf="fieldError('category')">{{ fieldError('category') }}</em>
+      </label>
+      <label>
+        <span>Code</span>
+        <input [ngModel]="currentRecord().code" (ngModelChange)="updateCurrent('code', $event)" placeholder="FRONT_OFFICE">
+        <em *ngIf="fieldError('code')">{{ fieldError('code') }}</em>
+      </label>
+      <label>
+        <span>Value</span>
+        <input [ngModel]="currentRecord().value" (ngModelChange)="updateCurrent('value', $event)" placeholder="Front Office">
+        <em *ngIf="fieldError('value')">{{ fieldError('value') }}</em>
+      </label>
+      <label>
+        <span>Status</span>
+        <select [ngModel]="currentRecord().isActive" (ngModelChange)="updateCurrent('isActive', $event)">
+          <option [ngValue]="true">Active</option>
+          <option [ngValue]="false">Inactive</option>
+        </select>
+      </label>
+      <label class="wide">
+        <span>Description</span>
+        <textarea rows="4" [ngModel]="currentRecord().description" (ngModelChange)="updateCurrent('description', $event)" placeholder="Describe where this value is used..."></textarea>
+      </label>
+    </div>
+
+    <footer>
+      <button type="button" class="btn-secondary" (click)="closeModal()">Cancel</button>
+      <button type="button" class="btn-primary" [disabled]="isSaving()" (click)="saveRecord()">
+        <span class="material-icons-round">save</span>
+        {{ isSaving() ? 'Saving...' : 'Save Master Data' }}
+      </button>
+    </footer>
+  </div>
+</div>

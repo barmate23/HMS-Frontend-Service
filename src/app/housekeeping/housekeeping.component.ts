@@ -121,6 +121,8 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   isMaintViewModalOpen = signal(false);
   isStatusModalOpen  = signal(false);
   isSopModalOpen     = signal(false);
+  isStaffTaskModalOpen = signal(false);
+  isStaffRoomModalOpen = signal(false);
   editingSopId       = signal<string | null>(null);
   modalMode          = signal<'create' | 'edit'>('create');
 
@@ -132,6 +134,10 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   selectedMaint   = signal<MaintenanceRequest | null>(null);
   currentSop      = signal<Partial<SopCheckpoint>>({});
   selectedRoom    = signal<HKRoom | null>(null);
+  selectedStaff    = signal<HKStaff | null>(null);
+  selectedRoomAssignmentStaff = signal<HKStaff | null>(null);
+  roomAssignmentFloor = signal<string>('Floor 1');
+  selectedRoomAssignmentIds = signal<number[]>([]);
   newRoomStatus   = signal<HKStatus>('VACANT_CLEAN');
 
   // --- Computed filtered lists ---
@@ -661,6 +667,96 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
       task.status !== 'COMPLETED' &&
       task.status !== 'SKIPPED'
     ).length;
+  }
+
+  staffAssignedRooms(staff: HKStaff): HKRoom[] {
+    const byRoomAssignment = this.hk.rooms().filter(room => room.assignedToId === staff.id);
+    const byStaffList = this.hk.rooms().filter(room => staff.assignedRoomIds.includes(room.id));
+    const rooms = [...byRoomAssignment, ...byStaffList];
+    return rooms.filter((room, index, list) => list.findIndex(item => item.id === room.id) === index);
+  }
+
+  staffPendingTasks(staff: HKStaff | null): HKTask[] {
+    if (!staff) return [];
+    return this.hk.tasks().filter(task =>
+      (task.assignedToId === staff.id || task.assignedToName === staff.name) &&
+      task.status !== 'COMPLETED' &&
+      task.status !== 'SKIPPED'
+    );
+  }
+
+  staffPendingTaskCount(staff: HKStaff): number {
+    return this.staffPendingTasks(staff).length;
+  }
+
+  staffPendingEstimatedMins(staff: HKStaff | null): number {
+    return this.staffPendingTasks(staff).reduce((total, task) => total + Number(task.estimatedMins || 0), 0);
+  }
+
+  openStaffPendingTasks(staff: HKStaff): void {
+    this.selectedStaff.set(staff);
+    this.isStaffTaskModalOpen.set(true);
+  }
+
+  closeStaffPendingTasks(): void {
+    this.isStaffTaskModalOpen.set(false);
+    this.selectedStaff.set(null);
+  }
+
+  roomAssignmentFloors(): string[] {
+    return Array.from(new Set(this.hk.rooms().map(room => room.floor))).filter(Boolean);
+  }
+
+  roomAssignmentRooms(): HKRoom[] {
+    const floor = this.roomAssignmentFloor();
+    return this.hk.rooms().filter(room => room.floor === floor);
+  }
+
+  roomAssignmentAvailableCount(): number {
+    const staff = this.selectedRoomAssignmentStaff();
+    return this.roomAssignmentRooms().filter(room => !room.assignedToId || room.assignedToId === staff?.id).length;
+  }
+
+  openStaffRoomAssignment(staff: HKStaff): void {
+    const floor = this.roomAssignmentFloors()[0] || 'Floor 1';
+    this.selectedRoomAssignmentStaff.set(staff);
+    this.roomAssignmentFloor.set(floor);
+    this.selectedRoomAssignmentIds.set(this.staffAssignedRooms(staff).filter(room => room.floor === floor).map(room => room.id));
+    this.isStaffRoomModalOpen.set(true);
+  }
+
+  closeStaffRoomAssignment(): void {
+    this.isStaffRoomModalOpen.set(false);
+    this.selectedRoomAssignmentStaff.set(null);
+    this.selectedRoomAssignmentIds.set([]);
+  }
+
+  changeRoomAssignmentFloor(floor: string): void {
+    const staff = this.selectedRoomAssignmentStaff();
+    this.roomAssignmentFloor.set(floor);
+    this.selectedRoomAssignmentIds.set(staff ? this.staffAssignedRooms(staff).filter(room => room.floor === floor).map(room => room.id) : []);
+  }
+
+  toggleRoomAssignment(roomId: number, checked: boolean): void {
+    this.selectedRoomAssignmentIds.update(ids => checked ? Array.from(new Set([...ids, roomId])) : ids.filter(id => id !== roomId));
+  }
+
+  isRoomSelectedForAssignment(roomId: number): boolean {
+    return this.selectedRoomAssignmentIds().includes(roomId);
+  }
+
+  saveStaffRoomAssignment(): void {
+    const staff = this.selectedRoomAssignmentStaff();
+    if (!staff) return;
+    const selectedIds = this.selectedRoomAssignmentIds();
+    this.roomAssignmentRooms().forEach(room => {
+      if (selectedIds.includes(room.id)) {
+        this.hk.assignRoomToStaff(room.id, staff.id);
+      } else if (room.assignedToId === staff.id || staff.assignedRoomIds.includes(room.id)) {
+        this.hk.assignRoomToStaff(room.id, undefined);
+      }
+    });
+    this.closeStaffRoomAssignment();
   }
 
   roomOpenMaintenanceCount(room: HKRoom): number {

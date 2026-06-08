@@ -304,6 +304,10 @@ export class HousekeepingService {
 
   assignRoomToStaff(roomId: number, staffId: number | undefined) {
     this._rooms.update(list => list.map(r => r.id === roomId ? { ...r, assignedToId: staffId } : r));
+    this._staff.update(list => list.map(staff => {
+      const withoutRoom = staff.assignedRoomIds.filter(id => id !== roomId);
+      return staff.id === staffId ? { ...staff, assignedRoomIds: [...withoutRoom, roomId] } : { ...staff, assignedRoomIds: withoutRoom };
+    }));
   }
 
   // --- Task CRUD ---

@@ -1,0 +1,251 @@
+<section class="dashboard-shell">
+  <div class="dashboard-toolbar">
+    <div>
+      <span class="eyebrow">HMS Cloud Command</span>
+      <h1>Main Dashboard</h1>
+      <p>Room inventory, booking revenue and POS movement for the selected financial year.</p>
+    </div>
+
+    <div class="filter-cluster">
+      <label>
+        <span>Financial Year</span>
+        <select [value]="selectedFinancialYear()" (change)="onFinancialYearChange($any($event.target).value)">
+          <option *ngFor="let year of financialYears()" [value]="year">{{ formatFinancialYear(year) }}</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <a routerLink="/masters/rooms" class="kpi-card room-total">
+      <span class="material-icons-round">hotel</span>
+      <div>
+        <strong>{{ roomKpis().total }}</strong>
+        <small>Total Rooms</small>
+      </div>
+    </a>
+
+    <a routerLink="/reservations" class="kpi-card room-available">
+      <span class="material-icons-round">meeting_room</span>
+      <div>
+        <strong>{{ roomKpis().available }}</strong>
+        <small>Available Rooms</small>
+      </div>
+    </a>
+
+    <a routerLink="/reservations" class="kpi-card room-occupied">
+      <span class="material-icons-round">bed</span>
+      <div>
+        <strong>{{ roomKpis().occupied }}</strong>
+        <small>Occupied Rooms</small>
+      </div>
+    </a>
+
+    <a routerLink="/reservations" class="kpi-card revenue">
+      <span class="material-icons-round">currency_rupee</span>
+      <div>
+        <strong>{{ totalMonthlyRevenue() | currency:'INR':'symbol':'1.0-0' }}</strong>
+        <small>FY Booking Revenue</small>
+      </div>
+    </a>
+
+    <a routerLink="/pos/orders" class="kpi-card pos">
+      <span class="material-icons-round">restaurant</span>
+      <div>
+        <strong>{{ posOrderCount() }}</strong>
+        <small>POS Orders</small>
+      </div>
+    </a>
+  </div>
+
+  <div class="dashboard-grid">
+    <article class="panel combined-chart-panel">
+      <header>
+        <div>
+          <h2>Revenue & Bookings</h2>
+          <p>{{ formatFinancialYear(selectedFinancialYear()) }} monthly booking performance</p>
+        </div>
+        <div class="panel-summary">
+          <div>
+            <strong>{{ totalMonthlyRevenue() | currency:'INR':'symbol':'1.0-0' }}</strong>
+            <span>Revenue</span>
+          </div>
+          <div>
+            <strong>{{ totalBookings() }}</strong>
+            <span>Bookings</span>
+          </div>
+          <div>
+            <strong>{{ averageBookingValue() | currency:'INR':'symbol':'1.0-0' }}</strong>
+            <span>ABV</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="combined-legend">
+        <span><i class="revenue-dot"></i>Revenue</span>
+        <span><i class="booking-dot"></i>Bookings</span>
+      </div>
+
+      <div class="combined-chart" [class.loading]="isLoadingRevenue()">
+        <div class="combo-month" *ngFor="let month of monthMetrics()">
+          <div class="combo-bars">
+            <span
+              class="combo-bar revenue-bar"
+              [style.height.%]="month.revenueHeight"
+              [title]="month.label + ' revenue: ' + (month.revenue | currency:'INR':'symbol':'1.0-0')">
+            </span>
+            <span
+              class="combo-bar booking-bar"
+              [style.height.%]="month.bookingHeight"
+              [title]="month.label + ' bookings: ' + month.bookings">
+            </span>
+          </div>
+          <div class="combo-values">
+            <strong>{{ month.revenue | currency:'INR':'symbol':'1.0-0' }}</strong>
+            <span>{{ month.bookings }} booking{{ month.bookings === 1 ? '' : 's' }}</span>
+          </div>
+          <small>{{ month.label }}</small>
+        </div>
+      </div>
+      <p class="error-text" *ngIf="revenueError()">{{ revenueError() }}</p>
+    </article>
+
+    <article class="panel room-panel">
+      <header>
+        <div>
+          <h2>Floor Wise Rooms</h2>
+          <p>Available and occupied rooms from current room records</p>
+        </div>
+        <div class="floor-header-tools">
+          <div class="room-legend">
+            <span><i class="available"></i>Available</span>
+            <span><i class="occupied"></i>Occupied</span>
+            <span><i class="blocked"></i>Blocked</span>
+          </div>
+          <div class="occupancy-chip">{{ roomKpis().occupancy }}% occupied</div>
+        </div>
+      </header>
+
+      <div class="floor-list" *ngIf="floorRoomMetrics().length; else noRooms">
+        <div class="floor-row" *ngFor="let floor of floorRoomMetrics()">
+          <div class="floor-main">
+            <strong>{{ floor.floor }}</strong>
+            <span>{{ floor.total }} rooms</span>
+          </div>
+          <div class="floor-bars">
+            <span class="available" [style.width.%]="floor.total ? floor.available / floor.total * 100 : 0"></span>
+            <span class="occupied" [style.width.%]="floor.total ? floor.occupied / floor.total * 100 : 0"></span>
+            <span class="blocked" [style.width.%]="floor.total ? floor.blocked / floor.total * 100 : 0"></span>
+          </div>
+          <div class="floor-counts">
+            <span>{{ floor.available }} available</span>
+            <span>{{ floor.occupied }} occupied</span>
+            <span>{{ floor.blocked }} blocked</span>
+          </div>
+        </div>
+      </div>
+      <ng-template #noRooms>
+        <div class="empty-state">No room records available yet.</div>
+      </ng-template>
+    </article>
+
+    <article class="panel pos-panel">
+      <header>
+        <div>
+          <h2>POS Performance</h2>
+          <p>Order count, value and menu item movement</p>
+        </div>
+        <a routerLink="/pos/orders">Open POS</a>
+      </header>
+
+      <div class="pos-mini-grid">
+        <div>
+          <strong>{{ posOrderValue() | currency:'INR':'symbol':'1.0-0' }}</strong>
+          <span>Order value</span>
+        </div>
+        <div>
+          <strong>{{ averagePosOrderValue() | currency:'INR':'symbol':'1.0-0' }}</strong>
+          <span>Avg order</span>
+        </div>
+        <div>
+          <strong>{{ posMenuItems().length }}</strong>
+          <span>Menu items</span>
+        </div>
+      </div>
+
+      <div class="selling-tabs">
+        <div class="tab-strip" role="tablist" aria-label="POS item performance">
+          <button
+            type="button"
+            role="tab"
+            [class.active]="activeSellingTab() === 'top'"
+            [attr.aria-selected]="activeSellingTab() === 'top'"
+            (click)="activeSellingTab.set('top')">
+            Top Selling Items
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [class.active]="activeSellingTab() === 'less'"
+            [attr.aria-selected]="activeSellingTab() === 'less'"
+            (click)="activeSellingTab.set('less')">
+            Less Selling Items
+          </button>
+        </div>
+
+        <div class="item-list" *ngIf="activeSellingTab() === 'top' && topSellingItems().length">
+          <div class="item-row" *ngFor="let item of topSellingItems(); let i = index">
+            <b>{{ i + 1 }}</b>
+            <img [src]="item.imageUrl" [alt]="item.name" loading="lazy">
+            <div class="item-main">
+              <strong>{{ item.name }}</strong>
+              <span>{{ item.category }} / {{ item.subcategory }} - {{ item.qty }} sold</span>
+              <em>Rate {{ item.price | currency:'INR':'symbol':'1.0-0' }} - Avg {{ (item.qty ? item.value / item.qty : 0) | currency:'INR':'symbol':'1.0-0' }}</em>
+            </div>
+            <div class="item-variation" aria-label="Month wise item order variation">
+              <span
+                *ngFor="let month of item.monthVariation"
+                [class.empty]="month.qty === 0"
+                [title]="month.label + ': ' + month.qty">
+                <i [style.height.%]="month.height"></i>
+                <em>{{ month.label }}</em>
+              </span>
+            </div>
+            <small>
+              {{ item.value | currency:'INR':'symbol':'1.0-0' }}
+              <span>{{ item.qty }} qty</span>
+            </small>
+          </div>
+        </div>
+
+        <div class="item-list" *ngIf="activeSellingTab() === 'less' && lessSellingItems().length">
+          <div class="item-row low" *ngFor="let item of lessSellingItems(); let i = index">
+            <b>{{ i + 1 }}</b>
+            <img [src]="item.imageUrl" [alt]="item.name" loading="lazy">
+            <div class="item-main">
+              <strong>{{ item.name }}</strong>
+              <span>{{ item.category }} / {{ item.subcategory }} - {{ item.qty }} sold</span>
+              <em>Rate {{ item.price | currency:'INR':'symbol':'1.0-0' }} - Avg {{ (item.qty ? item.value / item.qty : 0) | currency:'INR':'symbol':'1.0-0' }}</em>
+            </div>
+            <div class="item-variation" aria-label="Month wise item order variation">
+              <span
+                *ngFor="let month of item.monthVariation"
+                [class.empty]="month.qty === 0"
+                [title]="month.label + ': ' + month.qty">
+                <i [style.height.%]="month.height"></i>
+                <em>{{ month.label }}</em>
+              </span>
+            </div>
+            <small>
+              {{ item.value | currency:'INR':'symbol':'1.0-0' }}
+              <span>{{ item.qty }} qty</span>
+            </small>
+          </div>
+        </div>
+
+        <div class="empty-state small" *ngIf="activeSellingTab() === 'top' && !topSellingItems().length">No POS sales found.</div>
+        <div class="empty-state small" *ngIf="activeSellingTab() === 'less' && !lessSellingItems().length">No menu records available.</div>
+      </div>
+    </article>
+  </div>
+</section>

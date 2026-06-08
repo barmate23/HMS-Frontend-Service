@@ -9,7 +9,8 @@ export const routes: Routes = [
     path: '',
     component: Layout,
     children: [
-      { path: '', redirectTo: 'reservations', pathMatch: 'full' },
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'dashboard', loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent) },
       { path: 'reservations', component: ReservationCenter },
       { path: 'new-booking', component: NewBookingComponent },
       { path: 'arrivals', component: ArrivalsComponent },

@@ -1,19 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { HotelMastersService, Room } from '../masters/hotel-masters.service';
-import { HousekeepingService, HKRoom } from '../housekeeping/housekeeping.service';
-import { PosMenuItem, PosOrder, PosService } from '../pos/pos.service';
-
-interface StandardResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-  metadata?: {
-    totalRecords?: number;
-  };
-}
 
 interface DashboardReservation {
   id: string;
@@ -40,6 +27,52 @@ interface FloorRoomMetric {
   blocked: number;
 }
 
+interface DashboardRoom {
+  floor: string;
+  status: 'AVAILABLE' | 'OCCUPIED' | 'BLOCKED';
+}
+
+interface PosMenuItem {
+  id: number;
+  outletId: number;
+  name: string;
+  category: string;
+  subcategory: string;
+  price: number;
+  taxPercent: number;
+  variants: string[];
+  modifiers: string[];
+  available: boolean;
+  featured: boolean;
+  stockItem: string;
+  imageUrl: string;
+}
+
+interface PosOrderLine {
+  itemId: number;
+  name: string;
+  qty: number;
+  price: number;
+  course: string;
+  notes: string;
+}
+
+interface PosOrder {
+  id: number;
+  outletId: number;
+  orderNo: string;
+  type: 'TABLE' | 'TAKEAWAY' | 'ROOM';
+  tableNo?: string;
+  roomNo?: string;
+  guestName?: string;
+  server: string;
+  status: string;
+  kotNo?: string;
+  openedAt: string;
+  notes: string;
+  lines: PosOrderLine[];
+}
+
 interface PosItemMetric {
   name: string;
   category: string;
@@ -63,17 +96,10 @@ interface PosItemMetric {
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent {
-  private readonly http = inject(HttpClient);
-  private readonly masters = inject(HotelMastersService);
-  private readonly housekeeping = inject(HousekeepingService);
-  readonly pos = inject(PosService);
-
-  private readonly frontOfficeBaseUrl = '/api/frontOfficeService/v1';
-
   readonly selectedFinancialYear = signal(this.currentFinancialYear());
   readonly reservations = signal<DashboardReservation[]>([]);
   readonly isLoadingRevenue = signal(false);
-  readonly revenueError = signal<string | null>(null);
+  readonly revenueError = signal<string | null>('Showing sample booking data.');
   readonly activeSellingTab = signal<'top' | 'less'>('top');
 
   readonly financialYears = computed(() => {
@@ -81,28 +107,15 @@ export class DashboardComponent {
     return Array.from({ length: 5 }, (_, index) => current - index);
   });
 
-  readonly masterRooms = this.masters.rooms;
-  readonly masterFloors = this.masters.floors;
-  readonly hkRooms = this.housekeeping.rooms;
-  readonly posMenuItems = computed(() => {
-    const menuItems = this.pos.menuItems();
-    return menuItems.length ? menuItems : this.samplePosMenuItems();
-  });
-  readonly posOrders = computed(() => {
-    const orders = this.pos.orders();
-    return orders.length ? orders : this.samplePosOrders();
-  });
+  readonly demoRooms = computed(() => this.sampleRooms());
+  readonly posMenuItems = computed(() => this.samplePosMenuItems());
+  readonly posOrders = computed(() => this.samplePosOrders());
 
   readonly roomKpis = computed(() => {
-    const masterRooms = this.masterRooms();
-    const hkRooms = this.hkRooms();
-    const total = masterRooms.length || hkRooms.length;
-    const occupied = masterRooms.length
-      ? masterRooms.filter(room => this.isMasterOccupied(room)).length
-      : hkRooms.filter(room => room.isOccupied).length;
-    const blocked = masterRooms.length
-      ? masterRooms.filter(room => this.isMasterBlocked(room)).length
-      : hkRooms.filter(room => this.isHkBlocked(room)).length;
+    const rooms = this.demoRooms();
+    const total = rooms.length;
+    const occupied = rooms.filter(room => room.status === 'OCCUPIED').length;
+    const blocked = rooms.filter(room => room.status === 'BLOCKED').length;
     const available = Math.max(0, total - occupied - blocked);
     const occupancy = total ? Math.round((occupied / total) * 100) : 0;
 
@@ -110,32 +123,11 @@ export class DashboardComponent {
   });
 
   readonly floorRoomMetrics = computed<FloorRoomMetric[]>(() => {
-    const masterRooms = this.masterRooms();
-    if (masterRooms.length) {
-      const floorMap = this.masters.floorsMap();
-      const grouped = new Map<string, Room[]>();
-      masterRooms.forEach(room => {
-        const floor = floorMap.get(room.floorId)?.floorNumber || `Floor ${room.floorId || '-'}`;
-        grouped.set(floor, [...(grouped.get(floor) ?? []), room]);
-      });
-      return Array.from(grouped.entries()).map(([floor, rooms]) => {
-        const occupied = rooms.filter(room => this.isMasterOccupied(room)).length;
-        const blocked = rooms.filter(room => this.isMasterBlocked(room)).length;
-        return {
-          floor,
-          total: rooms.length,
-          occupied,
-          blocked,
-          available: Math.max(0, rooms.length - occupied - blocked)
-        };
-      }).sort((a, b) => a.floor.localeCompare(b.floor, undefined, { numeric: true }));
-    }
-
-    const grouped = new Map<string, HKRoom[]>();
-    this.hkRooms().forEach(room => grouped.set(room.floor, [...(grouped.get(room.floor) ?? []), room]));
+    const grouped = new Map<string, DashboardRoom[]>();
+    this.demoRooms().forEach(room => grouped.set(room.floor, [...(grouped.get(room.floor) ?? []), room]));
     return Array.from(grouped.entries()).map(([floor, rooms]) => {
-      const occupied = rooms.filter(room => room.isOccupied).length;
-      const blocked = rooms.filter(room => this.isHkBlocked(room)).length;
+      const occupied = rooms.filter(room => room.status === 'OCCUPIED').length;
+      const blocked = rooms.filter(room => room.status === 'BLOCKED').length;
       return {
         floor,
         total: rooms.length,
@@ -262,30 +254,9 @@ export class DashboardComponent {
   }
 
   loadFinancialYearReservations(): void {
-    const { start, end } = this.financialYearRange();
-    this.isLoadingRevenue.set(true);
-    this.revenueError.set(null);
-
-    const params = new HttpParams()
-      .set('page', '0')
-      .set('size', '500')
-      .set('fromDate', this.toIsoDate(start))
-      .set('toDate', this.toIsoDate(end));
-
-    this.http.get<StandardResponse<any[]>>(`${this.frontOfficeBaseUrl}/frontOffice/getAllReservations`, { params }).subscribe({
-      next: response => {
-        const reservations = (response.data ?? []).map(item => this.mapReservation(item));
-        this.reservations.set(reservations.length ? reservations : this.sampleReservations());
-        this.revenueError.set(reservations.length ? null : 'Showing sample booking data.');
-        this.isLoadingRevenue.set(false);
-      },
-      error: error => {
-        console.error('[Dashboard] Unable to load reservation revenue', error);
-        this.reservations.set(this.sampleReservations());
-        this.revenueError.set('Showing sample booking data.');
-        this.isLoadingRevenue.set(false);
-      }
-    });
+    this.isLoadingRevenue.set(false);
+    this.reservations.set(this.sampleReservations());
+    this.revenueError.set('Showing sample booking data.');
   }
 
   formatFinancialYear(year: number): string {
@@ -298,18 +269,6 @@ export class DashboardComponent {
 
   private orderValue(order: PosOrder): number {
     return order.lines.reduce((sum, line) => sum + Number(line.qty || 0) * Number(line.price || 0), 0);
-  }
-
-  private isMasterOccupied(room: Room): boolean {
-    return String(room.status).toUpperCase() === 'OCCUPIED';
-  }
-
-  private isMasterBlocked(room: Room): boolean {
-    return ['MAINTENANCE', 'CLEANING'].includes(String(room.status).toUpperCase()) || !room.isActive;
-  }
-
-  private isHkBlocked(room: HKRoom): boolean {
-    return ['OUT_OF_ORDER', 'UNDER_MAINTENANCE', 'DO_NOT_DISTURB'].includes(room.hkStatus);
   }
 
   private currentFinancialYear(): number {
@@ -343,18 +302,6 @@ export class DashboardComponent {
     return date >= start && date <= end;
   }
 
-  private mapReservation(item: any): DashboardReservation {
-    const booking = Array.isArray(item.bookings) ? item.bookings[0] : {};
-    const checkInDate = item.checkInDate || item.arrivalDate || item.checkIn || booking?.checkInDate || '';
-    return {
-      id: String(item.id ?? item.bookingId ?? item.reservationId ?? ''),
-      checkInDate,
-      createdAt: item.createdAt || item.bookingDate || checkInDate,
-      status: String(item.reservationStatus || item.status || ''),
-      billingAmount: Number(item.billingAmount ?? item.totalAmount ?? item.grandTotal ?? item.amount ?? 0)
-    };
-  }
-
   private sampleReservations(): DashboardReservation[] {
     const year = this.selectedFinancialYear();
     const monthlySamples = [
@@ -385,6 +332,22 @@ export class DashboardComponent {
           : averageAmount
       }));
     });
+  }
+
+  private sampleRooms(): DashboardRoom[] {
+    const floors = [
+      { floor: 'Ground', available: 5, occupied: 3, blocked: 1 },
+      { floor: 'Floor 1', available: 12, occupied: 8, blocked: 2 },
+      { floor: 'Floor 2', available: 10, occupied: 9, blocked: 1 },
+      { floor: 'Floor 3', available: 7, occupied: 6, blocked: 2 },
+      { floor: 'Floor 4', available: 8, occupied: 4, blocked: 1 }
+    ];
+
+    return floors.flatMap(item => [
+      ...Array.from({ length: item.available }, () => ({ floor: item.floor, status: 'AVAILABLE' as const })),
+      ...Array.from({ length: item.occupied }, () => ({ floor: item.floor, status: 'OCCUPIED' as const })),
+      ...Array.from({ length: item.blocked }, () => ({ floor: item.floor, status: 'BLOCKED' as const }))
+    ]);
   }
 
   private samplePosMenuItems(): PosMenuItem[] {

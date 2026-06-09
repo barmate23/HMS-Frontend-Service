@@ -274,9 +274,14 @@
       <div class="shift-card-list">
         <div class="shift-card" *ngFor="let shift of filteredShifts()">
           <div class="shift-card-head">
-            <div>
-              <strong>{{ shift.name }}</strong>
-              <small>{{ shift.code }} &middot; {{ shift.department }}</small>
+            <div class="shift-title-wrap">
+              <span class="shift-timeline-icon" [ngClass]="shiftTimelineType(shift)">
+                <span class="material-icons-round">{{ shiftTimelineIcon(shift) }}</span>
+              </span>
+              <div>
+                <strong>{{ shift.name }}</strong>
+                <small>{{ shiftTimelineLabel(shift) }} timeline &middot; {{ shift.code }} &middot; {{ shift.department }}</small>
+              </div>
             </div>
             <span class="status-pill" [class.active]="shift.isActive" [class.inactive]="!shift.isActive">
               {{ shift.isActive ? 'ACTIVE' : 'INACTIVE' }}
@@ -304,7 +309,7 @@
         </div>
         <div class="empty-state" *ngIf="filteredShifts().length === 0">
           <span class="material-icons-round">schedule_send</span>
-          No shifts match the selected filters.
+          No data found.
         </div>
       </div>
     </div>
@@ -351,7 +356,14 @@
               <td>{{ roleName(user.roleId) }}</td>
               <td>
                 <select class="inline-select" [ngModel]="user.shift" (ngModelChange)="assignUserShift(user, $event)">
-                  <option *ngFor="let shift of userService.shifts()" [value]="shift">{{ shift }}</option>
+                  <option value="" disabled *ngIf="userService.shiftConfigs().length === 0">No data found</option>
+                  <option
+                    *ngFor="let shift of userService.shiftConfigs()"
+                    [value]="shift.name"
+                    [disabled]="!shift.isActive && user.shift !== shift.name"
+                  >
+                    {{ shift.name }}{{ !shift.isActive ? ' (Inactive)' : '' }}
+                  </option>
                 </select>
               </td>
             </tr>
@@ -392,6 +404,54 @@
         <span class="material-icons-round">history_toggle_off</span>
         No activity found.
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="shiftDeleteTarget() as shift" (click)="closeShiftDeleteModal()">
+  <div class="admin-modal confirm-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h2>Delete Shift</h2>
+        <p>Confirm before removing this shift from the master list.</p>
+      </div>
+      <button class="close-btn" (click)="closeShiftDeleteModal()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="modal-body confirm-body shift-delete-body">
+      <div class="confirm-icon danger">
+        <span class="material-icons-round">delete_outline</span>
+      </div>
+      <div class="confirm-copy">
+        <h3>{{ shift.name }}</h3>
+        <p>
+          This shift will be removed from Shift Master. Existing users assigned to this shift may need reassignment.
+        </p>
+        <div class="delete-summary">
+          <span>
+            <small>Code</small>
+            <strong>{{ shift.code }}</strong>
+          </span>
+          <span>
+            <small>Time</small>
+            <strong>{{ shift.startTime }} - {{ shift.endTime }}</strong>
+          </span>
+          <span>
+            <small>Assigned</small>
+            <strong>{{ userService.shiftUserCount(shift.name) }} user{{ userService.shiftUserCount(shift.name) === 1 ? '' : 's' }}</strong>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="secondary-btn" (click)="closeShiftDeleteModal()">Cancel</button>
+      <button class="danger-btn" (click)="confirmDeleteShift()">
+        <span class="material-icons-round">delete_outline</span>
+        Delete Shift
+      </button>
     </div>
   </div>
 </div>
@@ -565,7 +625,7 @@
       <div class="form-grid">
         <label>
           Shift Name
-          <input type="text" [(ngModel)]="currentShift().name" placeholder="e.g. Morning Shift">
+          <input type="text" [(ngModel)]="currentShift().name" placeholder="e.g. Front Desk Shift">
         </label>
         <label>
           Shift Code

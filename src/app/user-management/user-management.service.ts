@@ -60,6 +60,7 @@ export interface UserShift {
   endTime: string;
   department: UserDepartment;
   property: string;
+  hotelId?: number;
   isActive: boolean;
   notes: string;
 }
@@ -171,7 +172,10 @@ interface ApiUser {
   roleId?: number;
   property?: ApiCommonMaster | string;
   propertyId?: number;
-  shift?: string;
+  shift?: string | ApiShift;
+  shiftId?: number;
+  shiftName?: string;
+  assignedShift?: ApiShift;
   status?: string;
   floorAccess?: string[];
   accessibleFloors?: string[];
@@ -179,6 +183,25 @@ interface ApiUser {
   lastLogin?: string;
   loginFailures?: number;
   notes?: string;
+}
+
+interface ApiShift {
+  id: number;
+  shiftName?: string;
+  name?: string;
+  shiftCode?: string;
+  code?: string;
+  startTime?: string;
+  endTime?: string;
+  hotelId?: number;
+  hotel?: ApiHotel | ApiCommonMaster | string;
+  property?: ApiCommonMaster | string;
+  department?: ApiCommonMaster | string;
+  departmentId?: number;
+  status?: string;
+  notes?: string;
+  userCount?: number;
+  assignedUserCount?: number;
 }
 
 interface ApiAuditLog {
@@ -232,7 +255,7 @@ export class UserManagementService {
     { id: 2, name: 'HMS Cloud - Annex' },
     { id: 3, name: 'HMS Cloud - Banquet Wing' }
   ]);
-  readonly shiftConfigs = signal<UserShift[]>(this.loadStoredShifts());
+  readonly shiftConfigs = signal<UserShift[]>([]);
   readonly shifts = computed(() => this.shiftConfigs().filter(shift => shift.isActive).map(shift => shift.name));
   readonly floors = signal<FloorOption[]>([
     { id: 1, name: 'Floor 1' },
@@ -263,14 +286,16 @@ export class UserManagementService {
       modules: this.http.get<StandardResponse<ApiModule[]>>(`${this.userBaseUrl}/roles/getAllModules`).pipe(catchError(() => of(null))),
       roles: this.http.get<StandardResponse<ApiRole[]>>(`${this.userBaseUrl}/roles/getAllRoles`).pipe(catchError(() => of(null))),
       users: this.http.get<StandardResponse<ApiUser[]>>(`${this.userBaseUrl}/users/getAllUsers`).pipe(catchError(() => of(null))),
+      shifts: this.http.get<StandardResponse<ApiShift[]>>(`${this.userBaseUrl}/shifts/getAllShifts`).pipe(catchError(() => of(null))),
       audit: this.http.get<StandardResponse<ApiAuditLog[]>>(`${this.userBaseUrl}/audit-logs/getAllAuditLogs`).pipe(catchError(() => of(null)))
     }).subscribe({
-      next: ({ hotels, floors, departments, modules, roles, users, audit }) => {
+      next: ({ hotels, floors, departments, modules, roles, users, shifts, audit }) => {
         if (hotels?.success && hotels.data?.length) this.setProperties(hotels.data);
         if (floors?.success && floors.data?.length) this.setFloors(floors.data);
         this.setDepartments(this.commonMastersData(departments));
         if (modules?.success && modules.data?.length) this.setModules(modules.data);
         if (roles?.success) this.roles.set((roles.data || []).map(role => this.mapRole(role)));
+        if (shifts?.success && Array.isArray(shifts.data)) this.setShifts(shifts.data);
         if (users?.success) this.users.set((users.data || []).map(user => this.mapUser(user)));
         if (audit?.success) this.activity.set((audit.data || []).map(log => this.mapAudit(log)));
         this.isLoading.set(false);
@@ -342,19 +367,22 @@ export class UserManagementService {
     const current = this.shiftConfigs();
     const existing = current.find(shift => shift.id === Number(input.id));
     const normalized = this.normalizedShift(input, existing);
+    const payload = this.toShiftRequest(normalized);
+    const request$ = existing
+      ? this.http.put<StandardResponse<ApiShift | object>>(`${this.userBaseUrl}/shifts/updateShift/${existing.id}`, payload)
+      : this.http.post<StandardResponse<ApiShift | object>>(`${this.userBaseUrl}/shifts/createShift`, payload);
 
-    this.shiftConfigs.update(shifts => {
-      const next = existing
-        ? shifts.map(shift => shift.id === existing.id ? normalized : shift)
-        : [normalized, ...shifts];
-      this.storeShifts(next);
-      return next;
-    });
-
-    if (existing && existing.name !== normalized.name) {
-      this.users.update(users => users.map(user => user.shift === existing.name ? { ...user, shift: normalized.name } : user));
-    }
-    this.addActivity('System', existing ? 'Shift configuration updated' : 'Shift configuration created', normalized.name, 'User Shifts', 'INFO');
+    request$.pipe(
+      tap(() => {
+        this.upsertLocalShift(normalized, existing);
+        this.loadShifts();
+        this.addActivity('System', existing ? 'Shift configuration updated' : 'Shift configuration created', normalized.name, 'User Shifts', 'INFO');
+      }),
+      catchError(err => {
+        this.apiError.set(err?.error?.message || err?.message || 'Unable to save shift.');
+        return of(null);
+      })
+    ).subscribe();
   }
 
   deleteShift(id: number): boolean {
@@ -366,12 +394,19 @@ export class UserManagementService {
       return false;
     }
 
-    this.shiftConfigs.update(shifts => {
-      const next = shifts.filter(shift => shift.id !== target.id);
-      this.storeShifts(next);
-      return next;
-    });
-    this.addActivity('System', 'Shift configuration deleted', target.name, 'User Shifts', 'WARNING');
+    this.http.delete<StandardResponse<void>>(`${this.userBaseUrl}/shifts/deleteShift/${id}`).pipe(
+      tap(() => {
+        this.shiftConfigs.update(shifts => {
+          const next = shifts.filter(shift => shift.id !== target.id);
+          return next;
+        });
+        this.addActivity('System', 'Shift configuration deleted', target.name, 'User Shifts', 'WARNING');
+      }),
+      catchError(err => {
+        this.apiError.set(err?.error?.message || err?.message || 'Unable to delete shift.');
+        return of(null);
+      })
+    ).subscribe();
     return true;
   }
 
@@ -381,8 +416,21 @@ export class UserManagementService {
 
   setUserShift(user: SystemUser, shift: string): void {
     if (!shift || user.shift === shift) return;
+    const targetShift = this.shiftConfigs().find(item => item.name === shift);
+    if (!targetShift?.id) {
+      this.apiError.set('Select a valid shift before assigning.');
+      return;
+    }
     this.users.update(users => users.map(item => item.id === user.id ? { ...item, shift } : item));
-    this.saveUser({ ...user, shift });
+    const params = new HttpParams().set('shiftId', String(targetShift.id));
+    this.http.post<StandardResponse<object>>(`${this.userBaseUrl}/shifts/assignShift/${user.id}`, null, { params }).pipe(
+      tap(() => this.loadUsers()),
+      catchError(err => {
+        this.users.update(users => users.map(item => item.id === user.id ? { ...item, shift: user.shift } : item));
+        this.apiError.set(err?.error?.message || err?.message || 'Unable to assign shift.');
+        return of(null);
+      })
+    ).subscribe();
   }
 
   saveRole(input: Partial<UserRole>): void {
@@ -492,6 +540,16 @@ export class UserManagementService {
     ).subscribe(roles => this.roles.set(roles.map(role => this.mapRole(role))));
   }
 
+  private loadShifts(): void {
+    this.http.get<StandardResponse<ApiShift[]>>(`${this.userBaseUrl}/shifts/getAllShifts`).pipe(
+      map(response => response.data || []),
+      catchError(err => {
+        this.apiError.set(err?.error?.message || err?.message || 'Unable to load shifts.');
+        return of([]);
+      })
+    ).subscribe(shifts => this.setShifts(shifts));
+  }
+
   private setModules(modules: ApiModule[]): void {
     this.permissionModules.set(modules.map(module => ({
       id: module.id,
@@ -530,6 +588,11 @@ export class UserManagementService {
     if (options.length) this.departments.set(options);
   }
 
+  private setShifts(shifts: ApiShift[]): void {
+    const mapped = shifts.map(shift => this.mapShift(shift)).filter(shift => shift.id && shift.name && shift.code);
+    this.shiftConfigs.set(mapped);
+  }
+
   private mapUser(user: ApiUser): SystemUser {
     return {
       id: Number(user.id),
@@ -541,13 +604,30 @@ export class UserManagementService {
       department: this.departmentFromApi(user.department, user.departmentId),
       roleId: Number(user.roleId || user.role?.id || this.roles()[0]?.id || 0),
       property: this.propertyFromApi(user.property, user.propertyId),
-      shift: user.shift || this.defaultShift(),
+      shift: this.shiftFromApi(user),
       status: this.statusFromApi(user.status),
       twoFactorEnabled: !!user.twoFactorEnabled,
       accessibleFloors: user.floorAccess?.length ? user.floorAccess : user.accessibleFloors?.length ? user.accessibleFloors : ['All Floors'],
       lastLogin: user.lastLogin || 'Never',
       loginFailures: Number(user.loginFailures || 0),
       notes: user.notes || ''
+    };
+  }
+
+  private mapShift(shift: ApiShift): UserShift {
+    const name = String(shift.shiftName || shift.name || '').trim() || `Shift #${shift.id}`;
+    const hotelId = Number(shift.hotelId || 0) || undefined;
+    return {
+      id: Number(shift.id),
+      name,
+      code: String(shift.shiftCode || shift.code || this.shiftCode(name)).trim().toUpperCase(),
+      startTime: this.timeValue(shift.startTime, '09:00'),
+      endTime: this.timeValue(shift.endTime, '18:00'),
+      department: this.departmentFromApi(shift.department, shift.departmentId),
+      property: this.propertyFromApi(shift.property || shift.hotel, hotelId),
+      hotelId,
+      isActive: this.shiftActiveFromApi(shift.status),
+      notes: shift.notes || ''
     };
   }
 
@@ -609,7 +689,7 @@ export class UserManagementService {
       departmentId: this.departmentId(input.department),
       roleId: Number(input.roleId || this.roles()[0]?.id || 0),
       propertyId: this.propertyId(input.property),
-      shift: input.shift || this.defaultShift(),
+      shift: input.shift || '',
       status: input.status || 'ACTIVE',
       floorAccess: input.accessibleFloors || ['All Floors'],
       notes: input.notes || '',
@@ -628,6 +708,18 @@ export class UserManagementService {
     };
   }
 
+  private toShiftRequest(input: Partial<UserShift>): object {
+    return {
+      shiftName: input.name || '',
+      shiftCode: input.code || this.shiftCode(input.name || ''),
+      startTime: this.timeValue(input.startTime, '09:00'),
+      endTime: this.timeValue(input.endTime, '18:00'),
+      hotelId: Number(input.hotelId || this.propertyId(input.property)),
+      status: input.isActive === false ? 'INACTIVE' : 'ACTIVE',
+      notes: input.notes || ''
+    };
+  }
+
   private permissionsToApi(matrix: PermissionMatrix): object[] {
     return this.permissionModules()
       .filter(module => module.id)
@@ -643,14 +735,14 @@ export class UserManagementService {
   }
 
   private departmentFromApi(value?: ApiCommonMaster | string, id?: number): UserDepartment {
-    const raw = typeof value === 'string' ? value : value?.value || value?.code || '';
+    const raw = typeof value === 'string' ? value : value?.value || value?.code || (value as any)?.name || '';
     const byId = this.departments().find(department => department.id === Number(id));
     const byName = this.departments().find(department => department.name.toLowerCase() === raw.toLowerCase() || department.code?.toLowerCase() === raw.toLowerCase());
     return raw || byId?.name || byName?.name || this.departments()[0]?.name || 'Front Office';
   }
 
   private propertyFromApi(value?: ApiCommonMaster | string, id?: number): string {
-    const raw = typeof value === 'string' ? value : value?.value || '';
+    const raw = typeof value === 'string' ? value : value?.value || (value as any)?.name || '';
     const byId = this.properties().find(property => property.id === Number(id));
     return raw || byId?.name || this.properties()[0]?.name || 'HMS Cloud - Main Hotel';
   }
@@ -658,6 +750,10 @@ export class UserManagementService {
   private statusFromApi(status?: string): UserStatus {
     const normalized = String(status || 'ACTIVE').toUpperCase();
     return this.statuses.includes(normalized as UserStatus) ? normalized as UserStatus : 'ACTIVE';
+  }
+
+  private shiftActiveFromApi(status?: string): boolean {
+    return String(status || 'ACTIVE').toUpperCase() !== 'INACTIVE';
   }
 
   private levelFromApi(level?: string): RoleLevel {
@@ -704,6 +800,37 @@ export class UserManagementService {
     return Array.isArray(response) ? response : response.success ? response.data || [] : [];
   }
 
+  private shiftFromApi(user: ApiUser): string {
+    const apiShift = typeof user.shift === 'object' ? user.shift : user.assignedShift;
+    const raw = apiShift?.shiftName || apiShift?.name || user.assignedShift?.shiftName || user.assignedShift?.name || user.shiftName || (typeof user.shift === 'string' ? user.shift : '');
+    const apiShiftId = Number(user.shiftId || apiShift?.id || 0);
+    const byId = this.shiftConfigs().find(shift => shift.id === apiShiftId);
+    const byName = this.shiftConfigs().find(shift =>
+      shift.name.toLowerCase() === String(raw).toLowerCase() ||
+      shift.code.toLowerCase() === String(raw).toLowerCase()
+    );
+    return byId?.name || byName?.name || raw || '';
+  }
+
+  private timeValue(value: string | undefined, fallback: string): string {
+    const raw = String(value || '').trim();
+    const match = raw.match(/^(\d{2}:\d{2})/);
+    return match?.[1] || fallback;
+  }
+
+  private upsertLocalShift(normalized: UserShift, existing?: UserShift): void {
+    this.shiftConfigs.update(shifts => {
+      const next = existing
+        ? shifts.map(shift => shift.id === existing.id ? normalized : shift)
+        : [normalized, ...shifts];
+      return next;
+    });
+
+    if (existing && existing.name !== normalized.name) {
+      this.users.update(users => users.map(user => user.shift === existing.name ? { ...user, shift: normalized.name } : user));
+    }
+  }
+
   private addActivity(actor: string, event: string, target: string, module: string, severity: AccessActivity['severity']): void {
     const nextId = Math.max(0, ...this.activity().map(item => item.id)) + 1;
     this.activity.update(log => [{
@@ -718,12 +845,8 @@ export class UserManagementService {
     }, ...log]);
   }
 
-  private defaultShift(): string {
-    return this.shifts()[0] || this.shiftConfigs()[0]?.name || 'General Shift';
-  }
-
   private normalizedShift(input: Partial<UserShift>, existing?: UserShift): UserShift {
-    const name = String(input.name || existing?.name || '').trim() || 'General Shift';
+    const name = String(input.name || existing?.name || '').trim();
     const code = String(input.code || existing?.code || this.shiftCode(name)).trim().toUpperCase();
     return {
       id: Number(input.id || existing?.id || this.nextShiftId()),
@@ -733,6 +856,7 @@ export class UserManagementService {
       endTime: String(input.endTime || existing?.endTime || '18:00'),
       department: input.department || existing?.department || this.departments()[0]?.name || 'Front Office',
       property: input.property || existing?.property || this.properties()[0]?.name || 'HMS Cloud - Main Hotel',
+      hotelId: Number(input.hotelId || existing?.hotelId || this.propertyId(input.property || existing?.property)),
       isActive: input.isActive ?? existing?.isActive ?? true,
       notes: String(input.notes || existing?.notes || '').trim()
     };
@@ -751,32 +875,4 @@ export class UserManagementService {
       .toUpperCase() || 'SHIFT';
   }
 
-  private loadStoredShifts(): UserShift[] {
-    const defaults = this.defaultShiftConfigs();
-    try {
-      const stored = localStorage.getItem('hms-user-management-shifts');
-      if (!stored) return defaults;
-      const parsed = JSON.parse(stored) as UserShift[];
-      return Array.isArray(parsed) && parsed.length ? parsed : defaults;
-    } catch {
-      return defaults;
-    }
-  }
-
-  private storeShifts(shifts: UserShift[]): void {
-    try {
-      localStorage.setItem('hms-user-management-shifts', JSON.stringify(shifts));
-    } catch {
-      // Local persistence is best-effort only; user assignments still save through the API.
-    }
-  }
-
-  private defaultShiftConfigs(): UserShift[] {
-    return [
-      { id: 1, name: 'Morning Shift', code: 'MORN', startTime: '07:00', endTime: '15:00', department: 'Front Office', property: 'HMS Cloud - Main Hotel', isActive: true, notes: 'Primary day operations shift.' },
-      { id: 2, name: 'Evening Shift', code: 'EVE', startTime: '15:00', endTime: '23:00', department: 'Front Office', property: 'HMS Cloud - Main Hotel', isActive: true, notes: 'Evening operations and handover coverage.' },
-      { id: 3, name: 'Night Shift', code: 'NIGHT', startTime: '23:00', endTime: '07:00', department: 'Front Office', property: 'HMS Cloud - Main Hotel', isActive: true, notes: 'Night audit and overnight coverage.' },
-      { id: 4, name: 'General Shift', code: 'GEN', startTime: '09:00', endTime: '18:00', department: 'Management', property: 'HMS Cloud - Main Hotel', isActive: true, notes: 'Administrative working hours.' }
-    ];
-  }
 }

@@ -95,11 +95,7 @@ export class Layout {
         { label: 'Billing', icon: 'receipt_long', route: '/pos/billing' },
         { label: 'Menu Management', icon: 'menu_book', route: '/pos/menu' }
       ]
-    },
-    { label: 'In-House', icon: 'people', route: '/in-house' },
-    { label: 'Room Rack', icon: 'grid_on', route: '/room-rack' },
-    { label: 'Night Audit', icon: 'bedtime', route: '/night-audit' },
-    { label: 'Reports', icon: 'bar_chart', route: '/reports' }
+    }
   ];
 
   toggleSidebar() {

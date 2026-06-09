@@ -60,6 +60,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   currentRole = signal<Partial<UserRole>>({});
   currentShift = signal<Partial<UserShift>>({});
   roleDeleteTarget = signal<UserRole | null>(null);
+  shiftDeleteTarget = signal<UserShift | null>(null);
   userFormSubmitted = signal(false);
   userValidationErrors = signal<Partial<Record<UserValidationKey, string>>>({});
   userTouchedFields = signal<Partial<Record<UserValidationKey, boolean>>>({});
@@ -308,9 +309,20 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   deleteShift(shift: UserShift): void {
-    if (confirm(`Delete shift "${shift.name}"?`)) {
-      this.userService.deleteShift(shift.id);
-    }
+    this.shiftDeleteTarget.set(shift);
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeShiftDeleteModal(): void {
+    this.shiftDeleteTarget.set(null);
+    document.body.style.overflow = '';
+  }
+
+  confirmDeleteShift(): void {
+    const shift = this.shiftDeleteTarget();
+    if (!shift) return;
+    this.userService.deleteShift(shift.id);
+    this.closeShiftDeleteModal();
   }
 
   assignUserShift(user: SystemUser, shift: string): void {
@@ -477,6 +489,28 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     if (status === 'ACTIVE') return 'check_circle';
     if (status === 'LOCKED') return 'lock';
     return 'pause_circle';
+  }
+
+  shiftTimelineType(shift: UserShift): 'day' | 'afternoon' | 'night' {
+    const text = `${shift.name} ${shift.code}`.toLowerCase();
+    const startHour = Number(String(shift.startTime || '00:00').split(':')[0]);
+    if (text.includes('night') || text.includes('nite') || startHour >= 20 || startHour < 5) return 'night';
+    if (text.includes('after') || text.includes('evening') || startHour >= 12) return 'afternoon';
+    return 'day';
+  }
+
+  shiftTimelineIcon(shift: UserShift): string {
+    const type = this.shiftTimelineType(shift);
+    if (type === 'night') return 'dark_mode';
+    if (type === 'afternoon') return 'wb_twilight';
+    return 'wb_sunny';
+  }
+
+  shiftTimelineLabel(shift: UserShift): string {
+    const type = this.shiftTimelineType(shift);
+    if (type === 'night') return 'Night';
+    if (type === 'afternoon') return 'Afternoon';
+    return 'Day';
   }
 
   severityIcon(severity: string): string {

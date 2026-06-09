@@ -1,5 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, signal, computed, inject } from '@angular/core';
+import { forkJoin } from 'rxjs';
 
 export type HKStatus =
   | 'VACANT_CLEAN'
@@ -57,11 +58,13 @@ export interface HKTask {
 export interface HKStaff {
   id: number;
   name: string;
-  role: StaffRole;
-  shift: ShiftType;
+  role: string;
+  shift: string;
   status: StaffStatus;
   assignedRoomIds: number[];
   completedToday: number;
+  pendingTasks?: number;
+  pendingTaskDetails?: HKTask[];
   phone: string;
   avatar: string;
 }
@@ -195,6 +198,59 @@ interface ApiSopCheckpointDTO {
   description?: string;
 }
 
+interface ApiRoomAssignmentDTO {
+  id?: number;
+  roomNumber?: string;
+  roomTypeName?: string;
+  status?: string;
+  assignedUserId?: number;
+  assignedUserName?: string;
+  assignedToCurrentUser?: boolean;
+  assignedToOther?: boolean;
+}
+
+interface ApiStaffDTO {
+  id?: number;
+  fullName?: string;
+  role?: string;
+  status?: string;
+  shift?: string;
+  phone?: string;
+  completedToday?: number;
+  pendingTasks?: number;
+  pendingTaskDetails?: ApiTaskDTO[];
+  assignedRoomDetails?: ApiRoomAssignmentDTO[];
+}
+
+interface ApiFloorDTO {
+  id?: number;
+  floorNumber?: string;
+  isActive?: boolean;
+}
+
+interface ApiRoomTypeDTO {
+  id?: number;
+  name?: string;
+}
+
+interface ApiMasterRoomDTO {
+  id?: number;
+  roomNumber?: string;
+  floorId?: number;
+  floorNumber?: string;
+  roomTypeId?: number;
+  typeId?: number;
+  roomTypeName?: string;
+  status?: string;
+  isActive?: boolean;
+}
+
+interface UserRoomAssignmentRequest {
+  userId: number;
+  roomIds: number[];
+  assignedBy: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class HousekeepingService {
   private readonly http = inject(HttpClient);
@@ -202,25 +258,12 @@ export class HousekeepingService {
   private readonly lostFoundApiBase = '/api/hmsService/v1/lost-found';
   private readonly maintenanceApiBase = '/api/hmsService/v1/maintenance';
   private readonly auditApiBase = '/api/hmsService/v1/housekeeping/audit';
+  private readonly staffApiBase = '/api/hmsService/v1/housekeeping/staff';
   private readonly hmsApiBase = '/api/hmsService/v1';
+  private readonly masterApiBase = '/api/masterService/v1';
 
-  private _rooms = signal<HKRoom[]>([
-    { id: 1,  roomNumber: '101', floor: 'Floor 1', type: 'Single Room',   hkStatus: 'VACANT_DIRTY',    isOccupied: false, lastCleaned: '2026-05-19T06:00:00Z', assignedToId: 1, dnd: false, priority: 'HIGH' },
-    { id: 2,  roomNumber: '102', floor: 'Floor 1', type: 'Double Room',   hkStatus: 'OCCUPIED_DIRTY',  isOccupied: true,  guestName: 'Rajan Mehta',       checkoutDate: '2026-05-20', lastCleaned: '2026-05-18T08:00:00Z', dnd: false, priority: 'MEDIUM' },
-    { id: 3,  roomNumber: '103', floor: 'Floor 1', type: 'Luxury Suite',  hkStatus: 'DO_NOT_DISTURB',  isOccupied: true,  guestName: 'Priya Sharma',      checkoutDate: '2026-05-22', dnd: true, priority: 'LOW' },
-    { id: 4,  roomNumber: '104', floor: 'Floor 1', type: 'Double Room',   hkStatus: 'INSPECTED',       isOccupied: false, lastCleaned: '2026-05-19T09:30:00Z', dnd: false, priority: 'LOW' },
-    { id: 5,  roomNumber: '105', floor: 'Floor 1', type: 'Single Room',   hkStatus: 'OUT_OF_ORDER',    isOccupied: false, dnd: false, priority: 'HIGH' },
-    { id: 6,  roomNumber: '201', floor: 'Floor 2', type: 'Double Room',   hkStatus: 'VACANT_CLEAN',    isOccupied: false, lastCleaned: '2026-05-19T10:00:00Z', dnd: false, priority: 'LOW' },
-    { id: 7,  roomNumber: '202', floor: 'Floor 2', type: 'Luxury Suite',  hkStatus: 'OCCUPIED_CLEAN',  isOccupied: true,  guestName: 'Amit Desai',        checkoutDate: '2026-05-21', lastCleaned: '2026-05-19T11:00:00Z', dnd: false, priority: 'LOW' },
-    { id: 8,  roomNumber: '203', floor: 'Floor 2', type: 'Single Room',   hkStatus: 'VACANT_DIRTY',    isOccupied: false, lastCleaned: '2026-05-18T12:00:00Z', assignedToId: 2, dnd: false, priority: 'MEDIUM' },
-    { id: 9,  roomNumber: '204', floor: 'Floor 2', type: 'Double Room',   hkStatus: 'UNDER_MAINTENANCE',isOccupied: false, dnd: false, priority: 'HIGH' },
-    { id: 10, roomNumber: '205', floor: 'Floor 2', type: 'Double Room',   hkStatus: 'OCCUPIED_DIRTY',  isOccupied: true,  guestName: 'Sunita Rao',        checkoutDate: '2026-05-20', dnd: false, priority: 'HIGH' },
-    { id: 11, roomNumber: '301', floor: 'Floor 3', type: 'Luxury Suite',  hkStatus: 'INSPECTED',       isOccupied: false, lastCleaned: '2026-05-19T08:45:00Z', dnd: false, priority: 'LOW' },
-    { id: 12, roomNumber: '302', floor: 'Floor 3', type: 'Double Room',   hkStatus: 'VACANT_DIRTY',    isOccupied: false, assignedToId: 3, dnd: false, priority: 'MEDIUM' },
-    { id: 13, roomNumber: '303', floor: 'Floor 3', type: 'Single Room',   hkStatus: 'OCCUPIED_CLEAN',  isOccupied: true,  guestName: 'Vikram Nair',       checkoutDate: '2026-05-23', dnd: false, priority: 'LOW' },
-    { id: 14, roomNumber: '304', floor: 'Floor 3', type: 'Luxury Suite',  hkStatus: 'OCCUPIED_DIRTY',  isOccupied: true,  guestName: 'Kavitha Reddy',     checkoutDate: '2026-05-20', dnd: false, priority: 'HIGH' },
-    { id: 15, roomNumber: 'G01', floor: 'Ground',  type: 'Palazzo Deluxe',hkStatus: 'VACANT_CLEAN',    isOccupied: false, lastCleaned: '2026-05-19T07:30:00Z', dnd: false, priority: 'LOW' },
-  ]);
+  private _rooms = signal<HKRoom[]>([]);
+  private _roomFloors = signal<string[]>([]);
 
   private _tasks = signal<HKTask[]>([]);
 
@@ -247,6 +290,7 @@ export class HousekeepingService {
 
   // Public read-only signals
   readonly rooms      = this._rooms.asReadonly();
+  readonly roomFloors = this._roomFloors.asReadonly();
   readonly tasks      = this._tasks.asReadonly();
   readonly staff      = this._staff.asReadonly();
   readonly lostFound  = this._lostFound.asReadonly();
@@ -288,6 +332,8 @@ export class HousekeepingService {
   readonly staffMap = computed(() => new Map(this._staff().map(s => [s.id, s])));
 
   constructor() {
+    this.loadRooms();
+    this.loadStaff();
     this.loadTasks();
     this.loadLostFound();
     this.loadLostFoundCategories();
@@ -298,6 +344,31 @@ export class HousekeepingService {
   }
 
   // --- Room CRUD ---
+  loadRooms() {
+    forkJoin({
+      floors: this.http.get<ApiResponse<ApiFloorDTO[]>>(`${this.masterApiBase}/floors/getAllFloors`),
+      roomTypes: this.http.get<ApiResponse<ApiRoomTypeDTO[]>>(`${this.masterApiBase}/roomTypes/getAllRoomTypes`),
+      rooms: this.http.get<ApiResponse<ApiMasterRoomDTO[]>>(`${this.masterApiBase}/rooms/getAllRooms`),
+    }).subscribe({
+      next: response => {
+        const floorItems = (response.floors.data ?? []).filter(floor => floor.id && floor.floorNumber && floor.isActive !== false);
+        const floors = new Map(floorItems.map(floor => [Number(floor.id), floor.floorNumber || `Floor ${floor.id}`]));
+        const roomTypes = new Map((response.roomTypes.data ?? []).map(type => [Number(type.id), type.name || 'Room']));
+        const rooms = (response.rooms.data ?? [])
+          .filter(room => room.id && room.roomNumber && room.isActive !== false)
+          .map(room => this.fromApiMasterRoom(room, floors, roomTypes))
+          .sort((a, b) => a.floor.localeCompare(b.floor, undefined, { numeric: true }) || a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }));
+        this._roomFloors.set(floorItems.map(floor => floor.floorNumber || `Floor ${floor.id}`));
+        this._rooms.set(rooms);
+      },
+      error: error => {
+        console.error('Failed to load housekeeping rooms', error);
+        this._roomFloors.set([]);
+        this._rooms.set([]);
+      },
+    });
+  }
+
   updateRoomStatus(roomId: number, status: HKStatus) {
     this._rooms.update(list => list.map(r => r.id === roomId ? { ...r, hkStatus: status, lastCleaned: status === 'VACANT_CLEAN' || status === 'INSPECTED' ? new Date().toISOString() : r.lastCleaned } : r));
   }
@@ -308,6 +379,106 @@ export class HousekeepingService {
       const withoutRoom = staff.assignedRoomIds.filter(id => id !== roomId);
       return staff.id === staffId ? { ...staff, assignedRoomIds: [...withoutRoom, roomId] } : { ...staff, assignedRoomIds: withoutRoom };
     }));
+  }
+
+  loadStaff() {
+    this.http.get<ApiResponse<ApiStaffDTO[]>>(`${this.staffApiBase}/getHousekeepingStaff`).subscribe({
+      next: response => this.applyApiStaff(response.data ?? []),
+      error: error => {
+        console.error('Failed to load housekeeping staff', error);
+        this._staff.set([]);
+      },
+    });
+  }
+
+  saveStaffAssignments(userId: number, roomIds: number[], assignedBy = 'System') {
+    const payload: UserRoomAssignmentRequest = { userId, roomIds, assignedBy };
+    this.applyLocalStaffAssignments(userId, roomIds);
+
+    this.http.post<ApiResponse<void>>(`${this.staffApiBase}/saveAssignments`, payload).subscribe({
+      next: () => this.loadStaff(),
+      error: error => {
+        console.error('Failed to save staff room assignments', error);
+        this.loadStaff();
+      },
+    });
+  }
+
+  private applyApiStaff(items: ApiStaffDTO[]) {
+    const staff = items.map(item => this.fromApiStaff(item)).filter(item => item.id && item.name);
+    this._staff.set(staff);
+
+    const assignedRoomIds = new Set(staff.flatMap(item => item.assignedRoomIds));
+    this._rooms.update(rooms => rooms.map(room => {
+      const assignedStaff = staff.find(item => item.assignedRoomIds.includes(room.id));
+      if (assignedStaff) return { ...room, assignedToId: assignedStaff.id };
+      return assignedRoomIds.has(room.id) ? room : { ...room, assignedToId: undefined };
+    }));
+  }
+
+  private fromApiStaff(item: ApiStaffDTO): HKStaff {
+    const name = item.fullName?.trim() || `Staff #${item.id ?? ''}`.trim();
+    const pendingTaskDetails = (item.pendingTaskDetails ?? []).map(task => this.fromApiTask(task));
+    return {
+      id: Number(item.id ?? 0),
+      name,
+      role: item.role?.trim() || 'HOUSEKEEPER',
+      shift: item.shift?.trim() || '-',
+      status: this.asStaffStatus(item.status),
+      assignedRoomIds: (item.assignedRoomDetails ?? [])
+        .map(room => this.numberOrUndefined(room.id))
+        .filter((id): id is number => !!id),
+      completedToday: Number(item.completedToday ?? 0),
+      pendingTasks: Number(item.pendingTasks ?? pendingTaskDetails.length),
+      pendingTaskDetails,
+      phone: item.phone || '-',
+      avatar: this.initials(name),
+    };
+  }
+
+  private applyLocalStaffAssignments(userId: number, roomIds: number[]) {
+    const selected = new Set(roomIds);
+    this._rooms.update(rooms => rooms.map(room => {
+      if (selected.has(room.id)) return { ...room, assignedToId: userId };
+      return room.assignedToId === userId ? { ...room, assignedToId: undefined } : room;
+    }));
+    this._staff.update(staff => staff.map(item => {
+      if (item.id === userId) return { ...item, assignedRoomIds: roomIds };
+      return { ...item, assignedRoomIds: item.assignedRoomIds.filter(id => !selected.has(id)) };
+    }));
+  }
+
+  private fromApiMasterRoom(room: ApiMasterRoomDTO, floors: Map<number, string>, roomTypes: Map<number, string>): HKRoom {
+    const existing = this._rooms().find(item => item.id === room.id);
+    const assignedStaff = this._staff().find(staff => staff.assignedRoomIds.includes(Number(room.id)));
+    const typeId = Number(room.roomTypeId ?? room.typeId ?? 0);
+    const hkStatus = this.asHKStatus(room.status);
+
+    return {
+      id: Number(room.id),
+      roomNumber: room.roomNumber ?? '',
+      floor: floors.get(Number(room.floorId)) || room.floorNumber || `Floor ${room.floorId ?? '-'}`,
+      type: roomTypes.get(typeId) || room.roomTypeName || 'Room',
+      hkStatus,
+      isOccupied: String(room.status || '').toUpperCase() === 'OCCUPIED',
+      lastCleaned: existing?.lastCleaned,
+      assignedToId: existing?.assignedToId ?? assignedStaff?.id,
+      dnd: existing?.dnd ?? false,
+      priority: existing?.priority ?? 'LOW',
+    };
+  }
+
+  private asHKStatus(value?: string): HKStatus {
+    const normalized = String(value || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+    if (normalized === 'OCCUPIED') return 'OCCUPIED_CLEAN';
+    if (normalized === 'CLEANING') return 'VACANT_DIRTY';
+    if (normalized === 'MAINTENANCE') return 'UNDER_MAINTENANCE';
+    if (normalized === 'OUT_OF_ORDER') return 'OUT_OF_ORDER';
+    if (normalized === 'DO_NOT_DISTURB') return 'DO_NOT_DISTURB';
+    if (normalized === 'OCCUPIED_DIRTY') return 'OCCUPIED_DIRTY';
+    if (normalized === 'VACANT_DIRTY') return 'VACANT_DIRTY';
+    if (normalized === 'INSPECTED') return 'INSPECTED';
+    return 'VACANT_CLEAN';
   }
 
   // --- Task CRUD ---
@@ -435,6 +606,21 @@ export class HousekeepingService {
       return value;
     }
     return 'PENDING';
+  }
+
+  private asStaffStatus(value?: string): StaffStatus {
+    const normalized = String(value || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+    if (normalized === 'ON_BREAK') return 'ON_BREAK';
+    if (normalized === 'INACTIVE' || normalized === 'OFF_DUTY') return 'OFF_DUTY';
+    return 'ON_DUTY';
+  }
+
+  private initials(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    const letters = parts.length > 1
+      ? `${parts[0][0]}${parts[parts.length - 1][0]}`
+      : name.slice(0, 2);
+    return letters.toUpperCase() || 'ST';
   }
 
   private numberOrUndefined(value: unknown): number | undefined {

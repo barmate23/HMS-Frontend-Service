@@ -1,0 +1,206 @@
+<main class="auth-shell">
+  <section class="auth-visual">
+    <div class="brand">
+      <span class="brand-mark">
+      </span>
+      <div>
+        <strong>HMS Cloud</strong>
+        <span>Hotel operations suite</span>
+      </div>
+    </div>
+
+    <div class="visual-copy">
+      <h1>Run every shift with quiet confidence.</h1>
+      <p>Reservations, housekeeping, rooms, staff and billing stay connected in one refined hotel workspace.</p>
+    </div>
+  </section>
+
+  <section class="auth-panel-wrap">
+    <div class="auth-panel">
+      <div class="panel-head">
+        <button class="back-btn" type="button" *ngIf="step() !== 'login'" (click)="step() === 'success' ? goToLogin() : goToLogin()">
+          <span class="material-icons-round">arrow_back</span>
+        </button>
+        <div>
+          <h2>{{ stepTitle() }}</h2>
+          <p>{{ stepSubtitle() }}</p>
+        </div>
+      </div>
+
+      <div class="alert" *ngIf="message()">
+        <span class="material-icons-round">info</span>
+        {{ message() }}
+      </div>
+
+      <form class="auth-form" *ngIf="step() === 'login'" (ngSubmit)="submitLogin()">
+        <label class="field">
+          <span>Email or Username</span>
+          <div class="input-wrap">
+            <span class="material-icons-round">person</span>
+            <input
+              name="username"
+              autocomplete="username"
+              placeholder="frontdesk@hotel.com"
+              [ngModel]="loginForm().username"
+              (ngModelChange)="updateLogin('username', $event)"
+            />
+          </div>
+        </label>
+
+        <label class="field">
+          <span>Password</span>
+          <div class="input-wrap">
+            <span class="material-icons-round">lock</span>
+            <input
+              name="password"
+              autocomplete="current-password"
+              placeholder="Enter password"
+              [type]="showPassword() ? 'text' : 'password'"
+              [ngModel]="loginForm().password"
+              (ngModelChange)="updateLogin('password', $event)"
+            />
+            <button class="icon-action" type="button" (click)="togglePassword()">
+              <span class="material-icons-round">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
+        </label>
+
+        <div class="form-row">
+          <label class="check-row">
+            <input
+              type="checkbox"
+              name="remember"
+              [ngModel]="loginForm().remember"
+              (ngModelChange)="updateLogin('remember', $event)"
+            />
+            <span>Remember this device</span>
+          </label>
+          <button type="button" class="link-btn" (click)="goToForgot()">Forgot password?</button>
+        </div>
+
+        <button class="primary-btn" type="submit" [disabled]="isSubmitting()">
+          <span class="material-icons-round">login</span>
+          {{ isSubmitting() ? 'Signing in...' : 'Sign In' }}
+        </button>
+      </form>
+
+      <form class="auth-form" *ngIf="step() === 'forgot'" (ngSubmit)="submitForgot()">
+        <div class="recovery-note">
+          <span class="material-icons-round">mark_email_unread</span>
+          <div>
+            <strong>Password recovery</strong>
+            <small>Use the registered admin email to generate a reset code.</small>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Registered Email</span>
+          <div class="input-wrap">
+            <span class="material-icons-round">alternate_email</span>
+            <input
+              name="email"
+              type="email"
+              autocomplete="email"
+              placeholder="manager@hotel.com"
+              [ngModel]="recoveryForm().email"
+              (ngModelChange)="updateRecovery('email', $event)"
+            />
+          </div>
+        </label>
+
+        <button class="primary-btn" type="submit" [disabled]="isSubmitting()">
+          <span class="material-icons-round">mark_email_read</span>
+          {{ isSubmitting() ? 'Sending code...' : 'Send Verification Code' }}
+        </button>
+      </form>
+
+      <form class="auth-form" *ngIf="step() === 'verify'" (ngSubmit)="submitOtp()">
+        <div class="recovery-note">
+          <span class="material-icons-round">pin</span>
+          <div>
+            <strong>Verification code</strong>
+            <small>Enter the reset code returned by the password recovery API.</small>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Verification Code</span>
+          <div class="input-wrap otp-wrap">
+            <span class="material-icons-round">pin</span>
+            <input
+              name="otp"
+              inputmode="numeric"
+              maxlength="6"
+              placeholder="000000"
+              [ngModel]="recoveryForm().otp"
+              (ngModelChange)="updateRecovery('otp', $event)"
+            />
+          </div>
+        </label>
+
+        <button class="primary-btn" type="submit" [disabled]="isSubmitting()">
+          <span class="material-icons-round">verified</span>
+          {{ isSubmitting() ? 'Verifying...' : 'Verify Code' }}
+        </button>
+
+        <button class="ghost-btn" type="button" (click)="submitForgot()" [disabled]="isSubmitting()">
+          Resend code
+        </button>
+      </form>
+
+      <form class="auth-form" *ngIf="step() === 'reset'" (ngSubmit)="submitReset()">
+        <label class="field">
+          <span>New Password</span>
+          <div class="input-wrap">
+            <span class="material-icons-round">password</span>
+            <input
+              name="newPassword"
+              autocomplete="new-password"
+              placeholder="Minimum 8 characters"
+              [type]="showNewPassword() ? 'text' : 'password'"
+              [ngModel]="recoveryForm().newPassword"
+              (ngModelChange)="updateRecovery('newPassword', $event)"
+            />
+            <button class="icon-action" type="button" (click)="toggleNewPassword()">
+              <span class="material-icons-round">{{ showNewPassword() ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
+        </label>
+
+        <label class="field">
+          <span>Confirm Password</span>
+          <div class="input-wrap">
+            <span class="material-icons-round">lock_reset</span>
+            <input
+              name="confirmPassword"
+              autocomplete="new-password"
+              placeholder="Re-enter password"
+              [type]="showNewPassword() ? 'text' : 'password'"
+              [ngModel]="recoveryForm().confirmPassword"
+              (ngModelChange)="updateRecovery('confirmPassword', $event)"
+            />
+          </div>
+        </label>
+
+        <button class="primary-btn" type="submit" [disabled]="isSubmitting()">
+          <span class="material-icons-round">done_all</span>
+          {{ isSubmitting() ? 'Updating...' : 'Update Password' }}
+        </button>
+      </form>
+
+      <div class="success-state" *ngIf="step() === 'success'">
+        <span class="success-icon material-icons-round">task_alt</span>
+        <p>Your password has been updated. Sign in with the new password.</p>
+        <button class="primary-btn" type="button" (click)="goToLogin()">
+          <span class="material-icons-round">arrow_forward</span>
+          Back To Sign In
+        </button>
+      </div>
+
+      <div class="panel-foot">
+        <span class="material-icons-round">shield</span>
+        Secure access for hotel staff and administrators
+      </div>
+    </div>
+  </section>
+</main>

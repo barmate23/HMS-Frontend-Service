@@ -3,11 +3,14 @@ import { Layout } from './layout/layout';
 import { ReservationCenter } from './reservations/reservation-center';
 import { NewBookingComponent } from './reservations/new-booking/new-booking.component';
 import { ArrivalsComponent } from './reservations/arrivals/arrivals.component';
+import { authGuard, guestGuard } from './auth/auth.guard';
 
 export const routes: Routes = [
+  { path: 'login', canActivate: [guestGuard], loadComponent: () => import('./auth/auth.component').then(m => m.AuthComponent) },
   {
     path: '',
     component: Layout,
+    canActivate: [authGuard],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent) },
@@ -40,6 +43,7 @@ export const routes: Routes = [
       { path: 'user-management', redirectTo: 'user-management/users', pathMatch: 'full' },
       { path: 'user-management/users', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) },
       { path: 'user-management/roles', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) },
+      { path: 'user-management/departments', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) },
       { path: 'user-management/shifts', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) },
       { path: 'user-management/activity', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) },
       { path: 'setup', redirectTo: 'setup/master-data', pathMatch: 'full' },

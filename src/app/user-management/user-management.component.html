@@ -9,6 +9,10 @@
         <span class="material-icons-round">admin_panel_settings</span>
         Roles & Permissions
       </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'departments'" (click)="switchTab('departments')">
+        <span class="material-icons-round">apartment</span>
+        Departments
+      </button>
       <button class="tab-btn" [class.active]="activeTab() === 'shifts'" (click)="switchTab('shifts')">
         <span class="material-icons-round">schedule</span>
         Shift Configuration
@@ -24,13 +28,13 @@
         <span class="material-icons-round">search</span>
         <input
           type="text"
-          [placeholder]="activeTab() === 'users' ? 'Search user, employee, role...' : activeTab() === 'roles' ? 'Search role, department...' : activeTab() === 'shifts' ? 'Search shift, code, department...' : 'Search activity, actor, module...'"
+          [placeholder]="activeTab() === 'users' ? 'Search user, employee, role...' : activeTab() === 'roles' ? 'Search role, department...' : activeTab() === 'departments' ? 'Search department, code...' : activeTab() === 'shifts' ? 'Search shift, code, department...' : 'Search activity, actor, module...'"
           [ngModel]="searchQuery()"
           (ngModelChange)="searchQuery.set($event)"
         >
       </div>
 
-      <select class="filter-select" *ngIf="activeTab() !== 'activity'" [ngModel]="departmentFilter()" (ngModelChange)="departmentFilter.set($event)">
+      <select class="filter-select" *ngIf="activeTab() !== 'activity' && activeTab() !== 'departments'" [ngModel]="departmentFilter()" (ngModelChange)="departmentFilter.set($event)">
         <option>All Departments</option>
         <option *ngFor="let department of userService.departments()" [value]="department.name">{{ department.name }}</option>
       </select>
@@ -55,6 +59,10 @@
         <span class="material-icons-round">add_moderator</span>
         Add Role
       </button>
+      <button class="btn-primary" *ngIf="activeTab() === 'departments'" (click)="openCreateDepartment()">
+        <span class="material-icons-round">add_business</span>
+        Add Department
+      </button>
       <button class="btn-primary" *ngIf="activeTab() === 'shifts'" (click)="openCreateShift()">
         <span class="material-icons-round">add_alarm</span>
         Add Shift
@@ -62,7 +70,7 @@
     </div>
   </div>
 
-  <div class="stats-grid" *ngIf="activeTab() !== 'shifts'">
+  <div class="stats-grid" *ngIf="activeTab() !== 'shifts' && activeTab() !== 'departments'">
     <div class="stat-card">
       <span class="material-icons-round">group</span>
       <strong>{{ userStats().total }}</strong>
@@ -87,6 +95,34 @@
       <span class="material-icons-round">security</span>
       <strong>{{ userStats().admins }}</strong>
       <small>Admin Roles</small>
+    </div>
+  </div>
+
+  <div class="stats-grid department-summary-grid" *ngIf="activeTab() === 'departments'">
+    <div class="stat-card">
+      <span class="material-icons-round">apartment</span>
+      <strong>{{ departmentStats().total }}</strong>
+      <small>Total Departments</small>
+    </div>
+    <div class="stat-card">
+      <span class="material-icons-round">verified</span>
+      <strong>{{ departmentStats().active }}</strong>
+      <small>Active</small>
+    </div>
+    <div class="stat-card warning">
+      <span class="material-icons-round">link</span>
+      <strong>{{ departmentStats().linked }}</strong>
+      <small>Linked Records</small>
+    </div>
+    <div class="stat-card danger">
+      <span class="material-icons-round">hide_source</span>
+      <strong>{{ departmentStats().inactive }}</strong>
+      <small>Inactive</small>
+    </div>
+    <div class="stat-card">
+      <span class="material-icons-round">inventory_2</span>
+      <strong>{{ departmentStats().empty }}</strong>
+      <small>Unused</small>
     </div>
   </div>
 
@@ -253,6 +289,78 @@
     </div>
   </div>
 
+  <div class="content-card" *ngIf="activeTab() === 'departments'">
+    <div class="card-header">
+      <h2>Department Master</h2>
+      <span>{{ filteredDepartments().length }} Departments</span>
+    </div>
+
+    <div class="table-wrap">
+      <table class="admin-table departments-table">
+        <thead>
+          <tr>
+            <th>Department</th>
+            <th>Code</th>
+            <th>Usage</th>
+            <th>Status</th>
+            <th>Updated</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let department of filteredDepartments()">
+            <td>
+              <div class="department-cell">
+                <span class="department-icon">
+                  <span class="material-icons-round">apartment</span>
+                </span>
+                <div>
+                  <strong>{{ department.name }}</strong>
+                  <small>{{ department.description || 'No department notes configured.' }}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="code-pill">{{ department.code || '-' }}</span>
+            </td>
+            <td>
+              <div class="usage-stack">
+                <strong>{{ departmentUsageTotal(department) }} linked</strong>
+                <small>
+                  {{ userService.departmentUsageCount(department.name).users }} users ·
+                  {{ userService.departmentUsageCount(department.name).roles }} roles ·
+                  {{ userService.departmentUsageCount(department.name).shifts }} shifts
+                </small>
+              </div>
+            </td>
+            <td>
+              <span class="status-pill" [class.active]="department.isActive !== false" [class.inactive]="department.isActive === false">
+                {{ department.isActive !== false ? 'ACTIVE' : 'INACTIVE' }}
+              </span>
+            </td>
+            <td>{{ department.updatedAt || 'Local' }}</td>
+            <td>
+              <div class="action-row">
+                <button class="icon-btn" title="Edit department" (click)="openEditDepartment(department)">
+                  <span class="material-icons-round">edit</span>
+                </button>
+                <button class="icon-btn danger" title="Delete department" (click)="deleteDepartment(department)">
+                  <span class="material-icons-round">delete_outline</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filteredDepartments().length === 0">
+            <td colspan="6" class="empty-state">
+              <span class="material-icons-round">domain_disabled</span>
+              No data found.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="shift-layout" *ngIf="activeTab() === 'shifts'">
     <div class="shift-subnav">
       <button class="shift-tab-btn" [class.active]="activeShiftTab() === 'master'" (click)="activeShiftTab.set('master')">
@@ -408,6 +516,50 @@
   </div>
 </div>
 
+<div class="modal-overlay" *ngIf="departmentDeleteTarget() as department" (click)="closeDepartmentDeleteModal()">
+  <div class="admin-modal confirm-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h2>Delete Department</h2>
+        <p>Confirm before removing this department from master data.</p>
+      </div>
+      <button class="close-btn" (click)="closeDepartmentDeleteModal()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="modal-body confirm-body">
+      <div class="confirm-icon danger">
+        <span class="material-icons-round">warning</span>
+      </div>
+      <div class="confirm-copy">
+        <h3>{{ department.name }}</h3>
+        <p>Deleting this department removes it from user, role, and shift selection lists.</p>
+      </div>
+
+      <div class="warning-panel" *ngIf="departmentDeleteBlockReason(department); else departmentDeleteReady">
+        <span class="material-icons-round">error</span>
+        <strong>{{ departmentDeleteBlockReason(department) }}</strong>
+      </div>
+
+      <ng-template #departmentDeleteReady>
+        <div class="warning-panel">
+          <span class="material-icons-round">priority_high</span>
+          <strong>Confirm only after verifying this department is no longer needed.</strong>
+        </div>
+      </ng-template>
+    </div>
+
+    <div class="modal-footer">
+      <button class="secondary-btn" (click)="closeDepartmentDeleteModal()">Cancel</button>
+      <button class="danger-btn" (click)="confirmDeleteDepartment()" [disabled]="!!departmentDeleteBlockReason(department)">
+        <span class="material-icons-round">delete_outline</span>
+        Delete Department
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" *ngIf="shiftDeleteTarget() as shift" (click)="closeShiftDeleteModal()">
   <div class="admin-modal confirm-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -498,6 +650,50 @@
       <button class="danger-btn" (click)="confirmDeleteRole()" [disabled]="!!roleDeleteBlockReason(role)">
         <span class="material-icons-round">delete_outline</span>
         Delete Role
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="isDepartmentModalOpen()" (click)="closeDepartmentModal()">
+  <div class="admin-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h2>{{ modalMode() === 'create' ? 'Create Department' : 'Edit Department' }}</h2>
+        <p>Manage department master data used across users, roles and shifts.</p>
+      </div>
+      <button class="close-btn" (click)="closeDepartmentModal()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-grid">
+        <label [class.has-error]="departmentFieldError('name')">
+          Department Name
+          <input type="text" [ngModel]="currentDepartment().name" (ngModelChange)="updateCurrentDepartment('name', $event)" placeholder="e.g. Front Office">
+          <small class="field-error" *ngIf="departmentFieldError('name')">{{ departmentFieldError('name') }}</small>
+        </label>
+        <label>
+          Status
+          <select [ngModel]="currentDepartment().isActive" (ngModelChange)="updateCurrentDepartment('isActive', $event)">
+            <option [ngValue]="true">Active</option>
+            <option [ngValue]="false">Inactive</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="notes-field">
+        Description
+        <textarea rows="3" [ngModel]="currentDepartment().description" (ngModelChange)="updateCurrentDepartment('description', $event)" placeholder="Department purpose or operational notes..."></textarea>
+      </label>
+    </div>
+
+    <div class="modal-footer">
+      <button class="secondary-btn" (click)="closeDepartmentModal()">Cancel</button>
+      <button class="btn-primary" (click)="saveDepartment()">
+        <span class="material-icons-round">save</span>
+        {{ modalMode() === 'create' ? 'Create Department' : 'Save Department' }}
       </button>
     </div>
   </div>

@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 import {
+  DepartmentOption,
   PermissionAction,
   PermissionMatrix,
   PermissionModule,
@@ -15,9 +16,10 @@ import {
   UserStatus
 } from './user-management.service';
 
-type UserManagementTab = 'users' | 'roles' | 'shifts' | 'activity';
+type UserManagementTab = 'users' | 'roles' | 'departments' | 'shifts' | 'activity';
 type ShiftTab = 'master' | 'assignment';
 type ModalMode = 'create' | 'edit';
+type DepartmentValidationKey = 'name';
 type UserValidationKey =
   'employeeId' |
   'fullName' |
@@ -54,13 +56,18 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   isUserModalOpen = signal(false);
   isRoleModalOpen = signal(false);
+  isDepartmentModalOpen = signal(false);
   isShiftModalOpen = signal(false);
   modalMode = signal<ModalMode>('create');
   currentUser = signal<Partial<SystemUser>>({});
   currentRole = signal<Partial<UserRole>>({});
+  currentDepartment = signal<Partial<DepartmentOption>>({});
   currentShift = signal<Partial<UserShift>>({});
   roleDeleteTarget = signal<UserRole | null>(null);
+  departmentDeleteTarget = signal<DepartmentOption | null>(null);
   shiftDeleteTarget = signal<UserShift | null>(null);
+  departmentFormSubmitted = signal(false);
+  departmentValidationErrors = signal<Partial<Record<DepartmentValidationKey, string>>>({});
   userFormSubmitted = signal(false);
   userValidationErrors = signal<Partial<Record<UserValidationKey, string>>>({});
   userTouchedFields = signal<Partial<Record<UserValidationKey, boolean>>>({});
@@ -85,6 +92,18 @@ export class UserManagementComponent implements OnInit, OnDestroy {
       active: shifts.filter(shift => shift.isActive).length,
       assigned,
       unassigned: this.userService.users().filter(user => !user.shift).length
+    };
+  });
+
+  readonly departmentStats = computed(() => {
+    const departments = this.userService.departments();
+    const totalLinks = departments.reduce((sum, department) => sum + this.userService.departmentUsageCount(department.name).total, 0);
+    return {
+      total: departments.length,
+      active: departments.filter(department => department.isActive !== false).length,
+      inactive: departments.filter(department => department.isActive === false).length,
+      linked: totalLinks,
+      empty: departments.filter(department => this.userService.departmentUsageCount(department.name).total === 0).length
     };
   });
 
@@ -119,6 +138,16 @@ export class UserManagementComponent implements OnInit, OnDestroy {
         role.level.toLowerCase().includes(query);
       const matchesDepartment = department === 'All Departments' || role.department === department;
       return matchesQuery && matchesDepartment;
+    });
+  });
+
+  readonly filteredDepartments = computed(() => {
+    const query = this.searchQuery().toLowerCase().trim();
+    return this.userService.departments().filter(department => {
+      return !query ||
+        department.name.toLowerCase().includes(query) ||
+        String(department.code || '').toLowerCase().includes(query) ||
+        String(department.description || '').toLowerCase().includes(query);
     });
   });
 
@@ -275,6 +304,42 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     document.body.style.overflow = '';
   }
 
+  openCreateDepartment(): void {
+    this.modalMode.set('create');
+    this.departmentFormSubmitted.set(false);
+    this.departmentValidationErrors.set({});
+    this.currentDepartment.set({
+      name: '',
+      description: '',
+      isActive: true
+    });
+    this.isDepartmentModalOpen.set(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  openEditDepartment(department: DepartmentOption): void {
+    this.modalMode.set('edit');
+    this.departmentFormSubmitted.set(false);
+    this.departmentValidationErrors.set({});
+    this.currentDepartment.set({ ...department });
+    this.isDepartmentModalOpen.set(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  saveDepartment(): void {
+    this.departmentFormSubmitted.set(true);
+    if (!this.validateDepartmentForm()) return;
+    this.userService.saveDepartment(this.currentDepartment());
+    this.closeDepartmentModal();
+  }
+
+  closeDepartmentModal(): void {
+    this.isDepartmentModalOpen.set(false);
+    this.departmentFormSubmitted.set(false);
+    this.departmentValidationErrors.set({});
+    document.body.style.overflow = '';
+  }
+
   openCreateShift(): void {
     this.modalMode.set('create');
     this.currentShift.set({
@@ -343,6 +408,31 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     if (this.isRoleDeleteFrozen(role)) return;
     this.roleDeleteTarget.set(role);
     document.body.style.overflow = 'hidden';
+  }
+
+  deleteDepartment(department: DepartmentOption): void {
+    this.departmentDeleteTarget.set(department);
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeDepartmentDeleteModal(): void {
+    this.departmentDeleteTarget.set(null);
+    document.body.style.overflow = '';
+  }
+
+  confirmDeleteDepartment(): void {
+    const department = this.departmentDeleteTarget();
+    if (!department || this.departmentDeleteBlockReason(department)) return;
+    this.userService.deleteDepartment(department.id);
+    this.closeDepartmentDeleteModal();
+  }
+
+  departmentDeleteBlockReason(department: DepartmentOption): string {
+    const usage = this.userService.departmentUsageCount(department.name);
+    if (usage.total > 0) {
+      return `This department is linked to ${usage.users} user${usage.users === 1 ? '' : 's'}, ${usage.roles} role${usage.roles === 1 ? '' : 's'}, and ${usage.shifts} shift${usage.shifts === 1 ? '' : 's'}. Reassign them before deleting.`;
+    }
+    return '';
   }
 
   isRoleDeleteFrozen(role: UserRole): boolean {
@@ -481,6 +571,21 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     return this.userService.rolesMap().get(Number(roleId))?.name || 'Unassigned';
   }
 
+  departmentUsageTotal(department: DepartmentOption): number {
+    return this.userService.departmentUsageCount(department.name).total;
+  }
+
+  departmentFieldError(field: DepartmentValidationKey): string {
+    if (!this.departmentFormSubmitted()) return '';
+    return this.departmentValidationErrors()[field] || '';
+  }
+
+  updateCurrentDepartment<K extends keyof DepartmentOption>(field: K, value: DepartmentOption[K] | undefined): void {
+    const normalized = field === 'code' && typeof value === 'string' ? value.toUpperCase() as DepartmentOption[K] : value;
+    this.currentDepartment.update(department => ({ ...department, [field]: normalized }));
+    if (this.departmentFormSubmitted()) this.validateDepartmentForm();
+  }
+
   roleDepartment(roleId?: number): string {
     return this.userService.rolesMap().get(Number(roleId))?.department || 'No Department';
   }
@@ -522,6 +627,8 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   private updateTabFromUrl(url: string): void {
     if (url.includes('/user-management/roles')) {
       this.activeTab.set('roles');
+    } else if (url.includes('/user-management/departments')) {
+      this.activeTab.set('departments');
     } else if (url.includes('/user-management/shifts')) {
       this.activeTab.set('shifts');
     } else if (url.includes('/user-management/activity')) {
@@ -530,6 +637,26 @@ export class UserManagementComponent implements OnInit, OnDestroy {
       this.activeTab.set('users');
     }
     this.searchQuery.set('');
+  }
+
+  private validateDepartmentForm(): boolean {
+    const department = this.currentDepartment();
+    const errors: Partial<Record<DepartmentValidationKey, string>> = {};
+    const name = this.textValue(department.name);
+    const duplicateName = this.userService.departments().some(item =>
+      item.id !== Number(department.id) && item.name.toLowerCase() === name.toLowerCase()
+    );
+
+    if (!name) {
+      errors.name = 'Department name is required.';
+    } else if (!/^[A-Za-z][A-Za-z0-9 &-]{1,58}[A-Za-z0-9]$/.test(name)) {
+      errors.name = 'Use 3-60 letters, numbers, spaces, ampersand or hyphen.';
+    } else if (duplicateName) {
+      errors.name = 'Department name already exists.';
+    }
+
+    this.departmentValidationErrors.set(errors);
+    return Object.keys(errors).length === 0;
   }
 
   private validateUserForm(): boolean {

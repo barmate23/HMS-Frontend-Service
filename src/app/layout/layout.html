@@ -77,24 +77,24 @@
             <span class="dot"></span>
           </button>
           <div class="user-pill">
-            <span class="user-initials">AB</span>
+            <span class="user-initials">{{ auth.currentUser()?.initials || 'HM' }}</span>
             
             <!-- Beautiful Profile Dropdown -->
             <div class="user-dropdown-menu">
               <div class="dropdown-header">
-                <div class="dropdown-avatar">AB</div>
+                <div class="dropdown-avatar">{{ auth.currentUser()?.initials || 'HM' }}</div>
                 <div class="dropdown-user-info">
-                  <div class="dropdown-name">Alexander Bennett</div>
-                  <div class="dropdown-email">alex.bennett&#64;hmscloud.com</div>
+                  <div class="dropdown-name">{{ auth.currentUser()?.fullName || 'HMS User' }}</div>
+                  <div class="dropdown-email">{{ auth.currentUser()?.email || 'user@hmscloud.com' }}</div>
                 </div>
               </div>
               <div class="dropdown-divider"></div>
               <div class="dropdown-body">
                 <div class="dropdown-item">
-                  <span class="material-icons-round">person</span>
+                    <span class="material-icons-round">person</span>
                   <div class="item-content">
                     <span class="item-label">My Profile</span>
-                    <span class="item-sub">Front Office Manager</span>
+                    <span class="item-sub">{{ auth.currentUser()?.role || 'Hotel Staff' }}</span>
                   </div>
                 </div>
                 <div class="dropdown-item">
@@ -106,7 +106,7 @@
                 </div>
               </div>
               <div class="dropdown-footer">
-                <button class="dropdown-logout">
+                <button class="dropdown-logout" type="button" (click)="logout()">
                   <span class="material-icons-round">logout</span>
                   Logout
                 </button>

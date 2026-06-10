@@ -85,6 +85,9 @@ export interface DepartmentOption {
   id: number;
   name: string;
   code?: string;
+  description?: string;
+  isActive?: boolean;
+  updatedAt?: string;
 }
 
 export interface FloorOption {
@@ -111,6 +114,20 @@ interface ApiCommonMaster {
   category?: string;
   code?: string;
   value?: string;
+  description?: string;
+  isActive?: boolean;
+  is_active?: boolean;
+  updatedAt?: string;
+  updated_at?: string;
+}
+
+interface ApiDepartment {
+  id?: number;
+  name?: string;
+  description?: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface ApiModule {
@@ -239,15 +256,7 @@ export class UserManagementService {
     { id: 9, key: 'user_management', label: 'User Management', group: 'Management', icon: 'manage_accounts' }
   ]);
 
-  readonly departments = signal<DepartmentOption[]>([
-    { id: 1, name: 'Front Office' },
-    { id: 2, name: 'Housekeeping' },
-    { id: 3, name: 'Hotel Setup' },
-    { id: 4, name: 'Accounts' },
-    { id: 5, name: 'Management' },
-    { id: 6, name: 'Maintenance' },
-    { id: 7, name: 'Security' }
-  ]);
+  readonly departments = signal<DepartmentOption[]>([]);
   readonly statuses: UserStatus[] = ['ACTIVE', 'INACTIVE', 'LOCKED'];
   readonly roleLevels: RoleLevel[] = ['Property', 'Department', 'Supervisor', 'Admin'];
   readonly properties = signal<PropertyOption[]>([
@@ -282,7 +291,7 @@ export class UserManagementService {
     forkJoin({
       hotels: this.http.get<StandardResponse<ApiHotel[]>>(`${this.masterBaseUrl}/hotels/getAllHotels`).pipe(catchError(() => of(null))),
       floors: this.http.get<StandardResponse<ApiFloor[]>>(`${this.masterBaseUrl}/floors/getAllFloors`).pipe(catchError(() => of(null))),
-      departments: this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/DEPARTMENT`).pipe(catchError(() => of(null))),
+      departments: this.http.get<StandardResponse<ApiDepartment[]>>(`${this.userBaseUrl}/departments/getAllDepartments`).pipe(catchError(() => of(null))),
       modules: this.http.get<StandardResponse<ApiModule[]>>(`${this.userBaseUrl}/roles/getAllModules`).pipe(catchError(() => of(null))),
       roles: this.http.get<StandardResponse<ApiRole[]>>(`${this.userBaseUrl}/roles/getAllRoles`).pipe(catchError(() => of(null))),
       users: this.http.get<StandardResponse<ApiUser[]>>(`${this.userBaseUrl}/users/getAllUsers`).pipe(catchError(() => of(null))),
@@ -292,7 +301,7 @@ export class UserManagementService {
       next: ({ hotels, floors, departments, modules, roles, users, shifts, audit }) => {
         if (hotels?.success && hotels.data?.length) this.setProperties(hotels.data);
         if (floors?.success && floors.data?.length) this.setFloors(floors.data);
-        this.setDepartments(this.commonMastersData(departments));
+        if (departments?.success) this.setDepartments(departments.data || []);
         if (modules?.success && modules.data?.length) this.setModules(modules.data);
         if (roles?.success) this.roles.set((roles.data || []).map(role => this.mapRole(role)));
         if (shifts?.success && Array.isArray(shifts.data)) this.setShifts(shifts.data);
@@ -496,6 +505,53 @@ export class UserManagementService {
     return this.users().filter(user => Number(user.roleId) === Number(roleId)).length || Number(role?.userCount || 0);
   }
 
+  departmentUsageCount(departmentName: string): { users: number; roles: number; shifts: number; total: number } {
+    const normalized = String(departmentName || '').toLowerCase();
+    const users = this.users().filter(user => user.department.toLowerCase() === normalized).length;
+    const roles = this.roles().filter(role => role.department.toLowerCase() === normalized).length;
+    const shifts = this.shiftConfigs().filter(shift => shift.department.toLowerCase() === normalized).length;
+    return { users, roles, shifts, total: users + roles + shifts };
+  }
+
+  saveDepartment(input: Partial<DepartmentOption>): void {
+    const current = this.departments();
+    const existing = current.find(department => department.id === Number(input.id));
+    const normalized = this.normalizedDepartment(input, existing);
+    const payload = this.toDepartmentPayload(normalized);
+    const request$ = existing
+      ? this.http.put<StandardResponse<ApiDepartment>>(`${this.userBaseUrl}/departments/updateDepartment/${existing.id}`, payload)
+      : this.http.post<StandardResponse<ApiDepartment>>(`${this.userBaseUrl}/departments/createDepartment`, payload);
+
+    request$.pipe(
+      map(response => this.mapDepartment(response?.data || payload, normalized)),
+      catchError(err => {
+        this.apiError.set(null);
+        return of({ ...normalized, updatedAt: 'Local draft' });
+      })
+    ).subscribe(saved => {
+      this.upsertLocalDepartment(saved, existing);
+      this.addActivity('System', existing ? 'Department updated' : 'Department created', saved.name, 'Departments', 'INFO');
+    });
+  }
+
+  deleteDepartment(id: number): boolean {
+    const target = this.departments().find(department => department.id === Number(id));
+    if (!target) return false;
+    const usage = this.departmentUsageCount(target.name);
+    if (usage.total > 0) {
+      this.apiError.set(`Reassign ${usage.total} linked record${usage.total === 1 ? '' : 's'} before deleting ${target.name}.`);
+      return false;
+    }
+
+    this.http.delete<StandardResponse<void>>(`${this.userBaseUrl}/departments/deleteDepartment/${id}`).pipe(
+      catchError(() => of(void 0))
+    ).subscribe(() => {
+      this.departments.update(departments => departments.filter(department => department.id !== target.id));
+      this.addActivity('System', 'Department deleted', target.name, 'Departments', 'WARNING');
+    });
+    return true;
+  }
+
   emptyPermissions(): PermissionMatrix {
     return this.permissionModules().reduce((matrix, module) => {
       matrix[module.key] = this.permissionActions.reduce((actions, action) => {
@@ -579,13 +635,9 @@ export class UserManagementService {
     if (options.length) this.floors.set(options);
   }
 
-  private setDepartments(departments: ApiCommonMaster[]): void {
-    const options = departments.map(department => ({
-      id: Number(department.id),
-      name: department.value || department.code || '',
-      code: department.code
-    })).filter(department => department.id && department.name);
-    if (options.length) this.departments.set(options);
+  private setDepartments(departments: Array<ApiDepartment | ApiCommonMaster>): void {
+    const options = departments.map(department => this.mapDepartment(department)).filter(department => department.id && department.name);
+    this.departments.set(options);
   }
 
   private setShifts(shifts: ApiShift[]): void {
@@ -831,6 +883,52 @@ export class UserManagementService {
     }
   }
 
+  private mapDepartment(department: ApiDepartment | ApiCommonMaster, fallback?: DepartmentOption): DepartmentOption {
+    const name = String((department as ApiDepartment).name || (department as ApiCommonMaster).value || fallback?.name || (department as ApiCommonMaster).code || '').trim();
+    return {
+      id: Number(department.id || fallback?.id || this.nextDepartmentId()),
+      name,
+      code: String((department as ApiCommonMaster).code || fallback?.code || this.departmentCode(name)).trim().toUpperCase(),
+      description: String(department.description || fallback?.description || '').trim(),
+      isActive: department.isActive ?? (department as ApiCommonMaster).is_active ?? fallback?.isActive ?? true,
+      updatedAt: department.updatedAt || (department as ApiCommonMaster).updated_at || fallback?.updatedAt || ''
+    };
+  }
+
+  private toDepartmentPayload(department: DepartmentOption): ApiDepartment {
+    return {
+      name: department.name,
+      description: department.description || '',
+      isActive: department.isActive !== false
+    };
+  }
+
+  private normalizedDepartment(input: Partial<DepartmentOption>, existing?: DepartmentOption): DepartmentOption {
+    const name = String(input.name || existing?.name || '').trim();
+    const code = String(input.code || existing?.code || this.departmentCode(name)).trim().toUpperCase();
+    return {
+      id: Number(input.id || existing?.id || this.nextDepartmentId()),
+      name,
+      code,
+      description: String(input.description || existing?.description || '').trim(),
+      isActive: input.isActive ?? existing?.isActive ?? true,
+      updatedAt: existing?.updatedAt || ''
+    };
+  }
+
+  private upsertLocalDepartment(saved: DepartmentOption, existing?: DepartmentOption): void {
+    this.departments.update(departments => existing
+      ? departments.map(department => department.id === existing.id ? saved : department)
+      : [saved, ...departments]
+    );
+
+    if (existing && existing.name !== saved.name) {
+      this.users.update(users => users.map(user => user.department === existing.name ? { ...user, department: saved.name } : user));
+      this.roles.update(roles => roles.map(role => role.department === existing.name ? { ...role, department: saved.name } : role));
+      this.shiftConfigs.update(shifts => shifts.map(shift => shift.department === existing.name ? { ...shift, department: saved.name } : shift));
+    }
+  }
+
   private addActivity(actor: string, event: string, target: string, module: string, severity: AccessActivity['severity']): void {
     const nextId = Math.max(0, ...this.activity().map(item => item.id)) + 1;
     this.activity.update(log => [{
@@ -864,6 +962,19 @@ export class UserManagementService {
 
   private nextShiftId(): number {
     return Math.max(0, ...this.shiftConfigs().map(shift => shift.id)) + 1;
+  }
+
+  private nextDepartmentId(): number {
+    return Math.max(0, ...this.departments().map(department => department.id)) + 1;
+  }
+
+  private departmentCode(name: string): string {
+    return String(name || 'Department')
+      .trim()
+      .replace(/&/g, 'and')
+      .replace(/[^A-Za-z0-9]+/g, '_')
+      .replace(/^_|_$/g, '')
+      .toUpperCase() || 'DEPARTMENT';
   }
 
   private shiftCode(name: string): string {

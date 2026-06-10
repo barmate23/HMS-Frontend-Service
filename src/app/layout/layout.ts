@@ -1,7 +1,8 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { AuthService } from '../auth/auth.service';
 
 @Component({
   selector: 'app-layout',
@@ -12,6 +13,11 @@ import { MatIconModule } from '@angular/material/icon';
 })
 export class Layout {
   isCollapsed = signal(false);
+
+  constructor(
+    readonly auth: AuthService,
+    private readonly router: Router
+  ) {}
 
   navItems = [
     { label: 'Dashboard', icon: 'grid_view', route: '/dashboard' },
@@ -73,6 +79,8 @@ export class Layout {
       children: [
         { label: 'Users', icon: 'group', route: '/user-management/users' },
         { label: 'Roles & Permissions', icon: 'admin_panel_settings', route: '/user-management/roles' },
+        { label: 'Departments', icon: 'apartment', route: '/user-management/departments' },
+        { label: 'Shift Configuration', icon: 'schedule', route: '/user-management/shifts' },
         { label: 'Access Audit', icon: 'manage_history', route: '/user-management/activity' }
       ]
     },
@@ -109,5 +117,10 @@ export class Layout {
     if (item.children) {
       item.expanded = !item.expanded;
     }
+  }
+
+  logout(): void {
+    this.auth.logout();
+    this.router.navigate(['/login']);
   }
 }

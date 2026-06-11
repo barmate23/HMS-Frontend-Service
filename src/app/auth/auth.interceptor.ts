@@ -1,17 +1,25 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
+  const router = inject(Router);
   const token = auth.accessToken;
-  const isPublicAuthRequest = req.url.includes('/auth/login')
-    || req.url.includes('/auth/refresh')
-    || req.url.includes('/auth/forgot-password')
-    || req.url.includes('/auth/reset-password');
+  const apiPath = apiUrlPath(req.url);
+  const isApiRequest = apiPath.startsWith('/api/');
+  const isPublicAuthRequest = [
+    '/api/hmsUserService/v1/auth/login',
+    '/api/hmsUserService/v1/auth/refresh',
+    '/api/hmsUserService/v1/auth/change-password',
+    '/api/hmsUserService/v1/auth/forgot-password',
+    '/api/hmsUserService/v1/auth/verify-reset-code',
+    '/api/hmsUserService/v1/auth/reset-password'
+  ].some(path => apiPath === path);
 
-  if (isPublicAuthRequest || !token || !req.url.startsWith('/api')) {
+  if (isPublicAuthRequest || !token || !isApiRequest) {
     return next(req);
   }
 
@@ -30,6 +38,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       return auth.refreshSession().pipe(
         switchMap(refreshed => {
           if (!refreshed) {
+            router.navigate(['/login']);
             return throwError(() => error);
           }
 
@@ -43,3 +52,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     })
   );
 };
+
+function apiUrlPath(url: string): string {
+  if (url.startsWith('/')) return url.split('?')[0];
+
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return url.split('?')[0];
+  }
+}

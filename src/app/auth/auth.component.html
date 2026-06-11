@@ -84,6 +84,90 @@
         </button>
       </form>
 
+      <form class="auth-form" *ngIf="step() === 'first-login'" (ngSubmit)="submitFirstLoginPassword()">
+        <div class="recovery-note first-login-note">
+          <span class="material-icons-round">admin_panel_settings</span>
+          <div>
+            <strong>First-time access</strong>
+            <small>Your administrator generated a temporary password. Create your private password to continue.</small>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Email or Username</span>
+          <div class="input-wrap">
+            <span class="material-icons-round">person</span>
+            <input
+              name="firstIdentifier"
+              autocomplete="username"
+              placeholder="frontdesk@hotel.com"
+              [ngModel]="firstLoginForm().identifier"
+              (ngModelChange)="updateFirstLogin('identifier', $event)"
+            />
+          </div>
+        </label>
+
+        <label class="field">
+          <span>Temporary Password</span>
+          <div class="input-wrap">
+            <span class="material-icons-round">vpn_key</span>
+            <input
+              name="temporaryPassword"
+              autocomplete="current-password"
+              placeholder="Temporary password"
+              [type]="showPassword() ? 'text' : 'password'"
+              [ngModel]="firstLoginForm().temporaryPassword"
+              (ngModelChange)="updateFirstLogin('temporaryPassword', $event)"
+            />
+            <button class="icon-action" type="button" (click)="togglePassword()">
+              <span class="material-icons-round">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
+        </label>
+
+        <label class="field">
+          <span>New Password</span>
+          <div class="input-wrap">
+            <span class="material-icons-round">password</span>
+            <input
+              name="firstNewPassword"
+              autocomplete="new-password"
+              placeholder="Minimum 8 characters"
+              [type]="showNewPassword() ? 'text' : 'password'"
+              [ngModel]="firstLoginForm().newPassword"
+              (ngModelChange)="updateFirstLogin('newPassword', $event)"
+            />
+            <button class="icon-action" type="button" (click)="toggleNewPassword()">
+              <span class="material-icons-round">{{ showNewPassword() ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
+        </label>
+
+        <label class="field">
+          <span>Confirm New Password</span>
+          <div class="input-wrap">
+            <span class="material-icons-round">lock_reset</span>
+            <input
+              name="firstConfirmPassword"
+              autocomplete="new-password"
+              placeholder="Re-enter new password"
+              [type]="showNewPassword() ? 'text' : 'password'"
+              [ngModel]="firstLoginForm().confirmPassword"
+              (ngModelChange)="updateFirstLogin('confirmPassword', $event)"
+            />
+          </div>
+        </label>
+
+        <button class="primary-btn" type="submit" [disabled]="isSubmitting()">
+          <span class="material-icons-round">done_all</span>
+          {{ isSubmitting() ? 'Updating...' : 'Set Custom Password' }}
+        </button>
+
+        <button class="ghost-btn" type="button" (click)="goToLogin()" [disabled]="isSubmitting()">
+          Back to sign in
+        </button>
+      </form>
+
       <form class="auth-form" *ngIf="step() === 'forgot'" (ngSubmit)="submitForgot()">
         <div class="recovery-note">
           <span class="material-icons-round">mark_email_unread</span>
@@ -116,12 +200,12 @@
 
       <form class="auth-form" *ngIf="step() === 'verify'" (ngSubmit)="submitOtp()">
         <div class="recovery-note">
-          <span class="material-icons-round">pin</span>
-          <div>
-            <strong>Verification code</strong>
-            <small>Enter the reset code returned by the password recovery API.</small>
+            <span class="material-icons-round">pin</span>
+            <div>
+              <strong>Verification code</strong>
+            <small>Enter the reset code sent to your registered email address.</small>
+            </div>
           </div>
-        </div>
 
         <label class="field">
           <span>Verification Code</span>

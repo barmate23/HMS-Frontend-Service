@@ -13,6 +13,8 @@ export interface AuthUser {
 export interface LoginResult {
   success: boolean;
   message: string;
+  requiresPasswordChange?: boolean;
+  identifier?: string;
 }
 
 export interface RecoveryResult {
@@ -47,6 +49,11 @@ interface ApiAuthResponse {
   expiresInSeconds?: number;
   refreshExpiresAt?: string;
   user: ApiAuthUser;
+  firstLogin?: boolean;
+  mustChangePassword?: boolean;
+  passwordChangeRequired?: boolean;
+  requiresPasswordChange?: boolean;
+  temporaryPassword?: boolean;
 }
 
 interface PasswordResetInitResponse {
@@ -54,6 +61,11 @@ interface PasswordResetInitResponse {
   expiresAt?: string;
   resetCode?: string;
   deliveryMode?: string;
+}
+
+interface PasswordChangeResponse {
+  email?: string;
+  username?: string;
 }
 
 interface StoredAuthSession {
@@ -89,23 +101,28 @@ export class AuthService {
   }
 
   login(identifier: string, password: string, remember: boolean): Observable<LoginResult> {
+    const normalizedIdentifier = identifier.trim();
     return this.http.post<StandardResponse<ApiAuthResponse>>(`${this.authBaseUrl}/login`, {
-      identifier: identifier.trim(),
+      identifier: normalizedIdentifier,
       password,
       rememberMe: remember
     }).pipe(
       tap(response => {
-        if (response.success && response.data) {
+        if (response.success && response.data && !this.requiresPasswordChange(response.data)) {
           this.storeSession(response.data, remember);
         }
       }),
       map(response => ({
         success: !!response.success && !!response.data,
-        message: response.success ? '' : this.responseMessage(response, 'Unable to sign in.')
+        message: response.success ? '' : this.responseMessage(response, 'Unable to sign in.'),
+        requiresPasswordChange: this.requiresPasswordChange(response.data),
+        identifier: normalizedIdentifier
       })),
       catchError(error => of({
         success: false,
-        message: this.errorMessage(error, 'Invalid username or password.')
+        message: this.errorMessage(error, 'Invalid username or password.'),
+        requiresPasswordChange: this.errorRequiresPasswordChange(error),
+        identifier: normalizedIdentifier
       }))
     );
   }
@@ -159,6 +176,22 @@ export class AuthService {
     );
   }
 
+  verifyResetCode(email: string, resetCode: string): Observable<LoginResult> {
+    return this.http.post<StandardResponse<void>>(`${this.authBaseUrl}/verify-reset-code`, {
+      email: email.trim(),
+      resetCode: resetCode.trim()
+    }).pipe(
+      map(response => ({
+        success: !!response.success,
+        message: response.message || 'Reset code verified successfully.'
+      })),
+      catchError(error => of({
+        success: false,
+        message: this.errorMessage(error, 'Reset code is invalid or expired.')
+      }))
+    );
+  }
+
   resetPassword(email: string, resetCode: string, newPassword: string): Observable<LoginResult> {
     return this.http.post<StandardResponse<void>>(`${this.authBaseUrl}/reset-password`, {
       email: email.trim(),
@@ -172,6 +205,25 @@ export class AuthService {
       catchError(error => of({
         success: false,
         message: this.errorMessage(error, 'Unable to reset password.')
+      }))
+    );
+  }
+
+  changeFirstLoginPassword(identifier: string, currentPassword: string, newPassword: string): Observable<LoginResult> {
+    return this.http.post<StandardResponse<PasswordChangeResponse>>(`${this.authBaseUrl}/change-password`, {
+      identifier: identifier.trim(),
+      currentPassword,
+      temporaryPassword: currentPassword,
+      newPassword,
+      confirmPassword: newPassword
+    }).pipe(
+      map(response => ({
+        success: !!response.success,
+        message: response.message || 'Password updated successfully.'
+      })),
+      catchError(error => of({
+        success: false,
+        message: this.errorMessage(error, 'Unable to update password.')
       }))
     );
   }
@@ -226,6 +278,21 @@ export class AuthService {
       role: user.role || user.roleCode || 'Hotel Staff',
       initials: this.initials(fullName)
     };
+  }
+
+  private requiresPasswordChange(auth?: ApiAuthResponse): boolean {
+    return !!(auth?.firstLogin || auth?.mustChangePassword || auth?.passwordChangeRequired || auth?.requiresPasswordChange || auth?.temporaryPassword);
+  }
+
+  private errorRequiresPasswordChange(error: any): boolean {
+    const code = `${error?.error?.error?.code || error?.error?.code || ''}`.toUpperCase();
+    const message = this.errorMessage(error, '').toLowerCase();
+    return code.includes('FIRST_LOGIN') ||
+      code.includes('PASSWORD_CHANGE') ||
+      message.includes('first login') ||
+      message.includes('change password') ||
+      message.includes('temporary password') ||
+      message.includes('default password');
   }
 
   private initials(name: string): string {

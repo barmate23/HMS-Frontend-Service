@@ -225,11 +225,17 @@
 .recovery-note .material-icons-round {
   width: 32px;
   height: 32px;
+  display: inline-grid;
   place-items: center;
   border-radius: 10px;
   background: #073c39;
   color: white;
   font-size: 17px;
+}
+
+.demo-card > div,
+.recovery-note > div {
+  min-width: 0;
 }
 
 .demo-card strong,

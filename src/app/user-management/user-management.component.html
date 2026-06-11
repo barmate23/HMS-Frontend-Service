@@ -23,34 +23,7 @@
       </button>
     </div>
 
-    <div class="nav-right">
-      <div class="search-box">
-        <span class="material-icons-round">search</span>
-        <input
-          type="text"
-          [placeholder]="activeTab() === 'users' ? 'Search user, employee, role...' : activeTab() === 'roles' ? 'Search role, department...' : activeTab() === 'departments' ? 'Search department, code...' : activeTab() === 'shifts' ? 'Search shift, code, department...' : 'Search activity, actor, module...'"
-          [ngModel]="searchQuery()"
-          (ngModelChange)="searchQuery.set($event)"
-        >
-      </div>
-
-      <select class="filter-select" *ngIf="activeTab() !== 'activity' && activeTab() !== 'departments'" [ngModel]="departmentFilter()" (ngModelChange)="departmentFilter.set($event)">
-        <option>All Departments</option>
-        <option *ngFor="let department of userService.departments()" [value]="department.name">{{ department.name }}</option>
-      </select>
-
-      <select class="filter-select" *ngIf="activeTab() === 'users'" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)">
-        <option>All Roles</option>
-        <option *ngFor="let role of userService.roles()" [value]="role.id">{{ role.name }}</option>
-      </select>
-
-      <select class="filter-select" *ngIf="activeTab() === 'activity'" [ngModel]="activitySeverityFilter()" (ngModelChange)="activitySeverityFilter.set($event)">
-        <option>All Events</option>
-        <option value="INFO">INFO</option>
-        <option value="WARNING">WARNING</option>
-        <option value="CRITICAL">CRITICAL</option>
-      </select>
-
+    <div class="nav-actions">
       <button class="btn-primary" *ngIf="activeTab() === 'users'" (click)="openCreateUser()">
         <span class="material-icons-round">person_add</span>
         Add User
@@ -156,8 +129,24 @@
 
   <div class="content-card" *ngIf="activeTab() === 'users'">
     <div class="card-header">
-      <h2>User Directory</h2>
-      <span>{{ filteredUsers().length }} Users</span>
+      <div class="card-title-group">
+        <h2>User Directory</h2>
+        <span class="count-pill users-count">{{ filteredUsers().length }} Users</span>
+      </div>
+      <div class="card-header-tools">
+        <div class="search-box">
+          <span class="material-icons-round">search</span>
+          <input type="text" placeholder="Search user, employee, role..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)">
+        </div>
+        <select class="filter-select" [ngModel]="departmentFilter()" (ngModelChange)="departmentFilter.set($event)">
+          <option>All Departments</option>
+          <option *ngFor="let department of userService.departments()" [value]="department.name">{{ department.name }}</option>
+        </select>
+        <select class="filter-select" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)">
+          <option>All Roles</option>
+          <option *ngFor="let role of userService.roles()" [value]="role.id">{{ role.name }}</option>
+        </select>
+      </div>
     </div>
 
     <div class="table-wrap">
@@ -229,6 +218,22 @@
   </div>
 
   <div class="roles-layout" *ngIf="activeTab() === 'roles'">
+    <div class="card-header inline-section-header">
+      <div class="card-title-group">
+        <h2>Roles & Permissions</h2>
+        <span class="count-pill roles-count">{{ filteredRoles().length }} Roles</span>
+      </div>
+      <div class="card-header-tools">
+        <div class="search-box">
+          <span class="material-icons-round">search</span>
+          <input type="text" placeholder="Search role, department..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)">
+        </div>
+        <select class="filter-select" [ngModel]="departmentFilter()" (ngModelChange)="departmentFilter.set($event)">
+          <option>All Departments</option>
+          <option *ngFor="let department of userService.departments()" [value]="department.name">{{ department.name }}</option>
+        </select>
+      </div>
+    </div>
     <div class="role-list">
       <div class="role-card" *ngFor="let role of filteredRoles()">
         <div class="role-card-head">
@@ -291,8 +296,16 @@
 
   <div class="content-card" *ngIf="activeTab() === 'departments'">
     <div class="card-header">
-      <h2>Department Master</h2>
-      <span>{{ filteredDepartments().length }} Departments</span>
+      <div class="card-title-group">
+        <h2>Department Master</h2>
+        <span class="count-pill departments-count">{{ filteredDepartments().length }} Departments</span>
+      </div>
+      <div class="card-header-tools">
+        <div class="search-box">
+          <span class="material-icons-round">search</span>
+          <input type="text" placeholder="Search department, code..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)">
+        </div>
+      </div>
     </div>
 
     <div class="table-wrap">
@@ -375,8 +388,20 @@
 
     <div class="shift-master-panel content-card" *ngIf="activeShiftTab() === 'master'">
       <div class="card-header">
-        <h2>Shift Master</h2>
-        <span>{{ filteredShifts().length }} Shifts</span>
+        <div class="card-title-group">
+          <h2>Shift Master</h2>
+          <span class="count-pill shifts-count">{{ filteredShifts().length }} Shifts</span>
+        </div>
+        <div class="card-header-tools">
+          <div class="search-box">
+            <span class="material-icons-round">search</span>
+            <input type="text" placeholder="Search shift, code, department..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)">
+          </div>
+          <select class="filter-select" [ngModel]="departmentFilter()" (ngModelChange)="departmentFilter.set($event)">
+            <option>All Departments</option>
+            <option *ngFor="let department of userService.departments()" [value]="department.name">{{ department.name }}</option>
+          </select>
+        </div>
       </div>
 
       <div class="shift-card-list">
@@ -489,8 +514,22 @@
 
   <div class="content-card" *ngIf="activeTab() === 'activity'">
     <div class="card-header">
-      <h2>Access & Permission Audit</h2>
-      <span>{{ filteredActivity().length }} Events</span>
+      <div class="card-title-group">
+        <h2>Access & Permission Audit</h2>
+        <span class="count-pill activity-count">{{ filteredActivity().length }} Events</span>
+      </div>
+      <div class="card-header-tools">
+        <div class="search-box">
+          <span class="material-icons-round">search</span>
+          <input type="text" placeholder="Search activity, actor, module..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)">
+        </div>
+        <select class="filter-select" [ngModel]="activitySeverityFilter()" (ngModelChange)="activitySeverityFilter.set($event)">
+          <option>All Events</option>
+          <option value="INFO">INFO</option>
+          <option value="WARNING">WARNING</option>
+          <option value="CRITICAL">CRITICAL</option>
+        </select>
+      </div>
     </div>
 
     <div class="activity-list">
@@ -712,6 +751,11 @@
     </div>
 
     <div class="modal-body">
+      <div class="modal-alert error" *ngIf="userService.apiError()">
+        <span class="material-icons-round">error</span>
+        <strong>{{ userService.apiError() }}</strong>
+      </div>
+
       <div class="form-grid">
         <label [class.has-error]="userFieldError('employeeId')">
           Employee ID
@@ -730,12 +774,12 @@
         </label>
         <label [class.has-error]="userFieldError('email')">
           Email
-          <input type="email" [ngModel]="currentUser().email" (ngModelChange)="updateCurrentUser('email', $event)" (blur)="markUserFieldTouched('email')" placeholder="user@hotel.com">
+          <input type="email" autocomplete="email" [ngModel]="currentUser().email" (ngModelChange)="updateCurrentUser('email', $event)" (blur)="markUserFieldTouched('email')" placeholder="user@hotel.com">
           <small class="field-error" *ngIf="userFieldError('email')">{{ userFieldError('email') }}</small>
         </label>
         <label [class.has-error]="userFieldError('phone')">
-          Phone
-          <input type="text" [ngModel]="currentUser().phone" (ngModelChange)="updateCurrentUser('phone', $event)" (blur)="markUserFieldTouched('phone')" placeholder="+91 ...">
+          Mobile Number
+          <input type="tel" inputmode="numeric" maxlength="10" autocomplete="tel" [ngModel]="currentUser().phone" (ngModelChange)="updateCurrentUser('phone', $event)" (blur)="markUserFieldTouched('phone')" placeholder="10-digit mobile number">
           <small class="field-error" *ngIf="userFieldError('phone')">{{ userFieldError('phone') }}</small>
         </label>
         <label [class.has-error]="userFieldError('department')">
@@ -759,13 +803,6 @@
             <option *ngFor="let property of userService.properties()" [value]="property.name">{{ property.name }}</option>
           </select>
           <small class="field-error" *ngIf="userFieldError('property')">{{ userFieldError('property') }}</small>
-        </label>
-        <label [class.has-error]="userFieldError('shift')">
-          Shift
-          <select [ngModel]="currentUser().shift" (ngModelChange)="updateCurrentUser('shift', $event)" (blur)="markUserFieldTouched('shift')">
-            <option *ngFor="let shift of userService.shifts()" [value]="shift">{{ shift }}</option>
-          </select>
-          <small class="field-error" *ngIf="userFieldError('shift')">{{ userFieldError('shift') }}</small>
         </label>
         <label [class.has-error]="userFieldError('status')">
           Status
@@ -819,31 +856,36 @@
 
     <div class="modal-body">
       <div class="form-grid">
-        <label>
+        <label [class.has-error]="shiftFieldError('name')">
           Shift Name
-          <input type="text" [(ngModel)]="currentShift().name" placeholder="e.g. Front Desk Shift">
+          <input type="text" [ngModel]="currentShift().name" (ngModelChange)="updateCurrentShift('name', $event)" placeholder="e.g. Front Desk Shift">
+          <small class="field-error" *ngIf="shiftFieldError('name')">{{ shiftFieldError('name') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="shiftFieldError('code')">
           Shift Code
-          <input type="text" [(ngModel)]="currentShift().code" placeholder="MORN">
+          <input type="text" maxlength="10" [ngModel]="currentShift().code" (ngModelChange)="updateCurrentShift('code', $event)" placeholder="MORN">
+          <small class="field-error" *ngIf="shiftFieldError('code')">{{ shiftFieldError('code') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="shiftFieldError('startTime')">
           Start Time
-          <input type="time" [(ngModel)]="currentShift().startTime">
+          <input type="time" [ngModel]="currentShift().startTime" (ngModelChange)="updateCurrentShift('startTime', $event)">
+          <small class="field-error" *ngIf="shiftFieldError('startTime')">{{ shiftFieldError('startTime') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="shiftFieldError('endTime')">
           End Time
-          <input type="time" [(ngModel)]="currentShift().endTime">
+          <input type="time" [ngModel]="currentShift().endTime" (ngModelChange)="updateCurrentShift('endTime', $event)">
+          <small class="field-error" *ngIf="shiftFieldError('endTime')">{{ shiftFieldError('endTime') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="shiftFieldError('property')">
           Property
-          <select [(ngModel)]="currentShift().property">
+          <select [ngModel]="currentShift().property" (ngModelChange)="updateCurrentShift('property', $event)">
             <option *ngFor="let property of userService.properties()" [value]="property.name">{{ property.name }}</option>
           </select>
+          <small class="field-error" *ngIf="shiftFieldError('property')">{{ shiftFieldError('property') }}</small>
         </label>
         <label>
           Status
-          <select [(ngModel)]="currentShift().isActive">
+          <select [ngModel]="currentShift().isActive" (ngModelChange)="updateCurrentShift('isActive', $event)">
             <option [ngValue]="true">Active</option>
             <option [ngValue]="false">Inactive</option>
           </select>
@@ -852,7 +894,7 @@
 
       <label class="notes-field">
         Shift Notes
-        <textarea rows="3" [(ngModel)]="currentShift().notes" placeholder="Coverage notes, handover instructions, or role restrictions..."></textarea>
+        <textarea rows="3" [ngModel]="currentShift().notes" (ngModelChange)="updateCurrentShift('notes', $event)" placeholder="Coverage notes, handover instructions, or role restrictions..."></textarea>
       </label>
     </div>
 
@@ -880,34 +922,38 @@
 
     <div class="modal-body">
       <div class="form-grid">
-        <label>
+        <label [class.has-error]="roleFieldError('name')">
           Role Name
-          <input type="text" [(ngModel)]="currentRole().name" placeholder="e.g. Revenue Manager">
+          <input type="text" [ngModel]="currentRole().name" (ngModelChange)="updateCurrentRole('name', $event)" placeholder="e.g. Revenue Manager">
+          <small class="field-error" *ngIf="roleFieldError('name')">{{ roleFieldError('name') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="roleFieldError('department')">
           Department
-          <select [(ngModel)]="currentRole().department">
+          <select [ngModel]="currentRole().department" (ngModelChange)="updateCurrentRole('department', $event)">
             <option *ngFor="let department of userService.departments()" [value]="department.name">{{ department.name }}</option>
           </select>
+          <small class="field-error" *ngIf="roleFieldError('department')">{{ roleFieldError('department') }}</small>
         </label>
-        <label>
+        <label [class.has-error]="roleFieldError('level')">
           Access Level
-          <select [(ngModel)]="currentRole().level">
+          <select [ngModel]="currentRole().level" (ngModelChange)="updateCurrentRole('level', $event)">
             <option *ngFor="let level of userService.roleLevels" [value]="level">{{ level }}</option>
           </select>
+          <small class="field-error" *ngIf="roleFieldError('level')">{{ roleFieldError('level') }}</small>
         </label>
         <label>
           Status
-          <select [(ngModel)]="currentRole().isActive">
+          <select [ngModel]="currentRole().isActive" (ngModelChange)="updateCurrentRole('isActive', $event)">
             <option [ngValue]="true">Active</option>
             <option [ngValue]="false">Inactive</option>
           </select>
         </label>
       </div>
 
-      <label class="notes-field">
+      <label class="notes-field" [class.has-error]="roleFieldError('description')">
         Description
-        <textarea rows="2" [(ngModel)]="currentRole().description" placeholder="Describe what this role can do..."></textarea>
+        <textarea rows="2" [ngModel]="currentRole().description" (ngModelChange)="updateCurrentRole('description', $event)" placeholder="Describe what this role can do..."></textarea>
+        <small class="field-error" *ngIf="roleFieldError('description')">{{ roleFieldError('description') }}</small>
       </label>
 
       <div class="section-title permission-head">Permissions</div>

@@ -8,6 +8,7 @@ import {
   OrderStatus,
   PosAuditLog,
   PosBill,
+  PosDashboardData,
   PosMenuItem,
   PosOrder,
   PosOrderLine,
@@ -120,12 +121,27 @@ export class PosComponent implements OnInit, OnDestroy {
     { code: 'ROOMDINING', name: 'Room dining credit', type: 'Flat', value: 500, validFrom: '2026-06-01', validTo: '2026-07-15', active: false }
   ]);
 
-  readonly dashboardOutlets = computed(() => this.sampleDashboardOutlets());
+  readonly dashboardOutlets = computed(() => {
+    const revenueMix = this.pos.posDashboard()?.revenueMix || [];
+    if (revenueMix.length) {
+      return revenueMix.map((row, index) => ({
+        id: index + 1,
+        name: row.outletName || `Outlet ${index + 1}`,
+        type: 'Restaurant',
+        location: '',
+        timing: '',
+        taxProfile: '',
+        active: true,
+        manager: ''
+      }));
+    }
+    return this.sampleDashboardOutlets();
+  });
   readonly dashboardMenuItems = computed(() => this.sampleDashboardMenuItems());
-  readonly dashboardTables = computed(() => this.sampleDashboardTables());
-  readonly dashboardOrders = computed(() => this.sampleDashboardOrders());
+  readonly dashboardTables = computed(() => this.dashboardTablesFromApi(this.pos.posDashboard()) || this.sampleDashboardTables());
+  readonly dashboardOrders = computed(() => this.dashboardOrdersFromApi(this.pos.posDashboard()) || this.sampleDashboardOrders());
   readonly dashboardBills = computed(() => this.sampleDashboardBills());
-  readonly dashboardAuditLogs = computed(() => this.sampleDashboardAuditLogs());
+  readonly dashboardAuditLogs = computed(() => this.dashboardActivityFromApi(this.pos.posDashboard()) || this.sampleDashboardAuditLogs());
 
   stats = computed(() => {
     const bills = this.pos.bills();
@@ -170,6 +186,32 @@ export class PosComponent implements OnInit, OnDestroy {
   });
 
   tableStatusSummary = computed(() => {
+    const floorPulse = this.pos.posDashboard()?.floorPulse;
+    if (floorPulse?.totalTables) {
+      const rows = [
+        { status: 'AVAILABLE', count: Number(floorPulse.available || 0), percent: Math.round(Number(floorPulse.availablePercent || 0)) },
+        { status: 'OCCUPIED', count: Number(floorPulse.occupied || 0), percent: Math.round(Number(floorPulse.occupiedPercent || 0)) },
+        { status: 'RESERVED', count: Number(floorPulse.reserved || 0), percent: Math.round(Number(floorPulse.reservedPercent || 0)) }
+      ];
+      const knownCount = rows.reduce((sum, row) => sum + row.count, 0);
+      const otherCount = Math.max(0, Number(floorPulse.totalTables || 0) - knownCount);
+      if (otherCount) {
+        rows.push({
+          status: 'OTHER',
+          count: otherCount,
+          percent: Math.max(0, 100 - rows.reduce((sum, row) => sum + row.percent, 0))
+        });
+      }
+      return rows
+        .filter(row => row.count > 0 || row.percent > 0)
+        .map(row => ({
+          ...row,
+          icon: this.tableStatusIcon(row.status),
+          color: this.tableStatusColor(row.status)
+        }))
+        .sort((a, b) => b.count - a.count);
+    }
+
     const statuses = new Map<string, number>();
     const tables = this.dashboardTables();
     for (const table of tables) {
@@ -200,6 +242,21 @@ export class PosComponent implements OnInit, OnDestroy {
   });
 
   outletRevenue = computed(() => {
+    const revenueMix = this.pos.posDashboard()?.revenueMix || [];
+    if (revenueMix.length) {
+      const rows = revenueMix
+        .map((row, index) => ({
+          outletId: index + 1,
+          name: row.outletName || `Outlet ${index + 1}`,
+          amount: Number(row.totalAmount || 0),
+          orders: Number(row.billCount || 0)
+        }))
+        .sort((a, b) => b.amount - a.amount || b.orders - a.orders)
+        .slice(0, 5);
+      const max = Math.max(1, ...rows.map(row => row.amount));
+      return rows.map(row => ({ ...row, width: Math.max(6, Math.round((row.amount / max) * 100)) }));
+    }
+
     const outlets = this.dashboardOutlets();
     const ordersById = new Map(this.dashboardOrders().map(order => [order.id, order]));
     const totals = new Map<number, { outletId: number; name: string; amount: number; orders: number }>();
@@ -223,6 +280,17 @@ export class PosComponent implements OnInit, OnDestroy {
   });
 
   paymentMix = computed(() => {
+    const paymentSplit = this.pos.posDashboard()?.paymentSplit || [];
+    if (paymentSplit.length) {
+      return paymentSplit
+        .map(row => ({
+          mode: row.method || 'Unspecified',
+          amount: Number(row.amount || 0),
+          percent: Math.round(Number(row.percentage || 0))
+        }))
+        .sort((a, b) => b.amount - a.amount);
+    }
+
     const totals = new Map<string, number>();
     for (const bill of this.dashboardBills().filter(item => item.status !== 'VOID')) {
       const amount = this.billTotal(bill);
@@ -238,6 +306,18 @@ export class PosComponent implements OnInit, OnDestroy {
   });
 
   topMenuItems = computed(() => {
+    const fastMovingItems = this.pos.posDashboard()?.fastMovingItems || [];
+    if (fastMovingItems.length) {
+      return fastMovingItems.map((item, index) => ({
+        itemId: index + 1,
+        name: item.itemName || `Item ${index + 1}`,
+        qty: Number(item.soldQty || 0),
+        revenue: 0,
+        outlet: item.outletName || 'Outlet',
+        imageUrl: item.imageUrl || this.menuImage({})
+      }));
+    }
+
     const menuById = new Map(this.dashboardMenuItems().map(item => [item.id, item]));
     const totals = new Map<number, { itemId: number; name: string; qty: number; revenue: number; outlet: string; imageUrl: string }>();
     for (const order of this.dashboardOrders()) {
@@ -271,6 +351,15 @@ export class PosComponent implements OnInit, OnDestroy {
   });
 
   billingWatch = computed(() => {
+    const watch = this.pos.posDashboard()?.billingWatch;
+    if (watch) {
+      return [
+        { label: 'Open / Partial Bills', value: Number(watch.openBillsCount || 0), amount: Number(watch.openBillsAmount || 0), icon: 'pending_actions', route: 'billing' as PosTab, color: '#b45309', bg: '#fff7ed' },
+        { label: 'Room Posting Pending', value: Number(watch.roomPostingPendingCount || 0), amount: Number(watch.roomPostingPendingAmount || 0), icon: 'bed', route: 'billing' as PosTab, color: '#2563eb', bg: '#eff6ff' },
+        { label: 'Voids / Comps', value: Number(watch.voidsCount || 0), amount: Number(watch.voidsAmount || 0), icon: 'block', route: 'billing' as PosTab, color: '#dc2626', bg: '#fef2f2' }
+      ];
+    }
+
     const bills = this.dashboardBills();
     const pendingFolio = bills.filter(bill => bill.roomNo && !bill.postedToFolio && bill.status !== 'VOID');
     const openBills = bills.filter(bill => bill.status === 'OPEN' || bill.status === 'PARTIAL');
@@ -1106,6 +1195,93 @@ export class PosComponent implements OnInit, OnDestroy {
       course: item.subcategory || 'Main',
       notes: item.modifiers[0] || ''
     })));
+  }
+
+  private dashboardTablesFromApi(data: PosDashboardData | null): PosTable[] | null {
+    const pulse = data?.floorPulse;
+    if (!pulse?.totalTables) return null;
+
+    const tables: PosTable[] = [];
+    const addTables = (status: TableStatus, count: number): void => {
+      for (let index = 0; index < count; index++) {
+        const id = tables.length + 1;
+        tables.push({
+          id,
+          outletId: 1,
+          number: `D${String(id).padStart(2, '0')}`,
+          section: 'Dashboard',
+          status,
+          covers: 0,
+          server: 'Unassigned'
+        });
+      }
+    };
+
+    addTables('AVAILABLE', Number(pulse.available || 0));
+    addTables('OCCUPIED', Number(pulse.occupied || 0));
+    addTables('RESERVED', Number(pulse.reserved || 0));
+    addTables('OTHER', Math.max(0, Number(pulse.totalTables || 0) - tables.length));
+
+    return tables;
+  }
+
+  private dashboardOrdersFromApi(data: PosDashboardData | null): PosOrder[] | null {
+    const queue = data?.kotQueue || [];
+    if (!queue.length) return null;
+
+    return queue.map((item, index) => {
+      const infoParts = String(item.info || '').split('•').map(part => part.trim()).filter(Boolean);
+      const typeText = String(infoParts[0] || 'TABLE').toUpperCase();
+      const type: PosOrder['type'] = typeText === 'ROOM' ? 'ROOM' : typeText === 'TAKEAWAY' ? 'TAKEAWAY' : 'TABLE';
+      const itemCount = Number(item.itemCount || 0);
+
+      return {
+        id: index + 1,
+        outletId: index + 1,
+        orderNo: item.orderId || `ORD-${index + 1}`,
+        type,
+        tableNo: type === 'TABLE' ? infoParts[1] || '' : '',
+        roomNo: type === 'ROOM' ? infoParts[1] || '' : '',
+        guestName: infoParts[1] || '',
+        server: item.outletName || 'Outlet',
+        status: String(item.status || 'OPEN').toUpperCase(),
+        openedAt: '',
+        notes: item.info || '',
+        lines: itemCount ? [{ itemId: index + 1, name: 'Items', qty: itemCount, price: 0, course: 'Queue', notes: '' }] : []
+      };
+    });
+  }
+
+  private dashboardActivityFromApi(data: PosDashboardData | null): PosAuditLog[] | null {
+    const activity = data?.recentActivity || [];
+    if (!activity.length) return null;
+
+    return activity.map((item, index) => ({
+      id: index + 1,
+      at: this.dashboardTimeLabel(item.timestamp),
+      user: 'POS',
+      action: item.activityType || 'POS activity',
+      module: 'POS Dashboard',
+      reference: item.linkedEntityId || '-'
+    }));
+  }
+
+  private dashboardTimeLabel(value?: string): string {
+    if (!value) return 'Just now';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs >= 0 && diffMs < 60_000) return 'Just now';
+    if (diffMs >= 0 && diffMs < 3_600_000) return `${Math.max(1, Math.round(diffMs / 60_000))} min ago`;
+    if (diffMs >= 0 && diffMs < 86_400_000) return `${Math.max(1, Math.round(diffMs / 3_600_000))} hr ago`;
+
+    return date.toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   private sampleDashboardOutlets(): PosOutlet[] {

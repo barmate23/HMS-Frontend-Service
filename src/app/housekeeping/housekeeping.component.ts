@@ -7,7 +7,7 @@ import {
   HousekeepingService,
   HKRoom, HKTask, HKStaff, LostFoundItem, MaintenanceRequest,
   HKStatus, TaskType, TaskStatus, Priority, LFStatus, MaintStatus, MaintPriority,
-  AuditFrequency, SopCheckpoint
+  AuditFrequency, SopCheckpoint, HousekeepingAttentionItem, HousekeepingRoomBoard
 } from './housekeeping.service';
 import { SystemUser, UserManagementService } from '../user-management/user-management.service';
 
@@ -84,6 +84,7 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   }
 
   selectTab(tab: TabType) {
+    this.isRoomBoardExpanded.set(false);
     this.router.navigate(['/housekeeping/' + tab]);
   }
 
@@ -123,6 +124,7 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   isSopModalOpen     = signal(false);
   isStaffTaskModalOpen = signal(false);
   isStaffRoomModalOpen = signal(false);
+  isRoomBoardExpanded = signal(false);
   editingSopId       = signal<string | null>(null);
   modalMode          = signal<'create' | 'edit'>('create');
 
@@ -341,6 +343,7 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   selectedFloorAudits = computed(() => this.filteredAudits());
 
   boardDashboard = computed(() => {
+    const dashboard = this.hk.dashboard();
     const rooms = this.hk.rooms();
     const tasks = this.hk.tasks();
     const maintenance = this.hk.maintenance();
@@ -352,17 +355,32 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
     const openMaintenance = maintenance.filter(item => item.status !== 'COMPLETED' && item.status !== 'RESOLVED' && item.status !== 'CANCELLED').length;
     const storedLostFound = lostFound.filter(item => item.status === 'STORED').length;
     const readiness = rooms.length ? Math.round((readyRooms / rooms.length) * 100) : 0;
+    const apiSummary = dashboard?.summary;
+    const apiAttentionQueue = dashboard?.attentionQueue ?? [];
+    const apiAuditReadiness = dashboard?.auditReadiness;
+    const apiRoomCount = apiAuditReadiness?.roomsTracked ?? dashboard?.floorRoomBoard?.reduce((total, floor) => total + Number(floor.roomCount ?? floor.rooms?.length ?? 0), 0);
+    const fallbackAttentionQueue: HousekeepingAttentionItem[] = [
+      { label: 'vacant dirty', count: this.hk.roomStats().vacantDirty, type: 'VACANT_DIRTY' },
+      { label: 'maintenance blockers', count: openMaintenance, type: 'MAINTENANCE_BLOCKER' },
+      { label: 'stored lost & found', count: storedLostFound, type: 'LOST_FOUND' },
+    ];
+    const attentionQueue = apiAttentionQueue.length ? apiAttentionQueue : fallbackAttentionQueue;
 
     return {
-      rooms: rooms.length,
-      dirtyRooms,
-      readyRooms,
-      blockedRooms,
-      openTasks,
-      openMaintenance,
-      storedLostFound,
-      auditCheckpoints: this.activeSopCheckpoints().length,
-      readiness,
+      rooms: Number(apiRoomCount ?? rooms.length),
+      dirtyRooms: Number(apiSummary?.needService ?? dirtyRooms),
+      readyRooms: Number(apiSummary?.readyRooms ?? readyRooms),
+      blockedRooms: Number(apiSummary?.blockedDnd ?? blockedRooms),
+      openTasks: Number(apiSummary?.openTasks ?? openTasks),
+      openMaintenance: Number(apiSummary?.repairIssues ?? openMaintenance),
+      storedLostFound: Number(attentionQueue.find(item => item.type === 'LOST_FOUND' || item.label?.toLowerCase().includes('lost'))?.count ?? storedLostFound),
+      auditCheckpoints: Number(apiSummary?.sopChecks ?? apiAuditReadiness?.checkpoints ?? this.activeSopCheckpoints().length),
+      readiness: Number(apiSummary?.readyPercentage ?? readiness),
+      attentionQueue,
+      pendingTasks: Number(dashboard?.teamLoad?.pendingSubmissions ?? this.hk.taskStats().pending),
+      inProgress: Number(dashboard?.teamLoad?.inProgress ?? this.hk.taskStats().inProgress),
+      staffProfiles: Number(dashboard?.teamLoad?.staffProfiles ?? this.hk.staff().length),
+      activeSop: apiAuditReadiness?.activeSop ?? this.auditFrequency(),
     };
   });
 
@@ -490,6 +508,18 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
 
   // --- Rooms grouped by floor ---
   roomsByFloor = computed(() => {
+    const dashboardFloors = this.hk.dashboard()?.floorRoomBoard ?? [];
+    if (dashboardFloors.length) {
+      const localRooms = this.filteredRooms();
+      return dashboardFloors
+        .map((floor, floorIndex) => ({
+          floor: floor.floorName || `Floor ${floorIndex + 1}`,
+          rooms: (floor.rooms ?? []).map((room, roomIndex) => this.fromDashboardRoom(room, floor.floorName || `Floor ${floorIndex + 1}`, localRooms, floorIndex, roomIndex))
+            .filter(room => this.matchesBoardFilters(room))
+        }))
+        .filter(floor => floor.rooms.length);
+    }
+
     const map = new Map<string, HKRoom[]>();
     this.filteredRooms().forEach(r => {
       if (!map.has(r.floor)) map.set(r.floor, []);
@@ -662,6 +692,7 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   }
 
   roomOpenTaskCount(room: HKRoom): number {
+    if (room.tasksCount !== undefined) return Number(room.tasksCount);
     return this.hk.tasks().filter(task =>
       (task.roomId === room.id || task.roomNumber === room.roomNumber) &&
       task.status !== 'COMPLETED' &&
@@ -760,6 +791,7 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   }
 
   roomOpenMaintenanceCount(room: HKRoom): number {
+    if (room.maintenanceCount !== undefined) return Number(room.maintenanceCount);
     return this.hk.maintenance().filter(item =>
       (item.roomId === room.id || item.roomNumber === room.roomNumber) &&
       item.status !== 'COMPLETED' &&
@@ -769,6 +801,7 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   }
 
   roomStoredLostFoundCount(room: HKRoom): number {
+    if (room.lostFoundCount !== undefined) return Number(room.lostFoundCount);
     return this.hk.lostFound().filter(item =>
       (item.roomId === room.id || item.roomNumber === room.roomNumber) &&
       item.status === 'STORED'
@@ -780,6 +813,62 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
     if (room.hkStatus === 'VACANT_DIRTY' || room.hkStatus === 'OCCUPIED_DIRTY') return 'needs-work';
     if (room.hkStatus === 'INSPECTED' || room.hkStatus === 'VACANT_CLEAN' || room.hkStatus === 'OCCUPIED_CLEAN') return 'ready';
     return '';
+  }
+
+  roomSopCheckCount(room: HKRoom): number {
+    return Number(room.sopChecksCount ?? this.activeSopCheckpoints().length);
+  }
+
+  private fromDashboardRoom(room: HousekeepingRoomBoard, floor: string, localRooms: HKRoom[], floorIndex: number, roomIndex: number): HKRoom {
+    const existing = localRooms.find(item => item.roomNumber === room.roomNumber);
+    const hkStatus = this.dashboardStatusToHKStatus(room.status);
+    const assignedStaffName = room.assignedStaff?.trim();
+
+    return {
+      ...(existing ?? {
+        id: -((floorIndex + 1) * 1000 + roomIndex + 1),
+        roomNumber: room.roomNumber || '',
+        floor,
+        type: room.category || 'Room',
+        hkStatus,
+        isOccupied: (room.status ?? '').toUpperCase().includes('OCCUPIED'),
+        dnd: (room.status ?? '').toUpperCase().includes('DO NOT DISTURB'),
+        priority: (Number(room.tasksCount ?? 0) || Number(room.maintenanceCount ?? 0)) ? 'HIGH' : 'LOW',
+      }),
+      floor,
+      roomNumber: room.roomNumber || existing?.roomNumber || '',
+      type: room.category || existing?.type || 'Room',
+      hkStatus,
+      isOccupied: (room.status ?? '').toUpperCase().includes('OCCUPIED') || existing?.isOccupied || false,
+      dnd: (room.status ?? '').toUpperCase().includes('DO NOT DISTURB') || existing?.dnd || false,
+      priority: (Number(room.tasksCount ?? 0) || Number(room.maintenanceCount ?? 0) || existing?.priority === 'HIGH') ? 'HIGH' : 'LOW',
+      assignedStaffName: assignedStaffName && assignedStaffName !== 'Unassigned' ? assignedStaffName : existing?.assignedStaffName,
+      tasksCount: Number(room.tasksCount ?? 0),
+      maintenanceCount: Number(room.maintenanceCount ?? 0),
+      lostFoundCount: Number(room.lostFoundCount ?? 0),
+      sopChecksCount: Number(room.sopChecksCount ?? 0),
+    };
+  }
+
+  private dashboardStatusToHKStatus(status?: string): HKStatus {
+    const normalized = (status ?? '').toUpperCase();
+    if (normalized.includes('DO NOT DISTURB')) return 'DO_NOT_DISTURB';
+    if (normalized.includes('UNDER MAINTENANCE')) return 'UNDER_MAINTENANCE';
+    if (normalized.includes('OUT OF ORDER') || normalized.includes('MAINTENANCE')) return 'OUT_OF_ORDER';
+    if (normalized.includes('INSPECTED')) return 'INSPECTED';
+    if (normalized.includes('OCCUPIED') && normalized.includes('DIRTY')) return 'OCCUPIED_DIRTY';
+    if (normalized.includes('OCCUPIED') && normalized.includes('CLEAN')) return 'OCCUPIED_CLEAN';
+    if (normalized.includes('VACANT') && normalized.includes('DIRTY')) return 'VACANT_DIRTY';
+    if (normalized.includes('VACANT') && normalized.includes('CLEAN')) return 'VACANT_CLEAN';
+    return 'VACANT_DIRTY';
+  }
+
+  private matchesBoardFilters(room: HKRoom): boolean {
+    const status = this.boardFilter();
+    const q = this.boardSearch().toLowerCase().trim();
+    const matchStatus = status === 'ALL' || room.hkStatus === status;
+    const matchQuery = !q || room.roomNumber.toLowerCase().includes(q) || room.floor.toLowerCase().includes(q) || (room.guestName?.toLowerCase().includes(q) ?? false);
+    return matchStatus && matchQuery;
   }
 
   auditResultLabel(result: AuditResult): string {

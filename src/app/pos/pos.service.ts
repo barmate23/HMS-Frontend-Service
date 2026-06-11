@@ -130,6 +130,68 @@ export interface PosAuditLog {
   reference: string;
 }
 
+export interface PosDashboardFloorPulse {
+  totalTables?: number;
+  occupied?: number;
+  available?: number;
+  reserved?: number;
+  occupiedPercent?: number;
+  availablePercent?: number;
+  reservedPercent?: number;
+}
+
+export interface PosDashboardKotQueueItem {
+  orderId?: string;
+  outletName?: string;
+  info?: string;
+  itemCount?: number;
+  status?: string;
+}
+
+export interface PosDashboardOutletRevenue {
+  outletName?: string;
+  billCount?: number;
+  totalAmount?: number;
+}
+
+export interface PosDashboardPaymentSplit {
+  method?: string;
+  percentage?: number;
+  amount?: number;
+}
+
+export interface PosDashboardFastMovingItem {
+  itemName?: string;
+  outletName?: string;
+  soldQty?: number;
+  imageUrl?: string | null;
+}
+
+export interface PosDashboardBillingWatch {
+  openBillsCount?: number;
+  openBillsAmount?: number;
+  roomPostingPendingCount?: number;
+  roomPostingPendingAmount?: number;
+  voidsCount?: number;
+  voidsAmount?: number;
+}
+
+export interface PosDashboardRecentActivity {
+  activityType?: string;
+  linkedEntityId?: string;
+  timestamp?: string;
+}
+
+export interface PosDashboardData {
+  floorPulse?: PosDashboardFloorPulse;
+  kotQueue?: PosDashboardKotQueueItem[];
+  revenueMix?: PosDashboardOutletRevenue[];
+  paymentSplit?: PosDashboardPaymentSplit[];
+  fastMovingItems?: PosDashboardFastMovingItem[];
+  billingWatch?: PosDashboardBillingWatch;
+  recentActivity?: PosDashboardRecentActivity[];
+}
+
 interface ApiOutlet {
   id: number;
   name?: string;
@@ -292,6 +354,7 @@ export class PosService {
   readonly bills = signal<PosBill[]>([]);
   readonly shifts = signal<PosShift[]>([]);
   readonly auditLogs = signal<PosAuditLog[]>([]);
+  readonly posDashboard = signal<PosDashboardData | null>(null);
 
   readonly outletMap = computed(() => new Map(this.outlets().map(outlet => [outlet.id, outlet])));
 
@@ -314,6 +377,7 @@ export class PosService {
     this.loadTables();
     this.loadMenuItems();
     this.loadOrders();
+    this.loadPosDashboard();
   }
 
   loadOutletTypes(): void {
@@ -487,6 +551,13 @@ export class PosService {
     this.http.get<ApiOrder[] | ApiListResponse<ApiOrder> | StandardResponse<ApiOrder[]>>(`${this.posBaseUrl}/orders/getAllOrders`).subscribe({
       next: response => this.orders.set(this.listData(response).map(item => this.mapOrder(item))),
       error: error => this.addAudit('Unable to load orders from API', 'Orders', error?.error?.message || error?.message || 'API error')
+    });
+  }
+
+  loadPosDashboard(): void {
+    this.http.get<StandardResponse<PosDashboardData>>(`${this.posBaseUrl}/dashboard/getPosDashboardData`).subscribe({
+      next: response => this.posDashboard.set(response?.data || null),
+      error: error => this.addAudit('Unable to load POS dashboard from API', 'Dashboard', error?.error?.message || error?.message || 'API error')
     });
   }
 

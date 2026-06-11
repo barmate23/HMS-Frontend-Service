@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { UserManagementService } from '../user-management/user-management.service';
 
-export type PosTab = 'outlets' | 'dining' | 'orders' | 'billing' | 'menu' | 'billing-setup';
+export type PosTab = 'dashboard' | 'outlets' | 'dining' | 'orders' | 'billing' | 'menu' | 'billing-setup';
 export type OutletType = string;
 export type OutletStatus = 'ACTIVE' | 'INACTIVE';
 export type TableStatus = string;

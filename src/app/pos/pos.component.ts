@@ -6,6 +6,7 @@ import { Subscription, filter } from 'rxjs';
 import { HotelMastersService } from '../masters/hotel-masters.service';
 import {
   OrderStatus,
+  PosAuditLog,
   PosBill,
   PosMenuItem,
   PosOrder,
@@ -119,6 +120,13 @@ export class PosComponent implements OnInit, OnDestroy {
     { code: 'ROOMDINING', name: 'Room dining credit', type: 'Flat', value: 500, validFrom: '2026-06-01', validTo: '2026-07-15', active: false }
   ]);
 
+  readonly dashboardOutlets = computed(() => this.sampleDashboardOutlets());
+  readonly dashboardMenuItems = computed(() => this.sampleDashboardMenuItems());
+  readonly dashboardTables = computed(() => this.sampleDashboardTables());
+  readonly dashboardOrders = computed(() => this.sampleDashboardOrders());
+  readonly dashboardBills = computed(() => this.sampleDashboardBills());
+  readonly dashboardAuditLogs = computed(() => this.sampleDashboardAuditLogs());
+
   stats = computed(() => {
     const bills = this.pos.bills();
     const totalSales = bills.reduce((sum, bill) => sum + this.billTotal(bill), 0);
@@ -130,6 +138,161 @@ export class PosComponent implements OnInit, OnDestroy {
       roomPostings: bills.filter(bill => bill.postedToFolio).length,
       sales: totalSales
     };
+  });
+
+  dashboardKpis = computed(() => {
+    const orders = this.dashboardOrders();
+    const bills = this.dashboardBills();
+    const tables = this.dashboardTables();
+    const menuItems = this.dashboardMenuItems();
+    const activeOrders = orders.filter(order => !['BILLED', 'CANCELLED'].includes(order.status));
+    const occupiedTables = tables.filter(table => ['OCCUPIED', 'RESERVED'].includes(String(table.status).toUpperCase())).length;
+    const availableTables = tables.filter(table => String(table.status).toUpperCase() === 'AVAILABLE').length;
+    const totalTables = Math.max(1, tables.length);
+    const paidSales = bills.filter(bill => bill.status !== 'VOID').reduce((sum, bill) => sum + this.billTotal(bill), 0);
+    const roomPostingAmount = bills
+      .filter(bill => bill.postedToFolio)
+      .reduce((sum, bill) => sum + this.billTotal(bill), 0);
+    const unpaidAmount = bills
+      .filter(bill => bill.status === 'OPEN' || bill.status === 'PARTIAL')
+      .reduce((sum, bill) => sum + Math.max(0, this.billTotal(bill) - Number(bill.paid || 0)), 0);
+
+    return {
+      activeOrders: activeOrders.length,
+      tableLoad: Math.round((occupiedTables / totalTables) * 100),
+      availableTables,
+      paidSales,
+      roomPostingAmount,
+      unpaidAmount,
+      kotPending: orders.filter(order => order.status === 'OPEN' || order.status === 'HELD').length,
+      menuAvailability: this.percent(menuItems.filter(item => item.available).length, menuItems.length)
+    };
+  });
+
+  tableStatusSummary = computed(() => {
+    const statuses = new Map<string, number>();
+    const tables = this.dashboardTables();
+    for (const table of tables) {
+      const status = String(table.status || 'AVAILABLE').toUpperCase();
+      statuses.set(status, (statuses.get(status) || 0) + 1);
+    }
+    const total = Math.max(1, tables.length);
+    return Array.from(statuses.entries())
+      .map(([status, count]) => ({
+        status,
+        count,
+        percent: Math.round((count / total) * 100),
+        icon: this.tableStatusIcon(status),
+        color: this.tableStatusColor(status)
+      }))
+      .sort((a, b) => b.count - a.count);
+  });
+
+  tableStatusPie = computed(() => {
+    let cursor = 0;
+    const segments = this.tableStatusSummary().map(row => {
+      const start = cursor;
+      cursor += row.percent;
+      return `${row.color} ${start}% ${cursor}%`;
+    });
+
+    return segments.length ? `conic-gradient(${segments.join(', ')})` : 'conic-gradient(var(--surface-200) 0% 100%)';
+  });
+
+  outletRevenue = computed(() => {
+    const outlets = this.dashboardOutlets();
+    const ordersById = new Map(this.dashboardOrders().map(order => [order.id, order]));
+    const totals = new Map<number, { outletId: number; name: string; amount: number; orders: number }>();
+
+    for (const outlet of outlets) {
+      totals.set(outlet.id, { outletId: outlet.id, name: outlet.name, amount: 0, orders: 0 });
+    }
+
+    for (const bill of this.dashboardBills().filter(item => item.status !== 'VOID')) {
+      const order = ordersById.get(Number(bill.orderId));
+      const outletId = Number(order?.outletId || outlets[0]?.id || 0);
+      const current = totals.get(outletId) || { outletId, name: this.dashboardOutletName(outletId), amount: 0, orders: 0 };
+      current.amount += this.billTotal(bill);
+      current.orders += 1;
+      totals.set(outletId, current);
+    }
+
+    const rows = Array.from(totals.values()).sort((a, b) => b.amount - a.amount || b.orders - a.orders).slice(0, 5);
+    const max = Math.max(1, ...rows.map(row => row.amount));
+    return rows.map(row => ({ ...row, width: Math.max(6, Math.round((row.amount / max) * 100)) }));
+  });
+
+  paymentMix = computed(() => {
+    const totals = new Map<string, number>();
+    for (const bill of this.dashboardBills().filter(item => item.status !== 'VOID')) {
+      const amount = this.billTotal(bill);
+      const modes = bill.paymentModes.length ? bill.paymentModes : ['Unspecified'];
+      for (const mode of modes) {
+        totals.set(mode, (totals.get(mode) || 0) + amount / modes.length);
+      }
+    }
+    const total = Math.max(1, Array.from(totals.values()).reduce((sum, value) => sum + value, 0));
+    return Array.from(totals.entries())
+      .map(([mode, amount]) => ({ mode, amount, percent: Math.round((amount / total) * 100) }))
+      .sort((a, b) => b.amount - a.amount);
+  });
+
+  topMenuItems = computed(() => {
+    const menuById = new Map(this.dashboardMenuItems().map(item => [item.id, item]));
+    const totals = new Map<number, { itemId: number; name: string; qty: number; revenue: number; outlet: string; imageUrl: string }>();
+    for (const order of this.dashboardOrders()) {
+      for (const line of order.lines) {
+        const menuItem = menuById.get(line.itemId);
+        const current = totals.get(line.itemId) || {
+          itemId: line.itemId,
+          name: line.name,
+          qty: 0,
+          revenue: 0,
+          outlet: this.dashboardOutletName(order.outletId),
+          imageUrl: menuItem?.imageUrl || this.menuImage(menuItem || {})
+        };
+        current.qty += Number(line.qty || 0);
+        current.revenue += Number(line.qty || 0) * Number(line.price || 0);
+        totals.set(line.itemId, current);
+      }
+    }
+    return Array.from(totals.values()).sort((a, b) => b.qty - a.qty || b.revenue - a.revenue).slice(0, 5);
+  });
+
+  kitchenQueue = computed(() => {
+    return this.dashboardOrders()
+      .filter(order => !['BILLED', 'CANCELLED'].includes(order.status))
+      .slice(0, 6)
+      .map(order => ({
+        ...order,
+        amount: this.orderTotal(order),
+        itemCount: order.lines.reduce((sum, line) => sum + Number(line.qty || 0), 0)
+      }));
+  });
+
+  billingWatch = computed(() => {
+    const bills = this.dashboardBills();
+    const pendingFolio = bills.filter(bill => bill.roomNo && !bill.postedToFolio && bill.status !== 'VOID');
+    const openBills = bills.filter(bill => bill.status === 'OPEN' || bill.status === 'PARTIAL');
+    const voidBills = bills.filter(bill => bill.status === 'VOID');
+    return [
+      { label: 'Open / Partial Bills', value: openBills.length, amount: openBills.reduce((sum, bill) => sum + Math.max(0, this.billTotal(bill) - Number(bill.paid || 0)), 0), icon: 'pending_actions', route: 'billing' as PosTab, color: '#b45309', bg: '#fff7ed' },
+      { label: 'Room Posting Pending', value: pendingFolio.length, amount: pendingFolio.reduce((sum, bill) => sum + this.billTotal(bill), 0), icon: 'bed', route: 'billing' as PosTab, color: '#2563eb', bg: '#eff6ff' },
+      { label: 'Voids / Comps', value: voidBills.length, amount: voidBills.reduce((sum, bill) => sum + this.billTotal(bill), 0), icon: 'block', route: 'billing' as PosTab, color: '#dc2626', bg: '#fef2f2' }
+    ];
+  });
+
+  setupReadiness = computed(() => {
+    const outlets = this.dashboardOutlets();
+    const menuItems = this.dashboardMenuItems();
+    const activeOutlets = outlets.filter(outlet => outlet.active).length;
+    const availableItems = menuItems.filter(item => item.available).length;
+    const readyRules = this.taxRules().filter(rule => rule.active).length + this.offerRules().filter(rule => rule.active).length;
+    return [
+      { label: 'Active outlets', value: activeOutlets, total: outlets.length, route: 'outlets' as PosTab },
+      { label: 'Available menu', value: availableItems, total: menuItems.length, route: 'menu' as PosTab },
+      { label: 'Billing rules', value: readyRules, total: this.taxRules().length + this.offerRules().length, route: 'billing-setup' as PosTab }
+    ];
   });
 
   filteredOutlets = computed(() => {
@@ -773,6 +936,10 @@ export class PosComponent implements OnInit, OnDestroy {
     return this.pos.outletMap().get(Number(id))?.name || 'Unknown Outlet';
   }
 
+  dashboardOutletName(id?: number): string {
+    return this.dashboardOutlets().find(outlet => outlet.id === Number(id))?.name || 'Unknown Outlet';
+  }
+
   billOrder(bill: Partial<PosBill>): PosOrder | null {
     return this.pos.orders().find(order => order.id === Number(bill.orderId || 0)) || null;
   }
@@ -860,8 +1027,20 @@ export class PosComponent implements OnInit, OnDestroy {
     return (order.lines || []).reduce((sum, line) => sum + line.qty * line.price, 0);
   }
 
+  percent(value: number, total: number): number {
+    return total ? Math.round((Number(value || 0) / total) * 100) : 0;
+  }
+
   tableStatusIcon(status: TableStatus): string {
     return status === 'AVAILABLE' ? 'check_circle' : status === 'OCCUPIED' ? 'room_service' : status === 'RESERVED' ? 'event' : 'receipt_long';
+  }
+
+  tableStatusColor(status: TableStatus): string {
+    const normalized = String(status || '').toUpperCase();
+    if (normalized === 'AVAILABLE') return '#0f8f86';
+    if (normalized === 'OCCUPIED') return '#0d4b4b';
+    if (normalized === 'RESERVED') return '#b7791f';
+    return '#475569';
   }
 
   menuImage(item: Partial<PosMenuItem>): string {
@@ -929,9 +1108,87 @@ export class PosComponent implements OnInit, OnDestroy {
     })));
   }
 
+  private sampleDashboardOutlets(): PosOutlet[] {
+    return [
+      { id: 1, name: 'Azure Restaurant', type: 'Restaurant', location: 'Lobby Level', timing: '07:00 AM - 11:00 PM', taxProfile: 'GST 5%', active: true, manager: 'Rajan Mehta' },
+      { id: 2, name: 'Skyline Bar', type: 'Bar', location: 'Rooftop', timing: '05:00 PM - 01:00 AM', taxProfile: 'GST 18%', active: true, manager: 'Deepa Thomas' },
+      { id: 3, name: 'Room Service', type: 'Room Service', location: 'Back Office', timing: '24 Hours', taxProfile: 'GST 5%', active: true, manager: 'Meena Pillai' },
+      { id: 4, name: 'Atrium Cafe', type: 'Cafe', location: 'Ground Floor', timing: '09:00 AM - 09:00 PM', taxProfile: 'GST 5%', active: true, manager: 'Arjun Menon' }
+    ];
+  }
+
+  private sampleDashboardMenuItems(): PosMenuItem[] {
+    return [
+      { id: 1, outletId: 1, name: 'Paneer Tikka', category: 'Food', subcategory: 'Starter', price: 420, taxPercent: 5, variants: ['Regular', 'Family'], modifiers: ['Extra mint chutney', 'No onion'], available: true, featured: true, stockItem: 'Paneer', imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=180&q=80' },
+      { id: 2, outletId: 1, name: 'Butter Chicken', category: 'Food', subcategory: 'Main Course', price: 620, taxPercent: 5, variants: ['Half', 'Full'], modifiers: ['Less spicy', 'Extra gravy'], available: true, featured: true, stockItem: 'Chicken curry cut', imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=180&q=80' },
+      { id: 3, outletId: 1, name: 'Veg Biryani', category: 'Food', subcategory: 'Main Course', price: 480, taxPercent: 5, variants: ['Single', 'Family'], modifiers: ['Raita', 'Salad'], available: true, featured: false, stockItem: 'Basmati rice', imageUrl: 'https://images.unsplash.com/photo-1563379091339-03246963d96c?auto=format&fit=crop&w=180&q=80' },
+      { id: 4, outletId: 2, name: 'Craft Lager', category: 'Beverage', subcategory: 'Beverage', price: 360, taxPercent: 18, variants: ['330 ml', 'Pitcher'], modifiers: ['Chilled glass'], available: true, featured: true, happyHourPrice: 300, happyHourWindow: '05:00 PM - 07:00 PM', stockItem: 'Lager keg', imageUrl: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?auto=format&fit=crop&w=180&q=80' },
+      { id: 5, outletId: 2, name: 'Citrus Mocktail', category: 'Beverage', subcategory: 'Beverage', price: 280, taxPercent: 5, variants: ['Classic', 'Spicy'], modifiers: ['No sugar', 'Extra ice'], available: true, featured: true, stockItem: 'Orange juice', imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=180&q=80' },
+      { id: 6, outletId: 3, name: 'Club Sandwich', category: 'Room Service', subcategory: 'Room Service', price: 390, taxPercent: 5, variants: ['Veg', 'Chicken'], modifiers: ['Fries', 'No mayo'], available: true, featured: false, stockItem: 'Bread loaf', imageUrl: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=180&q=80' },
+      { id: 7, outletId: 4, name: 'Cappuccino', category: 'Beverage', subcategory: 'Beverage', price: 220, taxPercent: 5, variants: ['Regular', 'Large'], modifiers: ['Oat milk', 'Extra shot'], available: true, featured: true, stockItem: 'Coffee beans', imageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=180&q=80' },
+      { id: 8, outletId: 4, name: 'Chocolate Pastry', category: 'Food', subcategory: 'Dessert', price: 260, taxPercent: 5, variants: ['Slice'], modifiers: ['Warm', 'No garnish'], available: false, featured: false, stockItem: 'Pastry', imageUrl: 'https://images.unsplash.com/photo-1606890737304-57a1ca8a5b62?auto=format&fit=crop&w=180&q=80' }
+    ];
+  }
+
+  private sampleDashboardTables(): PosTable[] {
+    return [
+      { id: 1, outletId: 1, number: 'T01', section: 'Indoor', status: 'OCCUPIED', covers: 4, server: 'Arjun Menon', guestName: 'Nisha Rao' },
+      { id: 2, outletId: 1, number: 'T02', section: 'Indoor', status: 'AVAILABLE', covers: 0, server: 'Unassigned' },
+      { id: 3, outletId: 1, number: 'T03', section: 'Patio', status: 'RESERVED', covers: 3, server: 'Meena Pillai', guestName: 'Kapoor Family', bookingTime: 'Today, 08:30 PM' },
+      { id: 4, outletId: 1, number: 'T04', section: 'Patio', status: 'OCCUPIED', covers: 2, server: 'Deepa Thomas', guestName: 'Amit Shah' },
+      { id: 5, outletId: 2, number: 'B01', section: 'Bar Counter', status: 'OCCUPIED', covers: 2, server: 'Rajan Mehta', guestName: 'Walk-in Guest' },
+      { id: 6, outletId: 2, number: 'B02', section: 'Lounge', status: 'AVAILABLE', covers: 0, server: 'Unassigned' },
+      { id: 7, outletId: 4, number: 'C01', section: 'Indoor', status: 'RESERVED', covers: 2, server: 'Arjun Menon', guestName: 'Cafe Booking', bookingTime: 'Today, 07:30 PM' },
+      { id: 8, outletId: 4, number: 'C02', section: 'Indoor', status: 'AVAILABLE', covers: 0, server: 'Unassigned' }
+    ];
+  }
+
+  private sampleDashboardOrders(): PosOrder[] {
+    return [
+      { id: 1, outletId: 1, orderNo: 'ORD-1001', type: 'TABLE', tableNo: 'T01', guestName: 'Nisha Rao', server: 'Arjun Menon', status: 'KOT_SENT', kotNo: 'KOT-501', openedAt: '18 min ago', notes: 'Anniversary table', lines: [
+        { itemId: 1, name: 'Paneer Tikka', qty: 2, price: 420, course: 'Starter', notes: 'Extra mint chutney' },
+        { itemId: 2, name: 'Butter Chicken', qty: 1, price: 620, course: 'Main Course', notes: 'Less spicy' }
+      ] },
+      { id: 2, outletId: 2, orderNo: 'ORD-1002', type: 'TABLE', tableNo: 'B01', guestName: 'Walk-in Guest', server: 'Rajan Mehta', status: 'OPEN', kotNo: '', openedAt: '9 min ago', notes: 'Bar counter service', lines: [
+        { itemId: 4, name: 'Craft Lager', qty: 2, price: 360, course: 'Beverage', notes: 'Chilled glass' },
+        { itemId: 5, name: 'Citrus Mocktail', qty: 1, price: 280, course: 'Beverage', notes: 'Extra ice' }
+      ] },
+      { id: 3, outletId: 3, orderNo: 'ORD-1003', type: 'ROOM', roomNo: '204', guestName: 'Rohan Malhotra', server: 'Meena Pillai', status: 'HELD', kotNo: 'KOT-502', openedAt: '24 min ago', notes: 'Deliver after 20 minutes', lines: [
+        { itemId: 6, name: 'Club Sandwich', qty: 2, price: 390, course: 'Room Service', notes: 'No mayo' },
+        { itemId: 7, name: 'Cappuccino', qty: 2, price: 220, course: 'Beverage', notes: 'Extra hot' }
+      ] },
+      { id: 4, outletId: 1, orderNo: 'ORD-1004', type: 'TABLE', tableNo: 'T04', guestName: 'Amit Shah', server: 'Deepa Thomas', status: 'BILLED', kotNo: 'KOT-499', openedAt: '54 min ago', notes: 'Bill generated', lines: [
+        { itemId: 3, name: 'Veg Biryani', qty: 2, price: 480, course: 'Main Course', notes: 'Raita' }
+      ] },
+      { id: 5, outletId: 4, orderNo: 'ORD-1005', type: 'TAKEAWAY', guestName: 'Cafe Pickup', server: 'Arjun Menon', status: 'OPEN', kotNo: '', openedAt: '5 min ago', notes: 'Pickup at counter', lines: [
+        { itemId: 7, name: 'Cappuccino', qty: 3, price: 220, course: 'Beverage', notes: 'Two regular, one oat milk' }
+      ] }
+    ];
+  }
+
+  private sampleDashboardBills(): PosBill[] {
+    return [
+      { id: 1, orderId: 4, billNo: 'BILL-7001', orderType: 'TABLE', tableNo: 'T04', guestName: 'Amit Shah', subtotal: 960, discount: 50, tax: 46, paid: 956, status: 'PAID', paymentModes: ['Card'], postedToFolio: false },
+      { id: 2, orderId: 3, billNo: 'BILL-7002', orderType: 'ROOM', roomNo: '204', guestName: 'Rohan Malhotra', subtotal: 1220, discount: 0, tax: 61, paid: 0, status: 'OPEN', paymentModes: ['Room Charge'], postedToFolio: false },
+      { id: 3, orderId: 1, billNo: 'BILL-7003', orderType: 'TABLE', tableNo: 'T01', guestName: 'Nisha Rao', subtotal: 1460, discount: 100, tax: 68, paid: 800, status: 'PARTIAL', paymentModes: ['UPI', 'Cash'], postedToFolio: false },
+      { id: 4, orderId: 2, billNo: 'BILL-7004', orderType: 'TABLE', tableNo: 'B01', guestName: 'Walk-in Guest', subtotal: 1000, discount: 0, tax: 126, paid: 1126, status: 'PAID', paymentModes: ['UPI'], postedToFolio: false },
+      { id: 5, orderId: 3, billNo: 'BILL-7005', orderType: 'ROOM', roomNo: '204', guestName: 'Rohan Malhotra', subtotal: 520, discount: 0, tax: 26, paid: 0, status: 'PARTIAL', paymentModes: ['Room Charge'], postedToFolio: true }
+    ];
+  }
+
+  private sampleDashboardAuditLogs(): PosAuditLog[] {
+    return [
+      { id: 1, at: 'Just now', user: 'Outlet Manager', action: 'KOT sent to kitchen', module: 'Orders', reference: 'ORD-1001' },
+      { id: 2, at: '4 min ago', user: 'Rajan Mehta', action: 'Bill settled by UPI', module: 'Billing', reference: 'BILL-7004' },
+      { id: 3, at: '9 min ago', user: 'Meena Pillai', action: 'Room service order held', module: 'Room Service', reference: 'Room 204' },
+      { id: 4, at: '15 min ago', user: 'Deepa Thomas', action: 'Table marked billed', module: 'Table Dining', reference: 'T04' },
+      { id: 5, at: '22 min ago', user: 'Arjun Menon', action: 'Cafe takeaway created', module: 'Orders', reference: 'ORD-1005' }
+    ];
+  }
+
   private updateTabFromUrl(url: string): void {
     const last = url.split('/').pop()?.split('?')[0] as PosTab;
-    this.activeTab.set(['outlets', 'dining', 'orders', 'billing', 'menu', 'billing-setup'].includes(last) ? last : 'outlets');
+    this.activeTab.set(['dashboard', 'outlets', 'dining', 'orders', 'billing', 'menu', 'billing-setup'].includes(last) ? last : 'dashboard');
     this.search.set('');
     this.statusFilter.set('ALL');
   }

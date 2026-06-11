@@ -32,7 +32,6 @@ export const routes: Routes = [
       { path: 'laundry/create', loadComponent: () => import('./laundry/laundry.component').then(m => m.LaundryComponent) },
       { path: 'laundry/orders', loadComponent: () => import('./laundry/laundry.component').then(m => m.LaundryComponent) },
       { path: 'laundry/detail', loadComponent: () => import('./laundry/laundry.component').then(m => m.LaundryComponent) },
-      { path: 'laundry/linen', loadComponent: () => import('./laundry/laundry.component').then(m => m.LaundryComponent) },
       { path: 'laundry/catalogue', loadComponent: () => import('./laundry/laundry.component').then(m => m.LaundryComponent) },
       { path: 'laundry/reports', loadComponent: () => import('./laundry/laundry.component').then(m => m.LaundryComponent) },
       { path: 'masters/hotels', loadComponent: () => import('./masters/hotel-masters.component').then(m => m.HotelMastersComponent) },

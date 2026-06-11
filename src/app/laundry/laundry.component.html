@@ -5,7 +5,6 @@
       <button class="tab-btn" [class.active]="activeTab() === 'create'" (click)="switchTab('create')"><span class="material-icons-round">add_circle</span>Create Order</button>
       <button class="tab-btn" [class.active]="activeTab() === 'orders'" (click)="switchTab('orders')"><span class="material-icons-round">local_laundry_service</span>Tracking</button>
       <button class="tab-btn" [class.active]="activeTab() === 'detail'" (click)="switchTab('detail')"><span class="material-icons-round">timeline</span>Status Flow</button>
-      <button class="tab-btn" [class.active]="activeTab() === 'linen'" (click)="switchTab('linen')"><span class="material-icons-round">qr_code_scanner</span>Linen Outsource</button>
       <button class="tab-btn" [class.active]="activeTab() === 'catalogue'" (click)="switchTab('catalogue')"><span class="material-icons-round">inventory_2</span>Price Master</button>
       <button class="tab-btn" [class.active]="activeTab() === 'reports'" (click)="switchTab('reports')"><span class="material-icons-round">bar_chart</span>Reports</button>
     </div>
@@ -36,9 +35,7 @@
         <label><span>To</span><input type="date" [ngModel]="toDate()" (ngModelChange)="toDate.set($event)"></label>
       </div>
 
-      <button class="btn-primary" *ngIf="activeTab() !== 'create' && activeTab() !== 'linen'" (click)="newOrder()"><span class="material-icons-round">add</span>New Laundry Order</button>
-      <button class="btn-primary" *ngIf="activeTab() === 'linen' && linenSection() === 'vendors' && editingVendorId() === null && viewingVendorId() === null" (click)="beginVendorEdit()"><span class="material-icons-round">add</span>Add Vendor</button>
-      <button class="btn-primary" *ngIf="activeTab() === 'linen' && linenSection() === 'requests'" (click)="newLinenDispatch()"><span class="material-icons-round">add</span>New Service Request</button>
+      <button class="btn-primary" *ngIf="activeTab() !== 'create'" (click)="newOrder()"><span class="material-icons-round">add</span>New Laundry Order</button>
       <button class="btn-primary" *ngIf="activeTab() === 'catalogue'" (click)="beginCatalogueEdit()"><span class="material-icons-round">add</span>Add Item</button>
       <button class="btn-primary" *ngIf="activeTab() === 'reports'"><span class="material-icons-round">download</span>Export</button>
     </div>

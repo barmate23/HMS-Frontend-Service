@@ -625,7 +625,7 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
   private updateTabFromUrl(url: string): void {
     const last = url.split('/').pop()?.split('?')[0] as LaundryTab;
-    this.activeTab.set(['dashboard', 'create', 'orders', 'detail', 'linen', 'catalogue', 'reports'].includes(last) ? last : 'dashboard');
+    this.activeTab.set(['dashboard', 'create', 'orders', 'detail', 'catalogue', 'reports'].includes(last) ? last : 'dashboard');
     if (this.activeTab() === 'create' && !(this.orderDraft().lines || []).length) this.addOrderLine();
   }
 

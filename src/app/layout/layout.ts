@@ -97,11 +97,13 @@ export class Layout {
       icon: 'point_of_sale',
       expanded: false,
       children: [
+        { label: 'Dashboard', icon: 'dashboard', route: '/pos/dashboard' },
         { label: 'Outlets', icon: 'storefront', route: '/pos/outlets' },
         { label: 'Table Dining', icon: 'table_restaurant', route: '/pos/dining' },
         { label: 'Orders', icon: 'restaurant_menu', route: '/pos/orders' },
         { label: 'Billing', icon: 'receipt_long', route: '/pos/billing' },
-        { label: 'Menu Management', icon: 'menu_book', route: '/pos/menu' }
+        { label: 'Menu Management', icon: 'menu_book', route: '/pos/menu' },
+        { label: 'Billing Setup', icon: 'settings', route: '/pos/billing-setup' }
       ]
     }
   ];

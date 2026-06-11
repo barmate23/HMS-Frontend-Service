@@ -1,6 +1,7 @@
 <div class="pos-container">
   <div class="compact-nav">
     <div class="tabs-container">
+      <button class="tab-btn" [class.active]="activeTab() === 'dashboard'" (click)="switchTab('dashboard')"><span class="material-icons-round">dashboard</span>Dashboard</button>
       <button class="tab-btn" [class.active]="activeTab() === 'outlets'" (click)="switchTab('outlets')"><span class="material-icons-round">storefront</span>Outlets</button>
       <button class="tab-btn" [class.active]="activeTab() === 'dining'" (click)="switchTab('dining')"><span class="material-icons-round">table_restaurant</span>Table Dining</button>
       <button class="tab-btn" [class.active]="activeTab() === 'orders'" (click)="switchTab('orders')"><span class="material-icons-round">restaurant_menu</span>Orders</button>
@@ -8,7 +9,7 @@
       <button class="tab-btn" [class.active]="activeTab() === 'menu'" (click)="switchTab('menu')"><span class="material-icons-round">menu_book</span>Menu Management</button>
     </div>
 
-    <div class="nav-right" *ngIf="activeTab() !== 'billing-setup'">
+    <div class="nav-right" *ngIf="activeTab() !== 'dashboard' && activeTab() !== 'billing-setup'">
       <div class="search-box">
         <span class="material-icons-round">search</span>
         <input type="text" [placeholder]="activeTab() === 'orders' ? 'Search order, table, room...' : activeTab() === 'dining' ? 'Search table, server, section...' : activeTab() === 'billing' ? 'Search bill, room, guest...' : 'Search outlet, item, category...'" [ngModel]="search()" (ngModelChange)="search.set($event)">
@@ -51,7 +52,7 @@
     </div>
   </div>
 
-  <div class="pos-stats-grid">
+  <div class="pos-stats-grid" *ngIf="activeTab() !== 'dashboard'">
     <div class="pos-stat-card"><span class="material-icons-round">storefront</span><div><strong>{{ stats().outlets }}</strong><small>Active Outlets</small></div></div>
     <div class="pos-stat-card"><span class="material-icons-round">restaurant</span><div><strong>{{ stats().orders }}</strong><small>Open Orders</small></div></div>
     <div class="pos-stat-card warning"><span class="material-icons-round">local_fire_department</span><div><strong>{{ stats().kot }}</strong><small>KOT Running</small></div></div>
@@ -61,6 +62,146 @@
   </div>
 
   <div class="view-content" [ngSwitch]="activeTab()">
+    <div class="pos-dashboard" *ngSwitchCase="'dashboard'">
+      <section class="pos-command-band">
+        <div class="pos-command-copy">
+          <h2>POS Operations Dashboard</h2>
+          <p>Monitor active service, kitchen queue, billing exposure, room postings and menu readiness across all outlets.</p>
+        </div>
+      </section>
+
+      <section class="pos-dashboard-grid">
+        <div class="pos-panel service-panel">
+          <div class="panel-title">
+            <h3>Service Floor Pulse</h3>
+            <button type="button" (click)="switchTab('dining')">Open Dining</button>
+          </div>
+          <div class="table-distribution-graph" (click)="switchTab('dining')">
+            <div class="table-pie-chart" [style.background]="tableStatusPie()">
+              <div>
+                <strong>{{ dashboardTables().length }}</strong>
+                <span>Total<br>tables</span>
+              </div>
+            </div>
+            <div class="distribution-legend">
+              <span *ngFor="let row of tableStatusSummary()">
+                <i [style.background]="row.color"></i>{{ row.status }} <b>{{ row.count }}</b> {{ row.percent }}%
+              </span>
+            </div>
+          </div>
+          <div class="table-status-stack">
+            <button type="button" class="table-status-row" *ngFor="let row of tableStatusSummary()" (click)="switchTab('dining')">
+              <span class="material-icons-round" [style.color]="row.color">{{ row.icon }}</span>
+              <strong>{{ row.status }}</strong>
+              <div class="status-meter"><i [style.width.%]="row.percent" [style.background]="row.color"></i></div>
+              <em>{{ row.count }}</em>
+            </button>
+          </div>
+        </div>
+
+        <div class="pos-panel queue-panel">
+          <div class="panel-title">
+            <h3>Live KOT & Order Queue</h3>
+            <button type="button" (click)="switchTab('orders')">View Orders</button>
+          </div>
+          <div class="queue-list" *ngIf="kitchenQueue().length; else noKotQueue">
+            <button type="button" class="queue-row" *ngFor="let order of kitchenQueue()" (click)="openEdit('order', order)">
+              <span class="queue-code">{{ order.orderNo }}</span>
+              <div>
+                <strong>{{ outletName(order.outletId) }}</strong>
+                <small>{{ order.tableNo || order.roomNo || order.type }} • {{ order.server }}</small>
+              </div>
+              <em>{{ order.itemCount }} items</em>
+              <span class="status-badge" [class]="order.status.toLowerCase()">{{ order.status }}</span>
+            </button>
+          </div>
+          <ng-template #noKotQueue>
+            <div class="dashboard-empty">No active kitchen queue.</div>
+          </ng-template>
+        </div>
+
+        <div class="pos-panel revenue-panel">
+          <div class="panel-title">
+            <h3>Outlet Revenue Mix</h3>
+            <button type="button" (click)="switchTab('outlets')">Outlets</button>
+          </div>
+          <div class="revenue-list">
+            <button type="button" class="revenue-row" *ngFor="let outlet of outletRevenue()" (click)="switchTab('billing')">
+              <div>
+                <strong>{{ outlet.name }}</strong>
+                <small>{{ outlet.orders }} bills</small>
+              </div>
+              <div class="revenue-bar"><i [style.width.%]="outlet.width"></i></div>
+              <em>&#8377;{{ outlet.amount | number:'1.0-0' }}</em>
+            </button>
+          </div>
+        </div>
+
+        <div class="pos-panel payment-panel">
+          <div class="panel-title">
+            <h3>Payment Split</h3>
+            <button type="button" (click)="switchTab('billing')">Billing</button>
+          </div>
+          <div class="payment-grid">
+            <button type="button" class="payment-tile" *ngFor="let row of paymentMix()" (click)="switchTab('billing')">
+              <strong>{{ row.percent }}%</strong>
+              <span>{{ row.mode }}</span>
+              <small>&#8377;{{ row.amount | number:'1.0-0' }}</small>
+            </button>
+          </div>
+        </div>
+
+        <div class="pos-panel menu-panel">
+          <div class="panel-title">
+            <h3>Fast Moving Menu Items</h3>
+            <button type="button" (click)="switchTab('menu')">Menu</button>
+          </div>
+          <div class="menu-rank-list" *ngIf="topMenuItems().length; else noTopItems">
+            <button type="button" *ngFor="let item of topMenuItems(); let i = index" (click)="switchTab('menu')">
+              <span>{{ i + 1 }}</span>
+              <img [src]="item.imageUrl" [alt]="item.name">
+              <div><strong>{{ item.name }}</strong><small>{{ item.outlet }}</small></div>
+              <em>{{ item.qty }} sold</em>
+            </button>
+          </div>
+          <ng-template #noTopItems>
+            <div class="dashboard-empty">No order lines available yet.</div>
+          </ng-template>
+        </div>
+
+        <div class="pos-panel watch-panel">
+          <div class="panel-title">
+            <h3>Billing Watch</h3>
+            <button type="button" (click)="switchTab('billing')">Resolve</button>
+          </div>
+          <div class="watch-list">
+            <button type="button" class="watch-row" *ngFor="let row of billingWatch()" (click)="switchTab(row.route)">
+              <span class="material-icons-round" [style.background]="row.bg" [style.color]="row.color">{{ row.icon }}</span>
+              <div><strong>{{ row.label }}</strong><small>&#8377;{{ row.amount | number:'1.0-0' }}</small></div>
+              <em>{{ row.value }}</em>
+            </button>
+          </div>
+        </div>
+
+        <div class="pos-panel activity-panel">
+          <div class="panel-title">
+            <h3>Recent POS Activity</h3>
+            <button type="button" (click)="switchTab('orders')">Work Queue</button>
+          </div>
+          <div class="dashboard-activity" *ngIf="dashboardAuditLogs().length; else noActivity">
+            <div class="activity-row" *ngFor="let log of dashboardAuditLogs().slice(0, 5)">
+              <span class="material-icons-round">history</span>
+              <strong>{{ log.action }}</strong>
+              <small>{{ log.module }} • {{ log.reference }}</small>
+            </div>
+          </div>
+          <ng-template #noActivity>
+            <div class="dashboard-empty">Activity will appear after POS actions.</div>
+          </ng-template>
+        </div>
+      </section>
+    </div>
+
     <div class="modern-card" *ngSwitchCase="'outlets'">
       <div class="card-header"><h2 class="card-title">POS Outlet Management</h2><span class="total-badge">{{ filteredOutlets().length }} Outlets</span></div>
       <div class="table-container">

@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 import {
   LaundryCatalogueItem,
+  LaundryDashboardActivity,
   LinenDispatch,
   LinenDispatchLine,
   LinenDispatchStatus,
@@ -18,6 +19,9 @@ import {
 
 type LinenSection = 'vendors' | 'requests' | 'ledger';
 type LinenVendorStatus = 'Active' | 'Inactive';
+type DeleteConfirmation =
+  | { type: 'catalogue'; id: number; name: string; title: string; message: string; note: string }
+  | { type: 'service'; id: number; name: string; title: string; message: string; note: string };
 type LinenVendor = {
   id: number;
   name: string;
@@ -46,30 +50,40 @@ export class LaundryComponent implements OnInit, OnDestroy {
   statusFilter = signal<'ALL' | LaundryStatus>('ALL');
   serviceFilter = signal<'ALL' | LaundryServiceType>('ALL');
   categoryFilter = signal('ALL');
-  fromDate = signal('2026-05-01');
-  toDate = signal('2026-05-31');
-  selectedFloor = signal('Floor 1');
-  selectedOrderId = signal<number>(1);
-  selectedLinenDispatchId = signal<number>(1);
-  selectedLinenVendorId = signal<number>(1);
+  fromDate = signal('');
+  toDate = signal('');
+  selectedFloor = signal('');
+  selectedOrderId = signal<number>(0);
+  selectedLinenDispatchId = signal<number>(0);
+  selectedLinenVendorId = signal<number>(0);
   viewingVendorId = signal<number | null>(null);
   editingCatalogueId = signal<number | null>(null);
+  selectedCatalogueId = signal<number | null>(null);
+  isServiceComposerOpen = signal(false);
+  editingServiceName = signal<string | null>(null);
+  serviceDraftName = signal('');
+  serviceDraftDescription = signal('');
+  serviceDraftBase = signal<'washFold' | 'washPress' | 'dryClean' | 'express'>('washPress');
+  serviceDraftActive = signal(true);
+  serviceBaseOverrides = signal<Record<string, 'washFold' | 'washPress' | 'dryClean' | 'express'>>({});
+  serviceStatusOverrides = signal<Record<string, boolean>>({});
+  serviceVersion = signal(0);
+  deleteConfirmation = signal<DeleteConfirmation | null>(null);
+  isOrderSummaryOpen = signal(false);
+  isItemDetailsOpen = signal(false);
   linenSection = signal<LinenSection>('requests');
   editingVendorId = signal<number | null>(null);
   catalogueDraft = signal<Partial<LaundryCatalogueItem>>({});
   linenDraft = signal<Partial<LinenDispatch>>({});
   vendorDraft = signal<Partial<LinenVendor>>({});
-  linenVendors = signal<LinenVendor[]>([
-    { id: 1, name: 'Sparkle Linen Services', contactPerson: 'Akshay Patil', phone: '+91 98765 43210', gstNumber: '27SPARK1234F1Z5', pickupWindow: 'Daily 10:00 AM - 12:00 PM', paymentTerms: 'Monthly settlement', status: 'Active' },
-    { id: 2, name: 'FreshFold Commercial Laundry', contactPerson: 'Nisha Shah', phone: '+91 99887 76655', gstNumber: '27FRESH5678H1Z2', pickupWindow: 'Alternate days 09:00 AM', paymentTerms: '15 days credit', status: 'Active' }
-  ]);
+  linenVendors = signal<LinenVendor[]>([]);
 
   orderDraft = signal<Partial<LaundryOrder>>({
-    bookingId: 101,
-    serviceType: 'Wash & Fold',
-    pickupAt: '31-05-2026 12:00',
-    expectedDeliveryAt: '01-06-2026 12:00',
-    billingMode: 'Room Account',
+    serviceType: '',
+    serviceTypes: [],
+    pickupAt: '',
+    expectedDeliveryAt: '',
+    billingMode: '',
     notes: '',
     lines: []
   });
@@ -78,11 +92,14 @@ export class LaundryComponent implements OnInit, OnDestroy {
     const q = this.search().toLowerCase().trim();
     const status = this.statusFilter();
     const service = this.serviceFilter();
+    const from = this.fromDate();
+    const to = this.toDate();
     return this.laundry.orders().filter(order => {
       const matchesQuery = !q || order.room.includes(q) || order.guest.toLowerCase().includes(q) || order.orderId.toLowerCase().includes(q);
       const matchesStatus = status === 'ALL' || order.status === status;
-      const matchesService = service === 'ALL' || order.serviceType === service;
-      return matchesQuery && matchesStatus && matchesService;
+      const matchesService = service === 'ALL' || (order.serviceTypes || [order.serviceType]).includes(service);
+      const matchesDateRange = this.matchesDateRange(order.createdAt || order.pickupAt || order.expectedDeliveryAt, from, to);
+      return matchesQuery && matchesStatus && matchesService && matchesDateRange;
     });
   });
 
@@ -96,6 +113,60 @@ export class LaundryComponent implements OnInit, OnDestroy {
     });
   });
 
+  readonly priceMasterStats = computed(() => {
+    const items = this.laundry.catalogue();
+    const activeItems = items.filter(item => item.active);
+    const services = this.priceServices();
+    const configuredRates = items.reduce((sum, item) => {
+      return sum + services.filter(service => this.priceForService(item, service.name) > 0).length;
+    }, 0);
+    const expressAverage = items.length
+      ? Math.round(items.reduce((sum, item) => sum + Number(item.expressSurcharge || 0), 0) / items.length)
+      : 0;
+
+    return {
+      items: items.length,
+      activeItems: activeItems.length,
+      services: services.length,
+      configuredRates,
+      expressAverage
+    };
+  });
+
+  readonly serviceCatalog = computed(() => {
+    this.serviceVersion();
+    return this.laundry.serviceCatalog().map(service => ({
+      id: service.id,
+      name: service.serviceName,
+      icon: this.serviceIcon(service.serviceName),
+      base: this.serviceBaseLabel(service.serviceName),
+      active: service.active,
+      configured: this.serviceHasConfiguredRates(service.serviceName),
+      description: service.description || this.serviceDescription(service.serviceName),
+      pricingBasis: service.pricingBasis,
+      displayOrder: service.displayOrder
+    }));
+  });
+
+  readonly priceServices = computed(() => {
+    return this.serviceCatalog()
+      .filter(service => service.active)
+      .map(service => ({
+        name: service.name,
+        icon: service.icon,
+        base: service.base,
+        enabled: service.configured,
+        description: service.description
+      }));
+  });
+
+  readonly selectedCatalogueItem = computed(() => {
+    const selectedId = this.selectedCatalogueId();
+    return this.laundry.catalogue().find(item => item.id === selectedId)
+      || this.laundry.catalogue()[0]
+      || null;
+  });
+
   readonly floors = computed(() => {
     return Array.from(new Set(this.laundry.activeBookings().map(booking => booking.floor)));
   });
@@ -103,6 +174,31 @@ export class LaundryComponent implements OnInit, OnDestroy {
   readonly roomsForSelectedFloor = computed(() => {
     return this.laundry.activeBookings().filter(booking => booking.floor === this.selectedFloor());
   });
+
+  private readonly defaultSelectionEffect = effect(() => {
+    const floors = this.floors();
+    if (!this.selectedFloor() && floors.length) {
+      this.selectedFloor.set(floors[0]);
+    }
+
+    const rooms = this.roomsForSelectedFloor();
+    if (!this.orderDraft().bookingId && rooms.length) {
+      this.setDraftBooking(rooms[0].bookingId);
+    }
+
+    this.laundry.serviceCatalog();
+    if (!(this.orderDraft().serviceTypes || []).length && this.laundry.serviceTypes.length) {
+      this.setDraftServiceTypes([this.laundry.serviceTypes[0]]);
+    }
+    if (!this.orderDraft().billingMode && this.laundry.billingOptions.length) {
+      this.orderDraft.update(draft => ({ ...draft, billingMode: this.laundry.billingOptions[0] }));
+    }
+
+    const orders = this.laundry.orders();
+    if (orders.length && !orders.some(order => order.id === this.selectedOrderId())) {
+      this.selectedOrderId.set(orders[0].id);
+    }
+  }, { allowSignalWrites: true });
 
   readonly selectedOrder = computed(() => {
     return this.laundry.orders().find(order => order.id === this.selectedOrderId()) || this.laundry.orders()[0];
@@ -141,59 +237,11 @@ export class LaundryComponent implements OnInit, OnDestroy {
   });
 
   readonly dashboardStats = computed(() => {
-    const orders = this.laundry.orders();
-    return {
-      pendingPickup: orders.filter(order => order.status === 'Pickup Pending').length,
-      inProcess: orders.filter(order => order.status === 'Processing').length,
-      ready: orders.filter(order => order.status === 'Ready for Delivery').length,
-      revenue: orders.filter(order => order.createdAt.startsWith('31-05-2026')).reduce((sum, order) => sum + this.laundry.orderAmount(order), 0),
-      overdue: orders.filter(order => order.status === 'Overdue').length,
-      completedToday: orders.filter(order => order.status === 'Delivered' && (order.deliveredAt || '').startsWith('31-05-2026')).length
-    };
+    return this.laundry.dashboardSummary();
   });
 
   readonly activityFeed = computed(() => {
-    return [...this.laundry.orders()]
-      .sort((a, b) => b.id - a.id)
-      .slice(0, 10)
-      .map(order => ({
-        ...order,
-        itemCount: this.laundry.orderItemCount(order),
-        amount: this.laundry.orderAmount(order)
-      }));
-  });
-
-  readonly reportStats = computed(() => {
-    const orders = this.reportOrders();
-    const revenue = orders.reduce((sum, order) => sum + this.laundry.orderAmount(order), 0);
-    const delivered = orders.filter(order => order.status === 'Delivered');
-    return {
-      revenue,
-      totalOrders: orders.length,
-      averageTat: delivered.length ? '8.4 hrs' : '0 hrs'
-    };
-  });
-
-  readonly serviceRevenue = computed(() => {
-    const orders = this.reportOrders();
-    const totals = this.laundry.serviceTypes.map(service => {
-      const revenue = orders.filter(order => order.serviceType === service).reduce((sum, order) => sum + this.laundry.orderAmount(order), 0);
-      return { service, revenue };
-    });
-    const max = Math.max(1, ...totals.map(item => item.revenue));
-    const total = Math.max(1, totals.reduce((sum, item) => sum + item.revenue, 0));
-    return totals.map(item => ({ ...item, width: `${Math.max(8, Math.round(item.revenue / max * 100))}%`, share: Math.round(item.revenue / total * 100) }));
-  });
-
-  readonly topRooms = computed(() => {
-    const grouped = new Map<string, { room: string; guest: string; orders: number; revenue: number; tat: string }>();
-    for (const order of this.reportOrders()) {
-      const current = grouped.get(order.room) || { room: order.room, guest: order.guest, orders: 0, revenue: 0, tat: '8.2 hrs' };
-      current.orders += 1;
-      current.revenue += this.laundry.orderAmount(order);
-      grouped.set(order.room, current);
-    }
-    return [...grouped.values()].sort((a, b) => b.orders - a.orders || b.revenue - a.revenue);
+    return this.laundry.dashboardActivity();
   });
 
   ngOnInit(): void {
@@ -214,13 +262,14 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
   newOrder(): void {
     const firstBooking = this.laundry.activeBookings()[0];
-    this.selectedFloor.set(firstBooking?.floor || 'Floor 1');
+    this.selectedFloor.set(firstBooking?.floor || '');
     this.orderDraft.set({
       bookingId: firstBooking?.bookingId,
-      serviceType: 'Wash & Fold',
-      pickupAt: '31-05-2026 12:00',
-      expectedDeliveryAt: '01-06-2026 12:00',
-      billingMode: 'Room Account',
+      serviceTypes: this.laundry.serviceTypes[0] ? [this.laundry.serviceTypes[0]] : [],
+      serviceType: this.laundry.serviceTypes[0] || '',
+      pickupAt: this.defaultDateTimeLocal(0),
+      expectedDeliveryAt: this.defaultDateTimeLocal(24),
+      billingMode: this.laundry.billingOptions[0] || '',
       notes: '',
       lines: []
     });
@@ -232,10 +281,10 @@ export class LaundryComponent implements OnInit, OnDestroy {
   newLinenDispatch(): void {
     const firstItem = this.laundry.linenItems().find(item => item.active);
     this.linenDraft.set({
-      vendorName: this.linenVendors().find(vendor => vendor.status === 'Active')?.name || this.laundry.linenVendors[0],
-      challanNo: 'CH-NEW',
-      sentAt: '31-05-2026 12:30',
-      expectedReturnAt: '01-06-2026 09:00',
+      vendorName: this.linenVendors().find(vendor => vendor.status === 'Active')?.name || '',
+      challanNo: '',
+      sentAt: '',
+      expectedReturnAt: '',
       vehicleNo: '',
       handledBy: 'Laundry Supervisor',
       status: 'Ready for Pickup',
@@ -353,21 +402,34 @@ export class LaundryComponent implements OnInit, OnDestroy {
     this.syncBookingToDraft();
   }
 
-  setDraftServiceType(serviceType: LaundryServiceType): void {
+  setDraftServiceTypes(serviceTypes: LaundryServiceType[]): void {
+    const selected = this.normalizeSelectedServices(serviceTypes);
     this.orderDraft.update(draft => ({
       ...draft,
-      serviceType,
-      lines: (draft.lines || []).map(line => this.repriceLine(line, serviceType))
+      serviceTypes: selected,
+      serviceType: this.laundry.serviceDisplay(selected),
+      lines: (draft.lines || []).map(line => this.repriceLine(line, selected))
     }));
   }
 
+  toggleDraftService(serviceType: LaundryServiceType): void {
+    const current = this.normalizeSelectedServices(this.orderDraft().serviceTypes || []);
+    const exists = current.some(service => service.toLowerCase() === serviceType.toLowerCase());
+    const next = exists ? current.filter(service => service.toLowerCase() !== serviceType.toLowerCase()) : [...current, serviceType];
+    this.setDraftServiceTypes(next.length ? next : [serviceType]);
+  }
+
+  isDraftServiceSelected(serviceType: LaundryServiceType): boolean {
+    return this.normalizeSelectedServices(this.orderDraft().serviceTypes || []).some(service => service.toLowerCase() === serviceType.toLowerCase());
+  }
+
   addOrderLine(): void {
-    const serviceType = this.orderDraft().serviceType || 'Wash & Fold';
-    const item = this.laundry.catalogue().find(value => value.active && this.laundry.priceFor(value, serviceType) > 0);
+    const serviceTypes = this.normalizeSelectedServices(this.orderDraft().serviceTypes || [this.orderDraft().serviceType || this.laundry.serviceTypes[0] || '']);
+    const item = this.laundry.catalogue().find(value => value.active && this.laundry.priceForServices(value, serviceTypes) > 0);
     if (!item) return;
     this.orderDraft.update(draft => ({
       ...draft,
-      lines: [...(draft.lines || []), { catalogueId: item.id, itemName: item.itemName, quantity: 1, unitPrice: this.laundry.priceFor(item, serviceType), notes: '' }]
+      lines: [...(draft.lines || []), { catalogueId: item.id, itemName: item.itemName, quantity: 1, unitPrice: this.laundry.priceForServices(item, serviceTypes), notes: '' }]
     }));
   }
 
@@ -385,11 +447,11 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
     const item = this.laundry.catalogueMap().get(Number(catalogueId));
     if (!item) return;
-    const serviceType = this.orderDraft().serviceType || 'Wash & Fold';
+    const serviceTypes = this.normalizeSelectedServices(this.orderDraft().serviceTypes || [this.orderDraft().serviceType || this.laundry.serviceTypes[0] || '']);
     this.orderDraft.update(draft => ({
       ...draft,
       lines: (draft.lines || []).map((line, i) => i === index
-        ? { ...line, catalogueId: item.id, itemName: item.itemName, unitPrice: this.laundry.priceFor(item, serviceType) }
+        ? { ...line, catalogueId: item.id, itemName: item.itemName, unitPrice: this.laundry.priceForServices(item, serviceTypes) }
         : line
       )
     }));
@@ -423,8 +485,40 @@ export class LaundryComponent implements OnInit, OnDestroy {
     }));
   }
 
+  trackByIndex(index: number): number {
+    return index;
+  }
+
   removeLine(index: number): void {
     this.orderDraft.update(draft => ({ ...draft, lines: (draft.lines || []).filter((_, i) => i !== index) }));
+  }
+
+  updateDraftDateTime(field: 'pickupAt' | 'expectedDeliveryAt', value: string): void {
+    this.orderDraft.update(draft => ({ ...draft, [field]: value }));
+  }
+
+  dateTimeInputValue(value?: string): string {
+    return this.toDateTimeInput(value);
+  }
+
+  dateInputValue(value?: string): string {
+    return this.toDateTimeInput(value).slice(0, 10);
+  }
+
+  timeInputValue(value?: string): string {
+    return this.toDateTimeInput(value).slice(11, 16);
+  }
+
+  updateDraftDatePart(field: 'pickupAt' | 'expectedDeliveryAt', date: string): void {
+    const current = this.toDateTimeInput(this.orderDraft()[field]);
+    const time = current.slice(11, 16) || '12:00';
+    this.updateDraftDateTime(field, date ? `${date}T${time}` : '');
+  }
+
+  updateDraftTimePart(field: 'pickupAt' | 'expectedDeliveryAt', time: string): void {
+    const current = this.toDateTimeInput(this.orderDraft()[field]);
+    const date = current.slice(0, 10) || this.defaultDateTimeLocal(0).slice(0, 10);
+    this.updateDraftDateTime(field, time ? `${date}T${time}` : '');
   }
 
   saveDraft(): void {
@@ -433,19 +527,53 @@ export class LaundryComponent implements OnInit, OnDestroy {
     this.switchTab('orders');
   }
 
-  confirmOrder(): void {
+  reviewOrder(): void {
+    if (!this.canConfirmOrder()) return;
+    this.isOrderSummaryOpen.set(true);
+  }
+
+  cancelOrderSummary(): void {
+    this.isOrderSummaryOpen.set(false);
+  }
+
+  confirmOrderFromSummary(): void {
     const saved = this.laundry.saveOrder({ ...this.orderDraft(), status: 'Pickup Pending' });
+    this.isOrderSummaryOpen.set(false);
     this.selectedOrderId.set(saved.id);
     this.switchTab('detail');
   }
 
-  viewOrder(order: LaundryOrder): void {
-    this.selectedOrderId.set(order.id);
+  canConfirmOrder(): boolean {
+    const draft = this.orderDraft();
+    const hasRoom = Boolean(draft.bookingId || draft.room);
+    const hasService = Boolean((draft.serviceTypes || []).length || String(draft.serviceType || '').trim());
+    const hasBilling = Boolean(String(draft.billingMode || '').trim());
+    const hasDates = Boolean(draft.pickupAt && draft.expectedDeliveryAt);
+    const hasLines = Boolean((draft.lines || []).some(line => String(line.itemName || '').trim() && Number(line.quantity || 0) > 0 && Number(line.unitPrice || 0) >= 0));
+    return hasRoom && hasService && hasBilling && hasDates && hasLines;
+  }
+
+  viewOrder(order: LaundryOrder | LaundryDashboardActivity): void {
+    const matchingOrder = this.laundry.orders().find(item =>
+      item.id === Number(order.id || 0) ||
+      item.orderId === order.orderId
+    );
+    this.selectedOrderId.set(matchingOrder?.id || order.id);
     this.switchTab('detail');
+  }
+
+  openItemDetails(order: LaundryOrder): void {
+    this.selectedOrderId.set(order.id);
+    this.isItemDetailsOpen.set(true);
+  }
+
+  closeItemDetails(): void {
+    this.isItemDetailsOpen.set(false);
   }
 
   selectStatusOrder(orderId: number): void {
     this.selectedOrderId.set(Number(orderId));
+    this.closeItemDetails();
   }
 
   editOrder(order: LaundryOrder): void {
@@ -556,18 +684,113 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
   beginCatalogueEdit(item?: LaundryCatalogueItem): void {
     this.editingCatalogueId.set(item?.id || 0);
-    this.catalogueDraft.set(item ? { ...item } : { category: 'Top Wear', itemName: '', washFold: 0, washPress: 0, dryClean: 0, expressSurcharge: 50, active: true });
+    this.selectedCatalogueId.set(item?.id || null);
+    this.catalogueDraft.set(item
+      ? { ...item, servicePrices: { ...(item.servicePrices || {}) } }
+      : { category: this.defaultLaundryCategory(), itemName: '', washFold: 0, washPress: 0, dryClean: 0, expressSurcharge: 50, servicePrices: {}, active: true }
+    );
   }
 
   saveCatalogueEdit(): void {
     this.laundry.saveCatalogueItem(this.catalogueDraft());
+    if (this.catalogueDraft().id) this.selectedCatalogueId.set(Number(this.catalogueDraft().id));
     this.editingCatalogueId.set(null);
     this.catalogueDraft.set({});
+  }
+
+  deleteCatalogueItem(item: LaundryCatalogueItem): void {
+    this.deleteConfirmation.set({
+      type: 'catalogue',
+      id: item.id,
+      name: item.itemName,
+      title: 'Delete Price Item',
+      message: `Delete "${item.itemName}" from Price Master?`,
+      note: 'This item will be removed from the laundry price matrix and will no longer be available for new laundry orders.'
+    });
   }
 
   cancelCatalogueEdit(): void {
     this.editingCatalogueId.set(null);
     this.catalogueDraft.set({});
+  }
+
+  selectCatalogueItem(item: LaundryCatalogueItem): void {
+    this.selectedCatalogueId.set(item.id);
+  }
+
+  openServiceComposer(service?: string): void {
+    const existing = service ? this.serviceCatalog().find(item => item.name === service) : null;
+    this.editingServiceName.set(existing?.name || null);
+    this.serviceDraftName.set(existing?.name || '');
+    this.serviceDraftDescription.set(existing?.description || '');
+    this.serviceDraftBase.set(service ? this.serviceBase(service) : 'washPress');
+    this.serviceDraftActive.set(existing?.active ?? true);
+    this.isServiceComposerOpen.set(true);
+  }
+
+  saveServiceDraft(): void {
+    const name = this.serviceDraftName().trim();
+    if (!name) return;
+    const current = this.editingServiceName();
+    const newKey = name.toLowerCase();
+    if (this.serviceCatalog().some(service => service.name.toLowerCase() === newKey && service.name !== current)) return;
+    const existing = current ? this.laundry.serviceCatalog().find(service => service.serviceName === current) : null;
+    this.laundry.saveServiceCatalogItem({
+      id: existing?.id,
+      serviceName: name,
+      pricingBasis: this.serviceDraftBase(),
+      description: this.serviceDraftDescription().trim(),
+      displayOrder: existing?.displayOrder || this.laundry.serviceCatalog().length + 1,
+      active: this.serviceDraftActive()
+    });
+    this.serviceVersion.update(value => value + 1);
+    this.isServiceComposerOpen.set(false);
+    this.editingServiceName.set(null);
+    this.serviceDraftName.set('');
+    this.serviceDraftDescription.set('');
+  }
+
+  cancelServiceDraft(): void {
+    this.isServiceComposerOpen.set(false);
+    this.editingServiceName.set(null);
+    this.serviceDraftName.set('');
+    this.serviceDraftDescription.set('');
+  }
+
+  toggleService(service: { id: number }): void {
+    this.laundry.toggleServiceCatalogItem(service.id);
+    this.serviceVersion.update(value => value + 1);
+  }
+
+  deleteService(service: { id: number; name: string }): void {
+    this.deleteConfirmation.set({
+      type: 'service',
+      id: service.id,
+      name: service.name,
+      title: 'Delete Laundry Service',
+      message: `Delete "${service.name}" from Service Catalog?`,
+      note: 'This service will no longer appear in Price Master. Existing item rates for this service may no longer be used for new laundry orders.'
+    });
+  }
+
+  cancelDelete(): void {
+    this.deleteConfirmation.set(null);
+  }
+
+  confirmDelete(): void {
+    const pending = this.deleteConfirmation();
+    if (!pending) return;
+
+    if (pending.type === 'catalogue') {
+      this.laundry.deleteCatalogueItem(pending.id);
+      if (this.editingCatalogueId() === pending.id) this.cancelCatalogueEdit();
+    } else {
+      this.laundry.deleteServiceCatalogItem(pending.id);
+      if (this.editingServiceName() === pending.name) this.cancelServiceDraft();
+      this.serviceVersion.update(value => value + 1);
+    }
+
+    this.deleteConfirmation.set(null);
   }
 
   statusClass(status: LaundryStatus | string): string {
@@ -578,8 +801,81 @@ export class LaundryComponent implements OnInit, OnDestroy {
     return `₹${Number(value || 0).toLocaleString('en-IN')}`;
   }
 
+  draftServicePrice(service: string): number {
+    const draft = this.catalogueDraft();
+    const key = this.normalizeServiceName(service);
+    const dynamicPrice = draft.servicePrices?.[key];
+    if (dynamicPrice !== undefined) return Number(dynamicPrice || 0);
+    return this.priceForService(draft as LaundryCatalogueItem, service);
+  }
+
+  setDraftServicePrice(service: string, value: number | string): void {
+    const key = this.normalizeServiceName(service);
+    const price = Number(value || 0);
+    const base = this.serviceBase(service);
+    const current = this.catalogueDraft();
+    const servicePrices = { ...(current.servicePrices || {}), [key]: price };
+    const next: Partial<LaundryCatalogueItem> = { ...current, servicePrices };
+
+    if (base === 'washFold') next.washFold = price;
+    if (base === 'washPress') next.washPress = price;
+    if (base === 'dryClean') next.dryClean = price;
+
+    this.catalogueDraft.set(next);
+  }
+
+  priceForService(item: LaundryCatalogueItem, service: string): number {
+    const dynamicPrice = item.servicePrices?.[this.normalizeServiceName(service)];
+    if (dynamicPrice !== undefined) return Number(dynamicPrice || 0);
+    const base = this.serviceBase(service);
+    if (base === 'express') {
+      const normal = item.washPress || item.washFold || item.dryClean;
+      return Math.round(normal * (1 + Number(item.expressSurcharge || 0) / 100));
+    }
+    return Number(item[base] || 0);
+  }
+
+  serviceIcon(service: string): string {
+    const normalized = service.toLowerCase();
+    if (normalized.includes('dry')) return 'dry_cleaning';
+    if (normalized.includes('fold')) return 'inventory_2';
+    if (normalized.includes('press') || normalized.includes('iron')) return 'iron';
+    if (normalized.includes('express') || normalized.includes('quick')) return 'bolt';
+    return 'local_laundry_service';
+  }
+
+  serviceDescription(service: string): string {
+    const normalized = service.toLowerCase();
+    if (normalized.includes('express')) return 'Priority pickup and room delivery surcharge.';
+    if (normalized.includes('dry')) return 'Premium care for delicate garments.';
+    if (normalized.includes('fold')) return 'Standard wash, dry and folded packaging.';
+    if (normalized.includes('press') || normalized.includes('iron')) return 'Guest-ready press finish for room service.';
+    return 'Custom admin configured laundry service.';
+  }
+
+  serviceBaseLabel(service: string): string {
+    const base = this.serviceBase(service);
+    if (base === 'washFold') return 'Wash & Fold rate';
+    if (base === 'washPress') return 'Wash & Press rate';
+    if (base === 'dryClean') return 'Dry Clean rate';
+    return 'Express surcharge';
+  }
+
+  serviceHasConfiguredRates(service: string): boolean {
+    return this.laundry.catalogue().some(item => item.active && this.priceForService(item, service) > 0);
+  }
+
   currentLineTotal(line: LaundryOrderLine): number {
     return Number(line.quantity || 0) * Number(line.unitPrice || 0);
+  }
+
+  formatOrderDateTime(value?: string): string {
+    if (!value) return '-';
+    const input = this.toDateTimeInput(value);
+    if (!input) return value;
+    const [date, time] = input.split('T');
+    const [year, month, day] = date.split('-');
+    return `${day}-${month}-${year} ${time}`;
   }
 
   draftTotal(): number {
@@ -617,20 +913,74 @@ export class LaundryComponent implements OnInit, OnDestroy {
     return 'pending';
   }
 
-  private repriceLine(line: LaundryOrderLine, serviceType: LaundryServiceType): LaundryOrderLine {
+  private repriceLine(line: LaundryOrderLine, serviceTypes: LaundryServiceType[]): LaundryOrderLine {
     if (Number(line.catalogueId) === 0) return line;
     const item = this.laundry.catalogueMap().get(Number(line.catalogueId));
-    return item ? { ...line, itemName: item.itemName, unitPrice: this.laundry.priceFor(item, serviceType) } : line;
+    return item ? { ...line, itemName: item.itemName, unitPrice: this.laundry.priceForServices(item, serviceTypes) } : line;
+  }
+
+  private normalizeSelectedServices(serviceTypes: LaundryServiceType[]): LaundryServiceType[] {
+    return (serviceTypes || [])
+      .map(service => String(service || '').trim())
+      .filter(Boolean)
+      .filter((service, index, list) => list.findIndex(item => item.toLowerCase() === service.toLowerCase()) === index);
+  }
+
+  private serviceBase(service: string): 'washFold' | 'washPress' | 'dryClean' | 'express' {
+    const normalized = service.toLowerCase();
+    const configured = this.laundry.serviceCatalog().find(item => item.serviceName.toLowerCase() === normalized);
+    if (configured) return configured.pricingBasis;
+    const override = this.serviceBaseOverrides()[normalized];
+    if (override) return override;
+    if (normalized.includes('express') || normalized.includes('quick')) return 'express';
+    if (normalized.includes('fold')) return 'washFold';
+    if (normalized.includes('dry')) return 'dryClean';
+    return 'washPress';
+  }
+
+  private normalizeServiceName(service: string): string {
+    return String(service || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  private defaultLaundryCategory(): string {
+    return this.laundry.categories[0] || 'Laundry Item';
+  }
+
+  private defaultDateTimeLocal(hoursFromNow: number): string {
+    const date = new Date();
+    date.setHours(date.getHours() + hoursFromNow);
+    date.setMinutes(Math.ceil(date.getMinutes() / 5) * 5, 0, 0);
+    return this.dateToLocalInput(date);
+  }
+
+  private dateToLocalInput(date: Date): string {
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  private toDateTimeInput(value?: string): string {
+    if (!value) return '';
+    const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}T${iso[4]}:${iso[5]}`;
+    const display = value.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})$/);
+    if (display) return `${display[3]}-${display[2]}-${display[1]}T${display[4]}:${display[5]}`;
+    return '';
+  }
+
+  private matchesDateRange(value: string | undefined, from: string, to: string): boolean {
+    if (!from && !to) return true;
+    const input = this.toDateTimeInput(value);
+    if (!input) return true;
+    const date = input.slice(0, 10);
+    if (from && date < from) return false;
+    if (to && date > to) return false;
+    return true;
   }
 
   private updateTabFromUrl(url: string): void {
     const last = url.split('/').pop()?.split('?')[0] as LaundryTab;
-    this.activeTab.set(['dashboard', 'create', 'orders', 'detail', 'catalogue', 'reports'].includes(last) ? last : 'dashboard');
+    this.activeTab.set(['dashboard', 'create', 'orders', 'detail', 'catalogue', 'services'].includes(last) ? last : 'dashboard');
     if (this.activeTab() === 'create' && !(this.orderDraft().lines || []).length) this.addOrderLine();
   }
 
-  private reportOrders(): LaundryOrder[] {
-    const service = this.serviceFilter();
-    return this.laundry.orders().filter(order => service === 'ALL' || order.serviceType === service);
-  }
 }

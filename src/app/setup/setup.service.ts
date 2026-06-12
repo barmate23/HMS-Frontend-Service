@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, map, of } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 export interface CommonMaster {
   id?: number;
@@ -36,8 +36,7 @@ interface ApiCommonMaster {
 @Injectable({ providedIn: 'root' })
 export class SetupService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/api/hmsService/v1/housekeeping/audit';
-  private tempId = -1;
+  private readonly baseUrl = '/api/hmsService/v1/common';
 
   getCommonMasters(category: string): Observable<CommonMaster[]> {
     return this.http
@@ -47,35 +46,20 @@ export class SetupService {
 
   createCommonMaster(input: CommonMaster): Observable<CommonMaster> {
     return this.http
-      .post<ApiCommonMaster | StandardResponse<ApiCommonMaster>>(`${this.baseUrl}/createCommonMaster`, this.toPayload(input))
-      .pipe(
-        map(response => this.mapCommonMaster(this.itemData(response) || this.toPayload(input), input.category)),
-        catchError(error => {
-          console.warn('[Setup] createCommonMaster API unavailable, using local record fallback.', error);
-          return of({ ...input, id: this.tempId--, updatedAt: 'Local draft' });
-        })
-      );
+      .post<ApiCommonMaster | StandardResponse<ApiCommonMaster>>(`${this.baseUrl}/saveCommonMaster`, this.toPayload(input))
+      .pipe(map(response => this.mapCommonMaster(this.itemData(response) || this.toPayload(input), input.category)));
   }
 
   updateCommonMaster(input: CommonMaster): Observable<CommonMaster> {
     return this.http
-      .put<ApiCommonMaster | StandardResponse<ApiCommonMaster>>(`${this.baseUrl}/updateCommonMaster/${input.id}`, this.toPayload(input))
-      .pipe(
-        map(response => this.mapCommonMaster(this.itemData(response) || this.toPayload(input), input.category)),
-        catchError(error => {
-          console.warn('[Setup] updateCommonMaster API unavailable, using local record fallback.', error);
-          return of({ ...input, updatedAt: 'Local draft' });
-        })
-      );
+      .put<ApiCommonMaster | StandardResponse<ApiCommonMaster>>(`${this.baseUrl}/updateCommonMasterData`, this.toPayload(input))
+      .pipe(map(response => this.mapCommonMaster(this.itemData(response) || this.toPayload(input), input.category)));
   }
 
   deleteCommonMaster(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/deleteCommonMaster/${id}`).pipe(
-      catchError(error => {
-        console.warn('[Setup] deleteCommonMaster API unavailable, using local delete fallback.', error);
-        return of(void 0);
-      })
-    );
+    return this.http
+      .delete<void | StandardResponse<void>>(`${this.baseUrl}/deleteCommonMaster/${id}`)
+      .pipe(map(() => void 0));
   }
 
   private mapCommonMaster(item: ApiCommonMaster, fallbackCategory: string): CommonMaster {
@@ -98,8 +82,7 @@ export class SetupService {
       code: input.code.trim().toUpperCase(),
       value: input.value.trim(),
       description: input.description.trim(),
-      isActive: input.isActive,
-      is_active: input.isActive
+      isActive: input.isActive
     };
   }
 

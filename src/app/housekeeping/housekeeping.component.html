@@ -170,29 +170,38 @@
           <div class="board-workstream-panel">
             <div class="workstream-head"><span class="material-icons-round">priority_high</span><strong>Attention Queue</strong></div>
             <div class="workstream-items">
-              <span><b>{{ hk.roomStats().vacantDirty }}</b> vacant dirty</span>
-              <span><b>{{ boardDashboard().openMaintenance }}</b> maintenance blockers</span>
-              <span><b>{{ boardDashboard().storedLostFound }}</b> stored lost & found</span>
+              <span *ngFor="let item of boardDashboard().attentionQueue"><b>{{ item.count || 0 }}</b> {{ item.label }}</span>
             </div>
           </div>
           <div class="board-workstream-panel">
             <div class="workstream-head"><span class="material-icons-round">groups</span><strong>Team Load</strong></div>
             <div class="workstream-items">
-              <span><b>{{ hk.taskStats().pending }}</b> pending tasks</span>
-              <span><b>{{ hk.taskStats().inProgress }}</b> in progress</span>
-              <span><b>{{ hk.staff().length }}</b> staff profiles</span>
+              <span><b>{{ boardDashboard().pendingTasks }}</b> pending tasks</span>
+              <span><b>{{ boardDashboard().inProgress }}</b> in progress</span>
+              <span><b>{{ boardDashboard().staffProfiles }}</b> staff profiles</span>
             </div>
           </div>
           <div class="board-workstream-panel">
             <div class="workstream-head"><span class="material-icons-round">playlist_add_check</span><strong>Audit Readiness</strong></div>
             <div class="workstream-items">
-              <span><b>{{ auditFrequency() }}</b> active SOP</span>
+              <span><b>{{ boardDashboard().activeSop }}</b> active SOP</span>
               <span><b>{{ boardDashboard().auditCheckpoints }}</b> checkpoints</span>
               <span><b>{{ boardDashboard().rooms }}</b> rooms tracked</span>
             </div>
           </div>
         </div>
       </section>
+
+      <div class="board-floor-toolbar">
+        <div>
+          <strong>Floor Wise Rooms</strong>
+          <span>{{ boardDashboard().rooms }} rooms tracked</span>
+        </div>
+        <button type="button" class="expand-board-btn" (click)="isRoomBoardExpanded.set(true)">
+          <span class="material-icons-round">open_in_full</span>
+          Expand View
+        </button>
+      </div>
 
       <div class="floors-container dashboard-floors">
         <div class="floor-block" *ngFor="let f of roomsByFloor()">
@@ -242,8 +251,8 @@
                 <span class="module-chip found" *ngIf="roomStoredLostFoundCount(room)">
                   <span class="material-icons-round">manage_search</span>{{ roomStoredLostFoundCount(room) }}
                 </span>
-                <span class="module-chip audit" *ngIf="activeSopCheckpoints().length">
-                  <span class="material-icons-round">fact_check</span>{{ activeSopCheckpoints().length }}
+                <span class="module-chip audit" *ngIf="roomSopCheckCount(room)">
+                  <span class="material-icons-round">fact_check</span>{{ roomSopCheckCount(room) }}
                 </span>
                 <span class="module-chip clear" *ngIf="!roomOpenTaskCount(room) && !roomOpenMaintenanceCount(room) && !roomStoredLostFoundCount(room)">
                   <span class="material-icons-round">done_all</span>Clear
@@ -252,11 +261,11 @@
 
               <!-- Card Actions / Quick status change -->
               <div class="rc-footer">
-                <div class="staff-assigned" *ngIf="room.assignedToId">
-                  <span class="avatar-sm" title="{{ getStaffName(room.assignedToId) }}">{{ getStaffAvatar(room.assignedToId) }}</span>
-                  <span class="staff-name">{{ getStaffName(room.assignedToId) }}</span>
+                <div class="staff-assigned" *ngIf="room.assignedToId || room.assignedStaffName">
+                  <span class="avatar-sm" title="{{ room.assignedStaffName || getStaffName(room.assignedToId) }}">{{ getStaffAvatar(room.assignedToId) }}</span>
+                  <span class="staff-name">{{ room.assignedStaffName || getStaffName(room.assignedToId) }}</span>
                 </div>
-                <div class="staff-assigned unassigned" *ngIf="!room.assignedToId">
+                <div class="staff-assigned unassigned" *ngIf="!room.assignedToId && !room.assignedStaffName">
                   <span class="material-icons-round">person_add_disabled</span>
                   <span>Unassigned</span>
                 </div>
@@ -495,6 +504,78 @@
         <div class="empty-state" *ngIf="selectedFloorAudits().length === 0">
           <span class="material-icons-round">fact_check</span>
           <p>No room audit records match the current filters.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="room-board-expanded" *ngIf="isRoomBoardExpanded()">
+      <div class="expanded-board-shell">
+        <div class="expanded-board-header">
+          <div>
+            <span class="board-section-label">Housekeeping Command</span>
+            <h2>Floor Wise Room Board</h2>
+          </div>
+          <div class="expanded-board-actions">
+            <div class="search-box">
+              <span class="material-icons-round">search</span>
+              <input type="text" placeholder="Search Room, Floor..." [ngModel]="boardSearch()" (ngModelChange)="boardSearch.set($event)">
+            </div>
+            <select class="filter-select" [ngModel]="boardFilter()" (ngModelChange)="boardFilter.set($event)">
+              <option value="ALL">All Statuses</option>
+              <option *ngFor="let st of allStatuses" [value]="st">{{ hkStatusLabel(st) }}</option>
+            </select>
+            <button type="button" class="close-expanded-btn" (click)="isRoomBoardExpanded.set(false)">
+              <span class="material-icons-round">close_fullscreen</span>
+              Back
+            </button>
+          </div>
+        </div>
+
+        <div class="expanded-summary-strip">
+          <span><b>{{ boardDashboard().readyRooms }}</b> ready</span>
+          <span><b>{{ boardDashboard().dirtyRooms }}</b> need service</span>
+          <span><b>{{ boardDashboard().blockedRooms }}</b> blocked/DND</span>
+          <span><b>{{ boardDashboard().openTasks }}</b> open tasks</span>
+          <span><b>{{ boardDashboard().openMaintenance }}</b> repair issues</span>
+        </div>
+
+        <div class="expanded-floors-scroll">
+          <div class="expanded-floor-block" *ngFor="let f of roomsByFloor()">
+            <h3 class="floor-title">
+              <span class="material-icons-round">layers</span>
+              {{ f.floor }}
+              <span class="floor-badge">{{ f.rooms.length }} Rooms</span>
+            </h3>
+            <div class="expanded-rooms-grid">
+              <button type="button" class="expanded-room-card" *ngFor="let room of f.rooms" (click)="openStatusModal(room)" [ngClass]="roomBoardClass(room)">
+                <span class="expanded-room-top">
+                  <b>{{ room.roomNumber }}</b>
+                  <small>{{ room.type }}</small>
+                </span>
+                <span class="hk-status-badge" [class]="room.hkStatus.toLowerCase()">
+                  <span class="material-icons-round">{{ hkStatusIcon(room.hkStatus) }}</span>
+                  <span>{{ hkStatusLabel(room.hkStatus) }}</span>
+                </span>
+                <span class="expanded-room-metrics">
+                  <span *ngIf="roomOpenTaskCount(room)"><i class="material-icons-round">assignment</i>{{ roomOpenTaskCount(room) }}</span>
+                  <span *ngIf="roomOpenMaintenanceCount(room)"><i class="material-icons-round">build</i>{{ roomOpenMaintenanceCount(room) }}</span>
+                  <span *ngIf="roomStoredLostFoundCount(room)"><i class="material-icons-round">manage_search</i>{{ roomStoredLostFoundCount(room) }}</span>
+                  <span *ngIf="roomSopCheckCount(room)"><i class="material-icons-round">fact_check</i>{{ roomSopCheckCount(room) }}</span>
+                  <span class="metric-clear" *ngIf="!roomOpenTaskCount(room) && !roomOpenMaintenanceCount(room) && !roomStoredLostFoundCount(room)">
+                    <i class="material-icons-round">done_all</i>Clear
+                  </span>
+                </span>
+                <span class="expanded-room-staff">
+                  <span class="material-icons-round">{{ room.assignedToId || room.assignedStaffName ? 'person' : 'person_add_disabled' }}</span>
+                  {{ room.assignedStaffName || getStaffName(room.assignedToId) }}
+                </span>
+              </button>
+            </div>
+          </div>
+          <div class="empty-state" *ngIf="roomsByFloor().length === 0">
+            <span class="material-icons-round">meeting_room</span>
+            <p>No rooms match the filter query.</p>
+          </div>
         </div>
       </div>
     </div>

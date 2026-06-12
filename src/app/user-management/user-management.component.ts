@@ -20,6 +20,8 @@ type UserManagementTab = 'users' | 'roles' | 'departments' | 'shifts' | 'activit
 type ShiftTab = 'master' | 'assignment';
 type ModalMode = 'create' | 'edit';
 type DepartmentValidationKey = 'name';
+type RoleValidationKey = 'name' | 'department' | 'level' | 'description';
+type ShiftValidationKey = 'name' | 'code' | 'startTime' | 'endTime' | 'property';
 type UserValidationKey =
   'employeeId' |
   'fullName' |
@@ -29,7 +31,6 @@ type UserValidationKey =
   'department' |
   'roleId' |
   'property' |
-  'shift' |
   'status' |
   'accessibleFloors';
 
@@ -68,6 +69,10 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   shiftDeleteTarget = signal<UserShift | null>(null);
   departmentFormSubmitted = signal(false);
   departmentValidationErrors = signal<Partial<Record<DepartmentValidationKey, string>>>({});
+  roleFormSubmitted = signal(false);
+  roleValidationErrors = signal<Partial<Record<RoleValidationKey, string>>>({});
+  shiftFormSubmitted = signal(false);
+  shiftValidationErrors = signal<Partial<Record<ShiftValidationKey, string>>>({});
   userFormSubmitted = signal(false);
   userValidationErrors = signal<Partial<Record<UserValidationKey, string>>>({});
   userTouchedFields = signal<Partial<Record<UserValidationKey, boolean>>>({});
@@ -77,7 +82,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     return {
       total: users.length,
       active: users.filter(user => user.status === 'ACTIVE').length,
-      locked: users.filter(user => user.status === 'LOCKED').length,
+      inactive: users.filter(user => user.status === 'INACTIVE').length,
       twoFactor: users.filter(user => user.twoFactorEnabled).length,
       roles: this.userService.roles().length,
       admins: this.userService.roles().filter(role => role.level === 'Admin').length
@@ -213,6 +218,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   openCreateUser(): void {
     this.modalMode.set('create');
+    this.userService.clearApiError();
     this.userFormSubmitted.set(false);
     this.userValidationErrors.set({});
     this.userTouchedFields.set({});
@@ -225,7 +231,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
       department: this.userService.departments()[0]?.name || 'Front Office',
       roleId: this.userService.roles()[0]?.id,
       property: this.userService.properties()[0]?.name,
-      shift: this.userService.shifts()[0],
+      shift: '',
       status: 'ACTIVE',
       twoFactorEnabled: false,
       accessibleFloors: ['All Floors'],
@@ -237,6 +243,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   openEditUser(user: SystemUser): void {
     this.modalMode.set('edit');
+    this.userService.clearApiError();
     this.userFormSubmitted.set(false);
     this.userValidationErrors.set({});
     this.userTouchedFields.set({});
@@ -251,12 +258,14 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   saveUser(): void {
     this.userFormSubmitted.set(true);
     if (!this.validateUserForm()) return;
-    this.userService.saveUser(this.normalizedUserForSave());
-    this.closeUserModal();
+    this.userService.saveUser(this.normalizedUserForSave()).subscribe(saved => {
+      if (saved) this.closeUserModal();
+    });
   }
 
   closeUserModal(): void {
     this.isUserModalOpen.set(false);
+    this.userService.clearApiError();
     this.userFormSubmitted.set(false);
     this.userValidationErrors.set({});
     this.userTouchedFields.set({});
@@ -265,6 +274,8 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   openCreateRole(): void {
     this.modalMode.set('create');
+    this.roleFormSubmitted.set(false);
+    this.roleValidationErrors.set({});
     this.currentRole.set({
       name: '',
       description: '',
@@ -280,6 +291,8 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   openEditRole(role: UserRole): void {
     this.modalMode.set('edit');
+    this.roleFormSubmitted.set(false);
+    this.roleValidationErrors.set({});
     this.currentRole.set({
       ...role,
       permissions: this.userService.clonePermissions(role.permissions)
@@ -295,12 +308,16 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   saveRole(): void {
+    this.roleFormSubmitted.set(true);
+    if (!this.validateRoleForm()) return;
     this.userService.saveRole(this.currentRole());
     this.closeRoleModal();
   }
 
   closeRoleModal(): void {
     this.isRoleModalOpen.set(false);
+    this.roleFormSubmitted.set(false);
+    this.roleValidationErrors.set({});
     document.body.style.overflow = '';
   }
 
@@ -342,6 +359,8 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   openCreateShift(): void {
     this.modalMode.set('create');
+    this.shiftFormSubmitted.set(false);
+    this.shiftValidationErrors.set({});
     this.currentShift.set({
       name: '',
       code: '',
@@ -358,18 +377,24 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
   openEditShift(shift: UserShift): void {
     this.modalMode.set('edit');
+    this.shiftFormSubmitted.set(false);
+    this.shiftValidationErrors.set({});
     this.currentShift.set({ ...shift });
     this.isShiftModalOpen.set(true);
     document.body.style.overflow = 'hidden';
   }
 
   saveShift(): void {
+    this.shiftFormSubmitted.set(true);
+    if (!this.validateShiftForm()) return;
     this.userService.saveShift(this.currentShift());
     this.closeShiftModal();
   }
 
   closeShiftModal(): void {
     this.isShiftModalOpen.set(false);
+    this.shiftFormSubmitted.set(false);
+    this.shiftValidationErrors.set({});
     document.body.style.overflow = '';
   }
 
@@ -476,8 +501,14 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   resetPassword(user: SystemUser): void {
-    this.userService.resetPassword(user.id);
-    alert(`Temporary password generated for ${user.fullName}.`);
+    this.userService.resetPassword(user.id).subscribe(result => {
+      if (!result.success) {
+        alert(result.message);
+        return;
+      }
+      const temporaryPassword = result.temporaryPassword ? `\nTemporary password: ${result.temporaryPassword}` : '';
+      alert(`${result.message}${temporaryPassword}`);
+    });
   }
 
   updateFloorAccess(floor: string, checked: boolean): void {
@@ -495,7 +526,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   updateCurrentUser<K extends keyof SystemUser>(field: K, value: SystemUser[K] | undefined): void {
-    this.currentUser.update(user => ({ ...user, [field]: value }));
+    this.currentUser.update(user => ({ ...user, [field]: this.normalizedUserField(field, value) }));
     this.revalidateActiveUserForm();
   }
 
@@ -581,9 +612,29 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   updateCurrentDepartment<K extends keyof DepartmentOption>(field: K, value: DepartmentOption[K] | undefined): void {
-    const normalized = field === 'code' && typeof value === 'string' ? value.toUpperCase() as DepartmentOption[K] : value;
+    const normalized = this.normalizedDepartmentField(field, value);
     this.currentDepartment.update(department => ({ ...department, [field]: normalized }));
     if (this.departmentFormSubmitted()) this.validateDepartmentForm();
+  }
+
+  roleFieldError(field: RoleValidationKey): string {
+    if (!this.roleFormSubmitted()) return '';
+    return this.roleValidationErrors()[field] || '';
+  }
+
+  updateCurrentRole<K extends keyof UserRole>(field: K, value: UserRole[K] | undefined): void {
+    this.currentRole.update(role => ({ ...role, [field]: this.normalizedRoleField(field, value) }));
+    if (this.roleFormSubmitted()) this.validateRoleForm();
+  }
+
+  shiftFieldError(field: ShiftValidationKey): string {
+    if (!this.shiftFormSubmitted()) return '';
+    return this.shiftValidationErrors()[field] || '';
+  }
+
+  updateCurrentShift<K extends keyof UserShift>(field: K, value: UserShift[K] | undefined): void {
+    this.currentShift.update(shift => ({ ...shift, [field]: this.normalizedShiftField(field, value) }));
+    if (this.shiftFormSubmitted()) this.validateShiftForm();
   }
 
   roleDepartment(roleId?: number): string {
@@ -659,6 +710,70 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     return Object.keys(errors).length === 0;
   }
 
+  private validateRoleForm(): boolean {
+    const role = this.currentRole();
+    const errors: Partial<Record<RoleValidationKey, string>> = {};
+    const name = this.textValue(role.name);
+    const description = this.textValue(role.description);
+    const duplicateName = this.userService.roles().some(item =>
+      item.id !== Number(role.id) && item.name.toLowerCase() === name.toLowerCase()
+    );
+
+    if (!name) {
+      errors.name = 'Role name is required.';
+    } else if (!/^[A-Z][A-Za-z0-9 &.'-]{1,58}[A-Za-z0-9.]$/.test(name)) {
+      errors.name = 'Use 3-60 characters. First letter should be capital.';
+    } else if (duplicateName) {
+      errors.name = 'Role name already exists.';
+    }
+
+    if (!role.department) errors.department = 'Department is required.';
+    if (!role.level) errors.level = 'Access level is required.';
+    if (description && description.length < 3) errors.description = 'Description should be at least 3 characters.';
+
+    this.roleValidationErrors.set(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  private validateShiftForm(): boolean {
+    const shift = this.currentShift();
+    const errors: Partial<Record<ShiftValidationKey, string>> = {};
+    const name = this.textValue(shift.name);
+    const code = this.textValue(shift.code);
+    const duplicateName = this.userService.shiftConfigs().some(item =>
+      item.id !== Number(shift.id) && item.name.toLowerCase() === name.toLowerCase()
+    );
+    const duplicateCode = this.userService.shiftConfigs().some(item =>
+      item.id !== Number(shift.id) && item.code.toLowerCase() === code.toLowerCase()
+    );
+
+    if (!name) {
+      errors.name = 'Shift name is required.';
+    } else if (!/^[A-Z][A-Za-z0-9 &.'-]{1,58}[A-Za-z0-9.]$/.test(name)) {
+      errors.name = 'Use 3-60 characters. First letter should be capital.';
+    } else if (duplicateName) {
+      errors.name = 'Shift name already exists.';
+    }
+
+    if (!code) {
+      errors.code = 'Shift code is required.';
+    } else if (!/^[A-Z0-9_-]{2,10}$/.test(code)) {
+      errors.code = 'Use 2-10 uppercase letters, numbers, hyphen or underscore.';
+    } else if (duplicateCode) {
+      errors.code = 'Shift code already exists.';
+    }
+
+    if (!shift.startTime) errors.startTime = 'Start time is required.';
+    if (!shift.endTime) errors.endTime = 'End time is required.';
+    if (shift.startTime && shift.endTime && shift.startTime === shift.endTime) {
+      errors.endTime = 'End time should be different from start time.';
+    }
+    if (!shift.property) errors.property = 'Property is required.';
+
+    this.shiftValidationErrors.set(errors);
+    return Object.keys(errors).length === 0;
+  }
+
   private validateUserForm(): boolean {
     const user = this.currentUser();
     const errors: Partial<Record<UserValidationKey, string>> = {};
@@ -676,8 +791,8 @@ export class UserManagementComponent implements OnInit, OnDestroy {
 
     if (!fullName) {
       errors.fullName = 'Full name is required.';
-    } else if (!/^[A-Za-z][A-Za-z .'-]{1,58}[A-Za-z.]$/.test(fullName)) {
-      errors.fullName = 'Enter a valid name using letters and spaces.';
+    } else if (!/^[A-Z][A-Za-z .'-]{1,58}[A-Za-z.]$/.test(fullName)) {
+      errors.fullName = 'Enter a valid name. First letter should be capital.';
     }
 
     if (!username) {
@@ -692,14 +807,15 @@ export class UserManagementComponent implements OnInit, OnDestroy {
       errors.email = 'Enter a valid email address.';
     }
 
-    if (phone && !/^\+?[0-9][0-9\s-]{8,18}$/.test(phone)) {
-      errors.phone = 'Enter a valid mobile number.';
+    if (!phone) {
+      errors.phone = 'Mobile number is required.';
+    } else if (!/^[6-9]\d{9}$/.test(phone)) {
+      errors.phone = 'Enter a valid 10-digit mobile number.';
     }
 
     if (!user.department) errors.department = 'Department is required.';
     if (!Number(user.roleId)) errors.roleId = 'Role is required.';
     if (!user.property) errors.property = 'Property is required.';
-    if (!user.shift) errors.shift = 'Shift is required.';
     if (!user.status) errors.status = 'Status is required.';
     if (!user.accessibleFloors?.length) errors.accessibleFloors = 'Select at least one floor access option.';
 
@@ -720,12 +836,56 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     return {
       ...user,
       employeeId: this.textValue(user.employeeId),
-      fullName: this.textValue(user.fullName).replace(/\s+/g, ' '),
+      fullName: this.formatPersonName(user.fullName),
       username: this.textValue(user.username),
-      email: this.textValue(user.email).toLowerCase(),
-      phone: this.textValue(user.phone),
+      email: this.formatEmail(user.email),
+      phone: this.formatMobileNumber(user.phone),
       accessibleFloors: user.accessibleFloors?.length ? user.accessibleFloors : ['All Floors']
     };
+  }
+
+  private normalizedUserField<K extends keyof SystemUser>(field: K, value: SystemUser[K] | undefined): SystemUser[K] | undefined {
+    if (typeof value !== 'string') return value;
+    if (field === 'fullName') return this.formatPersonName(value) as SystemUser[K];
+    if (field === 'email') return this.formatEmail(value) as SystemUser[K];
+    if (field === 'phone') return this.formatMobileNumber(value) as SystemUser[K];
+    return value;
+  }
+
+  private normalizedDepartmentField<K extends keyof DepartmentOption>(field: K, value: DepartmentOption[K] | undefined): DepartmentOption[K] | undefined {
+    if (typeof value !== 'string') return value;
+    if (field === 'name') return this.formatPersonName(value) as DepartmentOption[K];
+    if (field === 'code') return value.toUpperCase() as DepartmentOption[K];
+    return value;
+  }
+
+  private normalizedRoleField<K extends keyof UserRole>(field: K, value: UserRole[K] | undefined): UserRole[K] | undefined {
+    if (typeof value !== 'string') return value;
+    if (field === 'name') return this.formatPersonName(value) as UserRole[K];
+    return value;
+  }
+
+  private normalizedShiftField<K extends keyof UserShift>(field: K, value: UserShift[K] | undefined): UserShift[K] | undefined {
+    if (typeof value !== 'string') return value;
+    if (field === 'name') return this.formatPersonName(value) as UserShift[K];
+    if (field === 'code') return value.replace(/[^A-Za-z0-9_-]/g, '').toUpperCase().slice(0, 10) as UserShift[K];
+    return value;
+  }
+
+  private formatPersonName(value?: string): string {
+    return String(value || '')
+      .replace(/\s+/g, ' ')
+      .replace(/(^|[\s.'-])([a-z])/g, (_, prefix: string, letter: string) => `${prefix}${letter.toUpperCase()}`);
+  }
+
+  private formatEmail(value?: string): string {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  private formatMobileNumber(value?: string): string {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (digits.length > 10 && digits.startsWith('91')) return digits.slice(-10);
+    return digits.slice(0, 10);
   }
 
   private textValue(value?: string): string {

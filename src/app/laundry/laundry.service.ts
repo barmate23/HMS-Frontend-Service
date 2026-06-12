@@ -1,9 +1,11 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { forkJoin } from 'rxjs';
 
-export type LaundryTab = 'dashboard' | 'create' | 'orders' | 'detail' | 'linen' | 'catalogue' | 'reports';
-export type LaundryServiceType = 'Wash & Fold' | 'Wash & Press' | 'Dry Clean' | 'Express';
+export type LaundryTab = 'dashboard' | 'create' | 'orders' | 'detail' | 'linen' | 'catalogue' | 'services';
+export type LaundryServiceType = string;
 export type LaundryStatus = 'Pickup Pending' | 'Processing' | 'Ready for Delivery' | 'Delivered' | 'Overdue' | 'Cancelled';
-export type BillingMode = 'Room Account' | 'Direct Payment';
+export type BillingMode = string;
 export type LinenDispatchStatus = 'Draft' | 'Ready for Pickup' | 'Sent to Vendor' | 'Partially Returned' | 'Returned' | 'Exception';
 
 export interface ActiveBooking {
@@ -23,6 +25,16 @@ export interface LaundryCatalogueItem {
   washPress: number;
   dryClean: number;
   expressSurcharge: number;
+  servicePrices: Record<string, number>;
+  active: boolean;
+}
+
+export interface LaundryServiceCatalogItem {
+  id: number;
+  serviceName: string;
+  pricingBasis: 'washFold' | 'washPress' | 'dryClean' | 'express';
+  description: string;
+  displayOrder: number;
   active: boolean;
 }
 
@@ -42,6 +54,7 @@ export interface LaundryOrder {
   guest: string;
   plan: string;
   serviceType: LaundryServiceType;
+  serviceTypes: LaundryServiceType[];
   pickupAt: string;
   expectedDeliveryAt: string;
   deliveredAt?: string;
@@ -51,6 +64,31 @@ export interface LaundryOrder {
   notes: string;
   createdAt: string;
   lines: LaundryOrderLine[];
+}
+
+export interface LaundryDashboardSummary {
+  pendingPickup: number;
+  inProcess: number;
+  ready: number;
+  revenue: number;
+  overdue: number;
+  completedToday: number;
+}
+
+export interface LaundryDashboardActivity {
+  id: number;
+  orderId: string;
+  room: string;
+  guest: string;
+  status: LaundryStatus;
+  itemCount: number;
+  amount: number;
+  createdAt: string;
+}
+
+export interface LaundryDashboardData {
+  summary: LaundryDashboardSummary;
+  activityFeed: LaundryDashboardActivity[];
 }
 
 export interface LinenItemMaster {
@@ -101,192 +139,252 @@ export interface FolioPosting {
   postedAt: string;
 }
 
+interface StandardResponse<T> {
+  success: boolean;
+  message?: string;
+  data?: T;
+}
+
+interface ApiLaundryPriceMaster {
+  id?: number;
+  category?: string;
+  itemName?: string;
+  washFoldPrice?: number;
+  washPressPrice?: number;
+  dryCleanPrice?: number;
+  expressSurchargePercentage?: number;
+  servicePrices?: Record<string, number>;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface ApiLaundryServiceCatalog {
+  id?: number;
+  serviceName?: string;
+  pricingBasis?: string;
+  description?: string;
+  displayOrder?: number;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface ApiLaundryOrderItem {
+  id?: number;
+  priceMasterId?: number;
+  itemName?: string;
+  category?: string;
+  quantity?: number;
+  unitPrice?: number;
+  total?: number;
+  notes?: string;
+}
+
+interface ApiLaundryOrder {
+  id?: number;
+  orderId?: string;
+  roomId?: number;
+  roomNumber?: string;
+  floorNumber?: string;
+  guestName?: string;
+  serviceType?: string;
+  serviceTypes?: string[];
+  billingOption?: string;
+  pickupDatetime?: string;
+  expectedDelivery?: string;
+  specialInstructions?: string;
+  status?: string;
+  totalAmount?: number;
+  items?: ApiLaundryOrderItem[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface ApiLaundryDashboardActivity {
+  id?: number;
+  orderId?: string;
+  room?: string;
+  roomNumber?: string;
+  guest?: string;
+  guestName?: string;
+  status?: string;
+  itemCount?: number;
+  amount?: number;
+  totalAmount?: number;
+  createdAt?: string;
+}
+
+interface ApiLaundryDashboardData {
+  pendingPickup?: number;
+  inProcess?: number;
+  ready?: number;
+  readyForDelivery?: number;
+  revenue?: number;
+  todaysRevenue?: number;
+  todayRevenue?: number;
+  overdue?: number;
+  overdueOrders?: number;
+  completedToday?: number;
+  summary?: Partial<LaundryDashboardSummary> & {
+    readyForDelivery?: number;
+    todaysRevenue?: number;
+    todayRevenue?: number;
+    overdueOrders?: number;
+  };
+  activityFeed?: ApiLaundryDashboardActivity[];
+  recentOrders?: ApiLaundryDashboardActivity[];
+  liveActivity?: ApiLaundryDashboardActivity[];
+}
+
+interface ApiCommonMaster {
+  id?: number;
+  category?: string;
+  code?: string;
+  value?: string;
+  description?: string;
+  isActive?: boolean;
+  is_active?: boolean;
+}
+
+interface ApiFloor {
+  id: number;
+  floorNumber: string;
+  isActive?: boolean;
+}
+
+interface ApiRoom {
+  id: number;
+  roomNumber: string;
+  floorId: number;
+  roomTypeId?: number;
+  status?: string;
+  isActive?: boolean;
+}
+
+interface ApiRoomType {
+  id: number;
+  name: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class LaundryService {
-  readonly serviceTypes: LaundryServiceType[] = ['Wash & Fold', 'Wash & Press', 'Dry Clean', 'Express'];
+  private readonly http = inject(HttpClient);
+  private readonly apiBase = '/api/hmsService/v1/laundry';
+  private readonly hmsBase = '/api/hmsService/v1';
+  private readonly masterBase = '/api/masterService/v1';
+
+  serviceTypes: LaundryServiceType[] = [];
+  billingOptions: BillingMode[] = [];
+  categories: string[] = ['Top Wear', 'Bottom Wear', 'Ethnic', 'Outerwear', 'Linen', 'Accessories'];
   readonly statuses: LaundryStatus[] = ['Pickup Pending', 'Processing', 'Ready for Delivery', 'Delivered', 'Overdue', 'Cancelled'];
-  readonly categories = ['Top Wear', 'Bottom Wear', 'Ethnic', 'Outerwear', 'Linen', 'Accessories'];
   readonly linenStatuses: LinenDispatchStatus[] = ['Draft', 'Ready for Pickup', 'Sent to Vendor', 'Partially Returned', 'Returned', 'Exception'];
-  readonly linenVendors = ['Sparkle Linen Services', 'FreshFold Commercial Laundry', 'CityWash Outsource Partner'];
-
-  readonly activeBookings = signal<ActiveBooking[]>([
-    { bookingId: 101, floor: 'Floor 1', room: '102', guest: 'Rajan Mehta', plan: 'Deluxe CP', folioId: 'FOL-102-26' },
-    { bookingId: 102, floor: 'Floor 1', room: '108', guest: 'Mark Wilson', plan: 'Executive MAP', folioId: 'FOL-108-26' },
-    { bookingId: 103, floor: 'Floor 2', room: '203', guest: 'Jane Smith', plan: 'Suite AP', folioId: 'FOL-203-26' },
-    { bookingId: 104, floor: 'Floor 3', room: '304', guest: 'Ananya Rao', plan: 'Premium CP', folioId: 'FOL-304-26' },
-    { bookingId: 105, floor: 'Floor 4', room: '410', guest: 'Vikram Sethi', plan: 'Business EP', folioId: 'FOL-410-26' }
-  ]);
-
-  readonly catalogue = signal<LaundryCatalogueItem[]>([
-    { id: 1, category: 'Top Wear', itemName: 'Shirt', washFold: 70, washPress: 95, dryClean: 160, expressSurcharge: 50, active: true },
-    { id: 2, category: 'Top Wear', itemName: 'T-Shirt', washFold: 55, washPress: 75, dryClean: 130, expressSurcharge: 50, active: true },
-    { id: 3, category: 'Bottom Wear', itemName: 'Trouser', washFold: 80, washPress: 110, dryClean: 175, expressSurcharge: 50, active: true },
-    { id: 4, category: 'Ethnic', itemName: 'Kurta', washFold: 90, washPress: 125, dryClean: 220, expressSurcharge: 50, active: true },
-    { id: 5, category: 'Outerwear', itemName: 'Blazer', washFold: 0, washPress: 0, dryClean: 420, expressSurcharge: 50, active: true },
-    { id: 6, category: 'Linen', itemName: 'Bedsheet', washFold: 120, washPress: 160, dryClean: 0, expressSurcharge: 50, active: true },
-    { id: 7, category: 'Linen', itemName: 'Towel', washFold: 45, washPress: 60, dryClean: 0, expressSurcharge: 50, active: true },
-    { id: 8, category: 'Accessories', itemName: 'Scarf', washFold: 60, washPress: 85, dryClean: 140, expressSurcharge: 50, active: true }
-  ]);
-
-  readonly orders = signal<LaundryOrder[]>([
-    {
-      id: 1,
-      orderId: 'LND-1001',
-      bookingId: 101,
-      room: '102',
-      guest: 'Rajan Mehta',
-      plan: 'Deluxe CP',
-      serviceType: 'Wash & Press',
-      pickupAt: '31-05-2026 09:30',
-      expectedDeliveryAt: '31-05-2026 18:00',
-      billingMode: 'Room Account',
-      postedToFolio: true,
-      status: 'Processing',
-      notes: 'Press collars sharp. Guest has meeting by evening.',
-      createdAt: '31-05-2026 09:05',
-      lines: [
-        { catalogueId: 1, itemName: 'Shirt', quantity: 3, unitPrice: 95, notes: 'Light starch' },
-        { catalogueId: 3, itemName: 'Trouser', quantity: 2, unitPrice: 110, notes: '' }
-      ]
-    },
-    {
-      id: 2,
-      orderId: 'LND-1002',
-      bookingId: 103,
-      room: '203',
-      guest: 'Jane Smith',
-      plan: 'Suite AP',
-      serviceType: 'Dry Clean',
-      pickupAt: '31-05-2026 10:15',
-      expectedDeliveryAt: '01-06-2026 11:00',
-      billingMode: 'Direct Payment',
-      postedToFolio: false,
-      status: 'Pickup Pending',
-      notes: 'Handle blazer separately.',
-      createdAt: '31-05-2026 10:10',
-      lines: [
-        { catalogueId: 5, itemName: 'Blazer', quantity: 1, unitPrice: 420, notes: 'Remove lint' },
-        { catalogueId: 8, itemName: 'Scarf', quantity: 2, unitPrice: 140, notes: 'Delicate fabric' }
-      ]
-    },
-    {
-      id: 3,
-      orderId: 'LND-1003',
-      bookingId: 102,
-      room: '108',
-      guest: 'Mark Wilson',
-      plan: 'Executive MAP',
-      serviceType: 'Express',
-      pickupAt: '30-05-2026 16:00',
-      expectedDeliveryAt: '30-05-2026 22:00',
-      deliveredAt: '30-05-2026 21:20',
-      billingMode: 'Room Account',
-      postedToFolio: true,
-      status: 'Delivered',
-      notes: 'Express business laundry.',
-      createdAt: '30-05-2026 15:45',
-      lines: [
-        { catalogueId: 1, itemName: 'Shirt', quantity: 2, unitPrice: 105, notes: '' },
-        { catalogueId: 3, itemName: 'Trouser', quantity: 1, unitPrice: 120, notes: '' }
-      ]
-    },
-    {
-      id: 4,
-      orderId: 'LND-1004',
-      bookingId: 104,
-      room: '304',
-      guest: 'Ananya Rao',
-      plan: 'Premium CP',
-      serviceType: 'Wash & Fold',
-      pickupAt: '30-05-2026 08:00',
-      expectedDeliveryAt: '30-05-2026 19:00',
-      billingMode: 'Room Account',
-      postedToFolio: false,
-      status: 'Overdue',
-      notes: 'Call guest before delivery.',
-      createdAt: '30-05-2026 07:45',
-      lines: [
-        { catalogueId: 2, itemName: 'T-Shirt', quantity: 4, unitPrice: 55, notes: '' },
-        { catalogueId: 7, itemName: 'Towel', quantity: 2, unitPrice: 45, notes: 'Hotel linen replacement' }
-      ]
-    },
-    {
-      id: 5,
-      orderId: 'LND-1005',
-      bookingId: 105,
-      room: '410',
-      guest: 'Vikram Sethi',
-      plan: 'Business EP',
-      serviceType: 'Wash & Fold',
-      pickupAt: '31-05-2026 07:30',
-      expectedDeliveryAt: '31-05-2026 16:00',
-      deliveredAt: '31-05-2026 15:25',
-      billingMode: 'Direct Payment',
-      postedToFolio: false,
-      status: 'Delivered',
-      notes: '',
-      createdAt: '31-05-2026 07:20',
-      lines: [
-        { catalogueId: 6, itemName: 'Bedsheet', quantity: 2, unitPrice: 120, notes: '' },
-        { catalogueId: 7, itemName: 'Towel', quantity: 3, unitPrice: 45, notes: '' }
-      ]
-    }
-  ]);
-
-  readonly folioPostings = signal<FolioPosting[]>([
-    { id: 1, orderId: 'LND-1001', folioId: 'FOL-102-26', room: '102', guest: 'Rajan Mehta', amount: 505, postedAt: '31-05-2026 09:06' },
-    { id: 2, orderId: 'LND-1003', folioId: 'FOL-108-26', room: '108', guest: 'Mark Wilson', amount: 330, postedAt: '30-05-2026 15:46' }
-  ]);
-
-  readonly linenItems = signal<LinenItemMaster[]>([
-    { id: 1, itemName: 'Bedsheet King', category: 'Bed Linen', defaultVendorRate: 18, replacementCost: 650, active: true },
-    { id: 2, itemName: 'Bedsheet Queen', category: 'Bed Linen', defaultVendorRate: 16, replacementCost: 560, active: true },
-    { id: 3, itemName: 'Pillow Cover', category: 'Bed Linen', defaultVendorRate: 7, replacementCost: 140, active: true },
-    { id: 4, itemName: 'Duvet Cover', category: 'Bed Linen', defaultVendorRate: 28, replacementCost: 1100, active: true },
-    { id: 5, itemName: 'Bath Towel', category: 'Bath Linen', defaultVendorRate: 12, replacementCost: 420, active: true },
-    { id: 6, itemName: 'Hand Towel', category: 'Bath Linen', defaultVendorRate: 6, replacementCost: 180, active: true },
-    { id: 7, itemName: 'Table Napkin', category: 'F&B Linen', defaultVendorRate: 5, replacementCost: 90, active: true },
-    { id: 8, itemName: 'Staff Uniform Shirt', category: 'Uniform', defaultVendorRate: 22, replacementCost: 750, active: true }
-  ]);
-
-  readonly linenDispatches = signal<LinenDispatch[]>([
-    {
-      id: 1,
-      batchNo: 'LIN-OUT-1001',
-      vendorName: 'Sparkle Linen Services',
-      challanNo: 'CH-3112',
-      sentAt: '31-05-2026 10:00',
-      expectedReturnAt: '01-06-2026 08:00',
-      vehicleNo: 'MH 12 AB 4501',
-      handledBy: 'Laundry Supervisor',
-      status: 'Sent to Vendor',
-      billingRecorded: true,
-      lines: [
-        { id: 1, itemId: 1, itemName: 'Bedsheet King', source: 'Room 102', quantity: 6, returnedQty: 0, damagedQty: 0, missingQty: 0, vendorRate: 18, scanCodes: ['RFID-BSK-102-001', 'RFID-BSK-102-002', 'RFID-BSK-102-003', 'RFID-BSK-102-004', 'RFID-BSK-102-005', 'RFID-BSK-102-006'], notes: 'Checkout linen' },
-        { id: 2, itemId: 5, itemName: 'Bath Towel', source: 'Room 102', quantity: 8, returnedQty: 0, damagedQty: 0, missingQty: 0, vendorRate: 12, scanCodes: ['RFID-BTW-102-001', 'RFID-BTW-102-002'], notes: 'Scan pending for 6 pieces' }
-      ]
-    },
-    {
-      id: 2,
-      batchNo: 'LIN-OUT-1002',
-      vendorName: 'FreshFold Commercial Laundry',
-      challanNo: 'CH-3109',
-      sentAt: '30-05-2026 18:30',
-      expectedReturnAt: '31-05-2026 11:00',
-      returnedAt: '31-05-2026 10:40',
-      vehicleNo: 'KA 03 LN 7788',
-      handledBy: 'Housekeeping Desk',
-      status: 'Partially Returned',
-      billingRecorded: true,
-      lines: [
-        { id: 1, itemId: 3, itemName: 'Pillow Cover', source: 'Floor 2 Pantry', quantity: 40, returnedQty: 38, damagedQty: 1, missingQty: 1, vendorRate: 7, scanCodes: ['RFID-PC-203-018', 'RFID-PC-203-019', 'RFID-PC-203-020'], notes: 'One missing from vendor return count' },
-        { id: 2, itemId: 4, itemName: 'Duvet Cover', source: 'Room 203', quantity: 4, returnedQty: 4, damagedQty: 0, missingQty: 0, vendorRate: 28, scanCodes: ['RFID-DC-203-001', 'RFID-DC-203-002', 'RFID-DC-203-003', 'RFID-DC-203-004'], notes: '' }
-      ]
-    }
-  ]);
+  readonly linenVendors: string[] = [];
+  readonly serviceCatalog = signal<LaundryServiceCatalogItem[]>([]);
+  readonly activeBookings = signal<ActiveBooking[]>([]);
+  readonly catalogue = signal<LaundryCatalogueItem[]>([]);
+  readonly orders = signal<LaundryOrder[]>([]);
+  readonly dashboardData = signal<LaundryDashboardData | null>(null);
+  readonly folioPostings = signal<FolioPosting[]>([]);
+  readonly linenItems = signal<LinenItemMaster[]>([]);
+  readonly linenDispatches = signal<LinenDispatch[]>([]);
 
   readonly catalogueMap = computed(() => new Map(this.catalogue().map(item => [item.id, item])));
   readonly linenItemMap = computed(() => new Map(this.linenItems().map(item => [item.id, item])));
+
+  constructor() {
+    this.loadDropdownMasters();
+    this.loadHotelRooms();
+    this.loadPriceMasters();
+    this.loadOrders();
+    this.loadDashboardData();
+  }
+
+  loadDropdownMasters(): void {
+    forkJoin({
+      serviceCatalog: this.http.get<ApiLaundryServiceCatalog[] | StandardResponse<ApiLaundryServiceCatalog[]>>(`${this.apiBase}/getAllServiceCatalog`),
+      laundryItems: this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBase}/common/getCommonMaster/LAUNDRY_ITEM`),
+      billingOptions: this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBase}/common/getCommonMaster/LAUNDRY_BILLING_OPTION`)
+    }).subscribe({
+      next: response => {
+        const services = this.listData(response.serviceCatalog).map(service => this.mapServiceCatalog(service));
+        this.serviceCatalog.set(services);
+        this.serviceTypes = services.filter(service => service.active).map(service => service.serviceName);
+        const categories = this.commonMasterValues(response.laundryItems);
+        if (categories.length) this.categories = categories;
+        this.billingOptions = this.commonMasterValues(response.billingOptions);
+        this.refreshOrderLinePrices();
+      },
+      error: error => console.error('[Laundry] Failed to load laundry dropdown masters', error)
+    });
+  }
+
+  loadHotelRooms(): void {
+    forkJoin({
+      floors: this.http.get<StandardResponse<ApiFloor[]>>(`${this.masterBase}/floors/getAllFloors`),
+      rooms: this.http.get<StandardResponse<ApiRoom[]>>(`${this.masterBase}/rooms/getAllRooms`),
+      roomTypes: this.http.get<StandardResponse<ApiRoomType[]>>(`${this.masterBase}/roomTypes/getAllRoomTypes`)
+    }).subscribe({
+      next: ({ floors, rooms, roomTypes }) => {
+        const activeFloors = (floors.data || []).filter(floor => floor.isActive !== false);
+        const floorById = new Map(activeFloors.map(floor => [floor.id, floor.floorNumber]));
+        const roomTypeById = new Map((roomTypes.data || []).map(type => [type.id, type.name]));
+        const mappedRooms = (rooms.data || [])
+          .filter(room => room.isActive !== false)
+          .map(room => ({
+            bookingId: room.id,
+            floor: floorById.get(room.floorId) || '',
+            room: room.roomNumber,
+            guest: '',
+            plan: roomTypeById.get(room.roomTypeId || 0) || room.status || '',
+            folioId: ''
+          }))
+          .filter(room => room.floor && room.room);
+        this.activeBookings.set(mappedRooms);
+      },
+      error: error => console.error('[Laundry] Failed to load hotel floors and rooms', error)
+    });
+  }
+
+  loadPriceMasters(): void {
+    this.http.get<ApiLaundryPriceMaster[] | StandardResponse<ApiLaundryPriceMaster[]>>(`${this.apiBase}/getAllPriceMasters`).subscribe({
+      next: response => {
+        const items = this.listData(response).map(item => this.mapPriceMaster(item));
+        if (items.length) this.catalogue.set(items);
+        this.refreshOrderLinePrices();
+      },
+      error: error => console.error('[Laundry] Failed to load price masters', error)
+    });
+  }
+
+  loadOrders(): void {
+    this.http.get<ApiLaundryOrder[] | StandardResponse<ApiLaundryOrder[]>>(`${this.apiBase}/getAllOrders`).subscribe({
+      next: response => {
+        const orders = this.listData(response).map(order => this.mapOrder(order));
+        if (orders.length) this.orders.set(orders);
+        if (!this.dashboardData()) this.dashboardData.set(this.buildLocalDashboardData());
+      },
+      error: error => console.error('[Laundry] Failed to load orders', error)
+    });
+  }
+
+  loadDashboardData(): void {
+    this.http.get<StandardResponse<ApiLaundryDashboardData>>(`${this.apiBase}/dashboard/getLaundryDashboardData`).subscribe({
+      next: response => this.dashboardData.set(this.mapDashboardData(response?.data || null)),
+      error: error => {
+        console.error('[Laundry] Failed to load dashboard data', error);
+        this.dashboardData.set(this.buildLocalDashboardData());
+      }
+    });
+  }
+
+  dashboardSummary(): LaundryDashboardSummary {
+    return this.dashboardData()?.summary || this.buildLocalDashboardData().summary;
+  }
+
+  dashboardActivity(): LaundryDashboardActivity[] {
+    return this.dashboardData()?.activityFeed || this.buildLocalDashboardData().activityFeed;
+  }
 
   orderAmount(order: Pick<LaundryOrder, 'lines'>): number {
     return order.lines.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0), 0);
@@ -317,14 +415,24 @@ export class LaundryService {
   }
 
   priceFor(item: LaundryCatalogueItem, serviceType: LaundryServiceType): number {
-    const base = serviceType === 'Wash & Fold'
+    const normalizedService = String(serviceType || '').toLowerCase();
+    const dynamicPrice = item.servicePrices?.[this.normalizeServiceName(serviceType)];
+    const configuredBasis = this.serviceCatalog().find(service => this.normalizeServiceName(service.serviceName) === this.normalizeServiceName(serviceType))?.pricingBasis;
+    const base = configuredBasis === 'washFold' || normalizedService.includes('fold')
       ? item.washFold
-      : serviceType === 'Wash & Press'
+      : configuredBasis === 'washPress' || normalizedService.includes('press') || normalizedService.includes('iron')
         ? item.washPress
-        : item.dryClean;
-    if (serviceType !== 'Express') return base;
+        : configuredBasis === 'express' || normalizedService.includes('express')
+          ? Math.round((item.washPress || item.washFold || item.dryClean) * (1 + item.expressSurcharge / 100))
+          : item.dryClean;
+    if (dynamicPrice !== undefined) return Number(dynamicPrice || 0) || Number(base || 0);
+    if (!normalizedService.includes('express')) return base;
     const expressBase = item.washPress || item.washFold || item.dryClean;
     return Math.round(expressBase * (1 + item.expressSurcharge / 100));
+  }
+
+  priceForServices(item: LaundryCatalogueItem, serviceTypes: LaundryServiceType[]): number {
+    return this.normalizedServiceSelection(serviceTypes).reduce((sum, service) => sum + this.priceFor(item, service), 0);
   }
 
   saveCatalogueItem(input: Partial<LaundryCatalogueItem>): void {
@@ -337,18 +445,34 @@ export class LaundryService {
       washPress: Number(input.washPress || 0),
       dryClean: Number(input.dryClean || 0),
       expressSurcharge: Number(input.expressSurcharge ?? 50),
+      servicePrices: input.servicePrices || {},
       active: input.active ?? true
     };
     this.catalogue.update(items => input.id ? items.map(existing => existing.id === item.id ? item : existing) : [item, ...items]);
+    const request$ = input.id
+      ? this.http.put<ApiLaundryPriceMaster | StandardResponse<ApiLaundryPriceMaster>>(`${this.apiBase}/updatePriceMaster/${input.id}`, this.toPriceMasterPayload(item))
+      : this.http.post<ApiLaundryPriceMaster | StandardResponse<ApiLaundryPriceMaster>>(`${this.apiBase}/createPriceMaster`, this.toPriceMasterPayload(item));
+    request$.subscribe({
+      next: response => this.upsertCatalogueItem(this.mapPriceMaster(this.itemData(response) || this.toPriceMasterPayload(item))),
+      error: error => console.error('[Laundry] Failed to save price master', error)
+    });
   }
 
   toggleCatalogueItem(id: number): void {
-    this.catalogue.update(items => items.map(item => item.id === id ? { ...item, active: !item.active } : item));
+    const existing = this.catalogue().find(item => item.id === id);
+    if (!existing) return;
+    const updated = { ...existing, active: !existing.active };
+    this.upsertCatalogueItem(updated);
+    this.http.put<ApiLaundryPriceMaster | StandardResponse<ApiLaundryPriceMaster>>(`${this.apiBase}/updatePriceMaster/${id}`, this.toPriceMasterPayload(updated)).subscribe({
+      next: response => this.upsertCatalogueItem(this.mapPriceMaster(this.itemData(response) || this.toPriceMasterPayload(updated))),
+      error: error => console.error('[Laundry] Failed to update price master status', error)
+    });
   }
 
   saveOrder(input: Partial<LaundryOrder>): LaundryOrder {
-    const booking = this.activeBookings().find(item => item.bookingId === Number(input.bookingId)) || this.activeBookings()[0];
+    const booking = this.activeBookings().find(item => item.bookingId === Number(input.bookingId)) || this.emptyBooking(input);
     const nextId = Math.max(0, ...this.orders().map(item => item.id)) + 1;
+    const selectedServices = this.normalizedServiceSelection(input.serviceTypes || (input.serviceType ? this.splitServiceDisplay(input.serviceType) : [this.serviceTypes[0] || '']));
     const order: LaundryOrder = {
       id: input.id ?? nextId,
       orderId: input.orderId || `LND-${1000 + nextId}`,
@@ -356,31 +480,102 @@ export class LaundryService {
       room: input.room || booking.room,
       guest: input.guest || booking.guest,
       plan: input.plan || booking.plan,
-      serviceType: input.serviceType || 'Wash & Fold',
-      pickupAt: input.pickupAt || '31-05-2026 12:00',
-      expectedDeliveryAt: input.expectedDeliveryAt || '01-06-2026 12:00',
+      serviceTypes: selectedServices,
+      serviceType: this.serviceDisplay(selectedServices),
+      pickupAt: input.pickupAt || '',
+      expectedDeliveryAt: input.expectedDeliveryAt || '',
       deliveredAt: input.deliveredAt || '',
       billingMode: input.billingMode || 'Room Account',
       postedToFolio: input.postedToFolio ?? false,
       status: input.status || 'Pickup Pending',
       notes: input.notes || '',
-      createdAt: input.createdAt || '31-05-2026 11:55',
-      lines: input.lines?.length ? input.lines.map(line => ({ ...line, quantity: Math.max(1, Number(line.quantity || 1)), unitPrice: Number(line.unitPrice || 0) })) : []
+      createdAt: input.createdAt || '',
+      lines: input.lines?.length ? input.lines.map(line => this.patchOrderLinePrice(line, selectedServices)) : []
     };
     this.orders.update(items => input.id ? items.map(existing => existing.id === order.id ? order : existing) : [order, ...items]);
+    this.dashboardData.set(this.buildLocalDashboardData());
+    const request$ = input.id
+      ? this.http.put<ApiLaundryOrder | StandardResponse<ApiLaundryOrder>>(`${this.apiBase}/updateOrder/${input.id}`, this.toOrderPayload(order))
+      : this.http.post<ApiLaundryOrder | StandardResponse<ApiLaundryOrder>>(`${this.apiBase}/createOrder`, this.toOrderPayload(order));
+    request$.subscribe({
+      next: response => {
+        this.upsertOrder(this.mapOrder(this.itemData(response) || this.toOrderPayload(order)));
+        this.loadDashboardData();
+      },
+      error: error => console.error('[Laundry] Failed to save order', error)
+    });
     if (order.billingMode === 'Room Account') this.postOrderToFolio(order.id);
     return order;
   }
 
   updateOrderStatus(id: number, status: LaundryStatus): void {
     this.orders.update(items => items.map(order => order.id === id
-      ? { ...order, status, deliveredAt: status === 'Delivered' ? '31-05-2026 18:10' : order.deliveredAt }
+      ? { ...order, status, deliveredAt: status === 'Delivered' ? this.nowDisplayDateTime() : order.deliveredAt }
       : order
     ));
+    this.dashboardData.set(this.buildLocalDashboardData());
+    const params = new HttpParams().set('status', status);
+    this.http.patch<ApiLaundryOrder | StandardResponse<ApiLaundryOrder>>(`${this.apiBase}/updateOrderStatus/${id}`, null, { params }).subscribe({
+      next: response => {
+        this.upsertOrder(this.mapOrder(this.itemData(response) || this.toOrderPayload(this.orders().find(order => order.id === id)!)));
+        this.loadDashboardData();
+      },
+      error: error => console.error('[Laundry] Failed to update order status', error)
+    });
   }
 
   cancelOrder(id: number): void {
     this.updateOrderStatus(id, 'Cancelled');
+  }
+
+  deleteOrder(id: number): void {
+    this.orders.update(items => items.filter(order => order.id !== id));
+    this.dashboardData.set(this.buildLocalDashboardData());
+    this.http.delete<void | StandardResponse<void>>(`${this.apiBase}/deleteOrder/${id}`).subscribe({
+      next: () => this.loadDashboardData(),
+      error: error => console.error('[Laundry] Failed to delete order', error)
+    });
+  }
+
+  deleteCatalogueItem(id: number): void {
+    this.catalogue.update(items => items.filter(item => item.id !== id));
+    this.http.delete<void | StandardResponse<void>>(`${this.apiBase}/deletePriceMaster/${id}`).subscribe({
+      error: error => console.error('[Laundry] Failed to delete price master', error)
+    });
+  }
+
+  saveServiceCatalogItem(input: Partial<LaundryServiceCatalogItem>): void {
+    const nextId = Math.max(0, ...this.serviceCatalog().map(item => item.id)) + 1;
+    const item: LaundryServiceCatalogItem = {
+      id: input.id ?? nextId,
+      serviceName: input.serviceName || 'New Service',
+      pricingBasis: input.pricingBasis || 'washPress',
+      description: input.description || '',
+      displayOrder: Number(input.displayOrder || this.serviceCatalog().length + 1),
+      active: input.active ?? true
+    };
+    if (input.id) this.upsertServiceCatalogItem(item);
+    const request$ = input.id
+      ? this.http.put<ApiLaundryServiceCatalog | StandardResponse<ApiLaundryServiceCatalog>>(`${this.apiBase}/updateServiceCatalog/${input.id}`, this.toServiceCatalogPayload(item))
+      : this.http.post<ApiLaundryServiceCatalog | StandardResponse<ApiLaundryServiceCatalog>>(`${this.apiBase}/createServiceCatalog`, this.toServiceCatalogPayload(item));
+    request$.subscribe({
+      next: response => this.upsertServiceCatalogItem(this.mapServiceCatalog(this.itemData(response) || this.toServiceCatalogPayload(item))),
+      error: error => console.error('[Laundry] Failed to save service catalog', error)
+    });
+  }
+
+  toggleServiceCatalogItem(id: number): void {
+    const existing = this.serviceCatalog().find(item => item.id === id);
+    if (!existing) return;
+    this.saveServiceCatalogItem({ ...existing, active: !existing.active });
+  }
+
+  deleteServiceCatalogItem(id: number): void {
+    this.serviceCatalog.update(items => items.filter(item => item.id !== id));
+    this.syncServiceTypes();
+    this.http.delete<void | StandardResponse<void>>(`${this.apiBase}/deleteServiceCatalog/${id}`).subscribe({
+      error: error => console.error('[Laundry] Failed to delete service catalog', error)
+    });
   }
 
   postOrderToFolio(id: number): void {
@@ -394,7 +589,7 @@ export class LaundryService {
       room: order.room,
       guest: order.guest,
       amount: this.orderAmount(order),
-      postedAt: '31-05-2026 12:05'
+      postedAt: this.nowDisplayDateTime()
     };
     this.folioPostings.update(items => [posting, ...items]);
     this.orders.update(items => items.map(item => item.id === id ? { ...item, postedToFolio: true } : item));
@@ -405,10 +600,10 @@ export class LaundryService {
     const dispatch: LinenDispatch = {
       id: input.id ?? nextId,
       batchNo: input.batchNo || `LIN-OUT-${1000 + nextId}`,
-      vendorName: input.vendorName || this.linenVendors[0],
+      vendorName: input.vendorName || '',
       challanNo: input.challanNo || `CH-${3100 + nextId}`,
-      sentAt: input.sentAt || '31-05-2026 12:30',
-      expectedReturnAt: input.expectedReturnAt || '01-06-2026 09:00',
+      sentAt: input.sentAt || '',
+      expectedReturnAt: input.expectedReturnAt || '',
       returnedAt: input.returnedAt || '',
       vehicleNo: input.vehicleNo || '',
       handledBy: input.handledBy || 'Laundry Supervisor',
@@ -434,12 +629,379 @@ export class LaundryService {
 
   updateLinenDispatchStatus(id: number, status: LinenDispatchStatus): void {
     this.linenDispatches.update(items => items.map(dispatch => dispatch.id === id
-      ? { ...dispatch, status, returnedAt: status === 'Returned' || status === 'Partially Returned' ? dispatch.returnedAt || '31-05-2026 18:30' : dispatch.returnedAt }
+      ? { ...dispatch, status, returnedAt: status === 'Returned' || status === 'Partially Returned' ? dispatch.returnedAt || this.nowDisplayDateTime() : dispatch.returnedAt }
       : dispatch
     ));
   }
 
   recordLinenBilling(id: number): void {
     this.linenDispatches.update(items => items.map(dispatch => dispatch.id === id ? { ...dispatch, billingRecorded: true } : dispatch));
+  }
+
+  private upsertCatalogueItem(item: LaundryCatalogueItem): void {
+    this.catalogue.update(items => items.some(existing => existing.id === item.id)
+      ? items.map(existing => existing.id === item.id ? item : existing)
+      : [item, ...items]
+    );
+  }
+
+  private upsertServiceCatalogItem(item: LaundryServiceCatalogItem): void {
+    this.serviceCatalog.update(items => {
+      const next = items.some(existing => existing.id === item.id)
+        ? items.map(existing => existing.id === item.id ? item : existing)
+        : [...items, item];
+      return next.sort((a, b) => a.displayOrder - b.displayOrder || a.serviceName.localeCompare(b.serviceName));
+    });
+    this.syncServiceTypes();
+  }
+
+  private upsertOrder(order: LaundryOrder): void {
+    this.orders.update(items => items.some(existing => existing.id === order.id)
+      ? items.map(existing => existing.id === order.id ? order : existing)
+      : [order, ...items]
+    );
+  }
+
+  private mapDashboardData(data: ApiLaundryDashboardData | null): LaundryDashboardData {
+    if (!data) return this.buildLocalDashboardData();
+    const summary = data.summary || {};
+    const activity = data.activityFeed || data.recentOrders || data.liveActivity || [];
+    return {
+      summary: {
+        pendingPickup: Number(summary.pendingPickup ?? data.pendingPickup ?? 0),
+        inProcess: Number(summary.inProcess ?? data.inProcess ?? 0),
+        ready: Number(summary.ready ?? summary.readyForDelivery ?? data.ready ?? data.readyForDelivery ?? 0),
+        revenue: Number(summary.revenue ?? summary.todaysRevenue ?? summary.todayRevenue ?? data.revenue ?? data.todaysRevenue ?? data.todayRevenue ?? 0),
+        overdue: Number(summary.overdue ?? summary.overdueOrders ?? data.overdue ?? data.overdueOrders ?? 0),
+        completedToday: Number(summary.completedToday ?? data.completedToday ?? 0)
+      },
+      activityFeed: activity.map(item => this.mapDashboardActivity(item)).filter(item => item.orderId).slice(0, 10)
+    };
+  }
+
+  private mapDashboardActivity(item: ApiLaundryDashboardActivity): LaundryDashboardActivity {
+    const matchingOrder = this.orders().find(order =>
+      order.id === Number(item.id || 0) ||
+      order.orderId === String(item.orderId || '')
+    );
+    return {
+      id: Number(item.id || matchingOrder?.id || 0),
+      orderId: item.orderId || matchingOrder?.orderId || '',
+      room: item.room || item.roomNumber || matchingOrder?.room || '',
+      guest: item.guest || item.guestName || matchingOrder?.guest || '',
+      status: this.asLaundryStatus(item.status || matchingOrder?.status),
+      itemCount: Number(item.itemCount ?? (matchingOrder ? this.orderItemCount(matchingOrder) : 0)),
+      amount: Number(item.amount ?? item.totalAmount ?? (matchingOrder ? this.orderAmount(matchingOrder) : 0)),
+      createdAt: this.displayDateTime(item.createdAt) || matchingOrder?.createdAt || ''
+    };
+  }
+
+  private buildLocalDashboardData(): LaundryDashboardData {
+    const orders = this.orders();
+    return {
+      summary: {
+        pendingPickup: orders.filter(order => order.status === 'Pickup Pending').length,
+        inProcess: orders.filter(order => order.status === 'Processing').length,
+        ready: orders.filter(order => order.status === 'Ready for Delivery').length,
+        revenue: orders.filter(order => this.isToday(order.createdAt)).reduce((sum, order) => sum + this.orderAmount(order), 0),
+        overdue: orders.filter(order => order.status === 'Overdue').length,
+        completedToday: orders.filter(order => order.status === 'Delivered' && this.isToday(order.createdAt)).length
+      },
+      activityFeed: [...orders]
+        .sort((a, b) => b.id - a.id)
+        .slice(0, 10)
+        .map(order => ({
+          id: order.id,
+          orderId: order.orderId,
+          room: order.room,
+          guest: order.guest,
+          status: order.status,
+          itemCount: this.orderItemCount(order),
+          amount: this.orderAmount(order),
+          createdAt: order.createdAt
+        }))
+    };
+  }
+
+  private isToday(value?: string): boolean {
+    if (!value) return false;
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if (value.startsWith(today)) return true;
+    const match = value.match(/^(\d{2})-(\d{2})-(\d{4})/);
+    return Boolean(match && `${match[3]}-${match[2]}-${match[1]}` === today);
+  }
+
+  private mapPriceMaster(item: ApiLaundryPriceMaster): LaundryCatalogueItem {
+    return {
+      id: Number(item.id || 0),
+      category: item.category || 'Top Wear',
+      itemName: item.itemName || 'Laundry Item',
+      washFold: Number(item.washFoldPrice || 0),
+      washPress: Number(item.washPressPrice || 0),
+      dryClean: Number(item.dryCleanPrice || 0),
+      expressSurcharge: Number(item.expressSurchargePercentage ?? 50),
+      servicePrices: this.normalizeServicePrices(item.servicePrices || {}),
+      active: String(item.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+    };
+  }
+
+  private toPriceMasterPayload(item: LaundryCatalogueItem): ApiLaundryPriceMaster {
+    return {
+      id: item.id > 0 ? item.id : undefined,
+      category: item.category,
+      itemName: item.itemName,
+      washFoldPrice: Number(item.washFold || 0),
+      washPressPrice: Number(item.washPress || 0),
+      dryCleanPrice: Number(item.dryClean || 0),
+      expressSurchargePercentage: Number(item.expressSurcharge || 0),
+      servicePrices: this.buildServicePrices(item),
+      status: item.active ? 'ACTIVE' : 'INACTIVE'
+    };
+  }
+
+  private mapServiceCatalog(item: ApiLaundryServiceCatalog): LaundryServiceCatalogItem {
+    return {
+      id: Number(item.id || 0),
+      serviceName: item.serviceName || 'Laundry Service',
+      pricingBasis: this.asPricingBasis(item.pricingBasis),
+      description: item.description || '',
+      displayOrder: Number(item.displayOrder || 0),
+      active: String(item.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+    };
+  }
+
+  private toServiceCatalogPayload(item: LaundryServiceCatalogItem): ApiLaundryServiceCatalog {
+    return {
+      id: item.id > 0 ? item.id : undefined,
+      serviceName: item.serviceName,
+      pricingBasis: item.pricingBasis,
+      description: item.description,
+      displayOrder: Number(item.displayOrder || 0),
+      status: item.active ? 'ACTIVE' : 'INACTIVE'
+    };
+  }
+
+  private mapOrder(order: ApiLaundryOrder): LaundryOrder {
+    const booking = this.bookingForOrder(order);
+    const id = Number(order.id || 0);
+    return {
+      id,
+      orderId: order.orderId || `LND-${1000 + id}`,
+      bookingId: Number(order.roomId || booking.bookingId),
+      room: order.roomNumber || booking.room,
+      guest: order.guestName || booking.guest,
+      plan: booking.plan,
+      serviceTypes: this.normalizedServiceSelection(order.serviceTypes || this.splitServiceDisplay(order.serviceType)),
+      serviceType: this.serviceDisplay(order.serviceTypes || this.splitServiceDisplay(order.serviceType)),
+      pickupAt: this.displayDateTime(order.pickupDatetime),
+      expectedDeliveryAt: this.displayDateTime(order.expectedDelivery),
+      billingMode: this.asBillingMode(order.billingOption),
+      postedToFolio: false,
+      status: this.asLaundryStatus(order.status),
+      notes: order.specialInstructions || '',
+      createdAt: this.displayDateTime(order.createdAt) || '',
+      lines: (order.items || []).map(item => this.mapOrderLine(item, order.serviceType))
+    };
+  }
+
+  private mapOrderLine(item: ApiLaundryOrderItem, serviceType?: string): LaundryOrderLine {
+    const catalogueItem = this.catalogue().find(value => value.id === Number(item.priceMasterId));
+    const services = this.normalizedServiceSelection(this.splitServiceDisplay(serviceType));
+    const patchedPrice = Number(item.unitPrice || 0) || (catalogueItem && services.length ? this.priceForServices(catalogueItem, services) : 0);
+    return {
+      catalogueId: Number(item.priceMasterId || catalogueItem?.id || 0),
+      itemName: item.itemName || catalogueItem?.itemName || 'Laundry Item',
+      quantity: Math.max(1, Number(item.quantity || 1)),
+      unitPrice: Number(patchedPrice || 0),
+      notes: item.notes || ''
+    };
+  }
+
+  private patchOrderLinePrice(line: LaundryOrderLine, serviceTypes: string[]): LaundryOrderLine {
+    const catalogueItem = this.catalogueMap().get(Number(line.catalogueId));
+    const selectedServices = this.normalizedServiceSelection(serviceTypes);
+    const resolvedPrice = Number(line.unitPrice || 0) || (catalogueItem ? this.priceForServices(catalogueItem, selectedServices) : 0);
+    return {
+      ...line,
+      itemName: line.itemName || catalogueItem?.itemName || '',
+      quantity: Math.max(1, Number(line.quantity || 1)),
+      unitPrice: Number(resolvedPrice || 0)
+    };
+  }
+
+  private refreshOrderLinePrices(): void {
+    if (!this.orders().length || !this.catalogue().length) return;
+    this.orders.update(orders => orders.map(order => ({
+      ...order,
+      lines: order.lines.map(line => this.patchOrderLinePrice(line, order.serviceTypes || this.splitServiceDisplay(order.serviceType)))
+    })));
+  }
+
+  private toOrderPayload(order: LaundryOrder): ApiLaundryOrder {
+    return {
+      id: order.id > 0 ? order.id : undefined,
+      orderId: order.orderId,
+      roomId: Number(order.bookingId || 0) || undefined,
+      roomNumber: order.room,
+      floorNumber: this.activeBookings().find(booking => booking.bookingId === order.bookingId)?.floor,
+      guestName: order.guest,
+      serviceType: order.serviceType,
+      serviceTypes: order.serviceTypes,
+      billingOption: order.billingMode,
+      pickupDatetime: this.apiDateTime(order.pickupAt),
+      expectedDelivery: this.apiDateTime(order.expectedDeliveryAt),
+      specialInstructions: order.notes,
+      status: order.status,
+      totalAmount: this.orderAmount(order),
+      items: order.lines.map(line => ({
+        priceMasterId: Number(line.catalogueId) > 0 ? Number(line.catalogueId) : undefined,
+        itemName: line.itemName,
+        category: this.catalogueMap().get(Number(line.catalogueId))?.category || '',
+        quantity: Math.max(1, Number(line.quantity || 1)),
+        unitPrice: Number(line.unitPrice || 0),
+        total: Number(line.quantity || 0) * Number(line.unitPrice || 0),
+        notes: line.notes || ''
+      }))
+    };
+  }
+
+  private bookingForOrder(order: ApiLaundryOrder): ActiveBooking {
+    return this.activeBookings().find(booking =>
+      booking.bookingId === Number(order.roomId) ||
+      booking.room === String(order.roomNumber || '')
+    ) || this.activeBookings()[0] || {
+      bookingId: Number(order.roomId || 0),
+      floor: order.floorNumber || 'Floor 1',
+      room: order.roomNumber || '',
+      guest: order.guestName || '',
+      plan: 'Room Account',
+      folioId: ''
+    };
+  }
+
+  private emptyBooking(input?: Partial<LaundryOrder>): ActiveBooking {
+    return {
+      bookingId: Number(input?.bookingId || 0),
+      floor: '',
+      room: input?.room || '',
+      guest: input?.guest || '',
+      plan: input?.plan || '',
+      folioId: ''
+    };
+  }
+
+  private asServiceType(value?: string): LaundryServiceType {
+    return this.serviceTypes.find(item => item.toLowerCase() === String(value || '').toLowerCase()) || String(value || this.serviceTypes[0] || '');
+  }
+
+  private asBillingMode(value?: string): BillingMode {
+    return this.billingOptions.find(item => item.toLowerCase() === String(value || '').toLowerCase()) || String(value || this.billingOptions[0] || '');
+  }
+
+  private asLaundryStatus(value?: string): LaundryStatus {
+    const normalized = String(value || '').replace(/_/g, ' ').toLowerCase();
+    return this.statuses.find(status => status.toLowerCase() === normalized) || 'Pickup Pending';
+  }
+
+  private asPricingBasis(value?: string): LaundryServiceCatalogItem['pricingBasis'] {
+    const normalized = String(value || '').trim();
+    return ['washFold', 'washPress', 'dryClean', 'express'].includes(normalized)
+      ? normalized as LaundryServiceCatalogItem['pricingBasis']
+      : 'washPress';
+  }
+
+  private buildServicePrices(item: LaundryCatalogueItem): Record<string, number> {
+    const prices: Record<string, number> = { ...this.normalizeServicePrices(item.servicePrices || {}) };
+    for (const service of this.serviceCatalog()) {
+      if (!service.active) continue;
+      const key = this.normalizeServiceName(service.serviceName);
+      if (!key) continue;
+      if (prices[key] !== undefined) continue;
+      if (service.pricingBasis === 'washFold') prices[key] = Number(item.washFold || 0);
+      if (service.pricingBasis === 'washPress') prices[key] = Number(item.washPress || 0);
+      if (service.pricingBasis === 'dryClean') prices[key] = Number(item.dryClean || 0);
+      if (service.pricingBasis === 'express') {
+        const base = item.washPress || item.washFold || item.dryClean || 0;
+        prices[key] = Math.round(base * (1 + Number(item.expressSurcharge || 0) / 100));
+      }
+    }
+    return prices;
+  }
+
+  private normalizeServicePrices(servicePrices: Record<string, number>): Record<string, number> {
+    return Object.entries(servicePrices).reduce<Record<string, number>>((acc, [serviceName, price]) => {
+      const key = this.normalizeServiceName(serviceName);
+      if (key) acc[key] = Number(price || 0);
+      return acc;
+    }, {});
+  }
+
+  private normalizeServiceName(serviceName: string): string {
+    return String(serviceName || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  serviceDisplay(serviceTypes: string[]): string {
+    return this.normalizedServiceSelection(serviceTypes).join(', ');
+  }
+
+  private normalizedServiceSelection(serviceTypes: string[]): string[] {
+    return (serviceTypes || [])
+      .map(service => String(service || '').trim())
+      .filter(Boolean)
+      .filter((service, index, list) => list.findIndex(item => item.toLowerCase() === service.toLowerCase()) === index);
+  }
+
+  private splitServiceDisplay(serviceType?: string): string[] {
+    return String(serviceType || '')
+      .split(',')
+      .map(service => service.trim())
+      .filter(Boolean);
+  }
+
+  private syncServiceTypes(): void {
+    this.serviceTypes = this.serviceCatalog()
+      .filter(service => service.active)
+      .map(service => service.serviceName);
+  }
+
+  private apiDateTime(value?: string): string | undefined {
+    if (!value) return undefined;
+    if (/^\d{4}-\d{2}-\d{2}T/.test(value)) return value;
+    const match = value.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})$/);
+    if (!match) return value;
+    return `${match[3]}-${match[2]}-${match[1]}T${match[4]}:${match[5]}:00`;
+  }
+
+  private displayDateTime(value?: string): string {
+    if (!value) return '';
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (!match) return value;
+    return `${match[3]}-${match[2]}-${match[1]} ${match[4]}:${match[5]}`;
+  }
+
+  private nowDisplayDateTime(): string {
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  }
+
+  private listData<T>(response: T[] | StandardResponse<T[]> | null): T[] {
+    if (!response) return [];
+    if (Array.isArray(response)) return response;
+    return response.data || [];
+  }
+
+  private itemData<T>(response: T | StandardResponse<T> | null): T | null {
+    if (!response) return null;
+    if (typeof response === 'object' && 'success' in response) return response.data || null;
+    return response;
+  }
+
+  private commonMasterValues(response: ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]> | null): string[] {
+    return this.listData(response)
+      .filter(item => item.isActive ?? item.is_active ?? true)
+      .map(item => String(item.value || item.code || '').trim())
+      .filter(Boolean);
   }
 }

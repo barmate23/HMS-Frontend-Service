@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'LOCKED';
@@ -94,6 +94,12 @@ export interface FloorOption {
   id: number;
   name: string;
   hotelId?: number;
+}
+
+export interface PasswordResetResult {
+  success: boolean;
+  message: string;
+  temporaryPassword?: string;
 }
 
 interface StandardResponse<T> {
@@ -236,6 +242,14 @@ interface ApiAuditLog {
   ipAddress?: string;
 }
 
+interface ApiPasswordResetResponse {
+  temporaryPassword?: string;
+  defaultPassword?: string;
+  password?: string;
+  deliveryMode?: string;
+  emailSent?: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class UserManagementService {
   private readonly http = inject(HttpClient);
@@ -284,6 +298,10 @@ export class UserManagementService {
     this.loadAll();
   }
 
+  clearApiError(): void {
+    this.apiError.set(null);
+  }
+
   loadAll(): void {
     this.isLoading.set(true);
     this.apiError.set(null);
@@ -294,7 +312,12 @@ export class UserManagementService {
       departments: this.http.get<StandardResponse<ApiDepartment[]>>(`${this.userBaseUrl}/departments/getAllDepartments`).pipe(catchError(() => of(null))),
       modules: this.http.get<StandardResponse<ApiModule[]>>(`${this.userBaseUrl}/roles/getAllModules`).pipe(catchError(() => of(null))),
       roles: this.http.get<StandardResponse<ApiRole[]>>(`${this.userBaseUrl}/roles/getAllRoles`).pipe(catchError(() => of(null))),
-      users: this.http.get<StandardResponse<ApiUser[]>>(`${this.userBaseUrl}/users/getAllUsers`).pipe(catchError(() => of(null))),
+      users: this.http.get<StandardResponse<ApiUser[]>>(`${this.userBaseUrl}/users/getAllUsers`).pipe(
+        catchError(err => {
+          this.apiError.set(this.apiErrorMessage(err, 'Unable to load users.'));
+          return of(null);
+        })
+      ),
       shifts: this.http.get<StandardResponse<ApiShift[]>>(`${this.userBaseUrl}/shifts/getAllShifts`).pipe(catchError(() => of(null))),
       audit: this.http.get<StandardResponse<ApiAuditLog[]>>(`${this.userBaseUrl}/audit-logs/getAllAuditLogs`).pipe(catchError(() => of(null)))
     }).subscribe({
@@ -316,19 +339,26 @@ export class UserManagementService {
     });
   }
 
-  saveUser(input: Partial<SystemUser>): void {
+  saveUser(input: Partial<SystemUser>): Observable<boolean> {
     const payload = this.toUserRequest(input);
     const request$ = input.id
       ? this.http.put<StandardResponse<ApiUser | object>>(`${this.userBaseUrl}/users/updateUser/${input.id}`, payload)
       : this.http.post<StandardResponse<ApiUser | object>>(`${this.userBaseUrl}/users/createUser`, payload);
 
-    request$.pipe(
-      tap(() => this.loadUsers()),
+    this.apiError.set(null);
+    return request$.pipe(
+      tap(response => {
+        if (response?.success === false) {
+          throw response;
+        }
+        this.loadUsers();
+      }),
+      map(() => true),
       catchError(err => {
-        this.apiError.set(err?.error?.message || err?.message || 'Unable to save user.');
-        return of(null);
+        this.apiError.set(this.apiErrorMessage(err, 'Unable to save user.'));
+        return of(false);
       })
-    ).subscribe();
+    );
   }
 
   deleteUser(id: number): void {
@@ -354,9 +384,14 @@ export class UserManagementService {
 
   getUserById(id: number, onLoaded?: (user: SystemUser) => void): void {
     this.http.get<StandardResponse<ApiUser>>(`${this.userBaseUrl}/users/getUserById/${id}`).pipe(
-      map(response => response.data ? this.mapUser(response.data) : null),
-      tap(user => {
-        if (!user) return;
+      map(response => response.data ? { apiUser: response.data, user: this.mapUser(response.data) } : null),
+      tap(mapped => {
+        if (!mapped) return;
+        const existing = this.users().find(item => item.id === mapped.user.id);
+        const user = {
+          ...mapped.user,
+          shift: this.hasShiftPayload(mapped.apiUser) ? mapped.user.shift : existing?.shift || mapped.user.shift
+        };
         this.users.update(users => users.map(existing => existing.id === user.id ? user : existing));
         onLoaded?.(user);
       }),
@@ -367,9 +402,27 @@ export class UserManagementService {
     ).subscribe();
   }
 
-  resetPassword(id: number): void {
+  resetPassword(id: number): Observable<PasswordResetResult> {
     const user = this.users().find(item => item.id === id);
-    if (user) this.addActivity('System', 'Password reset requested; API endpoint not available', user.fullName, 'Users', 'WARNING');
+    return this.http.post<StandardResponse<ApiPasswordResetResponse>>(`${this.userBaseUrl}/users/resetPassword/${id}`, {}).pipe(
+      tap(response => {
+        if (response?.success === false) {
+          throw response;
+        }
+        if (user) this.addActivity('System', 'Temporary password generated', user.fullName, 'Users', 'INFO');
+      }),
+      map(response => ({
+        success: true,
+        message: response.message || 'Temporary password generated and shared with the user.',
+        temporaryPassword: response.data?.temporaryPassword || response.data?.defaultPassword || response.data?.password
+      })),
+      catchError(err => {
+        const message = this.apiErrorMessage(err, 'Unable to generate temporary password.');
+        this.apiError.set(message);
+        if (user) this.addActivity('System', message, user.fullName, 'Users', 'WARNING');
+        return of({ success: false, message });
+      })
+    );
   }
 
   saveShift(input: Partial<UserShift>): void {
@@ -585,7 +638,10 @@ export class UserManagementService {
   private loadUsers(): void {
     this.http.get<StandardResponse<ApiUser[]>>(`${this.userBaseUrl}/users/getAllUsers`).pipe(
       map(response => response.data || []),
-      catchError(() => of([]))
+      catchError(err => {
+        this.apiError.set(this.apiErrorMessage(err, 'Unable to load users.'));
+        return of([]);
+      })
     ).subscribe(users => this.users.set(users.map(user => this.mapUser(user))));
   }
 
@@ -795,8 +851,10 @@ export class UserManagementService {
 
   private propertyFromApi(value?: ApiCommonMaster | string, id?: number): string {
     const raw = typeof value === 'string' ? value : value?.value || (value as any)?.name || '';
-    const byId = this.properties().find(property => property.id === Number(id));
-    return raw || byId?.name || this.properties()[0]?.name || 'HMS Cloud - Main Hotel';
+    const apiId = Number(id || (typeof value === 'object' ? value?.id : 0));
+    const byId = this.properties().find(property => property.id === apiId);
+    const byName = this.properties().find(property => property.name.toLowerCase() === raw.toLowerCase());
+    return byId?.name || byName?.name || raw || this.properties()[0]?.name || 'HMS Cloud - Main Hotel';
   }
 
   private statusFromApi(status?: string): UserStatus {
@@ -862,6 +920,10 @@ export class UserManagementService {
       shift.code.toLowerCase() === String(raw).toLowerCase()
     );
     return byId?.name || byName?.name || raw || '';
+  }
+
+  private hasShiftPayload(user: ApiUser): boolean {
+    return user.shift !== undefined || user.shiftId !== undefined || user.shiftName !== undefined || user.assignedShift !== undefined;
   }
 
   private timeValue(value: string | undefined, fallback: string): string {
@@ -984,6 +1046,20 @@ export class UserManagementService {
       .join('')
       .slice(0, 4)
       .toUpperCase() || 'SHIFT';
+  }
+
+  private apiErrorMessage(error: any, fallback: string): string {
+    const payload = error?.error || error;
+    const validationData = payload?.data && typeof payload.data === 'object'
+      ? Object.values(payload.data).filter(Boolean).join(' ')
+      : '';
+
+    return validationData
+      || payload?.message
+      || payload?.error?.message
+      || payload?.error?.details
+      || error?.message
+      || fallback;
   }
 
 }

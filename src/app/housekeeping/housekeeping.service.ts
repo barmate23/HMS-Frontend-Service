@@ -34,8 +34,13 @@ export interface HKRoom {
   checkoutDate?: string;
   lastCleaned?: string;
   assignedToId?: number;
+  assignedStaffName?: string;
   dnd: boolean;
   priority: Priority;
+  tasksCount?: number;
+  maintenanceCount?: number;
+  lostFoundCount?: number;
+  sopChecksCount?: number;
 }
 
 export interface HKTask {
@@ -251,6 +256,60 @@ interface UserRoomAssignmentRequest {
   assignedBy: string;
 }
 
+export interface HousekeepingDashboardSummary {
+  readyRooms?: number;
+  needService?: number;
+  blockedDnd?: number;
+  openTasks?: number;
+  repairIssues?: number;
+  sopChecks?: number;
+  readyPercentage?: number;
+}
+
+export interface HousekeepingAttentionItem {
+  label?: string;
+  count?: number;
+  type?: string;
+}
+
+export interface HousekeepingTeamLoad {
+  pendingSubmissions?: number;
+  inProgress?: number;
+  staffProfiles?: number;
+}
+
+export interface HousekeepingAuditReadiness {
+  activeSop?: string;
+  checkpoints?: number;
+  roomsTracked?: number;
+}
+
+export interface HousekeepingRoomBoard {
+  roomNumber?: string;
+  category?: string;
+  status?: string;
+  tasksCount?: number;
+  maintenanceCount?: number;
+  lostFoundCount?: number;
+  sopChecksCount?: number;
+  assignedStaff?: string;
+  statusColor?: string;
+}
+
+export interface HousekeepingFloorRoomBoard {
+  floorName?: string;
+  roomCount?: number;
+  rooms?: HousekeepingRoomBoard[];
+}
+
+export interface HousekeepingDashboardData {
+  summary?: HousekeepingDashboardSummary;
+  attentionQueue?: HousekeepingAttentionItem[];
+  teamLoad?: HousekeepingTeamLoad;
+  auditReadiness?: HousekeepingAuditReadiness;
+  floorRoomBoard?: HousekeepingFloorRoomBoard[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class HousekeepingService {
   private readonly http = inject(HttpClient);
@@ -258,12 +317,14 @@ export class HousekeepingService {
   private readonly lostFoundApiBase = '/api/hmsService/v1/lost-found';
   private readonly maintenanceApiBase = '/api/hmsService/v1/maintenance';
   private readonly auditApiBase = '/api/hmsService/v1/housekeeping/audit';
+  private readonly dashboardApiBase = '/api/hmsService/v1/housekeeping/dashboard';
   private readonly staffApiBase = '/api/hmsService/v1/housekeeping/staff';
   private readonly hmsApiBase = '/api/hmsService/v1';
   private readonly masterApiBase = '/api/masterService/v1';
 
   private _rooms = signal<HKRoom[]>([]);
   private _roomFloors = signal<string[]>([]);
+  private _dashboard = signal<HousekeepingDashboardData | null>(null);
 
   private _tasks = signal<HKTask[]>([]);
 
@@ -291,6 +352,7 @@ export class HousekeepingService {
   // Public read-only signals
   readonly rooms      = this._rooms.asReadonly();
   readonly roomFloors = this._roomFloors.asReadonly();
+  readonly dashboard  = this._dashboard.asReadonly();
   readonly tasks      = this._tasks.asReadonly();
   readonly staff      = this._staff.asReadonly();
   readonly lostFound  = this._lostFound.asReadonly();
@@ -332,6 +394,7 @@ export class HousekeepingService {
   readonly staffMap = computed(() => new Map(this._staff().map(s => [s.id, s])));
 
   constructor() {
+    this.loadDashboard();
     this.loadRooms();
     this.loadStaff();
     this.loadTasks();
@@ -341,6 +404,16 @@ export class HousekeepingService {
     this.loadMaintenanceMasters();
     this.loadSopMasters();
     this.loadSopCheckpoints();
+  }
+
+  loadDashboard() {
+    this.http.get<ApiResponse<HousekeepingDashboardData>>(`${this.dashboardApiBase}/getHkDashboardData`).subscribe({
+      next: response => this._dashboard.set(response.data ?? null),
+      error: error => {
+        console.error('Failed to load housekeeping dashboard data', error);
+        this._dashboard.set(null);
+      },
+    });
   }
 
   // --- Room CRUD ---
@@ -720,7 +793,7 @@ export class HousekeepingService {
   }
 
   loadLostFoundCategories() {
-    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/housekeeping/audit/getCommonMaster/LOST_FOUND_CATEGORY`).subscribe({
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/LOST_FOUND_CATEGORY`).subscribe({
       next: response => this._lostFoundCategories.set(this.commonMasterData(response)),
       error: error => {
         console.error('Failed to load lost and found categories', error);
@@ -790,15 +863,15 @@ export class HousekeepingService {
   }
 
   loadMaintenanceMasters() {
-    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/housekeeping/audit/getCommonMaster/MAINTENANCE_CATEGORY`).subscribe({
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/MAINTENANCE_CATEGORY`).subscribe({
       next: response => this._maintenanceCategories.set(this.commonMasterData(response)),
       error: error => console.error('Failed to load maintenance categories', error),
     });
-    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/housekeeping/audit/getCommonMaster/MAINTENANCE_PRIORITY`).subscribe({
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/MAINTENANCE_PRIORITY`).subscribe({
       next: response => this._maintenancePriorities.set(this.commonMasterData(response)),
       error: error => console.error('Failed to load maintenance priorities', error),
     });
-    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/housekeeping/audit/getCommonMaster/MAINTENANCE_STATUS`).subscribe({
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/MAINTENANCE_STATUS`).subscribe({
       next: response => this._maintenanceStatuses.set(this.commonMasterData(response)),
       error: error => console.error('Failed to load maintenance statuses', error),
     });
@@ -872,21 +945,21 @@ export class HousekeepingService {
   }
 
   loadSopMasters() {
-    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.auditApiBase}/getCommonMaster/SOP_FREQUENCY`).subscribe({
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/SOP_FREQUENCY`).subscribe({
       next: response => this._sopFrequencyOptions.set(this.commonMasterData(response)),
       error: error => {
         console.error('Failed to load SOP frequencies', error);
         this._sopFrequencyOptions.set([]);
       },
     });
-    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.auditApiBase}/getCommonMaster/AUDIT_AREA`).subscribe({
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/AUDIT_AREA`).subscribe({
       next: response => this._sopAuditAreaOptions.set(this.commonMasterData(response)),
       error: error => {
         console.error('Failed to load audit areas', error);
         this._sopAuditAreaOptions.set([]);
       },
     });
-    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.auditApiBase}/getCommonMaster/RESPONSIBLE_ROLE`).subscribe({
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/RESPONSIBLE_ROLE`).subscribe({
       next: response => this._sopResponsibleRoleOptions.set(this.commonMasterData(response)),
       error: error => {
         console.error('Failed to load responsible roles', error);

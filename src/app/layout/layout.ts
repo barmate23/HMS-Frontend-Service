@@ -55,8 +55,7 @@ export class Layout {
         { label: 'Create Order', icon: 'add_circle', route: '/laundry/create' },
         { label: 'Order Tracking', icon: 'list_alt', route: '/laundry/orders' },
         { label: 'Status Flow', icon: 'timeline', route: '/laundry/detail' },
-        { label: 'Price Master', icon: 'inventory_2', route: '/laundry/catalogue' },
-        { label: 'Reports', icon: 'bar_chart', route: '/laundry/reports' }
+        { label: 'Price Master', icon: 'inventory_2', route: '/laundry/catalogue' }
       ]
     },
     {

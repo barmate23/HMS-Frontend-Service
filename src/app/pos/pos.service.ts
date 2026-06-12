@@ -130,6 +130,68 @@ export interface PosAuditLog {
   reference: string;
 }
 
+export interface PosDashboardFloorPulse {
+  totalTables?: number;
+  occupied?: number;
+  available?: number;
+  reserved?: number;
+  occupiedPercent?: number;
+  availablePercent?: number;
+  reservedPercent?: number;
+}
+
+export interface PosDashboardKotQueueItem {
+  orderId?: string;
+  outletName?: string;
+  info?: string;
+  itemCount?: number;
+  status?: string;
+}
+
+export interface PosDashboardOutletRevenue {
+  outletName?: string;
+  billCount?: number;
+  totalAmount?: number;
+}
+
+export interface PosDashboardPaymentSplit {
+  method?: string;
+  percentage?: number;
+  amount?: number;
+}
+
+export interface PosDashboardFastMovingItem {
+  itemName?: string;
+  outletName?: string;
+  soldQty?: number;
+  imageUrl?: string | null;
+}
+
+export interface PosDashboardBillingWatch {
+  openBillsCount?: number;
+  openBillsAmount?: number;
+  roomPostingPendingCount?: number;
+  roomPostingPendingAmount?: number;
+  voidsCount?: number;
+  voidsAmount?: number;
+}
+
+export interface PosDashboardRecentActivity {
+  activityType?: string;
+  linkedEntityId?: string;
+  timestamp?: string;
+}
+
+export interface PosDashboardData {
+  floorPulse?: PosDashboardFloorPulse;
+  kotQueue?: PosDashboardKotQueueItem[];
+  revenueMix?: PosDashboardOutletRevenue[];
+  paymentSplit?: PosDashboardPaymentSplit[];
+  fastMovingItems?: PosDashboardFastMovingItem[];
+  billingWatch?: PosDashboardBillingWatch;
+  recentActivity?: PosDashboardRecentActivity[];
+}
+
 interface ApiOutlet {
   id: number;
   name?: string;
@@ -292,6 +354,7 @@ export class PosService {
   readonly bills = signal<PosBill[]>([]);
   readonly shifts = signal<PosShift[]>([]);
   readonly auditLogs = signal<PosAuditLog[]>([]);
+  readonly posDashboard = signal<PosDashboardData | null>(null);
 
   readonly outletMap = computed(() => new Map(this.outlets().map(outlet => [outlet.id, outlet])));
 
@@ -314,10 +377,11 @@ export class PosService {
     this.loadTables();
     this.loadMenuItems();
     this.loadOrders();
+    this.loadPosDashboard();
   }
 
   loadOutletTypes(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/OUTLET_TYPE`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/OUTLET_TYPE`).subscribe({
       next: response => {
         const outletTypes = this.commonMastersData(response)
           .map(item => item.value || item.code || '')
@@ -331,7 +395,7 @@ export class PosService {
   }
 
   loadShiftSchedules(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/SHIFT_SCHEDULE`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/SHIFT_SCHEDULE`).subscribe({
       next: response => {
         const shiftSchedules = this.commonMastersData(response)
           .map(item => item.value || item.code || '')
@@ -344,7 +408,7 @@ export class PosService {
   }
 
   loadTableStatuses(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/TABLE_STATUS`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/TABLE_STATUS`).subscribe({
       next: response => {
         this.tableStatusMasters.set(this.commonMastersData(response));
         const tableStatuses = this.commonMastersData(response)
@@ -358,7 +422,7 @@ export class PosService {
   }
 
   loadTableSections(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/TABLE_SECTION`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/TABLE_SECTION`).subscribe({
       next: response => {
         this.tableSectionMasters.set(this.commonMastersData(response));
         const tableSections = this.commonMastersData(response)
@@ -372,7 +436,7 @@ export class PosService {
   }
 
   loadMenuCategories(): void {
-    this.http.get<ApiCommonMaster[] | ApiListResponse<ApiCommonMaster> | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/FOOD_CATEGORY`).subscribe({
+    this.http.get<ApiCommonMaster[] | ApiListResponse<ApiCommonMaster> | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/FOOD_CATEGORY`).subscribe({
       next: response => {
         const masters = this.commonMastersData(response);
         this.menuCategoryMasters.set(masters);
@@ -387,7 +451,7 @@ export class PosService {
   }
 
   loadMenuSubcategories(): void {
-    this.http.get<ApiCommonMaster[] | ApiListResponse<ApiCommonMaster> | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/FOOD_SUBCATEGORY`).subscribe({
+    this.http.get<ApiCommonMaster[] | ApiListResponse<ApiCommonMaster> | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/FOOD_SUBCATEGORY`).subscribe({
       next: response => {
         const masters = this.commonMastersData(response);
         this.menuSubcategoryMasters.set(masters);
@@ -402,7 +466,7 @@ export class PosService {
   }
 
   loadOrderStatuses(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/ORDER_STATUS`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/ORDER_STATUS`).subscribe({
       next: response => {
         const orderStatuses = this.commonMastersData(response)
           .map(item => item.value || item.code || '')
@@ -415,7 +479,7 @@ export class PosService {
   }
 
   loadBillStatuses(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/BILL_STATUS`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/BILL_STATUS`).subscribe({
       next: response => {
         const billStatuses = this.commonMastersData(response)
           .map(item => item.value || item.code || '')
@@ -428,7 +492,7 @@ export class PosService {
   }
 
   loadPaymentModes(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/PAYMENT_MODE`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/PAYMENT_MODE`).subscribe({
       next: response => {
         const paymentModes = this.commonMastersData(response)
           .map(item => item.value || item.code || '')
@@ -441,7 +505,7 @@ export class PosService {
   }
 
   loadVoidReasons(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/VOID_REASON`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/VOID_REASON`).subscribe({
       next: response => {
         const voidReasons = this.commonMastersData(response)
           .map(item => item.value || item.code || '')
@@ -487,6 +551,13 @@ export class PosService {
     this.http.get<ApiOrder[] | ApiListResponse<ApiOrder> | StandardResponse<ApiOrder[]>>(`${this.posBaseUrl}/orders/getAllOrders`).subscribe({
       next: response => this.orders.set(this.listData(response).map(item => this.mapOrder(item))),
       error: error => this.addAudit('Unable to load orders from API', 'Orders', error?.error?.message || error?.message || 'API error')
+    });
+  }
+
+  loadPosDashboard(): void {
+    this.http.get<StandardResponse<PosDashboardData>>(`${this.posBaseUrl}/dashboard/getPosDashboardData`).subscribe({
+      next: response => this.posDashboard.set(response?.data || null),
+      error: error => this.addAudit('Unable to load POS dashboard from API', 'Dashboard', error?.error?.message || error?.message || 'API error')
     });
   }
 

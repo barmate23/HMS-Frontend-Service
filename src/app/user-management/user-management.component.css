@@ -24,7 +24,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 6px;
   background: var(--surface-50);
   padding: 4px 8px;
   border-radius: 6px;
@@ -35,6 +36,7 @@
 
 .tabs-container,
 .nav-right,
+.nav-actions,
 .action-row,
 .role-actions {
   display: flex;
@@ -43,14 +45,15 @@
 }
 
 .tabs-container {
-  overflow-x: auto;
-  scrollbar-width: none;
-  flex: 0 1 auto;
+  overflow: visible;
+  scrollbar-width: auto;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
   min-width: 0;
 }
 
 .tabs-container::-webkit-scrollbar {
-  display: none;
+  display: initial;
 }
 
 .tab-btn,
@@ -92,16 +95,27 @@
 }
 
 .nav-right {
-  flex: 1;
+  min-height: 34px;
+  flex: 0 0 auto;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  padding: 4px 8px;
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  background: var(--surface-50);
   min-width: 0;
+}
+
+.nav-actions {
+  flex: 0 0 auto;
+  justify-content: flex-end;
 }
 
 .search-box {
   height: 26px;
   min-width: 180px;
-  max-width: 260px;
-  flex: 1;
+  max-width: 280px;
+  flex: 1 1 220px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -127,7 +141,8 @@
 
 .filter-select {
   height: 26px;
-  min-width: 132px;
+  min-width: 128px;
+  flex: 0 1 170px;
   border: 1px solid var(--surface-200);
   border-radius: 4px;
   background: white;
@@ -266,11 +281,12 @@
 }
 
 .card-header {
-  min-height: 36px;
-  padding: 8px 12px;
+  min-height: 50px;
+  padding: 8px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   border-bottom: 2px solid var(--primary-light);
 }
 
@@ -284,6 +300,76 @@
 .card-header span {
   font-size: 11px;
   color: var(--surface-700);
+}
+
+.card-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex: 0 0 auto;
+  min-width: 210px;
+}
+
+.card-title-group > span {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.count-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.users-count {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.roles-count {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.departments-count {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.shifts-count {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.activity-count {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.card-header-tools {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.card-header-tools .search-box {
+  min-width: 240px;
+  max-width: 340px;
+  flex: 1 1 300px;
+}
+
+.card-header-tools .filter-select {
+  min-width: 150px;
+  flex: 0 0 180px;
 }
 
 .table-wrap,
@@ -598,7 +684,16 @@
   flex: 1;
   min-height: 0;
   display: flex;
+  flex-direction: column;
+  gap: 8px;
   overflow: hidden;
+}
+
+.inline-section-header {
+  flex-shrink: 0;
+  border: 1px solid var(--surface-200);
+  border-radius: 8px;
+  background: white;
 }
 
 .shift-layout {
@@ -1257,6 +1352,29 @@
   overflow: auto;
 }
 
+.modal-alert {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.modal-alert .material-icons-round {
+  font-size: 19px;
+}
+
+.modal-alert.error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
 .confirm-body {
   display: grid;
   grid-template-columns: 54px minmax(0, 1fr);
@@ -1538,15 +1656,26 @@
 
 @media (max-width: 900px) {
   .compact-nav,
-  .nav-right {
+  .card-header,
+  .card-header-tools {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .nav-right,
+  .tabs-container {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .card-title-group,
+  .card-header-tools,
+  .card-header-tools .search-box,
+  .card-header-tools .filter-select,
   .search-box {
     width: 100%;
     max-width: none;
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   .stats-grid,

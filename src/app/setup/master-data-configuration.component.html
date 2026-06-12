@@ -93,7 +93,6 @@
               <th>Value</th>
               <th>Description</th>
               <th>Status</th>
-              <th>Updated</th>
               <th class="right">Actions</th>
             </tr>
           </thead>
@@ -104,7 +103,6 @@
               <td>{{ record.value }}</td>
               <td>{{ record.description || '-' }}</td>
               <td><span class="status-pill" [class.inactive]="!record.isActive">{{ record.isActive ? 'ACTIVE' : 'INACTIVE' }}</span></td>
-              <td>{{ record.updatedAt || record.createdAt || '-' }}</td>
               <td class="right">
                 <div class="row-actions">
                   <button type="button" class="icon-btn" [title]="record.isActive ? 'Deactivate' : 'Activate'" (click)="toggleActive(record)">

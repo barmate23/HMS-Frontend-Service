@@ -1,8 +1,10 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, switchMap, throwError } from 'rxjs';
+import { Observable, catchError, finalize, shareReplay, switchMap, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
+
+let refreshRequest$: Observable<boolean> | null = null;
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
@@ -35,7 +37,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         return throwError(() => error);
       }
 
-      return auth.refreshSession().pipe(
+      if (!refreshRequest$) {
+        refreshRequest$ = auth.refreshSession().pipe(
+          finalize(() => refreshRequest$ = null),
+          shareReplay({ bufferSize: 1, refCount: false })
+        );
+      }
+
+      return refreshRequest$.pipe(
         switchMap(refreshed => {
           if (!refreshed) {
             router.navigate(['/login']);

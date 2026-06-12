@@ -312,7 +312,12 @@ export class UserManagementService {
       departments: this.http.get<StandardResponse<ApiDepartment[]>>(`${this.userBaseUrl}/departments/getAllDepartments`).pipe(catchError(() => of(null))),
       modules: this.http.get<StandardResponse<ApiModule[]>>(`${this.userBaseUrl}/roles/getAllModules`).pipe(catchError(() => of(null))),
       roles: this.http.get<StandardResponse<ApiRole[]>>(`${this.userBaseUrl}/roles/getAllRoles`).pipe(catchError(() => of(null))),
-      users: this.http.get<StandardResponse<ApiUser[]>>(`${this.userBaseUrl}/users/getAllUsers`).pipe(catchError(() => of(null))),
+      users: this.http.get<StandardResponse<ApiUser[]>>(`${this.userBaseUrl}/users/getAllUsers`).pipe(
+        catchError(err => {
+          this.apiError.set(this.apiErrorMessage(err, 'Unable to load users.'));
+          return of(null);
+        })
+      ),
       shifts: this.http.get<StandardResponse<ApiShift[]>>(`${this.userBaseUrl}/shifts/getAllShifts`).pipe(catchError(() => of(null))),
       audit: this.http.get<StandardResponse<ApiAuditLog[]>>(`${this.userBaseUrl}/audit-logs/getAllAuditLogs`).pipe(catchError(() => of(null)))
     }).subscribe({
@@ -633,7 +638,10 @@ export class UserManagementService {
   private loadUsers(): void {
     this.http.get<StandardResponse<ApiUser[]>>(`${this.userBaseUrl}/users/getAllUsers`).pipe(
       map(response => response.data || []),
-      catchError(() => of([]))
+      catchError(err => {
+        this.apiError.set(this.apiErrorMessage(err, 'Unable to load users.'));
+        return of([]);
+      })
     ).subscribe(users => this.users.set(users.map(user => this.mapUser(user))));
   }
 

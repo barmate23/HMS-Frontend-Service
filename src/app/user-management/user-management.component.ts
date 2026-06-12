@@ -82,7 +82,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     return {
       total: users.length,
       active: users.filter(user => user.status === 'ACTIVE').length,
-      locked: users.filter(user => user.status === 'LOCKED').length,
+      inactive: users.filter(user => user.status === 'INACTIVE').length,
       twoFactor: users.filter(user => user.twoFactorEnabled).length,
       roles: this.userService.roles().length,
       admins: this.userService.roles().filter(role => role.level === 'Admin').length

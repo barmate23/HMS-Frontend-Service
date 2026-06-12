@@ -381,7 +381,7 @@ export class PosService {
   }
 
   loadOutletTypes(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/OUTLET_TYPE`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/OUTLET_TYPE`).subscribe({
       next: response => {
         const outletTypes = this.commonMastersData(response)
           .map(item => item.value || item.code || '')
@@ -395,7 +395,7 @@ export class PosService {
   }
 
   loadShiftSchedules(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/SHIFT_SCHEDULE`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/SHIFT_SCHEDULE`).subscribe({
       next: response => {
         const shiftSchedules = this.commonMastersData(response)
           .map(item => item.value || item.code || '')
@@ -408,7 +408,7 @@ export class PosService {
   }
 
   loadTableStatuses(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/TABLE_STATUS`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/TABLE_STATUS`).subscribe({
       next: response => {
         this.tableStatusMasters.set(this.commonMastersData(response));
         const tableStatuses = this.commonMastersData(response)
@@ -422,7 +422,7 @@ export class PosService {
   }
 
   loadTableSections(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/TABLE_SECTION`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/TABLE_SECTION`).subscribe({
       next: response => {
         this.tableSectionMasters.set(this.commonMastersData(response));
         const tableSections = this.commonMastersData(response)
@@ -436,7 +436,7 @@ export class PosService {
   }
 
   loadMenuCategories(): void {
-    this.http.get<ApiCommonMaster[] | ApiListResponse<ApiCommonMaster> | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/FOOD_CATEGORY`).subscribe({
+    this.http.get<ApiCommonMaster[] | ApiListResponse<ApiCommonMaster> | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/FOOD_CATEGORY`).subscribe({
       next: response => {
         const masters = this.commonMastersData(response);
         this.menuCategoryMasters.set(masters);
@@ -451,7 +451,7 @@ export class PosService {
   }
 
   loadMenuSubcategories(): void {
-    this.http.get<ApiCommonMaster[] | ApiListResponse<ApiCommonMaster> | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/FOOD_SUBCATEGORY`).subscribe({
+    this.http.get<ApiCommonMaster[] | ApiListResponse<ApiCommonMaster> | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/FOOD_SUBCATEGORY`).subscribe({
       next: response => {
         const masters = this.commonMastersData(response);
         this.menuSubcategoryMasters.set(masters);
@@ -466,7 +466,7 @@ export class PosService {
   }
 
   loadOrderStatuses(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/ORDER_STATUS`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/ORDER_STATUS`).subscribe({
       next: response => {
         const orderStatuses = this.commonMastersData(response)
           .map(item => item.value || item.code || '')
@@ -479,7 +479,7 @@ export class PosService {
   }
 
   loadBillStatuses(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/BILL_STATUS`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/BILL_STATUS`).subscribe({
       next: response => {
         const billStatuses = this.commonMastersData(response)
           .map(item => item.value || item.code || '')
@@ -492,7 +492,7 @@ export class PosService {
   }
 
   loadPaymentModes(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/PAYMENT_MODE`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/PAYMENT_MODE`).subscribe({
       next: response => {
         const paymentModes = this.commonMastersData(response)
           .map(item => item.value || item.code || '')
@@ -505,7 +505,7 @@ export class PosService {
   }
 
   loadVoidReasons(): void {
-    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/housekeeping/audit/getCommonMaster/VOID_REASON`).subscribe({
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/VOID_REASON`).subscribe({
       next: response => {
         const voidReasons = this.commonMastersData(response)
           .map(item => item.value || item.code || '')

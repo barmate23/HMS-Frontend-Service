@@ -793,7 +793,7 @@ export class HousekeepingService {
   }
 
   loadLostFoundCategories() {
-    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/housekeeping/audit/getCommonMaster/LOST_FOUND_CATEGORY`).subscribe({
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/LOST_FOUND_CATEGORY`).subscribe({
       next: response => this._lostFoundCategories.set(this.commonMasterData(response)),
       error: error => {
         console.error('Failed to load lost and found categories', error);
@@ -863,15 +863,15 @@ export class HousekeepingService {
   }
 
   loadMaintenanceMasters() {
-    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/housekeeping/audit/getCommonMaster/MAINTENANCE_CATEGORY`).subscribe({
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/MAINTENANCE_CATEGORY`).subscribe({
       next: response => this._maintenanceCategories.set(this.commonMasterData(response)),
       error: error => console.error('Failed to load maintenance categories', error),
     });
-    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/housekeeping/audit/getCommonMaster/MAINTENANCE_PRIORITY`).subscribe({
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/MAINTENANCE_PRIORITY`).subscribe({
       next: response => this._maintenancePriorities.set(this.commonMasterData(response)),
       error: error => console.error('Failed to load maintenance priorities', error),
     });
-    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/housekeeping/audit/getCommonMaster/MAINTENANCE_STATUS`).subscribe({
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/MAINTENANCE_STATUS`).subscribe({
       next: response => this._maintenanceStatuses.set(this.commonMasterData(response)),
       error: error => console.error('Failed to load maintenance statuses', error),
     });
@@ -945,21 +945,21 @@ export class HousekeepingService {
   }
 
   loadSopMasters() {
-    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.auditApiBase}/getCommonMaster/SOP_FREQUENCY`).subscribe({
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/SOP_FREQUENCY`).subscribe({
       next: response => this._sopFrequencyOptions.set(this.commonMasterData(response)),
       error: error => {
         console.error('Failed to load SOP frequencies', error);
         this._sopFrequencyOptions.set([]);
       },
     });
-    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.auditApiBase}/getCommonMaster/AUDIT_AREA`).subscribe({
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/AUDIT_AREA`).subscribe({
       next: response => this._sopAuditAreaOptions.set(this.commonMasterData(response)),
       error: error => {
         console.error('Failed to load audit areas', error);
         this._sopAuditAreaOptions.set([]);
       },
     });
-    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.auditApiBase}/getCommonMaster/RESPONSIBLE_ROLE`).subscribe({
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/RESPONSIBLE_ROLE`).subscribe({
       next: response => this._sopResponsibleRoleOptions.set(this.commonMasterData(response)),
       error: error => {
         console.error('Failed to load responsible roles', error);

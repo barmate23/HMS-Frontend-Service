@@ -70,6 +70,30 @@ export class Layout {
       ]
     },
     {
+      label: 'Inventory',
+      icon: 'inventory',
+      expanded: false,
+      children: [
+        { label: 'Dashboard', icon: 'dashboard', route: '/inventory/dashboard' },
+        { label: 'Stock Ledger', icon: 'inventory_2', route: '/inventory/stock' },
+        { label: 'Minibar Stock', icon: 'local_bar', route: '/inventory/minibar' },
+        { label: 'Purchase Requests', icon: 'assignment_add', route: '/inventory/requests' },
+        { label: 'Store Issues', icon: 'outbox', route: '/inventory/issues' }
+      ]
+    },
+    {
+      label: 'Purchase',
+      icon: 'shopping_cart_checkout',
+      expanded: false,
+      children: [
+        { label: 'Dashboard', icon: 'dashboard', route: '/purchase/dashboard' },
+        { label: 'Suppliers', icon: 'storefront', route: '/purchase/suppliers' },
+        { label: 'Purchase Orders', icon: 'shopping_cart', route: '/purchase/orders' },
+        { label: 'Inward Stock', icon: 'move_to_inbox', route: '/purchase/inward' },
+        { label: 'Vendor Bills', icon: 'receipt_long', route: '/purchase/bills' }
+      ]
+    },
+    {
       label: 'Hotel Setup',
       icon: 'domain',
       expanded: false,

@@ -985,10 +985,10 @@
       </div>
     </div>
     <div class="ci-footer">
-      <button class="ci-btn-cancel" (click)="isStatusModalOpen.set(false)">Cancel</button>
-      <button class="ci-btn-confirm" (click)="saveRoomStatus()">
+      <button class="ci-btn-cancel" [disabled]="isStatusSaving()" (click)="isStatusModalOpen.set(false)">Cancel</button>
+      <button class="ci-btn-confirm" [disabled]="isStatusSaving()" (click)="saveRoomStatus()">
         <span class="material-icons-round">save</span>
-        Save Changes
+        {{ isStatusSaving() ? 'Saving...' : 'Save Changes' }}
       </button>
     </div>
   </div>

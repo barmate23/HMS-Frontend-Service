@@ -121,6 +121,7 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   isMaintModalOpen   = signal(false);
   isMaintViewModalOpen = signal(false);
   isStatusModalOpen  = signal(false);
+  isStatusSaving     = signal(false);
   isSopModalOpen     = signal(false);
   isStaffTaskModalOpen = signal(false);
   isStaffRoomModalOpen = signal(false);
@@ -972,14 +973,21 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
 
   saveRoomStatus() {
     const room = this.selectedRoom();
-    if (!room) return;
-    this.hk.updateRoomStatus(room.id, this.newRoomStatus());
-    this.isStatusModalOpen.set(false);
+    if (!room || this.isStatusSaving()) return;
+
+    this.isStatusSaving.set(true);
+    this.hk.updateRoomStatus(room.id, this.newRoomStatus()).subscribe({
+      next: () => {
+        this.isStatusSaving.set(false);
+        this.isStatusModalOpen.set(false);
+      },
+      error: () => this.isStatusSaving.set(false),
+    });
   }
 
   quickStatusChange(room: HKRoom, status: HKStatus, event: Event) {
     event.stopPropagation();
-    this.hk.updateRoomStatus(room.id, status);
+    this.hk.updateRoomStatus(room.id, status).subscribe();
   }
 
   // --- Task Modal ---

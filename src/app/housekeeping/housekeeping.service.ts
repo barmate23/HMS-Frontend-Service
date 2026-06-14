@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import { Observable, forkJoin, of, throwError } from 'rxjs';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 
 export type HKStatus =
   | 'VACANT_CLEAN'
@@ -130,6 +131,12 @@ export interface CommonMasterOption {
   code?: string;
   value: string;
   description?: string;
+  isActive?: boolean;
+}
+
+interface UpdateHkStatusRequest {
+  roomId: number;
+  hkStatusId: number;
 }
 
 interface ApiTaskDTO {
@@ -321,6 +328,17 @@ export class HousekeepingService {
   private readonly staffApiBase = '/api/hmsService/v1/housekeeping/staff';
   private readonly hmsApiBase = '/api/hmsService/v1';
   private readonly masterApiBase = '/api/masterService/v1';
+  private readonly hkStatusCodeByStatus: Record<HKStatus, string> = {
+    VACANT_CLEAN: 'VC',
+    VACANT_DIRTY: 'VD',
+    OCCUPIED_CLEAN: 'OC',
+    OCCUPIED_DIRTY: 'OD',
+    INSPECTED: 'INS',
+    OUT_OF_ORDER: 'OOO',
+    DO_NOT_DISTURB: 'DND',
+    UNDER_MAINTENANCE: 'UM',
+  };
+  private hkStatusIdByStatus?: Map<HKStatus, number>;
 
   private _rooms = signal<HKRoom[]>([]);
   private _roomFloors = signal<string[]>([]);
@@ -442,8 +460,59 @@ export class HousekeepingService {
     });
   }
 
-  updateRoomStatus(roomId: number, status: HKStatus) {
+  updateRoomStatus(roomId: number, status: HKStatus): Observable<void> {
+    const previousRooms = this._rooms();
+    this.applyLocalRoomStatus(roomId, status);
+
+    return this.resolveHkStatusId(status).pipe(
+      switchMap(hkStatusId => {
+        const payload: UpdateHkStatusRequest = { roomId, hkStatusId };
+        return this.http.post<ApiResponse<void>>(`${this.dashboardApiBase}/updateHkStatus`, payload);
+      }),
+      tap(() => {
+        this.loadDashboard();
+        this.loadRooms();
+      }),
+      map(() => undefined),
+      catchError(error => {
+        console.error('Failed to update housekeeping room status', error);
+        this._rooms.set(previousRooms);
+        this.loadDashboard();
+        this.loadRooms();
+        return throwError(() => error);
+      }),
+    );
+  }
+
+  private applyLocalRoomStatus(roomId: number, status: HKStatus) {
     this._rooms.update(list => list.map(r => r.id === roomId ? { ...r, hkStatus: status, lastCleaned: status === 'VACANT_CLEAN' || status === 'INSPECTED' ? new Date().toISOString() : r.lastCleaned } : r));
+  }
+
+  private resolveHkStatusId(status: HKStatus): Observable<number> {
+    const cached = this.hkStatusIdByStatus?.get(status);
+    if (cached) return of(cached);
+
+    return this.http.get<ApiResponse<CommonMasterOption[]>>(`${this.hmsApiBase}/common/getCommonMaster/HK_STATUS`).pipe(
+      map(response => {
+        const codeToStatus = new Map(Object.entries(this.hkStatusCodeByStatus).map(([hkStatus, code]) => [code, hkStatus as HKStatus]));
+        const statusIds = new Map<HKStatus, number>();
+        const options = [...(response.data ?? [])]
+          .filter(option => option.id && option.isActive !== false)
+          .sort((a, b) => Number(a.id) - Number(b.id));
+
+        for (const option of options) {
+          const statusKey = codeToStatus.get(String(option.code || '').trim().toUpperCase());
+          if (statusKey && !statusIds.has(statusKey)) {
+            statusIds.set(statusKey, Number(option.id));
+          }
+        }
+
+        this.hkStatusIdByStatus = statusIds;
+        const id = statusIds.get(status);
+        if (!id) throw new Error(`No HK_STATUS common master id found for ${status}`);
+        return id;
+      }),
+    );
   }
 
   assignRoomToStaff(roomId: number, staffId: number | undefined) {

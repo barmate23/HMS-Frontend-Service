@@ -609,12 +609,26 @@ h1 {
   color: var(--accent-color);
 }
 
-.item-row img {
+.item-row img,
+.item-image-placeholder {
   width: 54px;
   height: 54px;
   border-radius: 8px;
+}
+
+.item-row img {
   object-fit: cover;
   background: var(--surface-100);
+}
+
+.item-image-placeholder {
+  display: grid;
+  place-items: center;
+  background: var(--primary-light);
+  color: var(--primary-color);
+  font-size: 18px;
+  font-weight: 950;
+  text-transform: uppercase;
 }
 
 .item-main {

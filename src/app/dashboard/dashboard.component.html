@@ -196,7 +196,8 @@
         <div class="item-list" *ngIf="activeSellingTab() === 'top' && topSellingItems().length">
           <div class="item-row" *ngFor="let item of topSellingItems(); let i = index">
             <b>{{ i + 1 }}</b>
-            <img [src]="item.imageUrl" [alt]="item.name" loading="lazy">
+            <img *ngIf="item.imageUrl" [src]="item.imageUrl" [alt]="item.name" loading="lazy">
+            <span *ngIf="!item.imageUrl" class="item-image-placeholder">{{ item.name.slice(0, 1) }}</span>
             <div class="item-main">
               <strong>{{ item.name }}</strong>
               <span>{{ item.category }} / {{ item.subcategory }} - {{ item.qty }} sold</span>
@@ -221,7 +222,8 @@
         <div class="item-list" *ngIf="activeSellingTab() === 'less' && lessSellingItems().length">
           <div class="item-row low" *ngFor="let item of lessSellingItems(); let i = index">
             <b>{{ i + 1 }}</b>
-            <img [src]="item.imageUrl" [alt]="item.name" loading="lazy">
+            <img *ngIf="item.imageUrl" [src]="item.imageUrl" [alt]="item.name" loading="lazy">
+            <span *ngIf="!item.imageUrl" class="item-image-placeholder">{{ item.name.slice(0, 1) }}</span>
             <div class="item-main">
               <strong>{{ item.name }}</strong>
               <span>{{ item.category }} / {{ item.subcategory }} - {{ item.qty }} sold</span>

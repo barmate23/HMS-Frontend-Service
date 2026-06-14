@@ -45,7 +45,7 @@
         </label>
         <label>
           <span>Date</span>
-          <input type="date" [ngModel]="mapSelectedDate()" (ngModelChange)="mapSelectedDate.set($event)">
+          <input type="date" [ngModel]="mapSelectedDate()" (ngModelChange)="onMapDateChange($event)">
         </label>
         <button class="mapv2-fetch-btn" (click)="loadRoomWiseStatus()">
           <span class="material-icons-round">sync</span>
@@ -372,7 +372,7 @@
         </label>
         <label>
           <span>Date</span>
-          <input type="date" [ngModel]="mapSelectedDate()" (ngModelChange)="mapSelectedDate.set($event)">
+          <input type="date" [ngModel]="mapSelectedDate()" (ngModelChange)="onMapDateChange($event)">
         </label>
         <button class="mapv2-fetch-btn" (click)="loadRoomWiseStatus()">
           <span class="material-icons-round">sync</span>

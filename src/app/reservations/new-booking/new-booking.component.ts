@@ -27,9 +27,10 @@ interface ApiRoomType {
 interface ApiRoom {
   id: number;
   roomNumber: string;
-  floorId: number;
-  floorNumber?: string;
-  roomTypeId: number;
+  floorId?: number;
+  floorNumber?: string | null;
+  floor?: number | string | { id?: number; floorId?: number; floorNumber?: string; name?: string };
+  roomTypeId?: number;
   roomTypeName?: string;
   status: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED' | 'CLEANING';
   maxOccupancy?: number;
@@ -268,7 +269,7 @@ export class NewBookingComponent implements OnInit {
 
     forkJoin({
       roomTypes: this.http.get<StandardResponse<ApiRoomType[]>>(`${this.masterBaseUrl}/roomTypes/getAllRoomTypes?page=0&size=50`),
-      rooms: this.http.get<StandardResponse<ApiRoom[]>>(`${this.masterBaseUrl}/rooms/getAllRooms?page=0&size=10`)
+      rooms: this.http.get<StandardResponse<ApiRoom[]>>(`${this.masterBaseUrl}/rooms/getAllRooms?page=0&size=500`)
     }).subscribe({
       next: ({ roomTypes, rooms }) => {
         const activeTypes = (roomTypes.data ?? []).filter(rt => rt.isActive !== false);
@@ -418,22 +419,64 @@ export class NewBookingComponent implements OnInit {
   }
 
   private mapApiRoom(room: ApiRoom, typeMap: Map<number, ApiRoomType>): Room {
-    const roomType = typeMap.get(room.roomTypeId);
-    const typeName = room.roomTypeName || roomType?.name || `Room Type ${room.roomTypeId}`;
+    const roomTypeId = Number(room.roomTypeId ?? 0);
+    const floor = this.resolveRoomFloor(room);
+    const roomType = typeMap.get(roomTypeId);
+    const typeName = room.roomTypeName || roomType?.name || (roomTypeId ? `Room Type ${roomTypeId}` : 'Room');
 
     return {
       id: String(room.id),
       number: room.roomNumber,
       type: typeName,
-      typeShort: this.shortCodeForRoomType(typeName, room.roomTypeId),
-      typeId: String(room.roomTypeId),
+      typeShort: this.shortCodeForRoomType(typeName, roomTypeId || room.id),
+      typeId: String(roomTypeId || typeName),
       hotelId: roomType?.hotelId,
-      floor: room.floorId,
+      floor,
       status: this.mapRoomStatus(room.status),
       rate: Number(roomType?.basePricePerNight ?? 0),
-      view: room.floorNumber || `Floor ${room.floorId}`,
+      view: this.resolveFloorLabel(room, floor),
       beds: `${room.maxOccupancy || 1} Pax`
     };
+  }
+
+  private resolveRoomFloor(room: ApiRoom): number {
+    const candidates = [
+      room.floorId,
+      typeof room.floor === 'object' ? room.floor.id : room.floor,
+      typeof room.floor === 'object' ? room.floor.floorId : undefined,
+      room.floorNumber,
+      typeof room.floor === 'object' ? room.floor.floorNumber : undefined,
+      room.roomNumber
+    ];
+
+    for (const value of candidates) {
+      const parsed = this.parseFloorNumber(value);
+      if (parsed) return parsed;
+    }
+
+    return 1;
+  }
+
+  private parseFloorNumber(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value;
+    const text = String(value).trim();
+    const explicitFloor = text.match(/floor\s*(\d+)/i);
+    if (explicitFloor) return Number(explicitFloor[1]);
+    const numeric = Number(text);
+    if (Number.isFinite(numeric) && numeric > 0 && numeric < 100) return numeric;
+    if (Number.isFinite(numeric) && numeric >= 100) return Math.max(1, Math.floor(numeric / 100));
+    const leadingDigits = text.match(/^(\d+)/);
+    return leadingDigits ? Math.max(1, Math.floor(Number(leadingDigits[1]) / 100)) : null;
+  }
+
+  private resolveFloorLabel(room: ApiRoom, floor: number): string {
+    const floorNumber = typeof room.floor === 'object' ? room.floor.floorNumber : room.floorNumber;
+    const text = floorNumber ? String(floorNumber).trim() : '';
+    if (text && !/^null$/i.test(text)) {
+      return /^floor/i.test(text) ? text : `Floor ${text}`;
+    }
+    return `Floor ${floor}`;
   }
 
   private mapRoomStatus(status: ApiRoom['status']): Room['status'] {
@@ -462,7 +505,9 @@ export class NewBookingComponent implements OnInit {
   }
 
   private ensureSelectedFloorExists() {
-    const floorIds = Array.from(new Set(this.allRooms.map(room => room.floor))).sort((a, b) => a - b);
+    const floorIds = Array.from(new Set(this.allRooms.map(room => room.floor)))
+      .filter(floor => Number.isFinite(floor) && floor > 0)
+      .sort((a, b) => a - b);
     if (floorIds.length > 0) {
       this.floors = floorIds.map(floor => ({ number: floor, label: `Floor ${floor}` }));
       if (!floorIds.includes(this.selectedFloor())) {
@@ -610,6 +655,12 @@ export class NewBookingComponent implements OnInit {
     this.dataRevision();
     if (typeId === 'ALL') return this.allRooms.filter(r => r.status === 'Available').length;
     return this.allRooms.filter(r => r.typeId === typeId && r.status === 'Available').length;
+  }
+
+  availableCountForFloor(floor: number): number {
+    if (!this.hasStayDates()) return 0;
+    this.dataRevision();
+    return this.allRooms.filter(r => r.floor === floor && r.status === 'Available').length;
   }
 
   filteredRooms = computed(() => {

@@ -1,0 +1,341 @@
+<div class="billing-shell">
+  <nav class="billing-tabs">
+    <button type="button" [class.active]="activeTab() === 'folios'" (click)="setTab('folios')">
+      <span class="material-icons-round">receipt_long</span>
+      Guest Folios
+    </button>
+    <button type="button" [class.active]="activeTab() === 'payments'" (click)="setTab('payments')">
+      <span class="material-icons-round">payments</span>
+      Payments
+    </button>
+    <button type="button" [class.active]="activeTab() === 'invoices'" (click)="setTab('invoices')">
+      <span class="material-icons-round">request_quote</span>
+      Invoices
+    </button>
+    <button type="button" [class.active]="activeTab() === 'refunds'" (click)="setTab('refunds')">
+      <span class="material-icons-round">currency_exchange</span>
+      Refunds
+    </button>
+  </nav>
+
+  <section class="metric-grid" *ngIf="activeTab() === 'folios'">
+    <article class="metric-card due">
+      <span class="material-icons-round">account_balance_wallet</span>
+      <div><strong>{{ formatINR(summary().totalDue) }}</strong><small>Outstanding Balance</small></div>
+    </article>
+    <article class="metric-card">
+      <span class="material-icons-round">hotel</span>
+      <div><strong>{{ summary().open }}</strong><small>Open Folios</small></div>
+    </article>
+    <article class="metric-card warning">
+      <span class="material-icons-round">event_busy</span>
+      <div><strong>{{ summary().overdue }}</strong><small>Due-Out Pending</small></div>
+    </article>
+    <article class="metric-card success">
+      <span class="material-icons-round">savings</span>
+      <div><strong>{{ formatINR(summary().advance) }}</strong><small>Advance Collected</small></div>
+    </article>
+  </section>
+
+  <section class="workspace" *ngIf="activeTab() === 'folios'">
+    <aside class="folio-queue">
+      <div class="queue-filters">
+        <label class="search-field">
+          <span class="material-icons-round">search</span>
+          <input [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Search folio, room, guest...">
+        </label>
+        <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+          <option value="ALL">All Statuses</option>
+          <option value="Open">Open</option>
+          <option value="Due Out">Due Out</option>
+          <option value="Settled">Settled</option>
+          <option value="Hold">Hold</option>
+        </select>
+      </div>
+
+      <button type="button" class="folio-card" *ngFor="let folio of filteredFolios()"
+              [class.active]="selectedFolio().id === folio.id"
+              (click)="selectFolio(folio.id)">
+        <div>
+          <strong>{{ folio.room }}</strong>
+          <span>{{ folio.guest }}</span>
+          <small>{{ folio.folioNo }} • {{ folio.reservationNo }}</small>
+        </div>
+        <div class="folio-right">
+          <b [class.credit]="balanceFor(folio) <= 0">{{ formatINR(balanceFor(folio)) }}</b>
+          <em [ngClass]="folio.status.toLowerCase().replace(' ', '-')">{{ folio.status }}</em>
+        </div>
+      </button>
+    </aside>
+
+    <main class="folio-ledger" *ngIf="selectedFolio() as folio">
+      <div class="folio-header">
+        <div>
+          <h2>Room {{ folio.room }} • {{ folio.guest }}</h2>
+          <p>{{ folio.checkIn }} to {{ folio.checkOut }} • {{ folio.company || 'Guest account' }}</p>
+        </div>
+        <div class="folio-balance">
+          <span>Balance</span>
+          <strong [class.credit]="selectedBalance() <= 0">{{ formatINR(selectedBalance()) }}</strong>
+        </div>
+      </div>
+
+      <div class="folio-summary">
+        <div><span>Charges</span><strong>{{ formatINR(selectedCharges()) }}</strong></div>
+        <div><span>Payments</span><strong>{{ formatINR(selectedCredits()) }}</strong></div>
+        <div><span>Tax</span><strong>{{ formatINR(selectedTax()) }}</strong></div>
+        <div><span>Credit Limit</span><strong>{{ formatINR(folio.creditLimit) }}</strong></div>
+      </div>
+
+      <div class="folio-actions">
+        <button type="button" [class.active]="folioAction() === 'ledger'" (click)="openFolioAction('ledger')">
+          <span class="material-icons-round">view_list</span>
+          Ledger
+        </button>
+        <button type="button" [class.active]="folioAction() === 'charge'" (click)="openFolioAction('charge')">
+          <span class="material-icons-round">add_card</span>
+          Post Charge
+        </button>
+        <button type="button" [class.active]="folioAction() === 'payment'" (click)="openFolioAction('payment')">
+          <span class="material-icons-round">payments</span>
+          Settlement
+        </button>
+      </div>
+
+      <div class="ledger-table" *ngIf="folioAction() === 'ledger'">
+        <div class="ledger-head">
+          <span>Date</span><span>Source</span><span>Description</span><span>Debit</span><span>GST</span><span>Credit</span>
+        </div>
+        <div class="ledger-row" *ngFor="let line of selectedLines()">
+          <span>{{ line.date }}</span>
+          <span><i [ngClass]="line.source.toLowerCase().replace(' ', '-')"></i>{{ line.source }}</span>
+          <span>
+            <strong>{{ line.description }}</strong>
+            <small>{{ line.reference }} • {{ line.user }}<ng-container *ngIf="line.taxCode"> • {{ line.taxCode }}</ng-container></small>
+          </span>
+          <span>{{ line.debit ? formatINR(line.debit) : '-' }}</span>
+          <span>{{ line.gst ? formatINR(line.gst) : '-' }}</span>
+          <span class="credit">{{ line.credit ? formatINR(line.credit) : '-' }}</span>
+        </div>
+        <div class="ledger-totals">
+          <div><span>Net Amount</span><strong>{{ formatINR(selectedNetAmount()) }}</strong></div>
+          <div><span>Tax</span><strong>{{ formatINR(selectedTax()) }}</strong></div>
+          <div><span>Total Amount</span><strong>{{ formatINR(selectedTotalAmount()) }}</strong></div>
+          <div><span>Payments</span><strong class="credit">{{ formatINR(selectedCredits()) }}</strong></div>
+          <div><span>Balance</span><strong [class.credit]="selectedBalance() <= 0">{{ formatINR(selectedBalance()) }}</strong></div>
+        </div>
+      </div>
+
+      <section class="process-panel" *ngIf="folioAction() === 'charge'">
+        <h3>Post Charge</h3>
+        <p>Add only approved room rent, POS, laundry, tax, discount, or service-charge postings to the selected guest folio.</p>
+        <div class="form-grid">
+          <label>
+            <span>Source</span>
+            <select [ngModel]="postingDraft().source" (ngModelChange)="updatePosting('source', $event)">
+              <option *ngFor="let type of chargeTypes" [value]="type">{{ type }}</option>
+            </select>
+          </label>
+          <label>
+            <span>Amount</span>
+            <input type="number" [ngModel]="postingDraft().amount" (ngModelChange)="updatePosting('amount', $event)">
+          </label>
+          <label>
+            <span>Tax</span>
+            <select [ngModel]="postingDraft().taxCode" (ngModelChange)="updatePosting('taxCode', $event)">
+              <option *ngFor="let tax of taxCodes" [value]="tax">{{ tax }}</option>
+            </select>
+          </label>
+          <label class="wide">
+            <span>Description</span>
+            <input [ngModel]="postingDraft().description" (ngModelChange)="updatePosting('description', $event)">
+          </label>
+        </div>
+        <button type="button" class="block-btn" (click)="addPosting()">
+          <span class="material-icons-round">add_card</span>
+          Add Posting
+        </button>
+      </section>
+
+      <section class="process-panel" *ngIf="folioAction() === 'payment'">
+        <h3>Settlement</h3>
+        <p>Collect advance, partial, or final settlement against the current folio balance.</p>
+        <div class="toggle-row">
+          <label><input type="checkbox" [ngModel]="splitBill()" (ngModelChange)="splitBill.set($event)"> Split bill</label>
+          <label><input type="checkbox" [ngModel]="companyBilling()" (ngModelChange)="companyBilling.set($event)"> Company billing</label>
+        </div>
+        <div class="form-grid">
+          <label>
+            <span>Mode</span>
+            <select [ngModel]="paymentDraft().mode" (ngModelChange)="updatePayment('mode', $event)">
+              <option *ngFor="let mode of paymentModes" [value]="mode">{{ mode }}</option>
+            </select>
+          </label>
+          <label>
+            <span>Amount</span>
+            <input type="number" [ngModel]="paymentDraft().amount" (ngModelChange)="updatePayment('amount', $event)">
+          </label>
+          <label class="wide">
+            <span>Reference</span>
+            <input [ngModel]="paymentDraft().reference" (ngModelChange)="updatePayment('reference', $event)" placeholder="Txn / approval code">
+          </label>
+          <label class="wide">
+            <span>Note</span>
+            <input [ngModel]="paymentDraft().note" (ngModelChange)="updatePayment('note', $event)" placeholder="Cashier note">
+          </label>
+        </div>
+        <button type="button" class="block-btn success" (click)="postPayment()">
+          <span class="material-icons-round">verified</span>
+          Collect Payment
+        </button>
+        <button type="button" class="outline-btn" [disabled]="selectedBalance() !== 0" (click)="markSettled()">Mark Settled</button>
+      </section>
+    </main>
+  </section>
+
+  <section class="tab-table" *ngIf="activeTab() === 'payments'">
+    <header><h2>Payment Register</h2><button class="primary-btn" (click)="setTab('folios')"><span class="material-icons-round">add</span> New Payment</button></header>
+    <div class="data-table">
+      <div class="table-head"><span>Folio</span><span>Guest</span><span>Room</span><span>Mode / Reference</span><span>Amount</span></div>
+      <div class="table-row" *ngFor="let row of paymentRows()">
+        <span>{{ row.folioNo }}</span><span>{{ row.guest }}</span><span>{{ row.room }}</span><span>{{ row.description }} • {{ row.reference }}</span><strong>{{ formatINR(row.credit) }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="tab-table invoice-view" *ngIf="activeTab() === 'invoices'">
+    <header><h2>Invoice Register</h2></header>
+    <div class="invoice-toolbar">
+      <label class="search-field">
+        <span class="material-icons-round">search</span>
+        <input [ngModel]="invoiceSearch()" (ngModelChange)="invoiceSearch.set($event); invoicePage.set(1)" placeholder="Search invoice, folio, room, guest...">
+      </label>
+      <select [ngModel]="invoiceStatusFilter()" (ngModelChange)="invoiceStatusFilter.set($event); invoicePage.set(1)">
+        <option value="ALL">All Statuses</option>
+        <option value="Draft">Draft</option>
+        <option value="Issued">Issued</option>
+        <option value="Paid">Paid</option>
+        <option value="Void">Void</option>
+      </select>
+      <label class="date-field">
+        <span>From</span>
+        <input type="date" [ngModel]="invoiceFromDate()" (ngModelChange)="invoiceFromDate.set($event); invoicePage.set(1)">
+      </label>
+      <label class="date-field">
+        <span>To</span>
+        <input type="date" [ngModel]="invoiceToDate()" (ngModelChange)="invoiceToDate.set($event); invoicePage.set(1)">
+      </label>
+    </div>
+    <div class="invoice-grid">
+      <article class="invoice-card" *ngFor="let invoice of pagedInvoices()">
+        <div class="invoice-card-top">
+          <strong>{{ invoice.invoiceNo }}</strong>
+          <em [ngClass]="invoice.status.toLowerCase()">{{ invoice.status }}</em>
+        </div>
+        <div class="invoice-identity">
+          <span class="folio-pill">{{ invoice.folioNo }}</span>
+          <span class="room-pill">Room {{ invoiceRoom(invoice) }}</span>
+          <small>{{ invoice.guest }}</small>
+        </div>
+        <div class="invoice-amount-row">
+          <b>{{ formatINR(invoice.amount) }}</b>
+          <span>{{ invoice.issuedAt }}</span>
+        </div>
+        <div class="invoice-actions">
+          <button type="button" title="View bill" (click)="viewInvoice(invoice)">
+            <span class="material-icons-round">visibility</span>
+          </button>
+          <button type="button" title="Download bill" (click)="downloadInvoice(invoice)">
+            <span class="material-icons-round">download</span>
+          </button>
+          <button type="button" title="Print bill" (click)="printInvoice(invoice)">
+            <span class="material-icons-round">print</span>
+          </button>
+        </div>
+      </article>
+    </div>
+    <div class="empty-state" *ngIf="!filteredInvoices().length">No invoices found for selected filters.</div>
+    <div class="invoice-pagination" *ngIf="filteredInvoices().length">
+      <span>{{ invoiceRangeLabel() }}</span>
+      <div>
+        <button type="button" class="outline-btn" [disabled]="invoicePage() === 1" (click)="previousInvoicePage()">
+          <span class="material-icons-round">chevron_left</span>
+          Prev
+        </button>
+        <strong>Page {{ invoicePage() }} / {{ invoiceTotalPages() }}</strong>
+        <button type="button" class="outline-btn" [disabled]="invoicePage() === invoiceTotalPages()" (click)="nextInvoicePage()">
+          Next
+          <span class="material-icons-round">chevron_right</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="tab-table" *ngIf="activeTab() === 'refunds'">
+    <header>
+      <h2>Refund Requests</h2>
+      <div class="refund-action">
+        <input [ngModel]="refundReason()" (ngModelChange)="refundReason.set($event)" placeholder="Refund reason">
+        <button class="primary-btn" (click)="requestRefund()"><span class="material-icons-round">undo</span> Request Refund</button>
+      </div>
+    </header>
+    <div class="data-table">
+      <div class="table-head"><span>Folio</span><span>Guest</span><span>Reason</span><span>Mode</span><span>Status</span><span>Amount</span></div>
+      <div class="table-row" *ngFor="let refund of refunds()">
+        <span>{{ refund.folioNo }}</span><span>{{ refund.guest }}</span><span>{{ refund.reason }}</span><span>{{ refund.mode }}</span><em>{{ refund.status }}</em><strong>{{ formatINR(refund.amount) }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <div class="invoice-preview-overlay" *ngIf="selectedInvoice() as invoice" (click)="closeInvoicePreview()">
+    <section class="invoice-preview" (click)="$event.stopPropagation()">
+      <header class="invoice-preview-header">
+        <div>
+          <h2>HMS Cloud</h2>
+          <p>Tax Invoice • {{ invoice.invoiceNo }}</p>
+        </div>
+        <div class="invoice-preview-actions">
+          <button type="button" (click)="downloadInvoice(invoice)">
+            <span class="material-icons-round">download</span>
+            Download
+          </button>
+          <button type="button" (click)="printInvoice(invoice)">
+            <span class="material-icons-round">print</span>
+            Print
+          </button>
+          <button type="button" (click)="closeInvoicePreview()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="invoice-meta">
+        <div><span>Guest</span><strong>{{ invoice.guest }}</strong></div>
+        <div><span>Folio</span><strong>{{ invoice.folioNo }}</strong></div>
+        <div><span>Status</span><strong>{{ invoice.status }}</strong></div>
+        <div><span>Issued</span><strong>{{ invoice.issuedAt }}</strong></div>
+      </div>
+
+      <div class="bill-table" *ngIf="selectedInvoiceFolio() as folio">
+        <div class="bill-head"><span>Date</span><span>Particulars</span><span>Net</span><span>GST</span><span>Total</span></div>
+        <div class="bill-row" *ngFor="let line of folio.lines">
+          <ng-container *ngIf="line.debit || line.gst">
+            <span>{{ line.date }}</span>
+            <span><strong>{{ line.description }}</strong><small>{{ line.source }} • {{ line.reference }}<ng-container *ngIf="line.taxCode"> • {{ line.taxCode }}</ng-container></small></span>
+            <span>{{ formatINR(line.debit) }}</span>
+            <span>{{ formatINR(line.gst) }}</span>
+            <span>{{ formatINR(line.debit + line.gst) }}</span>
+          </ng-container>
+        </div>
+      </div>
+
+      <div class="bill-summary">
+        <div><span>Net Amount</span><strong>{{ formatINR(invoice.netAmount) }}</strong></div>
+        <div><span>GST</span><strong>{{ formatINR(invoice.gstAmount) }}</strong></div>
+        <div><span>Total Bill</span><strong>{{ formatINR(invoice.amount) }}</strong></div>
+        <div><span>Paid</span><strong class="credit">{{ formatINR(invoice.paidAmount) }}</strong></div>
+        <div><span>Balance</span><strong>{{ formatINR(invoice.balanceAmount) }}</strong></div>
+      </div>
+    </section>
+  </div>
+</div>

@@ -1,0 +1,226 @@
+<div class="ops-shell">
+  <nav class="ops-tabs">
+    <button type="button" [class.active]="activeTab() === 'dashboard'" (click)="setTab('dashboard')"><span class="material-icons-round">dashboard</span>Dashboard</button>
+    <button type="button" [class.active]="activeTab() === 'suppliers'" (click)="setTab('suppliers')"><span class="material-icons-round">storefront</span>Suppliers</button>
+    <button type="button" [class.active]="activeTab() === 'orders'" (click)="setTab('orders')"><span class="material-icons-round">shopping_cart_checkout</span>Purchase Orders</button>
+    <button type="button" [class.active]="activeTab() === 'inward'" (click)="setTab('inward')"><span class="material-icons-round">move_to_inbox</span>Inward Stock</button>
+    <button type="button" [class.active]="activeTab() === 'bills'" (click)="setTab('bills')"><span class="material-icons-round">receipt</span>Vendor Bills</button>
+  </nav>
+
+  <section class="metric-grid" *ngIf="activeTab() === 'dashboard'">
+    <article class="metric-card blue"><span class="material-icons-round">storefront</span><div><strong>{{ summary().suppliers }}</strong><small>Suppliers</small></div></article>
+    <article class="metric-card amber"><span class="material-icons-round">shopping_cart</span><div><strong>{{ summary().openPo }}</strong><small>Open POs</small></div></article>
+    <article class="metric-card violet"><span class="material-icons-round">currency_rupee</span><div><strong>{{ formatINR(summary().poValue) }}</strong><small>PO Value</small></div></article>
+    <article class="metric-card green"><span class="material-icons-round">inventory</span><div><strong>{{ formatINR(summary().inwardValue) }}</strong><small>Inward Value</small></div></article>
+    <article class="metric-card red"><span class="material-icons-round">payments</span><div><strong>{{ formatINR(summary().payable) }}</strong><small>Payables</small></div></article>
+  </section>
+
+  <section class="dashboard-grid" *ngIf="activeTab() === 'dashboard'">
+    <article class="panel">
+      <header><h2>Pending Procurement</h2><span>{{ summary().openPo }} active</span></header>
+      <div class="simple-table compact">
+        <div class="table-head"><span>PO</span><span>Supplier</span><span>Expected</span><span>Status</span></div>
+        <div class="table-row" *ngFor="let order of purchaseOrders()">
+          <strong>{{ order.id }}</strong><span>{{ order.supplier }}</span><span>{{ order.expectedOn }}</span><em [class]="order.status.toLowerCase().replace(' ', '-')">{{ order.status }}</em>
+        </div>
+      </div>
+    </article>
+    <article class="panel">
+      <header><h2>Vendor Bill Queue</h2><span>{{ filteredBills().length }} bills</span></header>
+      <div class="simple-table compact-bills">
+        <div class="table-head"><span>Bill</span><span>Supplier</span><span>Due Date</span><span>Amount</span><span>Status</span></div>
+        <div class="table-row" *ngFor="let bill of vendorBills()">
+          <strong>{{ bill.id }}</strong><span>{{ bill.supplier }}</span><span>{{ bill.dueDate }}</span><b>{{ formatINR(bill.amount + bill.tax) }}</b><em [class]="bill.status.toLowerCase()">{{ bill.status }}</em>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="panel table-panel" *ngIf="activeTab() === 'suppliers'">
+    <header>
+      <h2>Supplier Register</h2>
+      <div class="toolbar">
+        <label class="search-field"><span class="material-icons-round">search</span><input [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Search supplier, GSTIN, contact..."></label>
+        <button class="primary-btn" (click)="openCreateModal('supplier')"><span class="material-icons-round">add</span>Add Supplier</button>
+      </div>
+    </header>
+    <div class="simple-table supplier-table">
+      <div class="table-head"><span>Code</span><span>Supplier</span><span>Category</span><span>Contact</span><span>Terms</span><span>Outstanding</span><span>Status</span><span>Actions</span></div>
+      <div class="table-row" *ngFor="let supplier of filteredSuppliers()">
+        <strong>{{ supplier.code }}</strong>
+        <span><b>{{ supplier.name }}</b><small>{{ supplier.gstin }} • {{ supplier.city }}</small></span>
+        <span>{{ supplier.category }}</span>
+        <span><b>{{ supplier.contact }}</b><small>{{ supplier.phone }} • {{ supplier.email }}</small></span>
+        <span>{{ supplier.paymentTerms }}</span>
+        <b>{{ formatINR(supplier.outstanding) }}</b>
+        <em [class]="supplier.status.toLowerCase().replace(' ', '-')">{{ supplier.status }}</em>
+        <span class="row-actions">
+          <button type="button" title="View supplier" (click)="viewSupplier(supplier)"><span class="material-icons-round">visibility</span></button>
+          <button type="button" title="Edit supplier" (click)="editSupplier(supplier)"><span class="material-icons-round">edit</span></button>
+          <button type="button" title="Delete supplier" (click)="deleteSupplier(supplier.id)"><span class="material-icons-round">delete</span></button>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel table-panel" *ngIf="activeTab() === 'orders'">
+    <header>
+      <h2>Purchase Orders</h2>
+      <div class="toolbar compact-tools">
+        <select [ngModel]="poStatusFilter()" (ngModelChange)="poStatusFilter.set($event)">
+          <option value="ALL">All Statuses</option>
+          <option value="Draft">Draft</option>
+          <option value="Approved">Approved</option>
+          <option value="Partially Received">Partially Received</option>
+          <option value="Closed">Closed</option>
+        </select>
+        <button class="primary-btn" (click)="openCreateModal('po')"><span class="material-icons-round">add_shopping_cart</span>New PO</button>
+      </div>
+    </header>
+    <div class="simple-table po-table">
+      <div class="table-head"><span>PO No.</span><span>Supplier</span><span>Department</span><span>Items</span><span>Expected</span><span>Amount</span><span>Status</span><span>Actions</span></div>
+      <div class="table-row" *ngFor="let order of filteredOrders()">
+        <strong>{{ order.id }}</strong><span>{{ order.supplier }}</span><span>{{ order.department }}</span><span>{{ order.items }}</span><span>{{ order.expectedOn }}</span><b>{{ formatINR(order.amount) }}</b><em [class]="order.status.toLowerCase().replace(' ', '-')">{{ order.status }}</em>
+        <span class="row-actions">
+          <button type="button" title="Download PO" (click)="downloadPurchaseOrder(order)"><span class="material-icons-round">download</span></button>
+          <button type="button" title="Print PO" (click)="printPurchaseOrder(order)"><span class="material-icons-round">print</span></button>
+          <button type="button" title="Edit PO" (click)="editPurchaseOrder(order)"><span class="material-icons-round">edit</span></button>
+          <button type="button" title="Delete PO" (click)="deletePurchaseOrder(order.id)"><span class="material-icons-round">delete</span></button>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel table-panel" *ngIf="activeTab() === 'inward'">
+    <header><h2>Inward Stock / GRN</h2><button class="primary-btn" (click)="openCreateModal('grn')"><span class="material-icons-round">move_to_inbox</span>Create GRN</button></header>
+    <div class="simple-table inward-table">
+      <div class="table-head"><span>GRN No.</span><span>PO No.</span><span>Supplier</span><span>Received By</span><span>Received On</span><span>Value</span><span>Variance</span></div>
+      <div class="table-row" *ngFor="let receipt of inwardReceipts()">
+        <strong>{{ receipt.id }}</strong><span>{{ receipt.poNo }}</span><span>{{ receipt.supplier }}</span><span>{{ receipt.receivedBy }}</span><span>{{ receipt.receivedOn }}</span><b>{{ formatINR(receipt.acceptedValue) }}</b><em [class]="receipt.variance === 'No variance' ? 'paid' : 'pending'">{{ receipt.variance }}</em>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel table-panel" *ngIf="activeTab() === 'bills'">
+    <header>
+      <h2>Vendor Bills</h2>
+      <div class="toolbar compact-tools">
+        <select [ngModel]="billStatusFilter()" (ngModelChange)="billStatusFilter.set($event)">
+          <option value="ALL">All Statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="Approved">Approved</option>
+          <option value="Paid">Paid</option>
+          <option value="Disputed">Disputed</option>
+        </select>
+        <button class="primary-btn" (click)="openCreateModal('bill')"><span class="material-icons-round">receipt_long</span>Enter Bill</button>
+      </div>
+    </header>
+    <div class="simple-table bill-table">
+      <div class="table-head"><span>Bill No.</span><span>Supplier</span><span>PO No.</span><span>Bill Date</span><span>Due Date</span><span>Total</span><span>Status</span><span>Actions</span></div>
+      <div class="table-row" *ngFor="let bill of filteredBills()">
+        <strong>{{ bill.id }}</strong><span>{{ bill.supplier }}</span><span>{{ bill.poNo }}</span><span>{{ bill.billDate }}</span><span>{{ bill.dueDate }}</span><b>{{ formatINR(bill.amount + bill.tax) }}</b><em [class]="bill.status.toLowerCase()">{{ bill.status }}</em>
+        <span class="row-actions">
+          <button type="button" title="Edit bill" (click)="editVendorBill(bill)"><span class="material-icons-round">edit</span></button>
+          <button type="button" title="Delete bill" (click)="deleteVendorBill(bill.id)"><span class="material-icons-round">delete</span></button>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <div class="modal-backdrop" *ngIf="createModal()" (click)="closeCreateModal()">
+    <section class="entry-modal" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <span class="material-icons-round">edit_note</span>
+          <h2>{{ createModalTitle() }}</h2>
+        </div>
+        <button type="button" class="icon-btn" (click)="closeCreateModal()"><span class="material-icons-round">close</span></button>
+      </header>
+
+      <div class="modal-body" [ngSwitch]="createModal()">
+        <div class="form-grid" *ngSwitchCase="'supplier'">
+          <label><span>Supplier Name</span><input [value]="selectedSupplier()?.name || ''" placeholder="Supplier / vendor name"></label>
+          <label><span>Category</span><select [value]="selectedSupplier()?.category || 'Housekeeping Supplies'"><option>Housekeeping Supplies</option><option>Linen & Laundry</option><option>Minibar</option><option>Food & Beverage</option><option>Engineering</option></select></label>
+          <label><span>Contact Person</span><input [value]="selectedSupplier()?.contact || ''" placeholder="Primary contact"></label>
+          <label><span>Phone</span><input [value]="selectedSupplier()?.phone || ''" placeholder="+91"></label>
+          <label><span>Email</span><input [value]="selectedSupplier()?.email || ''" placeholder="billing@supplier.com"></label>
+          <label><span>Payment Terms</span><select [value]="selectedSupplier()?.paymentTerms || '7 Days'"><option>7 Days</option><option>15 Days</option><option>30 Days</option><option>45 Days</option></select></label>
+          <label class="wide"><span>Supplier Address</span><input [value]="selectedSupplier()?.address || ''" placeholder="Registered billing / dispatch address"></label>
+          <label><span>City</span><input [value]="selectedSupplier()?.city || ''" placeholder="City"></label>
+          <label><span>State</span><input [value]="selectedSupplier()?.state || ''" placeholder="State"></label>
+          <label><span>Pin Code</span><input [value]="selectedSupplier()?.pinCode || ''" placeholder="400001"></label>
+          <label><span>GSTIN</span><input [value]="selectedSupplier()?.gstin || ''" placeholder="Tax registration"></label>
+          <label><span>PAN</span><input [value]="selectedSupplier()?.pan || ''" placeholder="PAN number"></label>
+          <label><span>Credit Limit</span><input [value]="selectedSupplier()?.creditLimit || ''" placeholder="Amount"></label>
+          <label><span>Bank Name</span><input [value]="selectedSupplier()?.bankName || ''" placeholder="Bank name"></label>
+          <label><span>Account No.</span><input [value]="selectedSupplier()?.accountNo || ''" placeholder="Vendor account number"></label>
+          <label><span>IFSC</span><input [value]="selectedSupplier()?.ifsc || ''" placeholder="IFSC code"></label>
+        </div>
+
+        <div class="form-grid" *ngSwitchCase="'po'">
+          <label><span>PO Number</span><input [value]="selectedPurchaseOrder()?.id || ''" placeholder="Enter PO number"></label>
+          <label><span>Supplier</span><select [value]="selectedPurchaseOrder()?.supplier || ''"><option *ngFor="let supplier of suppliers()">{{ supplier.name }}</option></select></label>
+          <label><span>Department</span><select [value]="selectedPurchaseOrder()?.department || 'Housekeeping'"><option>Housekeeping</option><option>Laundry</option><option>Minibar</option></select></label>
+          <label><span>Expected Date</span><input type="date" [value]="selectedPurchaseOrder()?.expectedOn || ''"></label>
+          <label><span>Item Count</span><input type="number" [value]="selectedPurchaseOrder()?.items || 1"></label>
+          <label class="wide"><span>PO Note</span><input placeholder="Purchase instruction"></label>
+        </div>
+
+        <div class="form-grid" *ngSwitchCase="'grn'">
+          <label><span>PO Number</span><select><option *ngFor="let order of purchaseOrders()">{{ order.id }}</option></select></label>
+          <label><span>Received By</span><input value="Store Keeper"></label>
+          <label><span>Received Date</span><input type="date"></label>
+          <label><span>Accepted Value</span><input placeholder="Amount"></label>
+          <label class="wide"><span>Variance Note</span><input placeholder="Short / excess / damaged quantity"></label>
+        </div>
+
+        <div class="form-grid" *ngSwitchCase="'bill'">
+          <label><span>Supplier</span><select [value]="selectedVendorBill()?.supplier || ''"><option *ngFor="let supplier of suppliers()">{{ supplier.name }}</option></select></label>
+          <label><span>PO Number</span><select [value]="selectedVendorBill()?.poNo || ''"><option *ngFor="let order of purchaseOrders()">{{ order.id }}</option></select></label>
+          <label><span>Bill Date</span><input type="date" [value]="selectedVendorBill()?.billDate || ''"></label>
+          <label><span>Due Date</span><input type="date" [value]="selectedVendorBill()?.dueDate || ''"></label>
+          <label><span>Amount</span><input [value]="selectedVendorBill()?.amount || ''" placeholder="Before tax"></label>
+          <label><span>GST</span><input [value]="selectedVendorBill()?.tax || ''" placeholder="Tax amount"></label>
+        </div>
+      </div>
+
+      <footer>
+        <button type="button" class="secondary-btn" (click)="closeCreateModal()">Cancel</button>
+        <button type="button" class="primary-btn" (click)="closeCreateModal()"><span class="material-icons-round">save</span>Save</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="supplierDetail() as supplier" (click)="closeSupplierDetail()">
+    <section class="entry-modal detail-modal" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <span class="material-icons-round">storefront</span>
+          <h2>Supplier Details</h2>
+        </div>
+        <button type="button" class="icon-btn" (click)="closeSupplierDetail()"><span class="material-icons-round">close</span></button>
+      </header>
+      <div class="modal-body">
+        <div class="supplier-summary">
+          <div>
+            <strong>{{ supplier.name }}</strong>
+            <small>{{ supplier.code }} • {{ supplier.category }}</small>
+          </div>
+          <em [class]="supplier.status.toLowerCase().replace(' ', '-')">{{ supplier.status }}</em>
+        </div>
+        <div class="detail-grid">
+          <article><span>Contact</span><b>{{ supplier.contact }}</b><small>{{ supplier.phone }} • {{ supplier.email }}</small></article>
+          <article><span>Address</span><b>{{ supplier.city }}, {{ supplier.state }}</b><small>{{ supplier.address }} - {{ supplier.pinCode }}</small></article>
+          <article><span>Tax Details</span><b>{{ supplier.gstin }}</b><small>PAN {{ supplier.pan }}</small></article>
+          <article><span>Payment Terms</span><b>{{ supplier.paymentTerms }}</b><small>Credit limit {{ formatINR(supplier.creditLimit) }}</small></article>
+          <article><span>Bank</span><b>{{ supplier.bankName }}</b><small>{{ supplier.accountNo }} • {{ supplier.ifsc }}</small></article>
+          <article><span>Outstanding</span><b>{{ formatINR(supplier.outstanding) }}</b><small>Current payable balance</small></article>
+        </div>
+      </div>
+      <footer>
+        <button type="button" class="secondary-btn" (click)="closeSupplierDetail()">Close</button>
+        <button type="button" class="primary-btn" (click)="editSupplier(supplier)"><span class="material-icons-round">edit</span>Edit Supplier</button>
+      </footer>
+    </section>
+  </div>
+</div>

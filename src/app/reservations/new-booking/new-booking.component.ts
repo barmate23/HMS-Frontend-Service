@@ -249,6 +249,7 @@ export class NewBookingComponent implements OnInit {
     { id:'407', number:'407', type:'Suite',      typeShort:'STE', typeId:'STE', floor:4, status:'Occupied',   rate:15000,view:'Sea',       beds:'King' },
     { id:'408', number:'408', type:'Penthouse',  typeShort:'PNT', typeId:'PNT', floor:4, status:'Available',  rate:25000,view:'Panoramic', beds:'King' },
   ];
+  private availableRoomIds = new Set<string>();
 
   isEditMode = computed(() => !!this.editReservationId());
 
@@ -311,11 +312,10 @@ export class NewBookingComponent implements OnInit {
     this.isAvailableRoomsLoading.set(true);
     this.roomInventoryError.set(null);
 
-    const floorId = this.selectedFloor();
     this.http.get<StandardResponse<ApiRoom[]>>(`${this.frontOfficeBaseUrl}/rooms/available?checkIn=${this.checkIn()}&checkOut=${this.checkOut()}`).subscribe({
       next: (response) => {
         const typeMap = this.buildRoomTypeMap();
-        this.mergeAvailableRoomsForFloor(response.data ?? [], typeMap, floorId);
+        this.setAvailableRoomsForStay(response.data ?? [], typeMap);
         this.selectedRoom.set(null);
         this.dataRevision.update(value => value + 1);
         this.isAvailableRoomsLoading.set(false);
@@ -357,12 +357,22 @@ export class NewBookingComponent implements OnInit {
     return map;
   }
 
-  private mergeAvailableRoomsForFloor(availableRooms: ApiRoom[], typeMap: Map<number, ApiRoomType>, floorId: number) {
+  private setAvailableRoomsForStay(availableRooms: ApiRoom[], typeMap: Map<number, ApiRoomType>) {
     const mappedRooms = availableRooms.map(room => this.mapApiRoom({ ...room, status: 'VACANT' }, typeMap));
-    this.allRooms = [
-      ...this.allRooms.filter(room => room.floor !== floorId),
-      ...mappedRooms
-    ];
+    this.availableRoomIds = new Set(mappedRooms.map(room => room.id));
+
+    const roomsById = new Map(this.allRooms.map(room => [room.id, room]));
+    for (const room of mappedRooms) {
+      roomsById.set(room.id, {
+        ...roomsById.get(room.id),
+        ...room,
+        status: 'Available'
+      });
+    }
+
+    this.allRooms = Array.from(roomsById.values())
+      .sort((a, b) => a.floor - b.floor || a.number.localeCompare(b.number, undefined, { numeric: true }));
+    this.ensureSelectedFloorExists();
   }
 
   loadRatePlans() {
@@ -653,28 +663,28 @@ export class NewBookingComponent implements OnInit {
   availableCountFor(typeId: string): number {
     if (!this.hasStayDates()) return 0;
     this.dataRevision();
-    if (typeId === 'ALL') return this.allRooms.filter(r => r.status === 'Available').length;
-    return this.allRooms.filter(r => r.typeId === typeId && r.status === 'Available').length;
+    if (typeId === 'ALL') return this.allRooms.filter(r => this.availableRoomIds.has(r.id)).length;
+    return this.allRooms.filter(r => r.typeId === typeId && this.availableRoomIds.has(r.id)).length;
   }
 
   availableCountForFloor(floor: number): number {
     if (!this.hasStayDates()) return 0;
     this.dataRevision();
-    return this.allRooms.filter(r => r.floor === floor && r.status === 'Available').length;
+    return this.allRooms.filter(r => r.floor === floor && this.availableRoomIds.has(r.id)).length;
   }
 
   filteredRooms = computed(() => {
     if (!this.hasStayDates()) return [];
     this.dataRevision();
     const type = this.selectedRoomType();
-    if (type === 'ALL') return this.allRooms.filter(r => r.status === 'Available');
-    return this.allRooms.filter(r => r.typeId === type && r.status === 'Available');
+    if (type === 'ALL') return this.allRooms.filter(r => this.availableRoomIds.has(r.id));
+    return this.allRooms.filter(r => r.typeId === type && this.availableRoomIds.has(r.id));
   });
 
   currentFloorRooms = computed(() => {
     if (!this.hasStayDates()) return [];
     this.dataRevision();
-    return this.allRooms.filter(r => r.floor === this.selectedFloor());
+    return this.allRooms.filter(r => r.floor === this.selectedFloor() && this.availableRoomIds.has(r.id));
   });
 
   nights = computed(() => {
@@ -729,7 +739,6 @@ export class NewBookingComponent implements OnInit {
   selectPlan(id: string) { this.selectedPlan.set(id); }
   selectFloor(num: number) {
     this.selectedFloor.set(num);
-    this.loadAvailableRoomsForStay();
   }
 
   openMapModal()  { this.mapModalOpen.set(true);  document.body.style.overflow = 'hidden'; }
@@ -746,12 +755,13 @@ export class NewBookingComponent implements OnInit {
     this.dataRevision();
     const fl = this.selectedFloor();
     const rooms = this.allRooms.filter(r => r.floor === fl);
+    const availableRooms = rooms.filter(r => this.availableRoomIds.has(r.id));
     return {
       total:       rooms.length,
-      available:   rooms.filter(r => r.status === 'Available').length,
-      occupied:    rooms.filter(r => r.status === 'Occupied').length,
-      reserved:    rooms.filter(r => r.status === 'Reserved').length,
-      maintenance: rooms.filter(r => r.status === 'Maintenance').length,
+      available:   availableRooms.length,
+      occupied:    rooms.filter(r => r.status === 'Occupied' && !this.availableRoomIds.has(r.id)).length,
+      reserved:    rooms.filter(r => r.status === 'Reserved' && !this.availableRoomIds.has(r.id)).length,
+      maintenance: rooms.filter(r => r.status === 'Maintenance' && !this.availableRoomIds.has(r.id)).length,
     };
   });
 

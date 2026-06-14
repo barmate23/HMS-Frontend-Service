@@ -4,7 +4,6 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { forkJoin } from 'rxjs';
 
 interface Reservation {
   id: string;
@@ -57,25 +56,17 @@ interface ApiFloor {
   isActive: boolean;
 }
 
-interface ApiRoomType {
-  id: number;
-  name: string;
-}
-
-interface ApiRoom {
+interface ApiRoomStatus {
   id: number;
   roomNumber: string;
   floorId: number;
-  roomTypeId: number;
+  floorNumber?: string | null;
+  roomTypeId?: number;
+  roomTypeName?: string | null;
   status: string;
+  guestName?: string | null;
+  reservationRef?: string | null;
   isActive: boolean;
-}
-
-interface ApiGanttItem {
-  roomId: number;
-  guestName: string;
-  reservationRef: string;
-  status: string;
 }
 
 @Component({
@@ -89,7 +80,6 @@ export class ReservationCenter implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly frontOfficeBaseUrl = '/api/frontOfficeService/v1';
-  private readonly masterBaseUrl = '/api/masterService/v1';
 
   viewMode = signal<'LIST' | 'STAY' | 'MAP'>('LIST');
   selectedFloor = signal('Floor 1');
@@ -436,48 +426,7 @@ export class ReservationCenter implements OnInit {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  rooms = signal<Room[]>([
-    // Floor 1 (30 Rooms)
-    { number: '101', type: 'SINGLE', floor: 'Floor 1', status: 'available' },
-    { number: '102', type: 'DOUBLE', floor: 'Floor 1', status: 'occupied', guest: 'John Doe' },
-    { number: '103', type: 'SUITE', floor: 'Floor 1', status: 'maintenance' },
-    { number: '104', type: 'DELUXE', floor: 'Floor 1', status: 'booked', guest: 'Alice Johnson' },
-    { number: '105', type: 'SINGLE', floor: 'Floor 1', status: 'dirty' },
-    { number: '106', type: 'DOUBLE', floor: 'Floor 1', status: 'available' },
-    { number: '107', type: 'SINGLE', floor: 'Floor 1', status: 'available' },
-    { number: '108', type: 'DOUBLE', floor: 'Floor 1', status: 'occupied', guest: 'Mark Wilson' },
-    { number: '109', type: 'SUITE', floor: 'Floor 1', status: 'available' },
-    { number: '110', type: 'DELUXE', floor: 'Floor 1', status: 'available' },
-    { number: '111', type: 'SINGLE', floor: 'Floor 1', status: 'available' },
-    { number: '112', type: 'DOUBLE', floor: 'Floor 1', status: 'dirty' },
-    { number: '113', type: 'SUITE', floor: 'Floor 1', status: 'available' },
-    { number: '114', type: 'DELUXE', floor: 'Floor 1', status: 'available' },
-    { number: '115', type: 'SINGLE', floor: 'Floor 1', status: 'maintenance' },
-    { number: '116', type: 'DOUBLE', floor: 'Floor 1', status: 'available' },
-    { number: '117', type: 'SINGLE', floor: 'Floor 1', status: 'available' },
-    { number: '118', type: 'DOUBLE', floor: 'Floor 1', status: 'available' },
-    { number: '119', type: 'SUITE', floor: 'Floor 1', status: 'dirty' },
-    { number: '120', type: 'DELUXE', floor: 'Floor 1', status: 'available' },
-    { number: '121', type: 'SINGLE', floor: 'Floor 1', status: 'available' },
-    { number: '122', type: 'DOUBLE', floor: 'Floor 1', status: 'available' },
-    { number: '123', type: 'SUITE', floor: 'Floor 1', status: 'available' },
-    { number: '124', type: 'DELUXE', floor: 'Floor 1', status: 'available' },
-    { number: '125', type: 'SINGLE', floor: 'Floor 1', status: 'available' },
-    { number: '126', type: 'DOUBLE', floor: 'Floor 1', status: 'available' },
-    { number: '127', type: 'SUITE', floor: 'Floor 1', status: 'available' },
-    { number: '128', type: 'DELUXE', floor: 'Floor 1', status: 'available' },
-    { number: '129', type: 'SINGLE', floor: 'Floor 1', status: 'available' },
-    { number: '130', type: 'DOUBLE', floor: 'Floor 1', status: 'available' },
-
-    // Floor 2
-    { number: '201', type: 'SINGLE', floor: 'Floor 2', status: 'available' },
-    { number: '202', type: 'DOUBLE', floor: 'Floor 2', status: 'occupied', guest: 'Robert Fox' },
-    { number: '203', type: 'SUITE', floor: 'Floor 2', status: 'occupied', guest: 'Jane Smith' },
-    
-    // Floor 3
-    { number: '301', type: 'DELUXE', floor: 'Floor 3', status: 'available' },
-    { number: '302', type: 'SINGLE', floor: 'Floor 3', status: 'available' }
-  ]);
+  rooms = signal<Room[]>([]);
 
   days = [
     { name: 'FRI', date: 20 }, { name: 'SAT', date: 21 }, { name: 'SUN', date: 22 }, { name: 'MON', date: 23 }, { name: 'TUE', date: 24 },
@@ -492,6 +441,9 @@ export class ReservationCenter implements OnInit {
 
   setView(mode: 'LIST' | 'STAY' | 'MAP') {
     this.viewMode.set(mode);
+    if (mode === 'MAP' && this.rooms().length === 0 && !this.mapIsLoading()) {
+      this.loadRoomWiseStatus();
+    }
   }
 
   setFloor(floor: string) {
@@ -502,42 +454,41 @@ export class ReservationCenter implements OnInit {
     this.mapSelectedFloorId.set(value ? Number(value) : null);
   }
 
+  onMapDateChange(value: string) {
+    this.mapSelectedDate.set(value);
+    this.loadRoomWiseStatus();
+  }
+
   loadRoomWiseStatus() {
     this.mapIsLoading.set(true);
     this.mapError.set(null);
     const date = this.mapSelectedDate() || this.toApiDate(new Date());
-    const params = new HttpParams().set('startDate', date).set('endDate', date);
+    const params = new HttpParams().set('date', date);
 
-    forkJoin({
-      floorsRes: this.http.get<StandardResponse<ApiFloor[]>>(`${this.masterBaseUrl}/floors/getAllFloors`),
-      roomTypesRes: this.http.get<StandardResponse<ApiRoomType[]>>(`${this.masterBaseUrl}/roomTypes/getAllRoomTypes`),
-      roomsRes: this.http.get<StandardResponse<ApiRoom[]>>(`${this.masterBaseUrl}/rooms/getAllRooms`),
-      ganttRes: this.http.get<StandardResponse<ApiGanttItem[]>>(`${this.frontOfficeBaseUrl}/frontOffice/getGanttChartData`, { params })
-    }).subscribe({
-      next: ({ floorsRes, roomTypesRes, roomsRes, ganttRes }) => {
-        const floors = (floorsRes.data || []).filter(f => f.isActive);
+    this.http.get<StandardResponse<ApiRoomStatus[]>>(`${this.frontOfficeBaseUrl}/rooms/getRoomStatusByDate`, { params }).subscribe({
+      next: (response) => {
+        const activeRooms = (response.data || []).filter(r => r.isActive !== false);
+        const floors = this.deriveMapFloors(activeRooms);
         this.mapFloors.set(floors);
-        if (!this.mapSelectedFloorId() && floors.length) this.mapSelectedFloorId.set(floors[0].id);
+
+        const currentFloorId = this.mapSelectedFloorId();
+        if (!currentFloorId && floors.length) {
+          this.mapSelectedFloorId.set(floors[0].id);
+        } else if (currentFloorId && !floors.some(f => f.id === currentFloorId)) {
+          this.mapSelectedFloorId.set(floors[0]?.id ?? null);
+        }
 
         const floorById = new Map(floors.map(f => [f.id, f.floorNumber]));
-        const roomTypeById = new Map((roomTypesRes.data || []).map(t => [t.id, t.name]));
-        const bookingByRoomId = new Map((ganttRes.data || []).map(b => [b.roomId, b]));
-
-        const mapped = (roomsRes.data || [])
-          .filter(r => r.isActive)
-          .map(r => {
-            const booking = bookingByRoomId.get(r.id);
-            return {
-              id: r.id,
-              number: r.roomNumber,
-              floorId: r.floorId,
-              floor: floorById.get(r.floorId) || `Floor ${r.floorId}`,
-              type: roomTypeById.get(r.roomTypeId) || 'Room',
-              status: this.normalizeRoomStatus(booking?.status || r.status),
-              guest: booking?.guestName,
-              reservationRef: booking?.reservationRef
-            } as Room;
-          });
+        const mapped = activeRooms.map(r => ({
+          id: r.id,
+          number: r.roomNumber,
+          floorId: r.floorId,
+          floor: floorById.get(r.floorId) || this.floorLabel(r),
+          type: r.roomTypeName || 'Room',
+          status: this.normalizeRoomStatus(r.status),
+          guest: r.guestName || undefined,
+          reservationRef: r.reservationRef || undefined
+        } as Room));
 
         this.rooms.set(mapped);
         this.mapIsLoading.set(false);
@@ -548,6 +499,24 @@ export class ReservationCenter implements OnInit {
         this.mapIsLoading.set(false);
       }
     });
+  }
+
+  private deriveMapFloors(rooms: ApiRoomStatus[]): ApiFloor[] {
+    const byId = new Map<number, ApiFloor>();
+    rooms.forEach(room => {
+      if (!byId.has(room.floorId)) {
+        byId.set(room.floorId, {
+          id: room.floorId,
+          floorNumber: this.floorLabel(room),
+          isActive: true
+        });
+      }
+    });
+    return Array.from(byId.values()).sort((a, b) => a.id - b.id);
+  }
+
+  private floorLabel(room: ApiRoomStatus): string {
+    return room.floorNumber || `Floor ${room.floorId}`;
   }
 
   statusLabel(status: Reservation['status']): string {

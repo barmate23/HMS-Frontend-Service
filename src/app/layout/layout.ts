@@ -47,6 +47,17 @@ export class Layout {
       ]
     },
     {
+      label: 'Billing',
+      icon: 'account_balance_wallet',
+      expanded: false,
+      children: [
+        { label: 'Guest Folios', icon: 'receipt_long', route: '/billing/folios' },
+        { label: 'Payments', icon: 'payments', route: '/billing/payments' },
+        { label: 'Invoices', icon: 'request_quote', route: '/billing/invoices' },
+        { label: 'Refunds', icon: 'currency_exchange', route: '/billing/refunds' }
+      ]
+    },
+    {
       label: 'Laundry',
       icon: 'local_laundry_service',
       expanded: false,

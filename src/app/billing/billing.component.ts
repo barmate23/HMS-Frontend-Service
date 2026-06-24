@@ -4,11 +4,73 @@ import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 
-type BillingTab = 'folios' | 'payments' | 'invoices' | 'refunds';
+type BillingTab = 'folios' | 'payments' | 'invoices' | 'refunds' | 'inward' | 'bills';
 type FolioStatus = 'Open' | 'Due Out' | 'Settled' | 'Hold';
 type ChargeType = 'Room' | 'POS' | 'Laundry' | 'Discount' | 'Service Charge' | 'Adjustment';
 type PaymentMode = 'Cash' | 'Card' | 'UPI' | 'Bank Transfer' | 'Company Credit';
 type InvoiceStatus = 'Draft' | 'Issued' | 'Paid' | 'Void';
+type BillStatus = 'Pending' | 'Approved' | 'Paid' | 'Disputed';
+
+interface VendorBillDraft {
+  id: string;
+  supplier: string;
+  poNo: string;
+  billDate: string;
+  dueDate: string;
+  amount: number | null;
+  tax: number | null;
+  status: BillStatus;
+  grnNo?: string;
+}
+
+interface GrnDraft {
+  id: string;
+  billNo: string;
+  poNo: string;
+  supplier: string;
+  receivedBy: string;
+  receivedOn: string;
+  items: number | null;
+  acceptedValue: number | null;
+  variance: string;
+}
+
+interface InwardReceipt {
+  id: string;
+  poNo: string;
+  billNo?: string;
+  supplier: string;
+  receivedBy: string;
+  receivedOn: string;
+  items: number;
+  acceptedValue: number;
+  variance: string;
+}
+
+interface VendorBill {
+  id: string;
+  supplier: string;
+  poNo: string;
+  billDate: string;
+  dueDate: string;
+  amount: number;
+  tax: number;
+  status: BillStatus;
+  grnNo?: string;
+}
+
+interface MiniSupplier {
+  id: number;
+  name: string;
+}
+
+interface MiniPurchaseOrder {
+  id: string;
+  supplier: string;
+  items: number;
+  subtotal: number;
+  taxTotal: number;
+}
 
 interface FolioLine {
   id: number;
@@ -50,6 +112,7 @@ interface Invoice {
   balanceAmount: number;
   status: InvoiceStatus;
   issuedAt: string;
+  grnNo?: string;
 }
 
 interface Refund {
@@ -169,7 +232,7 @@ export class BillingComponent implements OnInit, OnDestroy {
   ]);
 
   invoices = signal<Invoice[]>([
-    { id: 1, invoiceNo: 'INV-2026-1001', folioNo: 'FOL-1003', guest: 'Rahul Mehta', issuedDate: '2026-06-14', amount: 9204, netAmount: 7800, gstAmount: 1404, paidAmount: 9204, balanceAmount: 0, status: 'Paid', issuedAt: '2026-06-14 10:35' },
+    { id: 1, invoiceNo: 'INV-2026-1001', folioNo: 'FOL-1003', guest: 'Rahul Mehta', issuedDate: '2026-06-14', amount: 9204, netAmount: 7800, gstAmount: 1404, paidAmount: 9204, balanceAmount: 0, status: 'Paid', issuedAt: '2026-06-14 10:35', grnNo: 'GRN-3301' },
     { id: 2, invoiceNo: 'INV-DRAFT-1001', folioNo: 'FOL-1001', guest: 'Akshay Barmate', issuedDate: '', amount: 7571, netAmount: 6910, gstAmount: 661, paidAmount: 5000, balanceAmount: 2571, status: 'Draft', issuedAt: 'Not issued' }
   ]);
 
@@ -177,6 +240,42 @@ export class BillingComponent implements OnInit, OnDestroy {
     { id: 1, folioNo: 'FOL-0998', guest: 'Nisha Rao', amount: 1200, mode: 'UPI', reason: 'Duplicate advance', status: 'Processed' },
     { id: 2, folioNo: 'FOL-1001', guest: 'Akshay Barmate', amount: 500, mode: 'Card', reason: 'Service recovery', status: 'Pending Approval' }
   ]);
+
+  inwardReceipts = signal<InwardReceipt[]>([
+    { id: 'GRN-3301', poNo: 'PO-2410', billNo: 'VB-5102', supplier: 'CleanPro Hospitality Supplies', receivedBy: 'Store Keeper', receivedOn: '2026-06-15 11:20', items: 2, acceptedValue: 18400, variance: '1 item pending' },
+    { id: 'GRN-3302', poNo: 'PO-2411', billNo: 'VB-5103', supplier: 'FreshFoods Wholesale', receivedBy: 'Kitchen Mgr', receivedOn: '2026-06-15 09:30', items: 12, acceptedValue: 4250, variance: 'No variance' }
+  ]);
+
+  vendorBills = signal<VendorBill[]>([
+    { id: 'VB-5102', supplier: 'CleanPro Hospitality Supplies', poNo: 'PO-2410', billDate: '2026-06-14', dueDate: '2026-07-14', amount: 16000, tax: 2880, status: 'Pending', grnNo: 'GRN-3301' },
+    { id: 'VB-5103', supplier: 'FreshFoods Wholesale', poNo: 'PO-2411', billDate: '2026-06-15', dueDate: '2026-06-22', amount: 4000, tax: 250, status: 'Approved', grnNo: 'GRN-3302' }
+  ]);
+
+  mockSuppliers = signal<MiniSupplier[]>([
+    { id: 1, name: 'CleanPro Hospitality Supplies' },
+    { id: 2, name: 'FreshFoods Wholesale' }
+  ]);
+
+  mockPurchaseOrders = signal<MiniPurchaseOrder[]>([
+    { id: 'PO-2410', supplier: 'CleanPro Hospitality Supplies', items: 3, subtotal: 16000, taxTotal: 2880 },
+    { id: 'PO-2411', supplier: 'FreshFoods Wholesale', items: 12, subtotal: 4000, taxTotal: 250 }
+  ]);
+
+  billDraft = signal<VendorBillDraft>(this.emptyBillDraft());
+  billFormSubmitted = signal(false);
+  billTouchedFields = signal<Record<string, boolean>>({});
+
+  grnDraft = signal<GrnDraft>(this.emptyGrnDraft());
+  grnFormSubmitted = signal(false);
+  grnTouchedFields = signal<Record<string, boolean>>({});
+
+  selectedVendorBill = signal<VendorBill | null>(null);
+  selectedGrn = signal<InwardReceipt | null>(null);
+  vendorBillPendingDelete = signal<VendorBill | null>(null);
+  grnPendingDelete = signal<InwardReceipt | null>(null);
+
+  billingModal = signal<'grn' | 'bill' | null>(null);
+  billStatusFilter = signal<'ALL' | BillStatus>('ALL');
 
   constructor(private readonly router: Router) {}
 
@@ -476,6 +575,8 @@ export class BillingComponent implements OnInit, OnDestroy {
     if (url.includes('/billing/payments')) this.activeTab.set('payments');
     else if (url.includes('/billing/invoices')) this.activeTab.set('invoices');
     else if (url.includes('/billing/refunds')) this.activeTab.set('refunds');
+    else if (url.includes('/billing/inward')) this.activeTab.set('inward');
+    else if (url.includes('/billing/bills')) this.activeTab.set('bills');
     else this.activeTab.set('folios');
   }
 
@@ -515,5 +616,248 @@ export class BillingComponent implements OnInit, OnDestroy {
   private calculateGst(amount: number, taxCode: string): number {
     const rate = Number(taxCode.match(/\d+/)?.[0] || 0);
     return Math.round((amount * rate) / 100);
+  }
+
+  readonly filteredBills = computed(() => {
+    const status = this.billStatusFilter();
+    return this.vendorBills().filter(bill => status === 'ALL' || bill.status === status);
+  });
+
+  billingModalTitle(): string {
+    const type = this.billingModal();
+    if (type === 'grn') return this.selectedGrn() ? 'Edit Inward / GRN' : 'Create Inward / GRN';
+    if (type === 'bill') return this.selectedVendorBill() ? 'Edit Vendor Bill' : 'Enter Vendor Bill';
+    return '';
+  }
+
+  closeBillingModal(): void {
+    this.billingModal.set(null);
+    this.selectedVendorBill.set(null);
+    this.billDraft.set(this.emptyBillDraft());
+    this.billFormSubmitted.set(false);
+    this.billTouchedFields.set({});
+    this.selectedGrn.set(null);
+    this.grnDraft.set(this.emptyGrnDraft());
+    this.grnFormSubmitted.set(false);
+    this.grnTouchedFields.set({});
+  }
+
+  openBillingModal(type: 'grn' | 'bill'): void {
+    this.closeBillingModal();
+    this.billingModal.set(type);
+  }
+
+  editVendorBill(bill: VendorBill): void {
+    this.selectedVendorBill.set(bill);
+    this.billDraft.set(this.draftFromBill(bill));
+    this.billFormSubmitted.set(false);
+    this.billTouchedFields.set({});
+    this.billingModal.set('bill');
+  }
+
+  createGrnForBill(bill: VendorBill): void {
+    this.openBillingModal('grn');
+    this.updateGrnDraft('billNo', bill.id);
+  }
+
+  deleteVendorBill(id: string): void {
+    this.vendorBills.update(bills => bills.filter(bill => bill.id !== id));
+    this.inwardReceipts.update(grns => grns.map(g => {
+      if (g.billNo === id) {
+        const { billNo, ...rest } = g;
+        return rest as InwardReceipt;
+      }
+      return g;
+    }));
+  }
+
+  editGrn(grn: InwardReceipt): void {
+    this.selectedGrn.set(grn);
+    this.grnDraft.set(this.draftFromGrn(grn));
+    this.grnFormSubmitted.set(false);
+    this.grnTouchedFields.set({});
+    this.billingModal.set('grn');
+  }
+
+  deleteGrn(id: string): void {
+    const grn = this.inwardReceipts().find(g => g.id === id);
+    if (grn && grn.billNo) {
+      this.vendorBills.update(bills => bills.map(b => {
+        if (b.id === grn.billNo) {
+          const { grnNo, ...rest } = b;
+          return rest as VendorBill;
+        }
+        return b;
+      }));
+      this.invoices.update(invs => invs.map(i => {
+        if (i.invoiceNo === grn.billNo || i.grnNo === id) {
+          const { grnNo, ...rest } = i;
+          return rest as Invoice;
+        }
+        return i;
+      }));
+    }
+    this.inwardReceipts.update(grns => grns.filter(g => g.id !== id));
+  }
+
+  linkGrnToInvoice(invoice: Invoice) {
+    this.grnDraft.set({
+      id: 'GRN-' + Math.floor(1000 + Math.random() * 9000),
+      billNo: invoice.invoiceNo,
+      poNo: '',
+      supplier: invoice.guest,
+      receivedBy: 'Front Desk',
+      receivedOn: new Date().toISOString().split('T')[0],
+      items: 1,
+      acceptedValue: invoice.amount,
+      variance: 'No variance'
+    });
+    this.selectedGrn.set(null);
+    this.grnFormSubmitted.set(false);
+    this.grnTouchedFields.set({});
+    this.billingModal.set('grn');
+  }
+
+  viewGrn(grnNo: string) {
+    const receipt = this.inwardReceipts().find(r => r.id === grnNo);
+    if (receipt) {
+      this.editGrn(receipt);
+    } else {
+      this.activeTab.set('inward');
+    }
+  }
+
+  closeDeleteVendorBill(): void { this.vendorBillPendingDelete.set(null); }
+  confirmDeleteVendorBill(): void {
+    const bill = this.vendorBillPendingDelete();
+    if (bill) { this.deleteVendorBill(bill.id); this.closeDeleteVendorBill(); }
+  }
+
+  closeDeleteGrn(): void { this.grnPendingDelete.set(null); }
+  confirmDeleteGrn(): void {
+    const grn = this.grnPendingDelete();
+    if (grn) { this.deleteGrn(grn.id); this.closeDeleteGrn(); }
+  }
+
+  emptyBillDraft(): VendorBillDraft {
+    return { id: '', supplier: '', poNo: '', billDate: new Date().toISOString().split('T')[0], dueDate: '', amount: null, tax: null, status: 'Pending', grnNo: '' };
+  }
+
+  draftFromBill(bill: VendorBill): VendorBillDraft {
+    return { id: bill.id, supplier: bill.supplier, poNo: bill.poNo || '', billDate: bill.billDate, dueDate: bill.dueDate, amount: bill.amount, tax: bill.tax, status: bill.status, grnNo: bill.grnNo || '' };
+  }
+
+  updateBillDraft<K extends keyof VendorBillDraft>(field: K, value: VendorBillDraft[K]): void {
+    this.billDraft.update(draft => ({ ...draft, [field]: value }));
+    this.billTouchedFields.update(touched => ({ ...touched, [field]: true }));
+  }
+
+  markBillFieldAsTouched(field: string): void { this.billTouchedFields.update(touched => ({ ...touched, [field]: true })); }
+
+  validateBillDraft(draft: VendorBillDraft): Array<{ field: string; message: string }> {
+    const errors: Array<{ field: string; message: string }> = [];
+    if (!draft.id.trim()) errors.push({ field: 'id', message: 'Bill / Invoice number is required.' });
+    else if (!this.selectedVendorBill() && this.vendorBills().some(b => b.id.trim().toLowerCase() === draft.id.trim().toLowerCase())) errors.push({ field: 'id', message: 'Bill number already exists.' });
+    if (!draft.supplier.trim()) errors.push({ field: 'supplier', message: 'Supplier is required.' });
+    if (!draft.billDate) errors.push({ field: 'billDate', message: 'Bill date is required.' });
+    if (!draft.dueDate) errors.push({ field: 'dueDate', message: 'Due date is required.' });
+    if (draft.amount === null || draft.amount === undefined || Number(draft.amount) <= 0) errors.push({ field: 'amount', message: 'Enter a valid amount (> 0).' });
+    if (draft.tax === null || draft.tax === undefined || Number(draft.tax) < 0) errors.push({ field: 'tax', message: 'Enter a valid tax amount (>= 0).' });
+    return errors;
+  }
+
+  readonly billValidationErrors = computed(() => this.validateBillDraft(this.billDraft()));
+
+  billFieldError(field: string): string {
+    if (!this.billFormSubmitted() && !this.billTouchedFields()[field]) return '';
+    return this.billValidationErrors().find(e => e.field === field)?.message || '';
+  }
+
+  saveVendorBill(): void {
+    this.billFormSubmitted.set(true);
+    if (this.billValidationErrors().length > 0) return;
+    const draft = this.billDraft();
+    const existing = this.selectedVendorBill();
+    const savedBill: VendorBill = {
+      id: draft.id.trim(), supplier: draft.supplier.trim(), poNo: draft.poNo.trim(), billDate: draft.billDate, dueDate: draft.dueDate, amount: Number(draft.amount), tax: Number(draft.tax), status: draft.status, grnNo: (draft.grnNo || '').trim()
+    };
+    this.vendorBills.update(bills => {
+      if (existing) { const index = bills.findIndex(b => b.id === existing.id); if (index > -1) { const next = [...bills]; next[index] = savedBill; return next; } }
+      return [savedBill, ...bills];
+    });
+    this.closeBillingModal();
+  }
+
+  emptyGrnDraft(): GrnDraft {
+    return { id: '', supplier: '', poNo: '', billNo: '', receivedBy: '', receivedOn: new Date().toISOString().split('T')[0], items: null, acceptedValue: null, variance: 'No variance' };
+  }
+
+  draftFromGrn(grn: InwardReceipt): GrnDraft {
+    return { id: grn.id, supplier: grn.supplier, poNo: grn.poNo || '', billNo: grn.billNo || '', receivedBy: grn.receivedBy, receivedOn: grn.receivedOn, items: grn.items, acceptedValue: grn.acceptedValue, variance: grn.variance || 'No variance' };
+  }
+
+  updateGrnDraft<K extends keyof GrnDraft>(field: K, value: GrnDraft[K]): void {
+    this.grnDraft.update(draft => {
+      const next = { ...draft, [field]: value };
+      if (field === 'billNo' && value) {
+        const bill = this.vendorBills().find(b => b.id === value);
+        if (bill) {
+          next.poNo = bill.poNo || ''; next.supplier = bill.supplier; next.acceptedValue = bill.amount + bill.tax;
+          const po = this.mockPurchaseOrders().find(p => p.id === bill.poNo);
+          if (po) next.items = po.items;
+        } else {
+          const inv = this.invoices().find(i => i.invoiceNo === value);
+          if (inv) {
+            next.poNo = ''; next.supplier = inv.guest; next.acceptedValue = inv.amount; next.items = 1;
+          }
+        }
+      }
+      return next;
+    });
+    this.grnTouchedFields.update(touched => ({ ...touched, [field]: true }));
+  }
+
+  markGrnFieldAsTouched(field: string): void { this.grnTouchedFields.update(touched => ({ ...touched, [field]: true })); }
+
+  validateGrnDraft(draft: GrnDraft): Array<{ field: string; message: string }> {
+    const errors: Array<{ field: string; message: string }> = [];
+    if (!draft.id.trim()) errors.push({ field: 'id', message: 'GRN number is required.' });
+    else if (!this.selectedGrn() && this.inwardReceipts().some(g => g.id.trim().toLowerCase() === draft.id.trim().toLowerCase())) errors.push({ field: 'id', message: 'GRN number already exists.' });
+    if (!draft.billNo.trim()) errors.push({ field: 'billNo', message: 'Vendor Bill reference is required.' });
+    if (!draft.receivedBy.trim()) errors.push({ field: 'receivedBy', message: 'Received by name is required.' });
+    if (!draft.receivedOn) errors.push({ field: 'receivedOn', message: 'Received date is required.' });
+    if (draft.items === null || draft.items === undefined || Number(draft.items) <= 0) errors.push({ field: 'items', message: 'Enter a valid number of items (> 0).' });
+    if (draft.acceptedValue === null || draft.acceptedValue === undefined || Number(draft.acceptedValue) < 0) errors.push({ field: 'acceptedValue', message: 'Enter a valid value (>= 0).' });
+    return errors;
+  }
+
+  readonly grnValidationErrors = computed(() => this.validateGrnDraft(this.grnDraft()));
+
+  grnFieldError(field: string): string {
+    if (!this.grnFormSubmitted() && !this.grnTouchedFields()[field]) return '';
+    return this.grnValidationErrors().find(e => e.field === field)?.message || '';
+  }
+
+  saveGrn(): void {
+    this.grnFormSubmitted.set(true);
+    if (this.grnValidationErrors().length > 0) return;
+    const draft = this.grnDraft();
+    const existing = this.selectedGrn();
+    const bill = this.vendorBills().find(b => b.id === draft.billNo);
+    const inv = this.invoices().find(i => i.invoiceNo === draft.billNo);
+    const savedGrn: InwardReceipt = {
+      id: draft.id.trim(), poNo: draft.poNo.trim() || bill?.poNo || '', billNo: draft.billNo.trim(), supplier: draft.supplier.trim() || bill?.supplier || inv?.guest || '', receivedBy: draft.receivedBy.trim(), receivedOn: draft.receivedOn, items: Number(draft.items), acceptedValue: Number(draft.acceptedValue), variance: draft.variance.trim()
+    };
+    if (existing && existing.billNo && existing.billNo !== savedGrn.billNo) {
+      this.vendorBills.update(bills => bills.map(b => { if (b.id === existing.billNo) { const { grnNo, ...rest } = b; return rest as VendorBill; } return b; }));
+      this.invoices.update(invs => invs.map(i => { if (i.invoiceNo === existing.billNo) { const { grnNo, ...rest } = i; return rest as Invoice; } return i; }));
+    }
+    this.inwardReceipts.update(grns => {
+      if (existing) { const index = grns.findIndex(g => g.id === existing.id); if (index > -1) { const next = [...grns]; next[index] = savedGrn; return next; } }
+      return [savedGrn, ...grns];
+    });
+    this.vendorBills.update(bills => bills.map(b => { if (b.id === savedGrn.billNo) return { ...b, grnNo: savedGrn.id }; return b; }));
+    this.invoices.update(invs => invs.map(i => { if (i.invoiceNo === savedGrn.billNo) return { ...i, grnNo: savedGrn.id }; return i; }));
+    this.closeBillingModal();
   }
 }

@@ -26,6 +26,7 @@ export class Layout {
       icon: 'business_center', 
       expanded: false,
       children: [
+        { label: 'Dashboard', icon: 'dashboard', route: '/front-office/dashboard' },
         { label: 'Reservations', icon: 'calendar_month', route: '/reservations' },
         { label: 'Gantt Chart', icon: 'view_timeline', route: '/gantt-chart' },
         { label: 'Arrivals', icon: 'login', route: '/arrivals' },
@@ -54,7 +55,9 @@ export class Layout {
         { label: 'Guest Folios', icon: 'receipt_long', route: '/billing/folios' },
         { label: 'Payments', icon: 'payments', route: '/billing/payments' },
         { label: 'Invoices', icon: 'request_quote', route: '/billing/invoices' },
-        { label: 'Refunds', icon: 'currency_exchange', route: '/billing/refunds' }
+        { label: 'Refunds', icon: 'currency_exchange', route: '/billing/refunds' },
+        { label: 'Inward Stock', icon: 'move_to_inbox', route: '/billing/inward' },
+        { label: 'Vendor Bills', icon: 'receipt_long', route: '/billing/bills' }
       ]
     },
     {
@@ -89,8 +92,7 @@ export class Layout {
         { label: 'Dashboard', icon: 'dashboard', route: '/purchase/dashboard' },
         { label: 'Suppliers', icon: 'storefront', route: '/purchase/suppliers' },
         { label: 'Purchase Orders', icon: 'shopping_cart', route: '/purchase/orders' },
-        { label: 'Inward Stock', icon: 'move_to_inbox', route: '/purchase/inward' },
-        { label: 'Vendor Bills', icon: 'receipt_long', route: '/purchase/bills' }
+        { label: 'Item Config', icon: 'inventory_2', route: '/purchase/items' }
       ]
     },
     {

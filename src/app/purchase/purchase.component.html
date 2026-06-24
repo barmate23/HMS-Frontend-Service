@@ -3,34 +3,141 @@
     <button type="button" [class.active]="activeTab() === 'dashboard'" (click)="setTab('dashboard')"><span class="material-icons-round">dashboard</span>Dashboard</button>
     <button type="button" [class.active]="activeTab() === 'suppliers'" (click)="setTab('suppliers')"><span class="material-icons-round">storefront</span>Suppliers</button>
     <button type="button" [class.active]="activeTab() === 'orders'" (click)="setTab('orders')"><span class="material-icons-round">shopping_cart_checkout</span>Purchase Orders</button>
-    <button type="button" [class.active]="activeTab() === 'inward'" (click)="setTab('inward')"><span class="material-icons-round">move_to_inbox</span>Inward Stock</button>
-    <button type="button" [class.active]="activeTab() === 'bills'" (click)="setTab('bills')"><span class="material-icons-round">receipt</span>Vendor Bills</button>
+    <button type="button" [class.active]="activeTab() === 'items'" (click)="setTab('items')"><span class="material-icons-round">inventory_2</span>Item Config</button>
   </nav>
 
-  <section class="metric-grid" *ngIf="activeTab() === 'dashboard'">
-    <article class="metric-card blue"><span class="material-icons-round">storefront</span><div><strong>{{ summary().suppliers }}</strong><small>Suppliers</small></div></article>
-    <article class="metric-card amber"><span class="material-icons-round">shopping_cart</span><div><strong>{{ summary().openPo }}</strong><small>Open POs</small></div></article>
-    <article class="metric-card violet"><span class="material-icons-round">currency_rupee</span><div><strong>{{ formatINR(summary().poValue) }}</strong><small>PO Value</small></div></article>
-    <article class="metric-card green"><span class="material-icons-round">inventory</span><div><strong>{{ formatINR(summary().inwardValue) }}</strong><small>Inward Value</small></div></article>
-    <article class="metric-card red"><span class="material-icons-round">payments</span><div><strong>{{ formatINR(summary().payable) }}</strong><small>Payables</small></div></article>
+  <!-- Metric Grid -->
+  <section class="metric-grid purchase-dash-metrics" *ngIf="activeTab() === 'dashboard'">
+    <article class="metric-card blue">
+      <span class="material-icons-round">storefront</span>
+      <div><strong>{{ summary().suppliers }}</strong><small>Suppliers</small></div>
+    </article>
+    <article class="metric-card amber">
+      <span class="material-icons-round">shopping_cart</span>
+      <div><strong>{{ summary().openPo }}</strong><small>Open POs</small></div>
+    </article>
+    <article class="metric-card violet">
+      <span class="material-icons-round">currency_rupee</span>
+      <div><strong>{{ formatINR(summary().poValue) }}</strong><small>PO Value</small></div>
+    </article>
+    <article class="metric-card red" [class.pulse]="lowStockItems().length > 0">
+      <span class="material-icons-round">warning</span>
+      <div><strong>{{ lowStockItems().length }}</strong><small>Low Stock Items</small></div>
+    </article>
   </section>
 
-  <section class="dashboard-grid" *ngIf="activeTab() === 'dashboard'">
-    <article class="panel">
-      <header><h2>Pending Procurement</h2><span>{{ summary().openPo }} active</span></header>
+  <!-- Dashboard Grid -->
+  <section class="dashboard-grid purchase-dash-grid" *ngIf="activeTab() === 'dashboard'">
+    <article class="panel dashboard-panel procurement-panel">
+      <header>
+        <div>
+          <h2>Pending Procurement</h2>
+          <small>Purchase orders awaiting receipt or closure</small>
+        </div>
+        <span class="panel-badge">{{ summary().openPo }} Active Orders</span>
+      </header>
       <div class="simple-table compact">
-        <div class="table-head"><span>PO</span><span>Supplier</span><span>Expected</span><span>Status</span></div>
-        <div class="table-row" *ngFor="let order of purchaseOrders()">
-          <strong>{{ order.id }}</strong><span>{{ order.supplier }}</span><span>{{ order.expectedOn }}</span><em [class]="order.status.toLowerCase().replace(' ', '-')">{{ order.status }}</em>
+        <div class="table-head"><span>PO No.</span><span>Supplier</span><span>Expected</span><span>Status</span></div>
+        <button type="button" class="table-row dashboard-table-row" *ngFor="let order of activePurchaseOrders()" (click)="editPurchaseOrder(order)">
+          <strong>{{ order.id }}</strong>
+          <span>{{ order.supplier }}</span>
+          <span>{{ order.expectedOn }}</span>
+          <em [class]="order.status.toLowerCase().replace(' ', '-')">{{ order.status }}</em>
+        </button>
+        <div class="table-row empty-row" *ngIf="!activePurchaseOrders().length">
+          <span>No active purchase orders.</span>
         </div>
       </div>
     </article>
-    <article class="panel">
-      <header><h2>Vendor Bill Queue</h2><span>{{ filteredBills().length }} bills</span></header>
-      <div class="simple-table compact-bills">
-        <div class="table-head"><span>Bill</span><span>Supplier</span><span>Due Date</span><span>Amount</span><span>Status</span></div>
-        <div class="table-row" *ngFor="let bill of vendorBills()">
-          <strong>{{ bill.id }}</strong><span>{{ bill.supplier }}</span><span>{{ bill.dueDate }}</span><b>{{ formatINR(bill.amount + bill.tax) }}</b><em [class]="bill.status.toLowerCase()">{{ bill.status }}</em>
+
+    <article class="panel dashboard-panel reorder-panel">
+      <header>
+        <div>
+          <h2>Reorder & Low Stock Alerts</h2>
+          <small>Items below their configured reorder level</small>
+        </div>
+        <span class="panel-badge alert" *ngIf="lowStockItems().length">{{ lowStockItems().length }} Need Attention</span>
+      </header>
+      <div class="simple-table compact reorder-table">
+        <div class="table-head"><span>Item</span><span>Current</span><span>Reorder</span><span>Action</span></div>
+        <div class="table-row" *ngFor="let item of lowStockItems()">
+          <span>
+            <strong>{{ item.name }}</strong>
+            <small>{{ item.code }}</small>
+          </span>
+          <span class="qty danger-text">{{ item.currentStock }} {{ item.unit }}</span>
+          <span class="qty">{{ item.reorderLevel }} {{ item.unit }}</span>
+          <span>
+            <button type="button" class="btn-order-dash" (click)="createPoForItem(item)" title="Create purchase order">
+              <span class="material-icons-round">add_shopping_cart</span><span>Order</span>
+            </button>
+          </span>
+        </div>
+        <div class="table-row empty-row" *ngIf="!lowStockItems().length">
+          <span>All inventory items are above reorder level.</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel dashboard-panel category-panel">
+      <header>
+        <div>
+          <h2>Supplier Categories</h2>
+          <small>Active vendor mix and outstanding value</small>
+        </div>
+        <span class="panel-badge">{{ supplierCategorySummary().length }} Categories</span>
+      </header>
+      <div class="category-list">
+        <div class="category-item" *ngFor="let cat of supplierCategorySummary()">
+          <div class="category-meta">
+            <div>
+              <span class="category-name">{{ cat.name }}</span>
+              <span class="category-count">{{ cat.count }} {{ cat.count === 1 ? 'supplier' : 'suppliers' }}</span>
+            </div>
+            <strong>{{ formatINR(cat.outstanding) }}</strong>
+          </div>
+          <div class="category-progress-bar">
+            <div class="progress-fill" [style.width.%]="cat.percentage"></div>
+          </div>
+        </div>
+        <div class="category-item empty-row" *ngIf="!supplierCategorySummary().length">
+          <span>No supplier categories configured.</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel dashboard-panel pipeline-panel">
+      <header>
+        <div>
+          <h2>Procurement Pipeline</h2>
+          <small>Current purchase order stage breakdown</small>
+        </div>
+        <span class="panel-badge">{{ poStatusSummary().total }} Total POs</span>
+      </header>
+      <div class="pipeline-breakdown">
+        <div class="pipeline-item">
+          <div class="pipeline-label"><span class="stage-dot draft-dot"></span><span>Draft</span><strong>{{ poStatusSummary().draft }}</strong></div>
+          <div class="progress-bar mini-bar grey"><div class="fill" [style.width.%]="(poStatusSummary().draft / (poStatusSummary().total || 1)) * 100"></div></div>
+        </div>
+        <div class="pipeline-item">
+          <div class="pipeline-label"><span class="stage-dot approved-dot"></span><span>Approved</span><strong>{{ poStatusSummary().approved }}</strong></div>
+          <div class="progress-bar mini-bar green"><div class="fill" [style.width.%]="(poStatusSummary().approved / (poStatusSummary().total || 1)) * 100"></div></div>
+        </div>
+        <div class="pipeline-item">
+          <div class="pipeline-label"><span class="stage-dot partial-dot"></span><span>Partially Received</span><strong>{{ poStatusSummary().partiallyReceived }}</strong></div>
+          <div class="progress-bar mini-bar orange"><div class="fill" [style.width.%]="(poStatusSummary().partiallyReceived / (poStatusSummary().total || 1)) * 100"></div></div>
+        </div>
+        <div class="pipeline-item">
+          <div class="pipeline-label"><span class="stage-dot closed-dot"></span><span>Closed</span><strong>{{ poStatusSummary().closed }}</strong></div>
+          <div class="progress-bar mini-bar blue"><div class="fill" [style.width.%]="(poStatusSummary().closed / (poStatusSummary().total || 1)) * 100"></div></div>
+        </div>
+      </div>
+      <div class="quick-actions-panel">
+        <span>Quick Actions</span>
+        <div class="action-buttons">
+          <button type="button" class="action-btn po-action" (click)="openCreateModal('po')"><span class="material-icons-round">add_shopping_cart</span><span>New PO</span></button>
+          <button type="button" class="action-btn supplier-action" (click)="openCreateModal('supplier')"><span class="material-icons-round">person_add</span><span>Add Supplier</span></button>
+          <button type="button" class="action-btn item-action" (click)="openCreateModal('item')"><span class="material-icons-round">inventory_2</span><span>Add Item</span></button>
         </div>
       </div>
     </article>
@@ -46,6 +153,8 @@
     </header>
     <div class="simple-table supplier-table">
       <div class="table-head"><span>Code</span><span>Supplier</span><span>Category</span><span>Contact</span><span>Terms</span><span>Outstanding</span><span>Status</span><span>Actions</span></div>
+      <div class="table-row empty-row" *ngIf="supplierLoading()"><span>Loading suppliers...</span></div>
+      <div class="table-row empty-row" *ngIf="!supplierLoading() && !filteredSuppliers().length"><span>No suppliers found.</span></div>
       <div class="table-row" *ngFor="let supplier of filteredSuppliers()">
         <strong>{{ supplier.code }}</strong>
         <span><b>{{ supplier.name }}</b><small>{{ supplier.gstin }} • {{ supplier.city }}</small></span>
@@ -53,7 +162,7 @@
         <span><b>{{ supplier.contact }}</b><small>{{ supplier.phone }} • {{ supplier.email }}</small></span>
         <span>{{ supplier.paymentTerms }}</span>
         <b>{{ formatINR(supplier.outstanding) }}</b>
-        <em [class]="supplier.status.toLowerCase().replace(' ', '-')">{{ supplier.status }}</em>
+        <em [class]="statusClass(supplier.status)">{{ supplier.status }}</em>
         <span class="row-actions">
           <button type="button" title="View supplier" (click)="viewSupplier(supplier)"><span class="material-icons-round">visibility</span></button>
           <button type="button" title="Edit supplier" (click)="editSupplier(supplier)"><span class="material-icons-round">edit</span></button>
@@ -91,44 +200,41 @@
     </div>
   </section>
 
-  <section class="panel table-panel" *ngIf="activeTab() === 'inward'">
-    <header><h2>Inward Stock / GRN</h2><button class="primary-btn" (click)="openCreateModal('grn')"><span class="material-icons-round">move_to_inbox</span>Create GRN</button></header>
-    <div class="simple-table inward-table">
-      <div class="table-head"><span>GRN No.</span><span>PO No.</span><span>Supplier</span><span>Received By</span><span>Received On</span><span>Value</span><span>Variance</span></div>
-      <div class="table-row" *ngFor="let receipt of inwardReceipts()">
-        <strong>{{ receipt.id }}</strong><span>{{ receipt.poNo }}</span><span>{{ receipt.supplier }}</span><span>{{ receipt.receivedBy }}</span><span>{{ receipt.receivedOn }}</span><b>{{ formatINR(receipt.acceptedValue) }}</b><em [class]="receipt.variance === 'No variance' ? 'paid' : 'pending'">{{ receipt.variance }}</em>
-      </div>
-    </div>
-  </section>
-
-  <section class="panel table-panel" *ngIf="activeTab() === 'bills'">
+  <!-- ===== ITEM CONFIGURATION TAB ===== -->
+  <section class="panel table-panel" *ngIf="activeTab() === 'items'">
     <header>
-      <h2>Vendor Bills</h2>
-      <div class="toolbar compact-tools">
-        <select [ngModel]="billStatusFilter()" (ngModelChange)="billStatusFilter.set($event)">
-          <option value="ALL">All Statuses</option>
-          <option value="Pending">Pending</option>
-          <option value="Approved">Approved</option>
-          <option value="Paid">Paid</option>
-          <option value="Disputed">Disputed</option>
-        </select>
-        <button class="primary-btn" (click)="openCreateModal('bill')"><span class="material-icons-round">receipt_long</span>Enter Bill</button>
+      <h2>Item Configuration</h2>
+      <div class="toolbar">
+        <label class="search-field"><span class="material-icons-round">search</span><input [ngModel]="itemSearch()" (ngModelChange)="itemSearch.set($event)" placeholder="Search code, name, category, HSN..."></label>
+        <button class="primary-btn" (click)="openCreateModal('item')"><span class="material-icons-round">add</span>Add Item</button>
       </div>
     </header>
-    <div class="simple-table bill-table">
-      <div class="table-head"><span>Bill No.</span><span>Supplier</span><span>PO No.</span><span>Bill Date</span><span>Due Date</span><span>Total</span><span>Status</span><span>Actions</span></div>
-      <div class="table-row" *ngFor="let bill of filteredBills()">
-        <strong>{{ bill.id }}</strong><span>{{ bill.supplier }}</span><span>{{ bill.poNo }}</span><span>{{ bill.billDate }}</span><span>{{ bill.dueDate }}</span><b>{{ formatINR(bill.amount + bill.tax) }}</b><em [class]="bill.status.toLowerCase()">{{ bill.status }}</em>
+    <div class="simple-table items-table">
+      <div class="table-head">
+        <span>Code</span><span>Item Name</span><span>Category</span><span>UOM</span><span>HSN Code</span><span>Unit Cost</span><span>Tax %</span><span>Reorder Min</span><span>Stock Max</span><span>Status</span><span>Actions</span>
+      </div>
+      <div class="table-row empty-row" *ngIf="!filteredItems().length"><span>No items found.</span></div>
+      <div class="table-row" *ngFor="let item of filteredItems()">
+        <strong>{{ item.code }}</strong>
+        <span><b>{{ item.name }}</b><small>{{ item.description }}</small></span>
+        <span>{{ item.category }}</span>
+        <span>{{ item.unit }}</span>
+        <span>{{ item.hsnCode || '—' }}</span>
+        <b>{{ formatINR(item.unitCost) }}</b>
+        <span>{{ item.taxRate }}%</span>
+        <span>{{ item.reorderLevel ?? '—' }}</span>
+        <span>{{ item.parLevel ?? '—' }}</span>
+        <em [class]="item.isActive ? 'approved' : 'draft'">{{ item.isActive ? 'Active' : 'Inactive' }}</em>
         <span class="row-actions">
-          <button type="button" title="Edit bill" (click)="editVendorBill(bill)"><span class="material-icons-round">edit</span></button>
-          <button type="button" title="Delete bill" (click)="deleteVendorBill(bill.id)"><span class="material-icons-round">delete</span></button>
+          <button type="button" title="Edit item" (click)="editItem(item)"><span class="material-icons-round">edit</span></button>
+          <button type="button" title="Delete item" (click)="deleteItem(item.id)"><span class="material-icons-round">delete</span></button>
         </span>
       </div>
     </div>
   </section>
 
   <div class="modal-backdrop" *ngIf="createModal()" (click)="closeCreateModal()">
-    <section class="entry-modal" (click)="$event.stopPropagation()">
+    <section class="entry-modal" [class.po-modal]="createModal() === 'po'" (click)="$event.stopPropagation()">
       <header>
         <div>
           <span class="material-icons-round">edit_note</span>
@@ -139,54 +245,373 @@
 
       <div class="modal-body" [ngSwitch]="createModal()">
         <div class="form-grid" *ngSwitchCase="'supplier'">
-          <label><span>Supplier Name</span><input [value]="selectedSupplier()?.name || ''" placeholder="Supplier / vendor name"></label>
-          <label><span>Category</span><select [value]="selectedSupplier()?.category || 'Housekeeping Supplies'"><option>Housekeeping Supplies</option><option>Linen & Laundry</option><option>Minibar</option><option>Food & Beverage</option><option>Engineering</option></select></label>
-          <label><span>Contact Person</span><input [value]="selectedSupplier()?.contact || ''" placeholder="Primary contact"></label>
-          <label><span>Phone</span><input [value]="selectedSupplier()?.phone || ''" placeholder="+91"></label>
-          <label><span>Email</span><input [value]="selectedSupplier()?.email || ''" placeholder="billing@supplier.com"></label>
-          <label><span>Payment Terms</span><select [value]="selectedSupplier()?.paymentTerms || '7 Days'"><option>7 Days</option><option>15 Days</option><option>30 Days</option><option>45 Days</option></select></label>
-          <label class="wide"><span>Supplier Address</span><input [value]="selectedSupplier()?.address || ''" placeholder="Registered billing / dispatch address"></label>
-          <label><span>City</span><input [value]="selectedSupplier()?.city || ''" placeholder="City"></label>
-          <label><span>State</span><input [value]="selectedSupplier()?.state || ''" placeholder="State"></label>
-          <label><span>Pin Code</span><input [value]="selectedSupplier()?.pinCode || ''" placeholder="400001"></label>
-          <label><span>GSTIN</span><input [value]="selectedSupplier()?.gstin || ''" placeholder="Tax registration"></label>
-          <label><span>PAN</span><input [value]="selectedSupplier()?.pan || ''" placeholder="PAN number"></label>
-          <label><span>Credit Limit</span><input [value]="selectedSupplier()?.creditLimit || ''" placeholder="Amount"></label>
-          <label><span>Bank Name</span><input [value]="selectedSupplier()?.bankName || ''" placeholder="Bank name"></label>
-          <label><span>Account No.</span><input [value]="selectedSupplier()?.accountNo || ''" placeholder="Vendor account number"></label>
-          <label><span>IFSC</span><input [value]="selectedSupplier()?.ifsc || ''" placeholder="IFSC code"></label>
+          <label [class.invalid]="supplierFieldError('name')"><span>Supplier Name</span><input [ngModel]="supplierDraft().name" (ngModelChange)="updateSupplierDraft('name', $event)" (blur)="markFieldAsTouched('name')" placeholder="Supplier / vendor name"><small>{{ supplierFieldError('name') }}</small></label>
+          <label [class.invalid]="supplierFieldError('categoryId')"><span>Category</span><select [ngModel]="supplierDraft().categoryId" (ngModelChange)="updateSupplierDraft('categoryId', +$event || undefined)" (blur)="markFieldAsTouched('categoryId')"><option [ngValue]="undefined">Select category</option><option *ngFor="let option of supplierCategories()" [ngValue]="option.id">{{ option.value }}</option></select><small>{{ supplierFieldError('categoryId') }}</small></label>
+          <label [class.invalid]="supplierFieldError('contact')"><span>Contact Person</span><input [ngModel]="supplierDraft().contact" (ngModelChange)="updateSupplierDraft('contact', $event)" (blur)="markFieldAsTouched('contact')" placeholder="Primary contact"><small>{{ supplierFieldError('contact') }}</small></label>
+          <label [class.invalid]="supplierFieldError('phone')"><span>Phone</span><input [ngModel]="supplierDraft().phone" (ngModelChange)="updateSupplierDraft('phone', $event)" (blur)="markFieldAsTouched('phone')" placeholder="+91"><small>{{ supplierFieldError('phone') }}</small></label>
+          <label [class.invalid]="supplierFieldError('email')"><span>Email</span><input [ngModel]="supplierDraft().email" (ngModelChange)="updateSupplierDraft('email', $event)" (blur)="markFieldAsTouched('email')" placeholder="billing@supplier.com"><small>{{ supplierFieldError('email') }}</small></label>
+          <label [class.invalid]="supplierFieldError('paymentTermsId')"><span>Payment Terms</span><select [ngModel]="supplierDraft().paymentTermsId" (ngModelChange)="updateSupplierDraft('paymentTermsId', +$event || undefined)" (blur)="markFieldAsTouched('paymentTermsId')"><option [ngValue]="undefined">Select terms</option><option *ngFor="let option of paymentTerms()" [ngValue]="option.id">{{ option.value }}</option></select><small>{{ supplierFieldError('paymentTermsId') }}</small></label>
+          <label [class.invalid]="supplierFieldError('statusId')"><span>Status</span><select [ngModel]="supplierDraft().statusId" (ngModelChange)="updateSupplierDraft('statusId', +$event || undefined)" (blur)="markFieldAsTouched('statusId')"><option [ngValue]="undefined">Select status</option><option *ngFor="let option of supplierStatuses()" [ngValue]="option.id">{{ option.value }}</option></select><small>{{ supplierFieldError('statusId') }}</small></label>
+          <label class="wide" [class.invalid]="supplierFieldError('address')"><span>Supplier Address</span><input [ngModel]="supplierDraft().address" (ngModelChange)="updateSupplierDraft('address', $event)" (blur)="markFieldAsTouched('address')" placeholder="Registered billing / dispatch address"><small>{{ supplierFieldError('address') }}</small></label>
+          <label [class.invalid]="supplierFieldError('city')"><span>City</span><input [ngModel]="supplierDraft().city" (ngModelChange)="updateSupplierDraft('city', $event)" (blur)="markFieldAsTouched('city')" placeholder="City"><small>{{ supplierFieldError('city') }}</small></label>
+          <label [class.invalid]="supplierFieldError('state')"><span>State</span><input [ngModel]="supplierDraft().state" (ngModelChange)="updateSupplierDraft('state', $event)" (blur)="markFieldAsTouched('state')" placeholder="State"><small>{{ supplierFieldError('state') }}</small></label>
+          <label [class.invalid]="supplierFieldError('pinCode')"><span>Pin Code</span><input [ngModel]="supplierDraft().pinCode" (ngModelChange)="updateSupplierDraft('pinCode', $event)" (blur)="markFieldAsTouched('pinCode')" placeholder="400001"><small>{{ supplierFieldError('pinCode') }}</small></label>
+          <label [class.invalid]="supplierFieldError('gstin')"><span>GSTIN</span><input [ngModel]="supplierDraft().gstin" (ngModelChange)="updateSupplierDraft('gstin', $event)" (blur)="markFieldAsTouched('gstin')" placeholder="Tax registration"><small>{{ supplierFieldError('gstin') }}</small></label>
+          <label [class.invalid]="supplierFieldError('pan')"><span>PAN</span><input [ngModel]="supplierDraft().pan" (ngModelChange)="updateSupplierDraft('pan', $event)" (blur)="markFieldAsTouched('pan')" placeholder="PAN number"><small>{{ supplierFieldError('pan') }}</small></label>
+          <label [class.invalid]="supplierFieldError('creditLimit')"><span>Credit Limit</span><input type="number" [ngModel]="supplierDraft().creditLimit" (ngModelChange)="updateSupplierDraft('creditLimit', +$event || null)" (blur)="markFieldAsTouched('creditLimit')" placeholder="Amount"><small>{{ supplierFieldError('creditLimit') }}</small></label>
+          <label><span>Bank Name</span><input [ngModel]="supplierDraft().bankName" (ngModelChange)="updateSupplierDraft('bankName', $event)" placeholder="Bank name"></label>
+          <label><span>Account No.</span><input [ngModel]="supplierDraft().accountNo" (ngModelChange)="updateSupplierDraft('accountNo', $event)" placeholder="Vendor account number"></label>
+          <label [class.invalid]="supplierFieldError('ifsc')"><span>IFSC</span><input [ngModel]="supplierDraft().ifsc" (ngModelChange)="updateSupplierDraft('ifsc', $event)" (blur)="markFieldAsTouched('ifsc')" placeholder="IFSC code"><small>{{ supplierFieldError('ifsc') }}</small></label>
         </div>
 
-        <div class="form-grid" *ngSwitchCase="'po'">
-          <label><span>PO Number</span><input [value]="selectedPurchaseOrder()?.id || ''" placeholder="Enter PO number"></label>
-          <label><span>Supplier</span><select [value]="selectedPurchaseOrder()?.supplier || ''"><option *ngFor="let supplier of suppliers()">{{ supplier.name }}</option></select></label>
-          <label><span>Department</span><select [value]="selectedPurchaseOrder()?.department || 'Housekeeping'"><option>Housekeeping</option><option>Laundry</option><option>Minibar</option></select></label>
-          <label><span>Expected Date</span><input type="date" [value]="selectedPurchaseOrder()?.expectedOn || ''"></label>
-          <label><span>Item Count</span><input type="number" [value]="selectedPurchaseOrder()?.items || 1"></label>
-          <label class="wide"><span>PO Note</span><input placeholder="Purchase instruction"></label>
+        <div class="po-form-container" *ngSwitchCase="'po'">
+          <!-- Header Details -->
+          <div class="po-header-section">
+            <h3 class="section-title">PO Header Info</h3>
+            <div class="form-grid">
+              <label [class.invalid]="poFieldError('poNumber')">
+                <span>PO Number</span>
+                <input [ngModel]="poDraft().poNumber" (ngModelChange)="updatePoDraft('poNumber', $event)" (blur)="markPoFieldAsTouched('poNumber')" placeholder="PO-YYYY-XXXX">
+                <small>{{ poFieldError('poNumber') }}</small>
+              </label>
+
+              <label [class.invalid]="poFieldError('poDate')">
+                <span>PO Date</span>
+                <input type="date" [ngModel]="poDraft().poDate" (ngModelChange)="updatePoDraft('poDate', $event)" (blur)="markPoFieldAsTouched('poDate')">
+                <small>{{ poFieldError('poDate') }}</small>
+              </label>
+
+              <label [class.invalid]="poFieldError('supplier')">
+                <span>Supplier</span>
+                <select [ngModel]="poDraft().supplierId" (ngModelChange)="updatePoDraft('supplierId', +$event || undefined)" (blur)="markPoFieldAsTouched('supplier')">
+                  <option [ngValue]="undefined">Select Supplier</option>
+                  <option *ngFor="let supplier of suppliers()" [ngValue]="supplier.id">{{ supplier.name }}</option>
+                </select>
+                <small>{{ poFieldError('supplier') }}</small>
+              </label>
+
+              <label [class.invalid]="poFieldError('expectedOn')">
+                <span>Expected Delivery Date</span>
+                <input type="date" [ngModel]="poDraft().expectedOn" (ngModelChange)="updatePoDraft('expectedOn', $event)" (blur)="markPoFieldAsTouched('expectedOn')">
+                <small>{{ poFieldError('expectedOn') }}</small>
+              </label>
+
+              <label>
+                <span>Department</span>
+                <select [ngModel]="poDraft().department" (ngModelChange)="updatePoDraft('department', $event)">
+                  <option value="Housekeeping">Housekeeping</option>
+                  <option value="Laundry">Laundry</option>
+                  <option value="Minibar">Minibar</option>
+                  <option value="Kitchen">Kitchen & F&B</option>
+                  <option value="Front Office">Front Office</option>
+                </select>
+              </label>
+
+              <label [class.invalid]="poFieldError('deliveryLocation')">
+                <span>Delivery Location / Store</span>
+                <select [ngModel]="poDraft().deliveryLocation" (ngModelChange)="updatePoDraft('deliveryLocation', $event)" (blur)="markPoFieldAsTouched('deliveryLocation')">
+                  <option value="">Select Store</option>
+                  <option *ngFor="let loc of deliveryLocations()" [value]="loc">{{ loc }}</option>
+                </select>
+                <small>{{ poFieldError('deliveryLocation') }}</small>
+              </label>
+
+              <label [class.invalid]="poFieldError('requestedBy')">
+                <span>Requested By (Staff)</span>
+                <input [ngModel]="poDraft().requestedBy" (ngModelChange)="updatePoDraft('requestedBy', $event)" (blur)="markPoFieldAsTouched('requestedBy')" placeholder="Employee Name">
+                <small>{{ poFieldError('requestedBy') }}</small>
+              </label>
+
+              <label>
+                <span>Payment Terms</span>
+                <select [ngModel]="poDraft().paymentTermsId" (ngModelChange)="updatePoDraft('paymentTermsId', +$event || undefined)">
+                  <option [ngValue]="undefined">Select Terms</option>
+                  <option *ngFor="let term of paymentTerms()" [ngValue]="term.id">{{ term.value }}</option>
+                  <option value="0" *ngIf="!paymentTerms().length">Immediate</option>
+                  <option value="1" *ngIf="!paymentTerms().length">7 Days</option>
+                  <option value="2" *ngIf="!paymentTerms().length">15 Days</option>
+                  <option value="3" *ngIf="!paymentTerms().length">30 Days</option>
+                  <option value="4" *ngIf="!paymentTerms().length">45 Days</option>
+                  <option value="5" *ngIf="!paymentTerms().length">60 Days</option>
+                  <option value="6" *ngIf="!paymentTerms().length">90 Days</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Reference PR No.</span>
+                <input [ngModel]="poDraft().referenceNo" (ngModelChange)="updatePoDraft('referenceNo', $event)" placeholder="e.g. PR-1007">
+              </label>
+            </div>
+          </div>
+
+          <!-- Line Items Detail Grid -->
+          <div class="po-lines-section">
+            <div class="section-header-toolbar">
+              <h3 class="section-title">Line Items Detail</h3>
+              <button type="button" class="secondary-btn btn-sm" (click)="addPoLineItem()">
+                <span class="material-icons-round">add</span> Add Item Line
+              </button>
+            </div>
+            
+            <div class="po-lines-table-container">
+              <table class="po-lines-table">
+                <thead>
+                  <tr>
+                    <th style="width: 40px;">#</th>
+                    <th>Item Description</th>
+                    <th style="width: 100px;">Item Code</th>
+                    <th style="width: 80px;">Qty</th>
+                    <th style="width: 70px;">Unit</th>
+                    <th style="width: 100px;">Rate (₹)</th>
+                    <th style="width: 80px;">Disc (%)</th>
+                    <th style="width: 80px;">GST (%)</th>
+                    <th style="width: 110px;">Total (₹)</th>
+                    <th style="width: 45px;"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let line of poDraft().lineItems; let i = index">
+                    <td class="row-num">{{ i + 1 }}</td>
+                    <td>
+                      <select class="line-input" [ngModel]="line.itemName" (ngModelChange)="onPoItemSelect(i, +$event)">
+                        <option value="">-- Choose Item --</option>
+                        <option *ngFor="let item of masterItems()" [value]="item.id">{{ item.name }} ({{ item.category }})</option>
+                      </select>
+                      <small class="error-text" *ngIf="poFieldError('line-' + i + '-itemName')">Required</small>
+                    </td>
+                    <td>
+                      <input class="line-input readonly-input" [ngModel]="line.itemCode" readonly placeholder="Auto">
+                    </td>
+                    <td>
+                      <input class="line-input" type="number" min="1" [ngModel]="line.quantity" (ngModelChange)="updatePoLineItem(i, 'quantity', +$event || 0)" (blur)="markPoFieldAsTouched('line-' + i + '-quantity')">
+                      <small class="error-text" *ngIf="poFieldError('line-' + i + '-quantity')">> 0</small>
+                    </td>
+                    <td>
+                      <input class="line-input readonly-input" [ngModel]="line.uom" readonly placeholder="Unit">
+                    </td>
+                    <td>
+                      <input class="line-input" type="number" min="0" [ngModel]="line.rate" (ngModelChange)="updatePoLineItem(i, 'rate', +$event || 0)" (blur)="markPoFieldAsTouched('line-' + i + '-rate')">
+                      <small class="error-text" *ngIf="poFieldError('line-' + i + '-rate')">>= 0</small>
+                    </td>
+                    <td>
+                      <input class="line-input" type="number" min="0" max="100" [ngModel]="line.discountPercent" (ngModelChange)="updatePoLineItem(i, 'discountPercent', +$event || 0)">
+                    </td>
+                    <td>
+                      <input class="line-input" type="number" min="0" max="100" [ngModel]="line.taxPercent" (ngModelChange)="updatePoLineItem(i, 'taxPercent', +$event || 0)">
+                    </td>
+                    <td class="line-total-cell">
+                      <strong>{{ formatINR(line.total) }}</strong>
+                    </td>
+                    <td>
+                      <button type="button" class="line-delete-btn" (click)="removePoLineItem(i)">
+                        <span class="material-icons-round">delete</span>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <small class="error-text block-error" *ngIf="poFieldError('lineItems')">At least one valid line item is required.</small>
+            </div>
+          </div>
+
+          <!-- Bottom Totals & Notes Section -->
+          <div class="po-bottom-section">
+            <div class="po-notes-block">
+              <label>
+                <span>Special Instructions / Terms & Conditions</span>
+                <textarea [ngModel]="poDraft().notes" (ngModelChange)="updatePoDraft('notes', $event)" placeholder="Enter purchase instructions, terms, packaging requirements..."></textarea>
+              </label>
+            </div>
+            
+            <div class="po-totals-block">
+              <div class="totals-row">
+                <span class="label">Subtotal:</span>
+                <span class="val">{{ formatINR(poDraft().subtotal) }}</span>
+              </div>
+              <div class="totals-row">
+                <span class="label">Tax / GST Total:</span>
+                <span class="val">{{ formatINR(poDraft().taxTotal) }}</span>
+              </div>
+              <div class="totals-row edit-row">
+                <span class="label">Shipping & Freight (₹):</span>
+                <input class="shipping-input" type="number" min="0" [ngModel]="poDraft().shippingCharges" (ngModelChange)="updatePoDraft('shippingCharges', +$event || 0)">
+              </div>
+              <div class="totals-row grand-total">
+                <span class="label">Grand Total:</span>
+                <span class="val">{{ formatINR(poDraft().amount) }}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="form-grid" *ngSwitchCase="'grn'">
-          <label><span>PO Number</span><select><option *ngFor="let order of purchaseOrders()">{{ order.id }}</option></select></label>
-          <label><span>Received By</span><input value="Store Keeper"></label>
-          <label><span>Received Date</span><input type="date"></label>
-          <label><span>Accepted Value</span><input placeholder="Amount"></label>
-          <label class="wide"><span>Variance Note</span><input placeholder="Short / excess / damaged quantity"></label>
+        <div class="form-grid" *ngSwitchCase="'item'">
+          <label [class.invalid]="itemFieldError('code')">
+            <span>Item Code</span>
+            <input [ngModel]="itemDraft().code" (ngModelChange)="updateItemDraft('code', $event)" (blur)="markItemFieldAsTouched('code')" placeholder="e.g. HK-LIN-001" style="text-transform: uppercase;">
+            <small>{{ itemFieldError('code') }}</small>
+          </label>
+
+          <label [class.invalid]="itemFieldError('name')">
+            <span>Item Name</span>
+            <input [ngModel]="itemDraft().name" (ngModelChange)="updateItemDraft('name', $event)" (blur)="markItemFieldAsTouched('name')" placeholder="Item description">
+            <small>{{ itemFieldError('name') }}</small>
+          </label>
+
+          <label [class.invalid]="itemFieldError('category')">
+            <span>Category</span>
+            <select [ngModel]="itemDraft().category" (ngModelChange)="updateItemDraft('category', $event)" (blur)="markItemFieldAsTouched('category')">
+              <option value="">Select category</option>
+              <option value="Housekeeping Linen">Housekeeping Linen</option>
+              <option value="Guest Amenities">Guest Amenities</option>
+              <option value="Laundry Consumable">Laundry Consumable</option>
+              <option value="Cleaning Chemical">Cleaning Chemical</option>
+              <option value="Minibar">Minibar</option>
+              <option value="Kitchen Raw Material">Kitchen Raw Material</option>
+              <option value="Stationery">Stationery</option>
+              <option value="Engineering & Maintenance">Engineering &amp; Maintenance</option>
+              <option value="Uniforms">Uniforms</option>
+              <option value="Other">Other</option>
+            </select>
+            <small>{{ itemFieldError('category') }}</small>
+          </label>
+
+          <label [class.invalid]="itemFieldError('unit')">
+            <span>Unit of Measure (UOM)</span>
+            <select [ngModel]="itemDraft().unit" (ngModelChange)="updateItemDraft('unit', $event)" (blur)="markItemFieldAsTouched('unit')">
+              <option value="Pcs">Pcs</option>
+              <option value="Kg">Kg</option>
+              <option value="Ltr">Ltr</option>
+              <option value="Can">Can</option>
+              <option value="Box">Box</option>
+              <option value="Carton">Carton</option>
+              <option value="Dozen">Dozen</option>
+              <option value="Set">Set</option>
+              <option value="Pair">Pair</option>
+              <option value="Roll">Roll</option>
+              <option value="Gm">Gm</option>
+              <option value="Ml">Ml</option>
+            </select>
+            <small>{{ itemFieldError('unit') }}</small>
+          </label>
+
+          <label [class.invalid]="itemFieldError('unitCost')">
+            <span>Unit Cost (₹)</span>
+            <input type="number" min="0" [ngModel]="itemDraft().unitCost" (ngModelChange)="updateItemDraft('unitCost', +$event)" (blur)="markItemFieldAsTouched('unitCost')" placeholder="0.00">
+            <small>{{ itemFieldError('unitCost') }}</small>
+          </label>
+
+          <label [class.invalid]="itemFieldError('taxRate')">
+            <span>GST Tax Rate (%)</span>
+            <select [ngModel]="itemDraft().taxRate" (ngModelChange)="updateItemDraft('taxRate', +$event)" (blur)="markItemFieldAsTouched('taxRate')">
+              <option [ngValue]="0">0% (Exempt)</option>
+              <option [ngValue]="5">5%</option>
+              <option [ngValue]="12">12%</option>
+              <option [ngValue]="18">18%</option>
+              <option [ngValue]="28">28%</option>
+            </select>
+            <small>{{ itemFieldError('taxRate') }}</small>
+          </label>
+
+          <label>
+            <span>HSN / SAC Code</span>
+            <input [ngModel]="itemDraft().hsnCode" (ngModelChange)="updateItemDraft('hsnCode', $event)" placeholder="e.g. 6302" style="text-transform: uppercase;">
+          </label>
+
+          <label [class.invalid]="itemFieldError('reorderLevel')">
+            <span>Reorder Level (Min Qty)</span>
+            <input type="number" min="0" [ngModel]="itemDraft().reorderLevel" (ngModelChange)="updateItemDraft('reorderLevel', $event === '' ? null : +$event)" (blur)="markItemFieldAsTouched('reorderLevel')" placeholder="Alert threshold">
+            <small>{{ itemFieldError('reorderLevel') }}</small>
+          </label>
+
+          <label [class.invalid]="itemFieldError('parLevel')">
+            <span>Maximum Stock Level (Par Qty)</span>
+            <input type="number" min="0" [ngModel]="itemDraft().parLevel" (ngModelChange)="updateItemDraft('parLevel', $event === '' ? null : +$event)" (blur)="markItemFieldAsTouched('parLevel')" placeholder="Target stock after reorder">
+            <small>{{ itemFieldError('parLevel') }}</small>
+          </label>
+
+          <label class="wide">
+            <span>Description / Specification</span>
+            <input [ngModel]="itemDraft().description" (ngModelChange)="updateItemDraft('description', $event)" placeholder="Item specifications, brand, size, etc.">
+          </label>
+
+          <label class="status-toggle-label">
+            <span>Item Status</span>
+            <div class="toggle-switch">
+              <input type="checkbox" id="itemActiveToggle" [checked]="itemDraft().isActive" (change)="updateItemDraft('isActive', $any($event.target).checked)">
+              <label for="itemActiveToggle" class="toggle-track">
+                <span class="toggle-thumb"></span>
+              </label>
+              <span class="toggle-text">{{ itemDraft().isActive ? 'Active' : 'Inactive' }}</span>
+            </div>
+          </label>
         </div>
 
-        <div class="form-grid" *ngSwitchCase="'bill'">
-          <label><span>Supplier</span><select [value]="selectedVendorBill()?.supplier || ''"><option *ngFor="let supplier of suppliers()">{{ supplier.name }}</option></select></label>
-          <label><span>PO Number</span><select [value]="selectedVendorBill()?.poNo || ''"><option *ngFor="let order of purchaseOrders()">{{ order.id }}</option></select></label>
-          <label><span>Bill Date</span><input type="date" [value]="selectedVendorBill()?.billDate || ''"></label>
-          <label><span>Due Date</span><input type="date" [value]="selectedVendorBill()?.dueDate || ''"></label>
-          <label><span>Amount</span><input [value]="selectedVendorBill()?.amount || ''" placeholder="Before tax"></label>
-          <label><span>GST</span><input [value]="selectedVendorBill()?.tax || ''" placeholder="Tax amount"></label>
-        </div>
       </div>
 
       <footer>
         <button type="button" class="secondary-btn" (click)="closeCreateModal()">Cancel</button>
-        <button type="button" class="primary-btn" (click)="closeCreateModal()"><span class="material-icons-round">save</span>Save</button>
+        <button type="button" class="primary-btn"
+          [disabled]="(createModal() === 'supplier' && supplierFormSubmitted() && supplierValidationErrors().length > 0) || 
+                      (createModal() === 'po' && poFormSubmitted() && poValidationErrors().length > 0) || 
+                      (createModal() === 'item' && itemFormSubmitted() && itemValidationErrors().length > 0)"
+          (click)="createModal() === 'supplier' ? saveSupplier() : 
+                  (createModal() === 'po' ? savePurchaseOrder() : 
+                  (createModal() === 'item' ? saveItem() : closeCreateModal()))">
+          <span class="material-icons-round">save</span>Save
+        </button>
+      </footer>
+    </section>
+  </div>
+
+  <!-- Item Delete Confirmation Modal -->
+  <div class="modal-backdrop" *ngIf="itemPendingDelete() as item" (click)="closeDeleteItem()">
+    <section class="entry-modal confirm-modal" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <span class="material-icons-round">warning</span>
+          <h2>Delete Item</h2>
+        </div>
+        <button type="button" class="icon-btn" (click)="closeDeleteItem()"><span class="material-icons-round">close</span></button>
+      </header>
+      <div class="modal-body">
+        <div class="confirm-copy">
+          <span class="material-icons-round">inventory_2</span>
+          <div>
+            <strong>{{ item.name }}</strong>
+            <p>This item will be permanently removed from the item catalogue. Any purchase order lines using this item will not be affected.</p>
+            <small>{{ item.code }} &bull; {{ item.category }} &bull; {{ item.unit }}</small>
+          </div>
+        </div>
+      </div>
+      <footer>
+        <button type="button" class="secondary-btn" (click)="closeDeleteItem()">Cancel</button>
+        <button type="button" class="danger-btn" (click)="confirmDeleteItem()"><span class="material-icons-round">delete</span>Delete Item</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="supplierPendingDelete() as supplier" (click)="closeDeleteSupplier()">
+    <section class="entry-modal confirm-modal" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <span class="material-icons-round">warning</span>
+          <h2>Delete Supplier</h2>
+        </div>
+        <button type="button" class="icon-btn" (click)="closeDeleteSupplier()"><span class="material-icons-round">close</span></button>
+      </header>
+      <div class="modal-body">
+        <div class="confirm-copy">
+          <span class="material-icons-round">delete</span>
+          <div>
+            <strong>{{ supplier.name }}</strong>
+            <p>This supplier will be permanently removed from the register.</p>
+            <small>{{ supplier.code }} • {{ supplier.category }} • {{ supplier.phone || 'No phone' }}</small>
+          </div>
+        </div>
+      </div>
+      <footer>
+        <button type="button" class="secondary-btn" (click)="closeDeleteSupplier()">Cancel</button>
+        <button type="button" class="danger-btn" (click)="confirmDeleteSupplier()"><span class="material-icons-round">delete</span>Delete Supplier</button>
       </footer>
     </section>
   </div>
@@ -206,7 +631,7 @@
             <strong>{{ supplier.name }}</strong>
             <small>{{ supplier.code }} • {{ supplier.category }}</small>
           </div>
-          <em [class]="supplier.status.toLowerCase().replace(' ', '-')">{{ supplier.status }}</em>
+          <em [class]="statusClass(supplier.status)">{{ supplier.status }}</em>
         </div>
         <div class="detail-grid">
           <article><span>Contact</span><b>{{ supplier.contact }}</b><small>{{ supplier.phone }} • {{ supplier.email }}</small></article>

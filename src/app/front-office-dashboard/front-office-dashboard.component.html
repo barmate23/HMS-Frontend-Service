@@ -1,0 +1,224 @@
+<section class="fo-dashboard-shell">
+  <div class="fo-command">
+    <div>
+      <span class="command-eyebrow">Front Office Command</span>
+      <h1>Live Room Dashboard</h1>
+      <p>Current room position, floor-wise occupancy and booking details.</p>
+    </div>
+    <button type="button" (click)="loadDashboard()" [disabled]="isLoading()">
+      <span class="material-icons-round">sync</span>
+      Refresh
+    </button>
+  </div>
+
+  <div class="fo-state loading" *ngIf="isLoading()">
+    <span class="material-icons-round spin">sync</span>
+    Loading dashboard...
+  </div>
+  <div class="fo-state error" *ngIf="error() && !isLoading()">
+    <span class="material-icons-round">error_outline</span>
+    <span>{{ error() }}</span>
+    <button type="button" (click)="loadDashboard()">Retry</button>
+  </div>
+
+  <div class="kpi-grid">
+    <article class="kpi-card total">
+      <span class="material-icons-round">hotel</span>
+      <div><strong>{{ summary().totalRooms }}</strong><small>Total Rooms</small></div>
+    </article>
+    <article class="kpi-card booking">
+      <span class="material-icons-round">event_available</span>
+      <div><strong>{{ summary().totalBookings }}</strong><small>Total Bookings</small></div>
+    </article>
+    <article class="kpi-card available">
+      <span class="material-icons-round">meeting_room</span>
+      <div><strong>{{ summary().availableRooms }}</strong><small>Available</small></div>
+    </article>
+    <article class="kpi-card occupied">
+      <span class="material-icons-round">bed</span>
+      <div><strong>{{ summary().occupiedRooms }}</strong><small>Occupied</small></div>
+    </article>
+    <article class="kpi-card blocked">
+      <span class="material-icons-round">block</span>
+      <div><strong>{{ summary().blockedRooms }}</strong><small>Blocked</small></div>
+    </article>
+    <article class="kpi-card maintenance">
+      <span class="material-icons-round">build_circle</span>
+      <div><strong>{{ summary().underMaintenanceRooms }}</strong><small>Maintenance</small></div>
+    </article>
+  </div>
+
+  <section class="floor-board">
+    <header>
+      <div>
+        <h2>Floor Wise Room Map</h2>
+        <p>Room cards show the current booking state for the selected floor.</p>
+      </div>
+      <div class="board-actions">
+        <button type="button" class="expand-btn" (click)="openExpandedMap()">
+          <span class="material-icons-round">open_in_full</span>
+          Expand View
+        </button>
+        <a routerLink="/new-booking"><span class="material-icons-round">add</span>New Booking</a>
+      </div>
+    </header>
+
+    <div class="floor-tabs" *ngIf="floors().length">
+      <button
+        type="button"
+        *ngFor="let floor of floors()"
+        [class.active]="activeFloor()?.floorId === floor.floorId"
+        (click)="selectFloor(floor)">
+        <strong>{{ floor.floorName }}</strong>
+        <span>{{ floor.totalRooms }} rooms</span>
+        <small>{{ floor.availableRooms }} avl • {{ floor.occupiedRooms }} occ • {{ floor.bookedRooms }} booked</small>
+      </button>
+    </div>
+
+    <div class="legend">
+      <span><i class="available"></i>Available</span>
+      <span><i class="occupied"></i>Occupied</span>
+      <span><i class="booked"></i>Booked</span>
+      <span><i class="blocked"></i>Blocked</span>
+      <span><i class="maintenance"></i>Maintenance</span>
+    </div>
+
+    <div class="room-map" *ngIf="roomCards().length; else emptyRooms">
+      <article class="room-card" *ngFor="let room of roomCards()" [ngClass]="statusClass(room.displayStatus)">
+        <div class="room-card-top">
+          <strong>{{ room.roomNumber }}</strong>
+          <span>{{ room.roomType || '-' }}</span>
+        </div>
+        <em>{{ room.displayStatus }}</em>
+        <div class="room-meta">
+          <span><i class="material-icons-round">group</i>{{ guestCount(room) }}</span>
+          <span><i class="material-icons-round">cleaning_services</i>{{ room.housekeepingStatus || '-' }}</span>
+        </div>
+        <div class="guest-line" *ngIf="room.booking">
+          <b>{{ room.booking.guestName || 'Guest' }}</b>
+          <small>{{ room.booking.reservationRef }} • {{ room.booking.checkInDate }} to {{ room.booking.checkOutDate }}</small>
+        </div>
+        <button type="button" (click)="viewRoom(room)">
+          <span class="material-icons-round">visibility</span>
+          View
+        </button>
+      </article>
+    </div>
+
+    <ng-template #emptyRooms>
+      <div class="empty-state">
+        <span class="material-icons-round">meeting_room</span>
+        No rooms found for this floor.
+      </div>
+    </ng-template>
+  </section>
+</section>
+
+<div class="map-expand-backdrop" *ngIf="isMapExpanded()" (click)="closeExpandedMap()">
+  <section class="map-expand-modal" (click)="$event.stopPropagation()">
+    <header>
+      <div>
+        <span class="material-icons-round">map</span>
+        <div>
+          <h2>Floor Wise Room Map</h2>
+          <p>Expanded room board for front office operations.</p>
+        </div>
+      </div>
+      <button type="button" (click)="closeExpandedMap()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </header>
+
+    <div class="map-expand-body">
+      <div class="floor-tabs expanded-tabs" *ngIf="floors().length">
+        <button
+          type="button"
+          *ngFor="let floor of floors()"
+          [class.active]="activeFloor()?.floorId === floor.floorId"
+          (click)="selectFloor(floor)">
+          <strong>{{ floor.floorName }}</strong>
+          <span>{{ floor.totalRooms }} rooms</span>
+          <small>{{ floor.availableRooms }} avl • {{ floor.occupiedRooms }} occ • {{ floor.bookedRooms }} booked</small>
+        </button>
+      </div>
+
+      <div class="legend">
+        <span><i class="available"></i>Available</span>
+        <span><i class="occupied"></i>Occupied</span>
+        <span><i class="booked"></i>Booked</span>
+        <span><i class="blocked"></i>Blocked</span>
+        <span><i class="maintenance"></i>Maintenance</span>
+      </div>
+
+      <div class="room-map expanded-room-map" *ngIf="roomCards().length; else expandedEmptyRooms">
+        <article class="room-card" *ngFor="let room of roomCards()" [ngClass]="statusClass(room.displayStatus)">
+          <div class="room-card-top">
+            <strong>{{ room.roomNumber }}</strong>
+            <span>{{ room.roomType || '-' }}</span>
+          </div>
+          <em>{{ room.displayStatus }}</em>
+          <div class="room-meta">
+            <span><i class="material-icons-round">group</i>{{ guestCount(room) }}</span>
+            <span><i class="material-icons-round">cleaning_services</i>{{ room.housekeepingStatus || '-' }}</span>
+          </div>
+          <div class="guest-line" *ngIf="room.booking">
+            <b>{{ room.booking.guestName || 'Guest' }}</b>
+            <small>{{ room.booking.reservationRef }} • {{ room.booking.checkInDate }} to {{ room.booking.checkOutDate }}</small>
+          </div>
+          <button type="button" (click)="viewRoom(room)">
+            <span class="material-icons-round">visibility</span>
+            View
+          </button>
+        </article>
+      </div>
+
+      <ng-template #expandedEmptyRooms>
+        <div class="empty-state">
+          <span class="material-icons-round">meeting_room</span>
+          No rooms found for this floor.
+        </div>
+      </ng-template>
+    </div>
+  </section>
+</div>
+
+<div class="detail-backdrop" *ngIf="selectedRoom() as room" (click)="closeRoomDetails()">
+  <section class="booking-detail" (click)="$event.stopPropagation()">
+    <header>
+      <div>
+        <span class="material-icons-round">meeting_room</span>
+        <div>
+          <h2>Room {{ room.roomNumber }}</h2>
+          <p>{{ room.floorName }} • {{ room.roomType }} • {{ room.displayStatus }}</p>
+        </div>
+      </div>
+      <button type="button" (click)="closeRoomDetails()"><span class="material-icons-round">close</span></button>
+    </header>
+
+    <div class="detail-body" *ngIf="room.booking as booking; else noBooking">
+      <div class="detail-strip">
+        <div><span>Reservation</span><strong>{{ booking.reservationRef || '-' }}</strong></div>
+        <div><span>Status</span><strong>{{ booking.bookingStatus || booking.reservationStatus || '-' }}</strong></div>
+        <div><span>Total</span><strong>{{ formatMoney(booking.totalAmount) }}</strong></div>
+        <div><span>Paid</span><strong>{{ formatMoney(booking.paidAmount) }}</strong></div>
+      </div>
+
+      <div class="detail-grid">
+        <article><span>Guest</span><strong>{{ booking.guestName || '-' }}</strong><small>{{ booking.guestPhone || '-' }} • {{ booking.guestEmail || '-' }}</small></article>
+        <article><span>Stay</span><strong>{{ booking.checkInDate }} to {{ booking.checkOutDate }}</strong><small>{{ booking.nights || 0 }} nights • {{ booking.adults || 0 }} adults • {{ booking.children || 0 }} children</small></article>
+        <article><span>Rate Plan</span><strong>{{ booking.ratePlanName || '-' }}</strong><small>Rate {{ formatMoney(booking.ratePerNight) }}</small></article>
+        <article><span>Billing</span><strong>{{ booking.billingName || '-' }}</strong><small>{{ booking.billingMode || '-' }}</small></article>
+        <article><span>Source</span><strong>{{ booking.businessSource || '-' }}</strong><small>{{ booking.marketSegment || '-' }}</small></article>
+        <article><span>Requests</span><strong>{{ booking.specialRequests || '-' }}</strong><small>{{ booking.notes || '' }}</small></article>
+      </div>
+    </div>
+
+    <ng-template #noBooking>
+      <div class="no-booking">
+        <span class="material-icons-round">event_available</span>
+        <strong>No active booking for this room.</strong>
+        <p>Room is available for the current dashboard date.</p>
+      </div>
+    </ng-template>
+  </section>
+</div>

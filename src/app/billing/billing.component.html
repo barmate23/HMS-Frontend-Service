@@ -16,6 +16,14 @@
       <span class="material-icons-round">currency_exchange</span>
       Refunds
     </button>
+    <button type="button" [class.active]="activeTab() === 'inward'" (click)="setTab('inward')">
+      <span class="material-icons-round">move_to_inbox</span>
+      Inward GRN
+    </button>
+    <button type="button" [class.active]="activeTab() === 'bills'" (click)="setTab('bills')">
+      <span class="material-icons-round">receipt</span>
+      Vendor Bills
+    </button>
   </nav>
 
   <section class="metric-grid" *ngIf="activeTab() === 'folios'">
@@ -251,6 +259,19 @@
           <button type="button" title="Print bill" (click)="printInvoice(invoice)">
             <span class="material-icons-round">print</span>
           </button>
+          <div class="invoice-grn-link">
+            <span class="grn-lbl">GRN:</span>
+            <ng-container *ngIf="invoice.grnNo; else noGrnLink">
+              <span class="grn-badge-link" (click)="viewGrn(invoice.grnNo)" title="View linked GRN">
+                {{ invoice.grnNo }}
+              </span>
+            </ng-container>
+            <ng-template #noGrnLink>
+              <button type="button" class="btn-link-grn-inline" (click)="linkGrnToInvoice(invoice)" title="Create/Link GRN for this invoice">
+                <span class="material-icons-round">add_circle_outline</span> Link
+              </button>
+            </ng-template>
+          </div>
         </div>
       </article>
     </div>
@@ -335,6 +356,207 @@
         <div><span>Total Bill</span><strong>{{ formatINR(invoice.amount) }}</strong></div>
         <div><span>Paid</span><strong class="credit">{{ formatINR(invoice.paidAmount) }}</strong></div>
         <div><span>Balance</span><strong>{{ formatINR(invoice.balanceAmount) }}</strong></div>
+      </div>
+    </section>
+  </div>
+  <section class="tab-table" *ngIf="activeTab() === 'inward'">
+    <header><h2>Inward Stock / GRN</h2><button type="button" class="primary-btn" (click)="openBillingModal('grn')"><span class="material-icons-round">move_to_inbox</span>Create GRN</button></header>
+    <div class="simple-table inward-table">
+      <div class="table-head"><span>GRN No.</span><span>Bill / Invoice No.</span><span>PO No.</span><span>Supplier</span><span>Received By</span><span>Received On</span><span>Value</span><span>Variance</span><span>Actions</span></div>
+      <div class="table-row" *ngFor="let receipt of inwardReceipts()">
+        <strong>{{ receipt.id }}</strong><span>{{ receipt.billNo || '-' }}</span><span>{{ receipt.poNo || '-' }}</span><span>{{ receipt.supplier }}</span><span>{{ receipt.receivedBy }}</span><span>{{ receipt.receivedOn }}</span><b>{{ formatINR(receipt.acceptedValue) }}</b><em [class]="receipt.variance === 'No variance' ? 'paid' : 'pending'">{{ receipt.variance }}</em>
+        <span class="row-actions">
+          <button type="button" title="Edit GRN" (click)="editGrn(receipt)"><span class="material-icons-round">edit</span></button>
+          <button type="button" title="Delete GRN" (click)="grnPendingDelete.set(receipt)"><span class="material-icons-round">delete</span></button>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <section class="tab-table" *ngIf="activeTab() === 'bills'">
+    <header>
+      <h2>Vendor Bills</h2>
+      <div class="toolbar compact-tools">
+        <select [ngModel]="billStatusFilter()" (ngModelChange)="billStatusFilter.set($event)">
+          <option value="ALL">All Statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="Approved">Approved</option>
+          <option value="Paid">Paid</option>
+          <option value="Disputed">Disputed</option>
+        </select>
+        <button type="button" class="primary-btn" (click)="openBillingModal('bill')"><span class="material-icons-round">receipt_long</span>Enter Bill</button>
+      </div>
+    </header>
+    <div class="simple-table vendor-bills-table">
+      <div class="table-head"><span>Bill No.</span><span>Supplier</span><span>PO No.</span><span>GRN No.</span><span>Bill Date</span><span>Due Date</span><span>Total</span><span>Status</span><span>Actions</span></div>
+      <div class="table-row" *ngFor="let bill of filteredBills()">
+        <strong>{{ bill.id }}</strong><span>{{ bill.supplier }}</span><span>{{ bill.poNo || '-' }}</span><span>
+          <ng-container *ngIf="bill.grnNo; else noGrn">
+            {{ bill.grnNo }}
+          </ng-container>
+          <ng-template #noGrn>
+            <button type="button" class="btn-create-grn-inline" title="Create GRN against this bill" (click)="createGrnForBill(bill)">
+              <span class="material-icons-round">add_box</span>+ GRN
+            </button>
+          </ng-template>
+        </span><span>{{ bill.billDate }}</span><span>{{ bill.dueDate }}</span><b>{{ formatINR(bill.amount + bill.tax) }}</b><em [class]="bill.status.toLowerCase()">{{ bill.status }}</em>
+        <span class="row-actions">
+          <button type="button" title="Edit bill" (click)="editVendorBill(bill)"><span class="material-icons-round">edit</span></button>
+          <button type="button" title="Delete bill" (click)="vendorBillPendingDelete.set(bill)"><span class="material-icons-round">delete</span></button>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <div class="modal-backdrop" *ngIf="billingModal()" (click)="closeBillingModal()">
+    <section class="entry-modal" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <span class="material-icons-round">edit_note</span>
+          <h2>{{ billingModalTitle() }}</h2>
+        </div>
+        <button type="button" class="icon-btn" (click)="closeBillingModal()"><span class="material-icons-round">close</span></button>
+      </header>
+
+      <div class="modal-body" [ngSwitch]="billingModal()">
+        <div class="form-grid" *ngSwitchCase="'grn'">
+          <label>
+            <span>GRN Number *</span>
+            <input [ngModel]="grnDraft().id" (ngModelChange)="updateGrnDraft('id', $event)" (blur)="markGrnFieldAsTouched('id')" placeholder="e.g. GRN-3302" [disabled]="selectedGrn() !== null">
+            <small>{{ grnFieldError('id') }}</small>
+          </label>
+          <label>
+            <span>Reference (Vendor Bill / Guest Invoice) *</span>
+            <select [ngModel]="grnDraft().billNo" (ngModelChange)="updateGrnDraft('billNo', $event)" (blur)="markGrnFieldAsTouched('billNo')">
+              <option value="">-- Select Reference --</option>
+              <optgroup label="Vendor Bills">
+                <option *ngFor="let bill of vendorBills()" [value]="bill.id">{{ bill.id }} - {{ bill.supplier }} ({{ bill.poNo || 'No PO' }})</option>
+              </optgroup>
+              <optgroup label="Guest Invoices">
+                <option *ngFor="let inv of invoices()" [value]="inv.invoiceNo">{{ inv.invoiceNo }} - {{ inv.guest }}</option>
+              </optgroup>
+            </select>
+            <small>{{ grnFieldError('billNo') }}</small>
+          </label>
+          <label>
+            <span>PO Number</span>
+            <input [ngModel]="grnDraft().poNo" placeholder="Auto-populated" readonly class="readonly-input">
+          </label>
+          <label>
+            <span>Supplier</span>
+            <input [ngModel]="grnDraft().supplier" placeholder="Auto-populated" readonly class="readonly-input">
+          </label>
+          <label>
+            <span>Received By *</span>
+            <input [ngModel]="grnDraft().receivedBy" (ngModelChange)="updateGrnDraft('receivedBy', $event)" (blur)="markGrnFieldAsTouched('receivedBy')" placeholder="Store Keeper">
+            <small>{{ grnFieldError('receivedBy') }}</small>
+          </label>
+          <label>
+            <span>Received Date *</span>
+            <input type="date" [ngModel]="grnDraft().receivedOn" (ngModelChange)="updateGrnDraft('receivedOn', $event)" (blur)="markGrnFieldAsTouched('receivedOn')">
+            <small>{{ grnFieldError('receivedOn') }}</small>
+          </label>
+          <label>
+            <span>Accepted Value *</span>
+            <input type="number" min="0" [ngModel]="grnDraft().acceptedValue" (ngModelChange)="updateGrnDraft('acceptedValue', +$event || null)" (blur)="markGrnFieldAsTouched('acceptedValue')" placeholder="Accepted value">
+            <small>{{ grnFieldError('acceptedValue') }}</small>
+          </label>
+          <label>
+            <span>Number of Items *</span>
+            <input type="number" min="1" [ngModel]="grnDraft().items" (ngModelChange)="updateGrnDraft('items', +$event || null)" (blur)="markGrnFieldAsTouched('items')" placeholder="Received count">
+            <small>{{ grnFieldError('items') }}</small>
+          </label>
+          <label class="wide">
+            <span>Variance Note / Remarks</span>
+            <input [ngModel]="grnDraft().variance" (ngModelChange)="updateGrnDraft('variance', $event)" placeholder="Short / excess / damaged quantity, etc.">
+          </label>
+        </div>
+
+        <div class="form-grid" *ngSwitchCase="'bill'">
+          <label>
+            <span>Bill / Invoice No *</span>
+            <input [ngModel]="billDraft().id" (ngModelChange)="updateBillDraft('id', $event)" (blur)="markBillFieldAsTouched('id')" placeholder="e.g. INV-1002" [disabled]="selectedVendorBill() !== null">
+            <small>{{ billFieldError('id') }}</small>
+          </label>
+          <label>
+            <span>PO Number Reference</span>
+            <select [ngModel]="billDraft().poNo" (ngModelChange)="updateBillDraft('poNo', $event)">
+              <option value="">-- Select Purchase Order (Optional) --</option>
+              <option *ngFor="let order of mockPurchaseOrders()" [value]="order.id">{{ order.id }} ({{ order.supplier }})</option>
+            </select>
+          </label>
+          <label>
+            <span>Supplier *</span>
+            <select [ngModel]="billDraft().supplier" (ngModelChange)="updateBillDraft('supplier', $event)" (blur)="markBillFieldAsTouched('supplier')">
+              <option value="">-- Select Supplier --</option>
+              <option *ngFor="let supplier of mockSuppliers()" [value]="supplier.name">{{ supplier.name }}</option>
+            </select>
+            <small>{{ billFieldError('supplier') }}</small>
+          </label>
+          <label>
+            <span>Bill Date *</span>
+            <input type="date" [ngModel]="billDraft().billDate" (ngModelChange)="updateBillDraft('billDate', $event)" (blur)="markBillFieldAsTouched('billDate')">
+            <small>{{ billFieldError('billDate') }}</small>
+          </label>
+          <label>
+            <span>Due Date *</span>
+            <input type="date" [ngModel]="billDraft().dueDate" (ngModelChange)="updateBillDraft('dueDate', $event)" (blur)="markBillFieldAsTouched('dueDate')">
+            <small>{{ billFieldError('dueDate') }}</small>
+          </label>
+          <label>
+            <span>Subtotal (Before Tax) *</span>
+            <input type="number" min="0" [ngModel]="billDraft().amount" (ngModelChange)="updateBillDraft('amount', +$event || null)" (blur)="markBillFieldAsTouched('amount')" placeholder="Amount">
+            <small>{{ billFieldError('amount') }}</small>
+          </label>
+          <label>
+            <span>GST / Tax Total *</span>
+            <input type="number" min="0" [ngModel]="billDraft().tax" (ngModelChange)="updateBillDraft('tax', +$event || null)" (blur)="markBillFieldAsTouched('tax')" placeholder="Tax amount">
+            <small>{{ billFieldError('tax') }}</small>
+          </label>
+          <label>
+            <span>Status</span>
+            <select [ngModel]="billDraft().status" (ngModelChange)="updateBillDraft('status', $event)">
+              <option value="Pending">Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Paid">Paid</option>
+              <option value="Disputed">Disputed</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <footer>
+        <button type="button" class="secondary-btn" (click)="closeBillingModal()">Cancel</button>
+        <button type="button" class="primary-btn"
+          [disabled]="(billingModal() === 'bill' && billFormSubmitted() && billValidationErrors().length > 0) ||
+                      (billingModal() === 'grn' && grnFormSubmitted() && grnValidationErrors().length > 0)"
+          (click)="billingModal() === 'bill' ? saveVendorBill() : (billingModal() === 'grn' ? saveGrn() : closeBillingModal())">
+          <span class="material-icons-round">save</span>Save
+        </button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="vendorBillPendingDelete()" (click)="closeDeleteVendorBill()">
+    <section class="confirm-modal" (click)="$event.stopPropagation()">
+      <span class="material-icons-round warning-icon">warning</span>
+      <h3>Delete Vendor Bill?</h3>
+      <p>Are you sure you want to delete vendor bill <strong>{{ vendorBillPendingDelete()?.id }}</strong>?</p>
+      <div class="actions">
+        <button type="button" class="secondary-btn" (click)="closeDeleteVendorBill()">Cancel</button>
+        <button type="button" class="primary-btn danger" (click)="confirmDeleteVendorBill()">Delete Bill</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="grnPendingDelete()" (click)="closeDeleteGrn()">
+    <section class="confirm-modal" (click)="$event.stopPropagation()">
+      <span class="material-icons-round warning-icon">warning</span>
+      <h3>Delete GRN?</h3>
+      <p>Are you sure you want to delete inward receipt <strong>{{ grnPendingDelete()?.id }}</strong>?</p>
+      <div class="actions">
+        <button type="button" class="secondary-btn" (click)="closeDeleteGrn()">Cancel</button>
+        <button type="button" class="primary-btn danger" (click)="confirmDeleteGrn()">Delete GRN</button>
       </div>
     </section>
   </div>

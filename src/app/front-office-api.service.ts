@@ -112,6 +112,74 @@ export interface GanttChartItem {
   color?: string;
 }
 
+export interface FrontOfficeDashboardSummary {
+  totalRooms: number;
+  totalBookings: number;
+  availableRooms: number;
+  occupiedRooms: number;
+  bookedRooms: number;
+  blockedRooms: number;
+  underMaintenanceRooms: number;
+}
+
+export interface FrontOfficeBookingSnapshot {
+  bookingId?: number;
+  reservationId?: number;
+  reservationRef?: string;
+  guestName?: string;
+  guestPhone?: string;
+  guestEmail?: string;
+  vip?: boolean;
+  checkInDate?: string;
+  checkOutDate?: string;
+  nights?: number;
+  adults?: number;
+  children?: number;
+  reservationStatus?: string;
+  bookingStatus?: string;
+  ratePlanName?: string;
+  ratePerNight?: number;
+  totalAmount?: number;
+  paidAmount?: number;
+  billingName?: string;
+  billingMode?: string;
+  businessSource?: string;
+  marketSegment?: string;
+  specialRequests?: string;
+  notes?: string;
+}
+
+export interface FrontOfficeRoomCard {
+  roomId: number;
+  roomNumber: string;
+  floorId?: number;
+  floorName?: string;
+  roomType?: string;
+  maxOccupancy?: number;
+  roomStatus?: string;
+  housekeepingStatus?: string;
+  displayStatus: 'AVAILABLE' | 'OCCUPIED' | 'BOOKED' | 'BLOCKED' | 'MAINTENANCE' | string;
+  booking?: FrontOfficeBookingSnapshot | null;
+}
+
+export interface FrontOfficeFloorBoard {
+  floorId?: number;
+  floorName: string;
+  totalRooms: number;
+  availableRooms: number;
+  occupiedRooms: number;
+  bookedRooms: number;
+  blockedRooms: number;
+  underMaintenanceRooms: number;
+  rooms: FrontOfficeRoomCard[];
+}
+
+export interface FrontOfficeDashboardData {
+  businessDate: string;
+  summary: FrontOfficeDashboardSummary;
+  floors: FrontOfficeFloorBoard[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class FrontOfficeApiService {
   private readonly frontOfficeBaseUrl = '/api/frontOfficeService/v1';
@@ -148,6 +216,12 @@ export class FrontOfficeApiService {
       .set('startDate', startDate)
       .set('endDate', endDate);
     return this.http.get<ApiResponse<GanttChartItem[]>>(`${this.frontOfficeBaseUrl}/frontOffice/getGanttChartData`, { params });
+  }
+
+  getFrontOfficeDashboard(date?: string): Observable<ApiResponse<FrontOfficeDashboardData>> {
+    let params = new HttpParams();
+    if (date) params = params.set('date', date);
+    return this.http.get<ApiResponse<FrontOfficeDashboardData>>(`${this.frontOfficeBaseUrl}/frontOffice/dashboard/getDashboardData`, { params });
   }
 
   getGuests(): Observable<ApiResponse<GuestApiItem[]>> {

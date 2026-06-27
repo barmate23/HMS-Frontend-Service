@@ -188,10 +188,13 @@
     </header>
     <div class="simple-table po-table">
       <div class="table-head"><span>PO No.</span><span>Supplier</span><span>Department</span><span>Items</span><span>Expected</span><span>Amount</span><span>Status</span><span>Actions</span></div>
+      <div class="table-row empty-row" *ngIf="poLoading()"><span>Loading purchase orders...</span></div>
+      <div class="table-row empty-row" *ngIf="!poLoading() && poError()"><span>{{ poError() }}</span></div>
+      <div class="table-row empty-row" *ngIf="!poLoading() && !poError() && !filteredOrders().length"><span>No purchase orders found.</span></div>
       <div class="table-row" *ngFor="let order of filteredOrders()">
         <strong>{{ order.id }}</strong><span>{{ order.supplier }}</span><span>{{ order.department }}</span><span>{{ order.items }}</span><span>{{ order.expectedOn }}</span><b>{{ formatINR(order.amount) }}</b><em [class]="order.status.toLowerCase().replace(' ', '-')">{{ order.status }}</em>
         <span class="row-actions">
-          <button type="button" title="Download PO" (click)="downloadPurchaseOrder(order)"><span class="material-icons-round">download</span></button>
+          <button type="button" title="View PO" (click)="viewPurchaseOrder(order)"><span class="material-icons-round">visibility</span></button>
           <button type="button" title="Print PO" (click)="printPurchaseOrder(order)"><span class="material-icons-round">print</span></button>
           <button type="button" title="Edit PO" (click)="editPurchaseOrder(order)"><span class="material-icons-round">edit</span></button>
           <button type="button" title="Delete PO" (click)="deletePurchaseOrder(order.id)"><span class="material-icons-round">delete</span></button>
@@ -213,7 +216,9 @@
       <div class="table-head">
         <span>Code</span><span>Item Name</span><span>Category</span><span>UOM</span><span>HSN Code</span><span>Unit Cost</span><span>Tax %</span><span>Reorder Min</span><span>Stock Max</span><span>Status</span><span>Actions</span>
       </div>
-      <div class="table-row empty-row" *ngIf="!filteredItems().length"><span>No items found.</span></div>
+      <div class="table-row empty-row" *ngIf="itemLoading()"><span>Loading item configuration...</span></div>
+      <div class="table-row empty-row" *ngIf="!itemLoading() && itemError()"><span>{{ itemError() }}</span></div>
+      <div class="table-row empty-row" *ngIf="!itemLoading() && !itemError() && !filteredItems().length"><span>No items found.</span></div>
       <div class="table-row" *ngFor="let item of filteredItems()">
         <strong>{{ item.code }}</strong>
         <span><b>{{ item.name }}</b><small>{{ item.description }}</small></span>
@@ -298,20 +303,17 @@
 
               <label>
                 <span>Department</span>
-                <select [ngModel]="poDraft().department" (ngModelChange)="updatePoDraft('department', $event)">
-                  <option value="Housekeeping">Housekeeping</option>
-                  <option value="Laundry">Laundry</option>
-                  <option value="Minibar">Minibar</option>
-                  <option value="Kitchen">Kitchen & F&B</option>
-                  <option value="Front Office">Front Office</option>
+                <select [ngModel]="poDraft().departmentId" (ngModelChange)="updatePoDraft('departmentId', +$event || undefined)">
+                  <option [ngValue]="undefined">Select Department</option>
+                  <option *ngFor="let department of departments()" [ngValue]="department.id">{{ department.value }}</option>
                 </select>
               </label>
 
               <label [class.invalid]="poFieldError('deliveryLocation')">
                 <span>Delivery Location / Store</span>
-                <select [ngModel]="poDraft().deliveryLocation" (ngModelChange)="updatePoDraft('deliveryLocation', $event)" (blur)="markPoFieldAsTouched('deliveryLocation')">
-                  <option value="">Select Store</option>
-                  <option *ngFor="let loc of deliveryLocations()" [value]="loc">{{ loc }}</option>
+                <select [ngModel]="poDraft().deliveryStoreId" (ngModelChange)="updatePoDraft('deliveryStoreId', +$event || undefined)" (blur)="markPoFieldAsTouched('deliveryLocation')">
+                  <option [ngValue]="undefined">Select Store</option>
+                  <option *ngFor="let store of deliveryStores()" [ngValue]="store.id">{{ store.value }}</option>
                 </select>
                 <small>{{ poFieldError('deliveryLocation') }}</small>
               </label>
@@ -327,13 +329,6 @@
                 <select [ngModel]="poDraft().paymentTermsId" (ngModelChange)="updatePoDraft('paymentTermsId', +$event || undefined)">
                   <option [ngValue]="undefined">Select Terms</option>
                   <option *ngFor="let term of paymentTerms()" [ngValue]="term.id">{{ term.value }}</option>
-                  <option value="0" *ngIf="!paymentTerms().length">Immediate</option>
-                  <option value="1" *ngIf="!paymentTerms().length">7 Days</option>
-                  <option value="2" *ngIf="!paymentTerms().length">15 Days</option>
-                  <option value="3" *ngIf="!paymentTerms().length">30 Days</option>
-                  <option value="4" *ngIf="!paymentTerms().length">45 Days</option>
-                  <option value="5" *ngIf="!paymentTerms().length">60 Days</option>
-                  <option value="6" *ngIf="!paymentTerms().length">90 Days</option>
                 </select>
               </label>
 
@@ -373,9 +368,9 @@
                   <tr *ngFor="let line of poDraft().lineItems; let i = index">
                     <td class="row-num">{{ i + 1 }}</td>
                     <td>
-                      <select class="line-input" [ngModel]="line.itemName" (ngModelChange)="onPoItemSelect(i, +$event)">
-                        <option value="">-- Choose Item --</option>
-                        <option *ngFor="let item of masterItems()" [value]="item.id">{{ item.name }} ({{ item.category }})</option>
+                      <select class="line-input" [ngModel]="line.itemId || null" (ngModelChange)="onPoItemSelect(i, $event)">
+                        <option [ngValue]="null">-- Choose Item --</option>
+                        <option *ngFor="let item of masterItems()" [ngValue]="item.id">{{ item.name }} ({{ item.category }})</option>
                       </select>
                       <small class="error-text" *ngIf="poFieldError('line-' + i + '-itemName')">Required</small>
                     </td>
@@ -548,16 +543,78 @@
 
       </div>
 
+      <p class="delete-dialog-error" *ngIf="createModal() === 'item' && itemError()">
+        <span class="material-icons-round">error_outline</span>{{ itemError() }}
+      </p>
+
       <footer>
         <button type="button" class="secondary-btn" (click)="closeCreateModal()">Cancel</button>
         <button type="button" class="primary-btn"
-          [disabled]="(createModal() === 'supplier' && supplierFormSubmitted() && supplierValidationErrors().length > 0) || 
+          [disabled]="poSaving() || itemSaving() || (createModal() === 'supplier' && supplierFormSubmitted() && supplierValidationErrors().length > 0) || 
                       (createModal() === 'po' && poFormSubmitted() && poValidationErrors().length > 0) || 
                       (createModal() === 'item' && itemFormSubmitted() && itemValidationErrors().length > 0)"
           (click)="createModal() === 'supplier' ? saveSupplier() : 
                   (createModal() === 'po' ? savePurchaseOrder() : 
                   (createModal() === 'item' ? saveItem() : closeCreateModal()))">
-          <span class="material-icons-round">save</span>Save
+          <span class="material-icons-round">save</span>{{ (poSaving() && createModal() === 'po') || (itemSaving() && createModal() === 'item') ? 'Saving...' : 'Save' }}
+        </button>
+      </footer>
+    </section>
+  </div>
+
+  <!-- Purchase Order Delete Confirmation Modal -->
+  <div class="modal-backdrop" *ngIf="purchaseOrderPendingDelete() as order" (click)="closePurchaseOrderDelete()">
+    <section class="entry-modal confirm-modal purchase-order-delete-modal"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-po-title"
+      (click)="$event.stopPropagation()">
+      <header class="delete-dialog-header">
+        <div class="delete-dialog-title">
+          <span class="material-icons-round delete-dialog-icon">delete_forever</span>
+          <div>
+            <h2 id="delete-po-title">Delete purchase order?</h2>
+            <p>This action cannot be undone.</p>
+          </div>
+        </div>
+        <button type="button" class="icon-btn delete-dialog-close" aria-label="Close delete confirmation"
+          [disabled]="poDeleting()" (click)="closePurchaseOrderDelete()">
+          <span class="material-icons-round">close</span>
+        </button>
+      </header>
+
+      <div class="modal-body delete-dialog-body">
+        <div class="delete-order-summary">
+          <div class="delete-order-heading">
+            <div>
+              <small>Purchase order</small>
+              <strong>{{ order.id }}</strong>
+            </div>
+            <em [class]="order.status.toLowerCase().replace(' ', '-')">{{ order.status }}</em>
+          </div>
+          <dl>
+            <div><dt>Supplier</dt><dd>{{ order.supplier || 'Not assigned' }}</dd></div>
+            <div><dt>Department</dt><dd>{{ order.department || 'Not assigned' }}</dd></div>
+            <div><dt>Order value</dt><dd>{{ formatINR(order.amount) }}</dd></div>
+            <div><dt>Expected date</dt><dd>{{ order.expectedOn || 'Not set' }}</dd></div>
+          </dl>
+        </div>
+
+        <div class="delete-dialog-warning">
+          <span class="material-icons-round">warning_amber</span>
+          <p><strong>Permanent deletion</strong>The purchase order will be removed from the server and will no longer appear in this list.</p>
+        </div>
+
+        <p class="delete-dialog-error" *ngIf="poDeleteError()">
+          <span class="material-icons-round">error_outline</span>{{ poDeleteError() }}
+        </p>
+      </div>
+
+      <footer class="delete-dialog-footer">
+        <button type="button" class="secondary-btn" [disabled]="poDeleting()" (click)="closePurchaseOrderDelete()">Keep Purchase Order</button>
+        <button type="button" class="danger-btn" [disabled]="poDeleting()" (click)="confirmDeletePurchaseOrder()">
+          <span class="material-icons-round">{{ poDeleting() ? 'hourglass_top' : 'delete' }}</span>
+          {{ poDeleting() ? 'Deleting...' : 'Delete Purchase Order' }}
         </button>
       </footer>
     </section>
@@ -565,27 +622,58 @@
 
   <!-- Item Delete Confirmation Modal -->
   <div class="modal-backdrop" *ngIf="itemPendingDelete() as item" (click)="closeDeleteItem()">
-    <section class="entry-modal confirm-modal" (click)="$event.stopPropagation()">
-      <header>
-        <div>
-          <span class="material-icons-round">warning</span>
-          <h2>Delete Item</h2>
-        </div>
-        <button type="button" class="icon-btn" (click)="closeDeleteItem()"><span class="material-icons-round">close</span></button>
-      </header>
-      <div class="modal-body">
-        <div class="confirm-copy">
-          <span class="material-icons-round">inventory_2</span>
+    <section class="entry-modal confirm-modal purchase-order-delete-modal"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-item-title"
+      (click)="$event.stopPropagation()">
+      <header class="delete-dialog-header">
+        <div class="delete-dialog-title">
+          <span class="material-icons-round delete-dialog-icon">inventory_2</span>
           <div>
-            <strong>{{ item.name }}</strong>
-            <p>This item will be permanently removed from the item catalogue. Any purchase order lines using this item will not be affected.</p>
-            <small>{{ item.code }} &bull; {{ item.category }} &bull; {{ item.unit }}</small>
+            <h2 id="delete-item-title">Delete item?</h2>
+            <p>This item will be removed from item configuration.</p>
           </div>
         </div>
+        <button type="button" class="icon-btn delete-dialog-close" aria-label="Close delete confirmation"
+          [disabled]="itemDeleting()" (click)="closeDeleteItem()">
+          <span class="material-icons-round">close</span>
+        </button>
+      </header>
+
+      <div class="modal-body delete-dialog-body">
+        <div class="delete-order-summary">
+          <div class="delete-order-heading">
+            <div>
+              <small>Item</small>
+              <strong>{{ item.name }}</strong>
+            </div>
+            <em [class]="item.isActive ? 'approved' : 'draft'">{{ item.isActive ? 'Active' : 'Inactive' }}</em>
+          </div>
+          <dl>
+            <div><dt>Code</dt><dd>{{ item.code }}</dd></div>
+            <div><dt>Category</dt><dd>{{ item.category || 'Not assigned' }}</dd></div>
+            <div><dt>UOM</dt><dd>{{ item.unit || 'Not set' }}</dd></div>
+            <div><dt>Unit cost</dt><dd>{{ formatINR(item.unitCost) }}</dd></div>
+          </dl>
+        </div>
+
+        <div class="delete-dialog-warning">
+          <span class="material-icons-round">warning_amber</span>
+          <p><strong>Permanent deletion</strong>Any existing purchase order lines will stay as historical records, but this item will no longer be available for new purchase orders.</p>
+        </div>
+
+        <p class="delete-dialog-error" *ngIf="itemDeleteError()">
+          <span class="material-icons-round">error_outline</span>{{ itemDeleteError() }}
+        </p>
       </div>
-      <footer>
-        <button type="button" class="secondary-btn" (click)="closeDeleteItem()">Cancel</button>
-        <button type="button" class="danger-btn" (click)="confirmDeleteItem()"><span class="material-icons-round">delete</span>Delete Item</button>
+
+      <footer class="delete-dialog-footer">
+        <button type="button" class="secondary-btn" [disabled]="itemDeleting()" (click)="closeDeleteItem()">Keep Item</button>
+        <button type="button" class="danger-btn" [disabled]="itemDeleting()" (click)="confirmDeleteItem()">
+          <span class="material-icons-round">{{ itemDeleting() ? 'hourglass_top' : 'delete' }}</span>
+          {{ itemDeleting() ? 'Deleting...' : 'Delete Item' }}
+        </button>
       </footer>
     </section>
   </div>
@@ -612,6 +700,112 @@
       <footer>
         <button type="button" class="secondary-btn" (click)="closeDeleteSupplier()">Cancel</button>
         <button type="button" class="danger-btn" (click)="confirmDeleteSupplier()"><span class="material-icons-round">delete</span>Delete Supplier</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="purchaseOrderDetail() as order" (click)="closePurchaseOrderDetail()">
+    <section class="entry-modal detail-modal po-detail-modal" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <span class="material-icons-round">receipt_long</span>
+          <h2>Purchase Order Details</h2>
+        </div>
+        <button type="button" class="icon-btn" (click)="closePurchaseOrderDetail()"><span class="material-icons-round">close</span></button>
+      </header>
+
+      <div class="modal-body">
+        <div class="supplier-summary po-detail-summary">
+          <div>
+            <strong>{{ order.id }}</strong>
+            <small>{{ order.supplier || 'Supplier not assigned' }} • {{ order.department || 'Department not assigned' }}</small>
+          </div>
+          <em [class]="order.status.toLowerCase().replace(' ', '-')">{{ order.status }}</em>
+        </div>
+
+        <p class="delete-dialog-error" *ngIf="purchaseOrderDetailError()">
+          <span class="material-icons-round">error_outline</span>{{ purchaseOrderDetailError() }}
+        </p>
+
+        <div class="detail-grid po-detail-grid">
+          <article><span>PO Date</span><b>{{ order.poDate || order.orderedOn || '—' }}</b><small>Order creation date</small></article>
+          <article><span>Expected Delivery</span><b>{{ order.expectedOn || '—' }}</b><small>Planned receipt date</small></article>
+          <article><span>Delivery Store</span><b>{{ order.deliveryLocation || '—' }}</b><small>Receiving location</small></article>
+          <article><span>Payment Terms</span><b>{{ order.paymentTerms || '—' }}</b><small>Supplier payment condition</small></article>
+          <article><span>Requested By</span><b>{{ order.requestedBy || '—' }}</b><small>Staff / requester</small></article>
+          <article><span>Reference PR</span><b>{{ order.referenceNo || '—' }}</b><small>Purchase request reference</small></article>
+        </div>
+
+        <div class="po-detail-section">
+          <div class="section-header-toolbar">
+            <h3 class="section-title">Line Items</h3>
+            <span class="po-detail-count">{{ order.lineItems.length }} item{{ order.lineItems.length === 1 ? '' : 's' }}</span>
+          </div>
+          <div class="po-lines-table-container">
+            <table class="po-lines-table po-view-lines-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px;">#</th>
+                  <th style="width: 110px;">Item Code</th>
+                  <th>Item Description</th>
+                  <th style="width: 80px;">Qty</th>
+                  <th style="width: 85px;">Unit</th>
+                  <th style="width: 100px;">Rate</th>
+                  <th style="width: 80px;">Disc</th>
+                  <th style="width: 80px;">GST</th>
+                  <th style="width: 110px;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let line of order.lineItems; let i = index">
+                  <td class="row-num">{{ i + 1 }}</td>
+                  <td><strong>{{ line.itemCode || '—' }}</strong></td>
+                  <td>{{ line.itemName || '—' }}</td>
+                  <td>{{ line.quantity }}</td>
+                  <td>{{ line.uom || '—' }}</td>
+                  <td>{{ formatINR(line.rate) }}</td>
+                  <td>{{ line.discountPercent }}%</td>
+                  <td>{{ line.taxPercent }}%</td>
+                  <td><strong>{{ formatINR(line.total) }}</strong></td>
+                </tr>
+                <tr *ngIf="!order.lineItems.length">
+                  <td colspan="9" class="po-detail-empty">No line items available.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="po-detail-bottom">
+          <article class="po-detail-notes">
+            <span>Special Instructions / Terms & Conditions</span>
+            <p>{{ order.notes || 'No special instructions added.' }}</p>
+          </article>
+          <div class="po-totals-block po-detail-totals">
+            <div class="totals-row">
+              <span class="label">Subtotal:</span>
+              <span class="val">{{ formatINR(order.subtotal || 0) }}</span>
+            </div>
+            <div class="totals-row">
+              <span class="label">Tax / GST Total:</span>
+              <span class="val">{{ formatINR(order.taxTotal || 0) }}</span>
+            </div>
+            <div class="totals-row">
+              <span class="label">Shipping & Freight:</span>
+              <span class="val">{{ formatINR(order.shippingCharges || 0) }}</span>
+            </div>
+            <div class="totals-row grand-total">
+              <span class="label">Grand Total:</span>
+              <span class="val">{{ formatINR(order.amount) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <button type="button" class="secondary-btn" (click)="closePurchaseOrderDetail()">Close</button>
+        <button type="button" class="secondary-btn" (click)="printPurchaseOrder(order)"><span class="material-icons-round">print</span>Print</button>
+        <button type="button" class="primary-btn" (click)="closePurchaseOrderDetail(); editPurchaseOrder(order)"><span class="material-icons-round">edit</span>Edit PO</button>
       </footer>
     </section>
   </div>

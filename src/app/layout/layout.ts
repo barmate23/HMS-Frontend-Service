@@ -79,7 +79,6 @@ export class Layout {
       children: [
         { label: 'Dashboard', icon: 'dashboard', route: '/inventory/dashboard' },
         { label: 'Stock Ledger', icon: 'inventory_2', route: '/inventory/stock' },
-        { label: 'Minibar Stock', icon: 'local_bar', route: '/inventory/minibar' },
         { label: 'Purchase Requests', icon: 'assignment_add', route: '/inventory/requests' },
         { label: 'Store Issues', icon: 'outbox', route: '/inventory/issues' }
       ]

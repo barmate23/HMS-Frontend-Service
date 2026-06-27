@@ -3,7 +3,7 @@ import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter, forkJoin } from 'rxjs';
-import { PurchaseMasterOption, PurchaseService, SupplierPayload } from './purchase.service';
+import { ItemConfigPayload, PurchaseMasterOption, PurchaseOrderPayload, PurchaseService, SupplierPayload } from './purchase.service';
 
 type PurchaseTab = 'dashboard' | 'suppliers' | 'orders' | 'items';
 type SupplierStatus = string;
@@ -58,6 +58,8 @@ interface SupplierDraft {
 }
 
 interface PurchaseOrderItem {
+  id?: number;
+  itemId?: number;
   itemCode: string;
   itemName: string;
   uom: string;
@@ -69,17 +71,22 @@ interface PurchaseOrderItem {
 }
 
 interface PurchaseOrder {
+  recordId?: number;
   id: string;
   supplierId?: number;
   supplier: string;
+  departmentId?: number;
   department: string;
   orderedOn: string;
   expectedOn: string;
   items: number;
   amount: number;
   status: PoStatus;
+  statusId?: number;
+  statusCode?: string;
   
   deliveryLocation: string;
+  deliveryStoreId?: number;
   paymentTermsId?: number;
   paymentTerms: string;
   requestedBy: string;
@@ -100,7 +107,9 @@ interface PurchaseOrderDraft {
   department: string;
   poDate: string;
   expectedOn: string;
+  departmentId?: number;
   deliveryLocation: string;
+  deliveryStoreId?: number;
   paymentTermsId?: number;
   paymentTerms: string;
   requestedBy: string;
@@ -117,7 +126,9 @@ interface MasterInventoryItem {
   id: number;
   code: string;
   name: string;
+  categoryId?: number;
   category: string;
+  uomId?: number;
   unit: string;
   unitCost: number;
   taxRate: number;
@@ -163,11 +174,21 @@ export class PurchaseComponent implements OnInit, OnDestroy {
   touchedFields = signal<Record<string, boolean>>({});
   supplierDetail = signal<Supplier | null>(null);
   supplierPendingDelete = signal<Supplier | null>(null);
+  purchaseOrderPendingDelete = signal<PurchaseOrder | null>(null);
+  purchaseOrderDetail = signal<PurchaseOrder | null>(null);
+  purchaseOrderDetailError = signal('');
+  poDeleting = signal(false);
+  poDeleteError = signal('');
   selectedPurchaseOrder = signal<PurchaseOrder | null>(null);
   supplierCategories = signal<PurchaseMasterOption[]>([]);
+  departments = signal<PurchaseMasterOption[]>([]);
+  deliveryStores = signal<PurchaseMasterOption[]>([]);
   paymentTerms = signal<PurchaseMasterOption[]>([]);
   supplierStatuses = signal<PurchaseMasterOption[]>([]);
   supplierLoading = signal(false);
+  poLoading = signal(false);
+  poSaving = signal(false);
+  poError = signal('');
 
   readonly suppliers = signal<Supplier[]>([]);
 
@@ -182,14 +203,6 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     { id: 8, code: 'HK-LIN-003', name: 'Pillow Cover', category: 'Housekeeping Linen', unit: 'Pcs', unitCost: 80, taxRate: 12, description: 'Cotton pillow cover', hsnCode: '6302', reorderLevel: 80, parLevel: 200, isActive: true },
     { id: 9, code: 'FB-KIT-001', name: 'Cooking Oil', category: 'Kitchen Raw Material', unit: 'Ltr', unitCost: 120, taxRate: 5, description: 'Refined sunflower oil', hsnCode: '1512', reorderLevel: 25, parLevel: 60, isActive: true },
     { id: 10, code: 'FB-KIT-002', name: 'Basmati Rice', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 110, taxRate: 5, description: 'Premium aged basmati rice', hsnCode: '1006', reorderLevel: 50, parLevel: 120, isActive: true }
-  ]);
-
-  readonly deliveryLocations = signal<string[]>([
-    'Main Store',
-    'Housekeeping Store',
-    'Laundry Store',
-    'F&B Store',
-    'Kitchen Store'
   ]);
 
   readonly purchaseOrders = signal<PurchaseOrder[]>([
@@ -282,6 +295,11 @@ export class PurchaseComponent implements OnInit, OnDestroy {
   selectedItem = signal<MasterInventoryItem | null>(null);
   itemPendingDelete = signal<MasterInventoryItem | null>(null);
   itemSearch = signal('');
+  itemLoading = signal(false);
+  itemSaving = signal(false);
+  itemError = signal('');
+  itemDeleting = signal(false);
+  itemDeleteError = signal('');
 
   readonly filteredItems = computed(() => {
     const q = this.itemSearch().toLowerCase().trim();
@@ -301,6 +319,9 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(event => this.updateTabFromUrl((event as NavigationEnd).urlAfterRedirects));
     this.loadSupplierLookups();
+    this.loadItemConfigs();
+    this.purchaseOrders.set([]);
+    this.loadPurchaseOrders();
   }
 
   ngOnDestroy(): void {
@@ -385,6 +406,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     const targetStock = item.parLevel || (item.reorderLevel * 2);
     const qty = Math.max(1, targetStock - item.currentStock);
     draft.lineItems = [{
+      itemId: item.id,
       itemCode: item.code,
       itemName: item.name,
       uom: item.unit,
@@ -431,6 +453,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       this.itemDraft.set(this.emptyItemDraft());
       this.itemFormSubmitted.set(false);
       this.itemTouchedFields.set({});
+      this.itemError.set('');
     }
     this.createModal.set(type);
   }
@@ -450,6 +473,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     this.itemDraft.set(this.emptyItemDraft());
     this.itemFormSubmitted.set(false);
     this.itemTouchedFields.set({});
+    this.itemError.set('');
   }
 
   createModalTitle(): string {
@@ -501,16 +525,74 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     });
   }
 
+  viewPurchaseOrder(order: PurchaseOrder): void {
+    this.purchaseOrderDetail.set(order);
+    this.purchaseOrderDetailError.set('');
+    if (order.recordId) {
+      this.purchaseService.getPurchaseOrderById(order.recordId).subscribe({
+        next: response => {
+          if (!response) return;
+          this.purchaseOrderDetail.set(this.mapPurchaseOrder(response));
+        },
+        error: () => this.purchaseOrderDetailError.set('Unable to refresh purchase order details.')
+      });
+    }
+  }
+
+  closePurchaseOrderDetail(): void {
+    this.purchaseOrderDetail.set(null);
+    this.purchaseOrderDetailError.set('');
+  }
+
   editPurchaseOrder(order: PurchaseOrder): void {
     this.selectedPurchaseOrder.set(order);
     this.poDraft.set(this.draftFromPo(order));
     this.poFormSubmitted.set(false);
     this.poTouchedFields.set({});
     this.createModal.set('po');
+    if (order.recordId) {
+      this.purchaseService.getPurchaseOrderById(order.recordId).subscribe({
+        next: response => {
+          if (!response) return;
+          const detailedOrder = this.mapPurchaseOrder(response);
+          this.selectedPurchaseOrder.set(detailedOrder);
+          this.poDraft.set(this.draftFromPo(detailedOrder));
+        },
+        error: () => this.poError.set('Unable to refresh purchase order details.')
+      });
+    }
   }
 
   deletePurchaseOrder(id: string): void {
-    this.purchaseOrders.update(orders => orders.filter(order => order.id !== id));
+    const order = this.purchaseOrders().find(item => item.id === id);
+    if (!order?.recordId) return;
+    this.poDeleteError.set('');
+    this.purchaseOrderPendingDelete.set(order);
+  }
+
+  closePurchaseOrderDelete(): void {
+    if (this.poDeleting()) return;
+    this.poDeleteError.set('');
+    this.purchaseOrderPendingDelete.set(null);
+  }
+
+  confirmDeletePurchaseOrder(): void {
+    const order = this.purchaseOrderPendingDelete();
+    if (!order?.recordId || this.poDeleting()) return;
+
+    this.poDeleting.set(true);
+    this.poDeleteError.set('');
+    this.purchaseService.deletePurchaseOrder(order.recordId).subscribe({
+      next: () => {
+        this.purchaseOrders.update(orders => orders.filter(item => item.recordId !== order.recordId));
+        this.poDeleting.set(false);
+        this.purchaseOrderPendingDelete.set(null);
+      },
+      error: error => {
+        this.poDeleting.set(false);
+        this.poDeleteError.set(error?.error?.message || 'Unable to delete this purchase order. Please try again.');
+      }
+    });
   }
 
 
@@ -561,17 +643,6 @@ export class PurchaseComponent implements OnInit, OnDestroy {
   supplierFieldError(field: string): string {
     if (!this.supplierFormSubmitted() && !this.touchedFields()[field]) return '';
     return this.supplierValidationErrors().find(error => error.field === field)?.message || '';
-  }
-
-  downloadPurchaseOrder(order: PurchaseOrder): void {
-    const content = this.purchaseOrderDocument(order);
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${order.id}.txt`;
-    anchor.click();
-    URL.revokeObjectURL(url);
   }
 
   printPurchaseOrder(order: PurchaseOrder): void {
@@ -676,39 +747,6 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     printWindow.print();
   }
 
-  private purchaseOrderDocument(order: PurchaseOrder): string {
-    const lines = (order.lineItems || []).map((item, idx) => 
-      `${idx + 1}. [${item.itemCode || '-'}] ${item.itemName} | Qty: ${item.quantity} ${item.uom} | Rate: ${this.formatINR(item.rate)} | Discount: ${item.discountPercent}% | Tax: ${item.taxPercent}% | Total: ${this.formatINR(item.total)}`
-    ).join('\n');
-
-    return [
-      '========================================================================',
-      '                       HMS CLOUD PURCHASE ORDER                         ',
-      '========================================================================',
-      `PO Number          : ${order.id}`,
-      `Order Date         : ${order.poDate || order.orderedOn}`,
-      `Expected Delivery  : ${order.expectedOn}`,
-      `Reference Requisition: ${order.referenceNo || '-'}`,
-      '------------------------------------------------------------------------',
-      `Supplier           : ${order.supplier}`,
-      `Delivery Location  : ${order.deliveryLocation || 'Main Store'}`,
-      `Payment Terms      : ${order.paymentTerms || '30 Days'}`,
-      `Requested By       : ${order.requestedBy || '-'}`,
-      `PO Status          : ${order.status}`,
-      '========================================================================',
-      'LINE ITEMS DETAILS:',
-      '------------------------------------------------------------------------',
-      lines,
-      '------------------------------------------------------------------------',
-      `Subtotal           : ${this.formatINR(order.subtotal || 0)}`,
-      `Tax Total (GST)    : ${this.formatINR(order.taxTotal || 0)}`,
-      `Shipping & Freight : ${this.formatINR(order.shippingCharges || 0)}`,
-      `Grand Total        : ${this.formatINR(order.amount)}`,
-      '========================================================================',
-      order.notes ? `Special Instructions:\n${order.notes}\n========================================================================` : ''
-    ].filter(Boolean).join('\n');
-  }
-
   private updateTabFromUrl(url: string): void {
     if (url.includes('/purchase/suppliers')) this.activeTab.set('suppliers');
     else if (url.includes('/purchase/orders')) this.activeTab.set('orders');
@@ -730,21 +768,210 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     });
   }
 
+  private loadPurchaseOrders(): void {
+    this.poLoading.set(true);
+    this.poError.set('');
+    this.purchaseService.getPurchaseOrders().subscribe({
+      next: orders => {
+        this.purchaseOrders.set(orders.map(order => this.mapPurchaseOrder(order)));
+        this.poLoading.set(false);
+      },
+      error: error => {
+        this.purchaseOrders.set([]);
+        this.poLoading.set(false);
+        this.poError.set(error?.error?.message || 'Unable to load purchase orders.');
+      }
+    });
+  }
+
+  private loadItemConfigs(): void {
+    this.itemLoading.set(true);
+    this.itemError.set('');
+    this.purchaseService.getItemConfigs().subscribe({
+      next: items => {
+        this.masterItems.set(items.map(item => this.mapItemConfig(item)));
+        this.itemLoading.set(false);
+      },
+      error: error => {
+        this.masterItems.set([]);
+        this.itemLoading.set(false);
+        this.itemError.set(error?.error?.message || 'Unable to load item configuration.');
+      }
+    });
+  }
+
+  private mapItemConfig(input: ItemConfigPayload): MasterInventoryItem {
+    return {
+      id: Number(input.id || 0),
+      code: String(input.itemCode || '').trim().toUpperCase(),
+      name: String(input.itemName || '').trim(),
+      categoryId: input.categoryId ? Number(input.categoryId) : undefined,
+      category: String(input.categoryName || '').trim(),
+      uomId: input.uomId ? Number(input.uomId) : undefined,
+      unit: String(input.uomName || '').trim() || 'Pcs',
+      unitCost: Number(input.unitCost || 0),
+      taxRate: Number(input.gstTaxRate || 0),
+      description: String(input.description || '').trim(),
+      hsnCode: String(input.hsnSacCode || '').trim().toUpperCase(),
+      reorderLevel: input.reorderLevel === undefined || input.reorderLevel === null ? undefined : Number(input.reorderLevel),
+      parLevel: input.maxStockLevel === undefined || input.maxStockLevel === null ? undefined : Number(input.maxStockLevel),
+      isActive: input.isActive ?? true
+    };
+  }
+
+  private itemPayloadFromDraft(draft: ItemDraft, existing: MasterInventoryItem | null): ItemConfigPayload {
+    return {
+      id: existing?.id,
+      itemCode: draft.code.trim().toUpperCase(),
+      itemName: draft.name.trim(),
+      categoryId: existing?.categoryId,
+      categoryName: draft.category.trim(),
+      uomId: existing?.uomId,
+      uomName: draft.unit.trim(),
+      unitCost: Number(draft.unitCost || 0),
+      gstTaxRate: Number(draft.taxRate ?? 0),
+      hsnSacCode: draft.hsnCode.trim().toUpperCase() || undefined,
+      reorderLevel: draft.reorderLevel === null || draft.reorderLevel === undefined ? undefined : Number(draft.reorderLevel),
+      maxStockLevel: draft.parLevel === null || draft.parLevel === undefined ? undefined : Number(draft.parLevel),
+      description: draft.description.trim() || undefined,
+      isActive: draft.isActive
+    };
+  }
+
+  private mapPurchaseOrder(input: PurchaseOrderPayload): PurchaseOrder {
+    const lines = (input.lines || []).map(line => {
+      const masterItem = this.resolvePoMasterItem(line.itemId, line.itemCode, line.itemName);
+      return {
+        id: line.id ? Number(line.id) : undefined,
+        itemId: line.itemId ? Number(line.itemId) : masterItem?.id,
+        itemCode: String(line.itemCode || masterItem?.code || '').trim(),
+        itemName: String(line.itemName || masterItem?.name || '').trim(),
+        uom: masterItem?.unit || 'Pcs',
+        quantity: Number(line.quantity || 0),
+        rate: Number(line.rate || 0),
+        taxPercent: Number(line.gstPercentage || 0),
+        discountPercent: Number(line.discountPercentage || 0),
+        total: Number(line.totalAmount || 0)
+      };
+    });
+    const subtotal = lines.reduce((sum, line) => {
+      const gross = line.quantity * line.rate;
+      return sum + gross - (gross * line.discountPercent / 100);
+    }, 0);
+    const taxTotal = lines.reduce((sum, line) => sum + Math.max(0, line.total - (
+      line.quantity * line.rate * (1 - line.discountPercent / 100)
+    )), 0);
+
+    return {
+      recordId: input.id ? Number(input.id) : undefined,
+      id: String(input.poNumber || `PO-${input.id || ''}`).trim(),
+      supplierId: input.supplierId ? Number(input.supplierId) : undefined,
+      supplier: String(input.supplierName || '').trim(),
+      department: String(input.departmentName || '').trim(),
+      departmentId: input.departmentId ? Number(input.departmentId) : undefined,
+      orderedOn: String(input.poDate || ''),
+      expectedOn: String(input.expectedDate || ''),
+      items: Number(input.itemCount ?? lines.length),
+      amount: Number(input.totalAmount || lines.reduce((sum, line) => sum + line.total, 0)),
+      status: this.mapPoStatus(input.statusName || input.statusCode),
+      statusId: input.statusId ? Number(input.statusId) : undefined,
+      statusCode: String(input.statusCode || '').trim(),
+      deliveryLocation: String(input.deliveryStoreName || '').trim(),
+      deliveryStoreId: input.deliveryStoreId ? Number(input.deliveryStoreId) : undefined,
+      paymentTermsId: input.paymentTermsId ? Number(input.paymentTermsId) : undefined,
+      paymentTerms: String(input.paymentTermsName || this.optionValue(this.paymentTerms(), input.paymentTermsId) || '').trim(),
+      requestedBy: String(input.requestedBy || '').trim(),
+      poDate: String(input.poDate || ''),
+      referenceNo: String(input.prNumber || '').trim(),
+      shippingCharges: 0,
+      subtotal: Math.round(subtotal * 100) / 100,
+      taxTotal: Math.round(taxTotal * 100) / 100,
+      notes: String(input.poNote || '').trim(),
+      lineItems: lines
+    };
+  }
+
+  private resolvePoMasterItem(itemId?: number | string, itemCode?: string, itemName?: string): MasterInventoryItem | undefined {
+    const code = String(itemCode || '').trim().toLowerCase();
+    const name = String(itemName || '').trim().toLowerCase();
+    return this.masterItems().find(item =>
+      Number(item.id) === Number(itemId) ||
+      (!!code && item.code.trim().toLowerCase() === code) ||
+      (!!name && item.name.trim().toLowerCase() === name)
+    );
+  }
+
+  private purchaseOrderPayloadFromDraft(draft: PurchaseOrderDraft, existing: PurchaseOrder | null): PurchaseOrderPayload {
+    const paymentTerms = this.optionById(this.paymentTerms(), draft.paymentTermsId);
+    const department = this.optionById(this.departments(), draft.departmentId);
+    const deliveryStore = this.optionById(this.deliveryStores(), draft.deliveryStoreId);
+    return {
+      id: existing?.recordId,
+      poNumber: draft.poNumber.trim(),
+      supplierId: draft.supplierId,
+      supplierName: draft.supplier.trim(),
+      departmentId: draft.departmentId,
+      departmentName: department?.value || draft.department.trim(),
+      poDate: draft.poDate,
+      expectedDate: draft.expectedOn,
+      prNumber: draft.referenceNo.trim() || undefined,
+      deliveryStoreId: draft.deliveryStoreId,
+      deliveryStoreName: deliveryStore?.value || draft.deliveryLocation.trim(),
+      paymentTermsId: draft.paymentTermsId,
+      paymentTermsName: paymentTerms?.value || draft.paymentTerms.trim(),
+      requestedBy: draft.requestedBy.trim(),
+      itemCount: draft.lineItems.length,
+      poNote: draft.notes.trim() || undefined,
+      totalAmount: draft.amount,
+      lines: draft.lineItems.map(line => {
+        const masterItem = this.resolvePoMasterItem(line.itemId, line.itemCode, line.itemName);
+        return {
+          id: line.id,
+          itemId: line.itemId || masterItem?.id,
+          itemCode: (line.itemCode || masterItem?.code || '').trim(),
+          itemName: (line.itemName || masterItem?.name || '').trim(),
+          quantity: Number(line.quantity || 0),
+          rate: Number(line.rate || 0),
+          discountPercentage: Number(line.discountPercent || 0),
+          gstPercentage: Number(line.taxPercent || 0),
+          totalAmount: Number(line.total || 0)
+        };
+      }),
+      statusId: existing?.statusId,
+      statusName: existing?.status || 'Draft',
+      statusCode: existing?.statusCode || 'DRAFT'
+    };
+  }
+
+  private mapPoStatus(status?: string): PoStatus {
+    const normalized = String(status || '').trim().toUpperCase().replace(/[_-]+/g, ' ');
+    if (normalized.includes('PARTIAL')) return 'Partially Received';
+    if (normalized.includes('APPROV')) return 'Approved';
+    if (normalized.includes('CLOS') || normalized.includes('COMPLET')) return 'Closed';
+    return 'Draft';
+  }
+
   private loadSupplierLookups(): void {
     forkJoin({
+      departments: this.purchaseService.getDepartments(),
       categories: this.purchaseService.getCommonMaster('SUPPLIER_CATEGORY'),
       terms: this.purchaseService.getCommonMaster('PAYMENT_TERMS'),
+      deliveryStores: this.purchaseService.getCommonMaster('DELIVERY_STORE'),
       statuses: this.purchaseService.getCommonMaster('SUPPLIER_STATUS')
     }).subscribe({
       next: response => {
+        this.departments.set(response.departments);
         this.supplierCategories.set(response.categories);
         this.paymentTerms.set(response.terms);
+        this.deliveryStores.set(response.deliveryStores);
         this.supplierStatuses.set(response.statuses);
         this.loadSuppliers();
       },
       error: () => {
+        this.departments.set([]);
         this.supplierCategories.set([]);
         this.paymentTerms.set([]);
+        this.deliveryStores.set([]);
         this.supplierStatuses.set([]);
         this.loadSuppliers();
       }
@@ -896,11 +1123,14 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     return {
       poNumber: `PO-${new Date().getFullYear()}-${String(this.purchaseOrders ? this.purchaseOrders().length + 1001 : 1001)}`,
       supplier: '',
-      department: 'Housekeeping',
+      departmentId: undefined,
+      department: '',
       poDate: today,
       expectedOn: '',
-      deliveryLocation: 'Main Store',
-      paymentTerms: '30 Days',
+      deliveryStoreId: undefined,
+      deliveryLocation: '',
+      paymentTermsId: undefined,
+      paymentTerms: '',
       requestedBy: '',
       referenceNo: '',
       shippingCharges: 0,
@@ -931,9 +1161,11 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       poNumber: order.id,
       supplierId: order.supplierId,
       supplier: order.supplier,
+      departmentId: order.departmentId,
       department: order.department,
       poDate: order.poDate,
       expectedOn: order.expectedOn,
+      deliveryStoreId: order.deliveryStoreId,
       deliveryLocation: order.deliveryLocation,
       paymentTermsId: order.paymentTermsId,
       paymentTerms: order.paymentTerms,
@@ -958,6 +1190,18 @@ export class PurchaseComponent implements OnInit, OnDestroy {
           next.paymentTermsId = sup.paymentTermsId;
           next.paymentTerms = sup.paymentTerms;
         }
+      }
+      if (field === 'departmentId') {
+        const department = this.optionById(this.departments(), Number(value));
+        next.department = department?.value || '';
+      }
+      if (field === 'deliveryStoreId') {
+        const store = this.optionById(this.deliveryStores(), Number(value));
+        next.deliveryLocation = store?.value || '';
+      }
+      if (field === 'paymentTermsId') {
+        const terms = this.optionById(this.paymentTerms(), Number(value));
+        next.paymentTerms = terms?.value || '';
       }
       return next;
     });
@@ -1006,14 +1250,26 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     });
   }
 
-  onPoItemSelect(index: number, itemId: number): void {
+  onPoItemSelect(index: number, itemId: number | null): void {
     const item = this.masterItems().find(mi => mi.id === itemId);
-    if (!item) return;
     this.poDraft.update(draft => {
       const lineItems = draft.lineItems.map((line, i) => {
         if (i !== index) return line;
+        if (!item) {
+          return {
+            ...line,
+            itemId: undefined,
+            itemCode: '',
+            itemName: '',
+            uom: 'Pcs',
+            rate: 0,
+            taxPercent: 18,
+            total: 0
+          };
+        }
         const updated = {
           ...line,
+          itemId: item.id,
           itemCode: item.code,
           itemName: item.name,
           uom: item.unit,
@@ -1100,42 +1356,34 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     if (this.poValidationErrors().length) return;
 
     const draft = this.poDraft();
-    const orderIndex = this.purchaseOrders().findIndex(po => po.id === draft.poNumber);
+    const existing = this.selectedPurchaseOrder();
+    const payload = this.purchaseOrderPayloadFromDraft(draft, existing);
+    const request = existing?.recordId
+      ? this.purchaseService.updatePurchaseOrder(existing.recordId, payload)
+      : this.purchaseService.createPurchaseOrder(payload);
 
-    const updatedOrder: PurchaseOrder = {
-      id: draft.poNumber,
-      supplierId: draft.supplierId,
-      supplier: draft.supplier,
-      department: draft.department,
-      orderedOn: draft.poDate,
-      expectedOn: draft.expectedOn,
-      items: draft.lineItems.length,
-      amount: draft.amount,
-      status: draft.id ? (this.purchaseOrders().find(po => po.id === draft.id)?.status || 'Draft') : 'Draft',
-      deliveryLocation: draft.deliveryLocation,
-      paymentTermsId: draft.paymentTermsId,
-      paymentTerms: draft.paymentTerms,
-      requestedBy: draft.requestedBy,
-      poDate: draft.poDate,
-      referenceNo: draft.referenceNo,
-      shippingCharges: draft.shippingCharges,
-      subtotal: draft.subtotal,
-      taxTotal: draft.taxTotal,
-      notes: draft.notes,
-      lineItems: draft.lineItems
-    };
-
-    this.purchaseOrders.update(orders => {
-      const next = [...orders];
-      if (orderIndex > -1) {
-        next[orderIndex] = updatedOrder;
-      } else {
-        next.unshift(updatedOrder);
+    this.poSaving.set(true);
+    this.poError.set('');
+    request.subscribe({
+      next: response => {
+        const saved = this.mapPurchaseOrder(response);
+        this.purchaseOrders.update(orders => {
+          const index = orders.findIndex(order =>
+            saved.recordId ? order.recordId === saved.recordId : order.id === saved.id
+          );
+          if (index === -1) return [saved, ...orders];
+          const next = [...orders];
+          next[index] = saved;
+          return next;
+        });
+        this.poSaving.set(false);
+        this.closeCreateModal();
+      },
+      error: error => {
+        this.poSaving.set(false);
+        this.poError.set(error?.error?.message || 'Unable to save purchase order. Please check the entered details and try again.');
       }
-      return next;
     });
-
-    this.closeCreateModal();
   }
 
   editItem(item: MasterInventoryItem): void {
@@ -1143,56 +1391,84 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     this.itemDraft.set(this.draftFromItem(item));
     this.itemFormSubmitted.set(false);
     this.itemTouchedFields.set({});
+    this.itemError.set('');
     this.createModal.set('item');
+    if (item.id) {
+      this.purchaseService.getItemConfigById(item.id).subscribe({
+        next: response => {
+          if (!response) return;
+          const detailedItem = this.mapItemConfig(response);
+          this.selectedItem.set(detailedItem);
+          this.itemDraft.set(this.draftFromItem(detailedItem));
+        },
+        error: () => this.itemError.set('Unable to refresh item details.')
+      });
+    }
   }
 
   deleteItem(id: number): void {
     const item = this.masterItems().find(i => i.id === id);
-    if (item) this.itemPendingDelete.set(item);
+    if (item) {
+      this.itemDeleteError.set('');
+      this.itemPendingDelete.set(item);
+    }
   }
 
   closeDeleteItem(): void {
+    if (this.itemDeleting()) return;
+    this.itemDeleteError.set('');
     this.itemPendingDelete.set(null);
   }
 
   confirmDeleteItem(): void {
     const item = this.itemPendingDelete();
-    if (!item) return;
-    this.masterItems.update(items => items.filter(i => i.id !== item.id));
-    this.closeDeleteItem();
+    if (!item || this.itemDeleting()) return;
+    this.itemDeleting.set(true);
+    this.itemDeleteError.set('');
+    this.purchaseService.deleteItemConfig(item.id).subscribe({
+      next: () => {
+        this.masterItems.update(items => items.filter(i => i.id !== item.id));
+        this.itemDeleting.set(false);
+        this.itemPendingDelete.set(null);
+      },
+      error: error => {
+        this.itemDeleting.set(false);
+        this.itemDeleteError.set(error?.error?.message || 'Unable to delete this item. Please try again.');
+      }
+    });
   }
 
   saveItem(): void {
     this.itemFormSubmitted.set(true);
-    if (this.itemValidationErrors().length) return;
+    if (this.itemValidationErrors().length || this.itemSaving()) return;
 
     const draft = this.itemDraft();
     const existing = this.selectedItem();
+    const payload = this.itemPayloadFromDraft(draft, existing);
+    const request = existing?.id
+      ? this.purchaseService.updateItemConfig(existing.id, payload)
+      : this.purchaseService.createItemConfig(payload);
 
-    const saved: MasterInventoryItem = {
-      id: existing?.id ?? (Math.max(0, ...this.masterItems().map(i => i.id)) + 1),
-      code: draft.code.trim().toUpperCase(),
-      name: draft.name.trim(),
-      category: draft.category.trim(),
-      unit: draft.unit.trim(),
-      unitCost: Number(draft.unitCost || 0),
-      taxRate: Number(draft.taxRate ?? 18),
-      description: draft.description.trim(),
-      hsnCode: draft.hsnCode.trim().toUpperCase(),
-      reorderLevel: Number(draft.reorderLevel || 0),
-      parLevel: Number(draft.parLevel || 0),
-      isActive: draft.isActive
-    };
-
-    this.masterItems.update(items => {
-      const index = items.findIndex(i => i.id === saved.id);
-      if (index === -1) return [saved, ...items];
-      const next = [...items];
-      next[index] = saved;
-      return next;
+    this.itemSaving.set(true);
+    this.itemError.set('');
+    request.subscribe({
+      next: response => {
+        const saved = this.mapItemConfig(response);
+        this.masterItems.update(items => {
+          const index = items.findIndex(i => i.id === saved.id);
+          if (index === -1) return [saved, ...items];
+          const next = [...items];
+          next[index] = saved;
+          return next;
+        });
+        this.itemSaving.set(false);
+        this.closeCreateModal();
+      },
+      error: error => {
+        this.itemSaving.set(false);
+        this.itemError.set(error?.error?.message || 'Unable to save item. Please check the entered details and try again.');
+      }
     });
-
-    this.closeCreateModal();
   }
 
   updateItemDraft<K extends keyof ItemDraft>(field: K, value: ItemDraft[K]): void {

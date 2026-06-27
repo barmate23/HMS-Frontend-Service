@@ -17,10 +17,23 @@ interface VendorBillDraft {
   poNo: string;
   billDate: string;
   dueDate: string;
-  amount: number | null;
-  tax: number | null;
+  totalAmount: number | null;
+  netAmount: number | null;
   status: BillStatus;
   grnNo?: string;
+  lines: VendorBillLineDraft[];
+}
+
+interface VendorBillLineDraft {
+  itemCode: string;
+  invoiceQty: number | null;
+}
+
+interface VendorBillLine {
+  itemCode: string;
+  itemName: string;
+  unit: string;
+  invoiceQty: number;
 }
 
 interface GrnDraft {
@@ -28,11 +41,28 @@ interface GrnDraft {
   billNo: string;
   poNo: string;
   supplier: string;
+  invoiceTotal: number;
+  invoiceNet: number;
   receivedBy: string;
   receivedOn: string;
-  items: number | null;
-  acceptedValue: number | null;
-  variance: string;
+  remarks: string;
+  lines: GrnLineDraft[];
+}
+
+interface GrnLineDraft {
+  itemCode: string;
+  itemName: string;
+  unit: string;
+  invoiceQty: number;
+  receivedQty: number | null;
+}
+
+interface GrnLine {
+  itemCode: string;
+  itemName: string;
+  unit: string;
+  invoiceQty: number;
+  receivedQty: number;
 }
 
 interface InwardReceipt {
@@ -45,6 +75,8 @@ interface InwardReceipt {
   items: number;
   acceptedValue: number;
   variance: string;
+  remarks: string;
+  lines: GrnLine[];
 }
 
 interface VendorBill {
@@ -53,10 +85,11 @@ interface VendorBill {
   poNo: string;
   billDate: string;
   dueDate: string;
-  amount: number;
-  tax: number;
+  totalAmount: number;
+  netAmount: number;
   status: BillStatus;
   grnNo?: string;
+  lines: VendorBillLine[];
 }
 
 interface MiniSupplier {
@@ -68,8 +101,16 @@ interface MiniPurchaseOrder {
   id: string;
   supplier: string;
   items: number;
-  subtotal: number;
-  taxTotal: number;
+  totalAmount: number;
+  netAmount: number;
+  lines: VendorBillLineDraft[];
+}
+
+interface VendorBillItem {
+  code: string;
+  name: string;
+  unit: string;
+  category: string;
 }
 
 interface FolioLine {
@@ -242,13 +283,51 @@ export class BillingComponent implements OnInit, OnDestroy {
   ]);
 
   inwardReceipts = signal<InwardReceipt[]>([
-    { id: 'GRN-3301', poNo: 'PO-2410', billNo: 'VB-5102', supplier: 'CleanPro Hospitality Supplies', receivedBy: 'Store Keeper', receivedOn: '2026-06-15 11:20', items: 2, acceptedValue: 18400, variance: '1 item pending' },
-    { id: 'GRN-3302', poNo: 'PO-2411', billNo: 'VB-5103', supplier: 'FreshFoods Wholesale', receivedBy: 'Kitchen Mgr', receivedOn: '2026-06-15 09:30', items: 12, acceptedValue: 4250, variance: 'No variance' }
+    {
+      id: 'GRN-3301', poNo: 'PO-2410', billNo: 'INV-1002', supplier: 'CleanPro Hospitality Supplies', receivedBy: 'Store Keeper', receivedOn: '2026-06-15 11:20', items: 2, acceptedValue: 16000, variance: '1 item short', remarks: 'Remaining floor cleaner expected in the next delivery.',
+      lines: [
+        { itemCode: 'HK-CHEM-007', itemName: 'Floor Cleaner', unit: 'Ltr', invoiceQty: 24, receivedQty: 20 },
+        { itemCode: 'LND-DET-003', itemName: 'Laundry Detergent', unit: 'Kg', invoiceQty: 18, receivedQty: 18 }
+      ]
+    },
+    {
+      id: 'GRN-3302', poNo: 'PO-2411', billNo: 'INV-1003', supplier: 'FreshFoods Wholesale', receivedBy: 'Kitchen Mgr', receivedOn: '2026-06-15 09:30', items: 1, acceptedValue: 4000, variance: 'No variance', remarks: '',
+      lines: [
+        { itemCode: 'FB-DRY-012', itemName: 'Coffee Sachet', unit: 'Pcs', invoiceQty: 300, receivedQty: 300 }
+      ]
+    }
   ]);
 
   vendorBills = signal<VendorBill[]>([
-    { id: 'VB-5102', supplier: 'CleanPro Hospitality Supplies', poNo: 'PO-2410', billDate: '2026-06-14', dueDate: '2026-07-14', amount: 16000, tax: 2880, status: 'Pending', grnNo: 'GRN-3301' },
-    { id: 'VB-5103', supplier: 'FreshFoods Wholesale', poNo: 'PO-2411', billDate: '2026-06-15', dueDate: '2026-06-22', amount: 4000, tax: 250, status: 'Approved', grnNo: 'GRN-3302' }
+    {
+      id: 'INV-1002',
+      supplier: 'CleanPro Hospitality Supplies',
+      poNo: 'PO-2410',
+      billDate: '2026-06-14',
+      dueDate: '2026-07-14',
+      totalAmount: 18880,
+      netAmount: 16000,
+      status: 'Pending',
+      grnNo: 'GRN-3301',
+      lines: [
+        { itemCode: 'HK-CHEM-007', itemName: 'Floor Cleaner', unit: 'Ltr', invoiceQty: 24 },
+        { itemCode: 'LND-DET-003', itemName: 'Laundry Detergent', unit: 'Kg', invoiceQty: 18 }
+      ]
+    },
+    {
+      id: 'INV-1003',
+      supplier: 'FreshFoods Wholesale',
+      poNo: 'PO-2411',
+      billDate: '2026-06-15',
+      dueDate: '2026-06-22',
+      totalAmount: 4250,
+      netAmount: 4000,
+      status: 'Approved',
+      grnNo: 'GRN-3302',
+      lines: [
+        { itemCode: 'FB-DRY-012', itemName: 'Coffee Sachet', unit: 'Pcs', invoiceQty: 300 }
+      ]
+    }
   ]);
 
   mockSuppliers = signal<MiniSupplier[]>([
@@ -256,9 +335,35 @@ export class BillingComponent implements OnInit, OnDestroy {
     { id: 2, name: 'FreshFoods Wholesale' }
   ]);
 
+  mockItemConfigs = signal<VendorBillItem[]>([
+    { code: 'HK-CHEM-007', name: 'Floor Cleaner', unit: 'Ltr', category: 'Cleaning Chemical' },
+    { code: 'LND-DET-003', name: 'Laundry Detergent', unit: 'Kg', category: 'Laundry Consumable' },
+    { code: 'HK-AMN-014', name: 'Dental Kit', unit: 'Pcs', category: 'Guest Amenities' },
+    { code: 'FB-DRY-012', name: 'Coffee Sachet', unit: 'Pcs', category: 'F&B Supplies' }
+  ]);
+
   mockPurchaseOrders = signal<MiniPurchaseOrder[]>([
-    { id: 'PO-2410', supplier: 'CleanPro Hospitality Supplies', items: 3, subtotal: 16000, taxTotal: 2880 },
-    { id: 'PO-2411', supplier: 'FreshFoods Wholesale', items: 12, subtotal: 4000, taxTotal: 250 }
+    {
+      id: 'PO-2410',
+      supplier: 'CleanPro Hospitality Supplies',
+      items: 2,
+      totalAmount: 18880,
+      netAmount: 16000,
+      lines: [
+        { itemCode: 'HK-CHEM-007', invoiceQty: 24 },
+        { itemCode: 'LND-DET-003', invoiceQty: 18 }
+      ]
+    },
+    {
+      id: 'PO-2411',
+      supplier: 'FreshFoods Wholesale',
+      items: 1,
+      totalAmount: 4250,
+      netAmount: 4000,
+      lines: [
+        { itemCode: 'FB-DRY-012', invoiceQty: 300 }
+      ]
+    }
   ]);
 
   billDraft = signal<VendorBillDraft>(this.emptyBillDraft());
@@ -623,6 +728,16 @@ export class BillingComponent implements OnInit, OnDestroy {
     return this.vendorBills().filter(bill => status === 'ALL' || bill.status === status);
   });
 
+  readonly supplierPurchaseOrders = computed(() => {
+    const supplier = this.billDraft().supplier;
+    return this.mockPurchaseOrders().filter(order => !supplier || order.supplier === supplier);
+  });
+
+  readonly availableGrnInvoices = computed(() => {
+    const currentBillNo = this.selectedGrn()?.billNo;
+    return this.vendorBills().filter(bill => !bill.grnNo || bill.id === currentBillNo);
+  });
+
   billingModalTitle(): string {
     const type = this.billingModal();
     if (type === 'grn') return this.selectedGrn() ? 'Edit Inward / GRN' : 'Create Inward / GRN';
@@ -689,33 +804,8 @@ export class BillingComponent implements OnInit, OnDestroy {
         }
         return b;
       }));
-      this.invoices.update(invs => invs.map(i => {
-        if (i.invoiceNo === grn.billNo || i.grnNo === id) {
-          const { grnNo, ...rest } = i;
-          return rest as Invoice;
-        }
-        return i;
-      }));
     }
     this.inwardReceipts.update(grns => grns.filter(g => g.id !== id));
-  }
-
-  linkGrnToInvoice(invoice: Invoice) {
-    this.grnDraft.set({
-      id: 'GRN-' + Math.floor(1000 + Math.random() * 9000),
-      billNo: invoice.invoiceNo,
-      poNo: '',
-      supplier: invoice.guest,
-      receivedBy: 'Front Desk',
-      receivedOn: new Date().toISOString().split('T')[0],
-      items: 1,
-      acceptedValue: invoice.amount,
-      variance: 'No variance'
-    });
-    this.selectedGrn.set(null);
-    this.grnFormSubmitted.set(false);
-    this.grnTouchedFields.set({});
-    this.billingModal.set('grn');
   }
 
   viewGrn(grnNo: string) {
@@ -740,16 +830,86 @@ export class BillingComponent implements OnInit, OnDestroy {
   }
 
   emptyBillDraft(): VendorBillDraft {
-    return { id: '', supplier: '', poNo: '', billDate: new Date().toISOString().split('T')[0], dueDate: '', amount: null, tax: null, status: 'Pending', grnNo: '' };
+    return {
+      id: '',
+      supplier: '',
+      poNo: '',
+      billDate: new Date().toISOString().split('T')[0],
+      dueDate: '',
+      totalAmount: null,
+      netAmount: null,
+      status: 'Pending',
+      grnNo: '',
+      lines: [{ itemCode: '', invoiceQty: null }]
+    };
   }
 
   draftFromBill(bill: VendorBill): VendorBillDraft {
-    return { id: bill.id, supplier: bill.supplier, poNo: bill.poNo || '', billDate: bill.billDate, dueDate: bill.dueDate, amount: bill.amount, tax: bill.tax, status: bill.status, grnNo: bill.grnNo || '' };
+    return {
+      id: bill.id,
+      supplier: bill.supplier,
+      poNo: bill.poNo || '',
+      billDate: bill.billDate,
+      dueDate: bill.dueDate,
+      totalAmount: bill.totalAmount,
+      netAmount: bill.netAmount,
+      status: bill.status,
+      grnNo: bill.grnNo || '',
+      lines: bill.lines.map(line => ({ itemCode: line.itemCode, invoiceQty: line.invoiceQty }))
+    };
   }
 
   updateBillDraft<K extends keyof VendorBillDraft>(field: K, value: VendorBillDraft[K]): void {
-    this.billDraft.update(draft => ({ ...draft, [field]: value }));
+    this.billDraft.update(draft => {
+      const next = { ...draft, [field]: value };
+      if (field === 'supplier') {
+        const selectedSupplier = String(value || '');
+        const poStillValid = this.mockPurchaseOrders().some(order => order.id === next.poNo && order.supplier === selectedSupplier);
+        if (!poStillValid) next.poNo = '';
+      }
+      if (field === 'poNo' && value) {
+        const po = this.mockPurchaseOrders().find(order => order.id === value);
+        if (po) {
+          next.supplier = po.supplier;
+          next.totalAmount = po.totalAmount;
+          next.netAmount = po.netAmount;
+          next.lines = po.lines.map(line => ({ ...line }));
+        }
+      }
+      return next;
+    });
     this.billTouchedFields.update(touched => ({ ...touched, [field]: true }));
+  }
+
+  addBillLine(): void {
+    this.billDraft.update(draft => ({
+      ...draft,
+      lines: [...draft.lines, { itemCode: '', invoiceQty: null }]
+    }));
+  }
+
+  removeBillLine(index: number): void {
+    this.billDraft.update(draft => ({
+      ...draft,
+      lines: draft.lines.length > 1 ? draft.lines.filter((_, i) => i !== index) : draft.lines
+    }));
+  }
+
+  updateBillLine<K extends keyof VendorBillLineDraft>(index: number, field: K, value: VendorBillLineDraft[K]): void {
+    this.billDraft.update(draft => ({
+      ...draft,
+      lines: draft.lines.map((line, i) => i === index ? { ...line, [field]: value } : line)
+    }));
+    this.billTouchedFields.update(touched => ({ ...touched, [`line-${index}-${field}`]: true }));
+  }
+
+  itemUnit(itemCode: string): string {
+    return this.mockItemConfigs().find(item => item.code === itemCode)?.unit || '-';
+  }
+
+  itemLabel(itemCode: string): string {
+    const item = this.mockItemConfigs().find(i => i.code === itemCode);
+    return item ? item.name : itemCode;
   }
 
   markBillFieldAsTouched(field: string): void { this.billTouchedFields.update(touched => ({ ...touched, [field]: true })); }
@@ -759,10 +919,17 @@ export class BillingComponent implements OnInit, OnDestroy {
     if (!draft.id.trim()) errors.push({ field: 'id', message: 'Bill / Invoice number is required.' });
     else if (!this.selectedVendorBill() && this.vendorBills().some(b => b.id.trim().toLowerCase() === draft.id.trim().toLowerCase())) errors.push({ field: 'id', message: 'Bill number already exists.' });
     if (!draft.supplier.trim()) errors.push({ field: 'supplier', message: 'Supplier is required.' });
+    if (!draft.poNo.trim()) errors.push({ field: 'poNo', message: 'Purchase order is required.' });
     if (!draft.billDate) errors.push({ field: 'billDate', message: 'Bill date is required.' });
     if (!draft.dueDate) errors.push({ field: 'dueDate', message: 'Due date is required.' });
-    if (draft.amount === null || draft.amount === undefined || Number(draft.amount) <= 0) errors.push({ field: 'amount', message: 'Enter a valid amount (> 0).' });
-    if (draft.tax === null || draft.tax === undefined || Number(draft.tax) < 0) errors.push({ field: 'tax', message: 'Enter a valid tax amount (>= 0).' });
+    if (draft.totalAmount === null || draft.totalAmount === undefined || Number(draft.totalAmount) <= 0) errors.push({ field: 'totalAmount', message: 'Enter a valid total amount.' });
+    if (draft.netAmount === null || draft.netAmount === undefined || Number(draft.netAmount) <= 0) errors.push({ field: 'netAmount', message: 'Enter a valid net amount.' });
+    if (Number(draft.netAmount || 0) > Number(draft.totalAmount || 0)) errors.push({ field: 'netAmount', message: 'Net amount cannot exceed total amount.' });
+    if (!draft.lines.length) errors.push({ field: 'lines', message: 'Add at least one invoice item.' });
+    draft.lines.forEach((line, index) => {
+      if (!line.itemCode) errors.push({ field: `line-${index}-itemCode`, message: 'Select item.' });
+      if (line.invoiceQty === null || line.invoiceQty === undefined || Number(line.invoiceQty) <= 0) errors.push({ field: `line-${index}-invoiceQty`, message: 'Enter qty.' });
+    });
     return errors;
   }
 
@@ -778,8 +945,26 @@ export class BillingComponent implements OnInit, OnDestroy {
     if (this.billValidationErrors().length > 0) return;
     const draft = this.billDraft();
     const existing = this.selectedVendorBill();
+    const lines: VendorBillLine[] = draft.lines.map(line => {
+      const item = this.mockItemConfigs().find(i => i.code === line.itemCode);
+      return {
+        itemCode: line.itemCode,
+        itemName: item?.name || line.itemCode,
+        unit: item?.unit || '',
+        invoiceQty: Number(line.invoiceQty)
+      };
+    });
     const savedBill: VendorBill = {
-      id: draft.id.trim(), supplier: draft.supplier.trim(), poNo: draft.poNo.trim(), billDate: draft.billDate, dueDate: draft.dueDate, amount: Number(draft.amount), tax: Number(draft.tax), status: draft.status, grnNo: (draft.grnNo || '').trim()
+      id: draft.id.trim(),
+      supplier: draft.supplier.trim(),
+      poNo: draft.poNo.trim(),
+      billDate: draft.billDate,
+      dueDate: draft.dueDate,
+      totalAmount: Number(draft.totalAmount),
+      netAmount: Number(draft.netAmount),
+      status: draft.status,
+      grnNo: (draft.grnNo || '').trim(),
+      lines
     };
     this.vendorBills.update(bills => {
       if (existing) { const index = bills.findIndex(b => b.id === existing.id); if (index > -1) { const next = [...bills]; next[index] = savedBill; return next; } }
@@ -789,27 +974,53 @@ export class BillingComponent implements OnInit, OnDestroy {
   }
 
   emptyGrnDraft(): GrnDraft {
-    return { id: '', supplier: '', poNo: '', billNo: '', receivedBy: '', receivedOn: new Date().toISOString().split('T')[0], items: null, acceptedValue: null, variance: 'No variance' };
+    return {
+      id: '',
+      supplier: '',
+      poNo: '',
+      billNo: '',
+      invoiceTotal: 0,
+      invoiceNet: 0,
+      receivedBy: '',
+      receivedOn: new Date().toISOString().split('T')[0],
+      remarks: '',
+      lines: []
+    };
   }
 
   draftFromGrn(grn: InwardReceipt): GrnDraft {
-    return { id: grn.id, supplier: grn.supplier, poNo: grn.poNo || '', billNo: grn.billNo || '', receivedBy: grn.receivedBy, receivedOn: grn.receivedOn, items: grn.items, acceptedValue: grn.acceptedValue, variance: grn.variance || 'No variance' };
+    const bill = this.vendorBills().find(item => item.id === grn.billNo);
+    return {
+      id: grn.id,
+      supplier: grn.supplier,
+      poNo: grn.poNo || '',
+      billNo: grn.billNo || '',
+      invoiceTotal: bill?.totalAmount || grn.acceptedValue,
+      invoiceNet: bill?.netAmount || grn.acceptedValue,
+      receivedBy: grn.receivedBy,
+      receivedOn: grn.receivedOn,
+      remarks: grn.remarks || '',
+      lines: grn.lines.map(line => ({ ...line }))
+    };
   }
 
   updateGrnDraft<K extends keyof GrnDraft>(field: K, value: GrnDraft[K]): void {
     this.grnDraft.update(draft => {
       const next = { ...draft, [field]: value };
-      if (field === 'billNo' && value) {
+      if (field === 'billNo') {
         const bill = this.vendorBills().find(b => b.id === value);
         if (bill) {
-          next.poNo = bill.poNo || ''; next.supplier = bill.supplier; next.acceptedValue = bill.amount + bill.tax;
-          const po = this.mockPurchaseOrders().find(p => p.id === bill.poNo);
-          if (po) next.items = po.items;
+          next.poNo = bill.poNo || '';
+          next.supplier = bill.supplier;
+          next.invoiceTotal = bill.totalAmount;
+          next.invoiceNet = bill.netAmount;
+          next.lines = bill.lines.map(line => ({ ...line, receivedQty: line.invoiceQty }));
         } else {
-          const inv = this.invoices().find(i => i.invoiceNo === value);
-          if (inv) {
-            next.poNo = ''; next.supplier = inv.guest; next.acceptedValue = inv.amount; next.items = 1;
-          }
+          next.poNo = '';
+          next.supplier = '';
+          next.invoiceTotal = 0;
+          next.invoiceNet = 0;
+          next.lines = [];
         }
       }
       return next;
@@ -819,6 +1030,30 @@ export class BillingComponent implements OnInit, OnDestroy {
 
   markGrnFieldAsTouched(field: string): void { this.grnTouchedFields.update(touched => ({ ...touched, [field]: true })); }
 
+  updateGrnLine(index: number, receivedQty: number | null): void {
+    this.grnDraft.update(draft => ({
+      ...draft,
+      lines: draft.lines.map((line, lineIndex) => lineIndex === index ? { ...line, receivedQty } : line)
+    }));
+    this.grnTouchedFields.update(touched => ({ ...touched, [`line-${index}-receivedQty`]: true }));
+  }
+
+  grnLineVariance(line: GrnLineDraft): string {
+    const received = Number(line.receivedQty || 0);
+    if (received === line.invoiceQty) return 'Matched';
+    if (received < line.invoiceQty) return `${line.invoiceQty - received} short`;
+    return `${received - line.invoiceQty} excess`;
+  }
+
+  grnVarianceSummary(lines: GrnLineDraft[] = this.grnDraft().lines): string {
+    const short = lines.filter(line => Number(line.receivedQty || 0) < line.invoiceQty).length;
+    const excess = lines.filter(line => Number(line.receivedQty || 0) > line.invoiceQty).length;
+    if (!short && !excess) return 'No variance';
+    if (short && !excess) return `${short} item${short === 1 ? '' : 's'} short`;
+    if (excess && !short) return `${excess} item${excess === 1 ? '' : 's'} excess`;
+    return `${short + excess} item variances`;
+  }
+
   validateGrnDraft(draft: GrnDraft): Array<{ field: string; message: string }> {
     const errors: Array<{ field: string; message: string }> = [];
     if (!draft.id.trim()) errors.push({ field: 'id', message: 'GRN number is required.' });
@@ -826,8 +1061,12 @@ export class BillingComponent implements OnInit, OnDestroy {
     if (!draft.billNo.trim()) errors.push({ field: 'billNo', message: 'Vendor Bill reference is required.' });
     if (!draft.receivedBy.trim()) errors.push({ field: 'receivedBy', message: 'Received by name is required.' });
     if (!draft.receivedOn) errors.push({ field: 'receivedOn', message: 'Received date is required.' });
-    if (draft.items === null || draft.items === undefined || Number(draft.items) <= 0) errors.push({ field: 'items', message: 'Enter a valid number of items (> 0).' });
-    if (draft.acceptedValue === null || draft.acceptedValue === undefined || Number(draft.acceptedValue) < 0) errors.push({ field: 'acceptedValue', message: 'Enter a valid value (>= 0).' });
+    if (!draft.lines.length) errors.push({ field: 'lines', message: 'The selected invoice has no items.' });
+    draft.lines.forEach((line, index) => {
+      if (line.receivedQty === null || line.receivedQty === undefined || Number(line.receivedQty) < 0) {
+        errors.push({ field: `line-${index}-receivedQty`, message: 'Enter received qty.' });
+      }
+    });
     return errors;
   }
 
@@ -844,20 +1083,28 @@ export class BillingComponent implements OnInit, OnDestroy {
     const draft = this.grnDraft();
     const existing = this.selectedGrn();
     const bill = this.vendorBills().find(b => b.id === draft.billNo);
-    const inv = this.invoices().find(i => i.invoiceNo === draft.billNo);
+    const lines: GrnLine[] = draft.lines.map(line => ({ ...line, receivedQty: Number(line.receivedQty) }));
     const savedGrn: InwardReceipt = {
-      id: draft.id.trim(), poNo: draft.poNo.trim() || bill?.poNo || '', billNo: draft.billNo.trim(), supplier: draft.supplier.trim() || bill?.supplier || inv?.guest || '', receivedBy: draft.receivedBy.trim(), receivedOn: draft.receivedOn, items: Number(draft.items), acceptedValue: Number(draft.acceptedValue), variance: draft.variance.trim()
+      id: draft.id.trim(),
+      poNo: draft.poNo.trim() || bill?.poNo || '',
+      billNo: draft.billNo.trim(),
+      supplier: draft.supplier.trim() || bill?.supplier || '',
+      receivedBy: draft.receivedBy.trim(),
+      receivedOn: draft.receivedOn,
+      items: lines.length,
+      acceptedValue: draft.invoiceNet,
+      variance: this.grnVarianceSummary(lines),
+      remarks: draft.remarks.trim(),
+      lines
     };
     if (existing && existing.billNo && existing.billNo !== savedGrn.billNo) {
       this.vendorBills.update(bills => bills.map(b => { if (b.id === existing.billNo) { const { grnNo, ...rest } = b; return rest as VendorBill; } return b; }));
-      this.invoices.update(invs => invs.map(i => { if (i.invoiceNo === existing.billNo) { const { grnNo, ...rest } = i; return rest as Invoice; } return i; }));
     }
     this.inwardReceipts.update(grns => {
       if (existing) { const index = grns.findIndex(g => g.id === existing.id); if (index > -1) { const next = [...grns]; next[index] = savedGrn; return next; } }
       return [savedGrn, ...grns];
     });
     this.vendorBills.update(bills => bills.map(b => { if (b.id === savedGrn.billNo) return { ...b, grnNo: savedGrn.id }; return b; }));
-    this.invoices.update(invs => invs.map(i => { if (i.invoiceNo === savedGrn.billNo) return { ...i, grnNo: savedGrn.id }; return i; }));
     this.closeBillingModal();
   }
 }

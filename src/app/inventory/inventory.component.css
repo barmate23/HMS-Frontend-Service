@@ -588,10 +588,20 @@ button {
 }
 
 .minibar-table .table-head,
-.minibar-table .table-row,
+.minibar-table .table-row {
+  grid-template-columns: 110px minmax(130px, 1fr) 120px 72px 92px 92px 90px 76px;
+}
+
 .issue-table .table-head,
 .issue-table .table-row {
-  grid-template-columns: 110px minmax(130px, 1fr) 120px 72px 92px 92px 90px 76px;
+  grid-template-columns: 110px minmax(145px, 1fr) minmax(180px, 1.35fr) minmax(140px, 1fr) 70px 100px 90px 76px;
+  column-gap: 16px;
+  padding-right: 14px;
+  padding-left: 14px;
+}
+
+.issue-table .table-row > * {
+  min-width: 0;
 }
 
 .request-table .table-head,

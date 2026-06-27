@@ -2,41 +2,88 @@
   <nav class="ops-tabs">
     <button type="button" [class.active]="activeTab() === 'dashboard'" (click)="setTab('dashboard')"><span class="material-icons-round">dashboard</span>Dashboard</button>
     <button type="button" [class.active]="activeTab() === 'stock'" (click)="setTab('stock')"><span class="material-icons-round">inventory_2</span>Stock Ledger</button>
-    <button type="button" [class.active]="activeTab() === 'minibar'" (click)="setTab('minibar')"><span class="material-icons-round">local_bar</span>Minibar</button>
     <button type="button" [class.active]="activeTab() === 'requests'" (click)="setTab('requests')"><span class="material-icons-round">assignment_add</span>Purchase Requests</button>
     <button type="button" [class.active]="activeTab() === 'issues'" (click)="setTab('issues')"><span class="material-icons-round">outbox</span>Store Issues</button>
   </nav>
 
-  <section class="metric-grid" *ngIf="activeTab() === 'dashboard'">
-    <article class="metric-card blue"><span class="material-icons-round">category</span><div><strong>{{ dashboard().totalSku }}</strong><small>Total SKUs</small></div></article>
-    <article class="metric-card red"><span class="material-icons-round">warning</span><div><strong>{{ dashboard().low }}</strong><small>Low Stock</small></div></article>
-    <article class="metric-card green"><span class="material-icons-round">currency_rupee</span><div><strong>{{ formatINR(dashboard().value) }}</strong><small>Stock Value</small></div></article>
-    <article class="metric-card amber"><span class="material-icons-round">pending_actions</span><div><strong>{{ dashboard().openRequests }}</strong><small>Open PRs</small></div></article>
-    <article class="metric-card teal"><span class="material-icons-round">local_bar</span><div><strong>{{ dashboard().minibarDue }}</strong><small>Refill Alerts</small></div></article>
-  </section>
+  <section class="inventory-dashboard" *ngIf="activeTab() === 'dashboard'">
+    <div class="dashboard-titlebar">
+      <div>
+        <h1>Inventory Control</h1>
+        <p>Stock ledger health, purchase request pressure, and store issue movement in one operational view.</p>
+      </div>
+      <div class="dashboard-actions">
+        <button type="button" class="secondary-btn" (click)="setTab('stock')"><span class="material-icons-round">inventory_2</span>Ledger</button>
+        <button type="button" class="primary-btn" (click)="openCreateModal('request')"><span class="material-icons-round">assignment_add</span>New PR</button>
+      </div>
+    </div>
 
-  <section class="dashboard-grid" *ngIf="activeTab() === 'dashboard'">
-    <article class="panel">
-      <header><h2>Reorder Watch</h2><span>{{ dashboard().low }} items</span></header>
-      <div class="watch-list">
-        <div class="watch-row" *ngFor="let item of stockItems()">
-          <ng-container *ngIf="stockStatus(item) === 'LOW' || stockStatus(item) === 'CRITICAL'">
+    <section class="metric-grid dashboard-kpis">
+      <article class="metric-card" *ngFor="let kpi of dashboardKpis()" [ngClass]="kpi.tone">
+        <span class="material-icons-round">{{ kpi.icon }}</span>
+        <div><strong>{{ kpi.value }}</strong><small>{{ kpi.label }}</small><em>{{ kpi.delta }}</em></div>
+      </article>
+    </section>
+
+    <section class="dashboard-command-grid">
+      <article class="panel stock-health-panel">
+        <header><h2>Stock Health</h2><span>1,248 SKUs</span></header>
+        <div class="health-visual">
+          <div class="health-ring" style="--healthy: 74%; --low: 77%; --out: 79%;">
+            <strong>74%</strong>
+            <small>Healthy</small>
+          </div>
+          <div class="health-list">
+            <div class="health-row" *ngFor="let slice of stockHealth()">
+              <i [style.background]="slice.color"></i>
+              <span>{{ slice.label }}</span>
+              <b>{{ slice.value }}</b>
+              <small>{{ slice.percent }}%</small>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel reorder-panel">
+        <header><h2>Reorder Watch</h2><span>{{ reorderWatch().length }} items</span></header>
+        <div class="watch-list dashboard-watch-list">
+          <div class="watch-row" *ngFor="let item of reorderWatch()">
             <span class="material-icons-round">inventory</span>
-            <div><strong>{{ item.name }}</strong><small>{{ item.store }} • {{ item.onHand }} {{ item.unit }} on hand</small></div>
-            <em [class]="stockStatus(item).toLowerCase()">{{ stockStatusLabel(item) }}</em>
-          </ng-container>
+            <div><strong>{{ item.item }}</strong><small>{{ item.store }} • {{ item.onHand }} on hand • reorder {{ item.reorderAt }}</small></div>
+            <em [class]="item.status.toLowerCase()">{{ item.status }}</em>
+          </div>
         </div>
-      </div>
-    </article>
-    <article class="panel">
-      <header><h2>Today’s Store Movement</h2><span>{{ storeIssues().length }} issues</span></header>
-      <div class="simple-table compact">
-        <div class="table-head"><span>Issue</span><span>Department</span><span>Item</span><span>Qty</span></div>
-        <div class="table-row" *ngFor="let issue of storeIssues()">
-          <strong>{{ issue.id }}</strong><span>{{ issue.department }}</span><span>{{ issue.item }}</span><b>{{ issue.quantity }} {{ issue.unit }}</b>
+      </article>
+
+      <article class="panel pipeline-panel">
+        <header><h2>PR Pipeline</h2><span>23 open</span></header>
+        <div class="pipeline-list">
+          <div class="pipeline-row" *ngFor="let row of prPipeline()">
+            <div class="pipeline-meta">
+              <span><i [style.background]="row.color"></i>{{ row.status }}</span>
+              <b>{{ row.count }}</b>
+            </div>
+            <div class="pipeline-track"><div [style.width.%]="row.count * 9" [style.background]="row.color"></div></div>
+            <small>{{ formatINR(row.value) }}</small>
+          </div>
         </div>
-      </div>
-    </article>
+      </article>
+
+      <article class="panel movement-panel">
+        <header><h2>Store Movement</h2><span>Today</span></header>
+        <div class="simple-table movement-table">
+          <div class="table-head"><span>Issue</span><span>Department</span><span>Item</span><span>Qty</span><span>Status</span></div>
+          <div class="table-row" *ngFor="let movement of dashboardMovements()">
+            <strong>{{ movement.id }}</strong>
+            <span>{{ movement.department }}</span>
+            <span>{{ movement.item }}</span>
+            <b>{{ movement.qty }}</b>
+            <em [class]="movement.status.toLowerCase()">{{ movement.status }}</em>
+          </div>
+        </div>
+      </article>
+
+    </section>
   </section>
 
   <section class="panel table-panel" *ngIf="activeTab() === 'stock'">
@@ -50,11 +97,10 @@
         <select [ngModel]="storeFilter()" (ngModelChange)="storeFilter.set($event)">
           <option *ngFor="let store of stores()" [value]="store">{{ store === 'ALL' ? 'All Stores' : store }}</option>
         </select>
-        <button class="primary-btn" (click)="openCreateModal('stock')"><span class="material-icons-round">add</span>Add Item</button>
       </div>
     </header>
     <div class="simple-table stock-table">
-      <div class="table-head"><span>Code</span><span>Item</span><span>Store</span><span>On Hand</span><span>Reorder</span><span>Value</span><span>Status</span><span>Actions</span></div>
+      <div class="table-head"><span>Code</span><span>Item</span><span>Store</span><span>On Hand</span><span>Reorder</span><span>Value</span><span>Status</span></div>
       <div class="table-row" *ngFor="let item of filteredStock()">
         <strong>{{ item.code }}</strong>
         <span><b>{{ item.name }}</b><small>{{ item.category }}</small></span>
@@ -63,49 +109,45 @@
         <span>{{ item.reorderLevel }} / {{ item.parLevel }}</span>
         <span>{{ formatINR(item.onHand * item.unitCost) }}</span>
         <em [class]="stockStatus(item).toLowerCase()">{{ stockStatusLabel(item) }}</em>
-        <span class="row-actions">
-          <button type="button" title="Edit item" (click)="editStockItem(item)"><span class="material-icons-round">edit</span></button>
-          <button type="button" title="Delete item" (click)="deleteStockItem(item.id)"><span class="material-icons-round">delete</span></button>
-        </span>
       </div>
-    </div>
-  </section>
-
-  <section class="panel table-panel" *ngIf="activeTab() === 'minibar'">
-    <header><h2>Minibar Control</h2><button class="primary-btn" (click)="openCreateModal('minibar')"><span class="material-icons-round">add</span>Post Consumption</button></header>
-    <div class="simple-table minibar-table">
-      <div class="table-head"><span>Room</span><span>Item</span><span>Par</span><span>Current</span><span>Consumed</span><span>Charge</span><span>Status</span><span>Actions</span></div>
-      <div class="table-row" *ngFor="let item of minibarItems()">
-        <strong>Room {{ item.room }}</strong><span>{{ item.item }}</span><span>{{ item.par }}</span><span>{{ item.current }}</span><b>{{ item.consumed }}</b><span>{{ formatINR(item.charge) }}</span><em [class]="item.status.toLowerCase()">{{ item.status }}</em>
-        <span class="row-actions">
-          <button type="button" title="Edit minibar posting" (click)="editMinibarItem(item)"><span class="material-icons-round">edit</span></button>
-          <button type="button" title="Delete minibar posting" (click)="deleteMinibarItem(item.id)"><span class="material-icons-round">delete</span></button>
-        </span>
-      </div>
+      <div class="table-state" *ngIf="isLoadingStock()">Loading stock items...</div>
+      <div class="table-state error" *ngIf="!isLoadingStock() && stockError()">{{ stockError() }}</div>
+      <div class="table-state" *ngIf="!isLoadingStock() && !stockError() && !filteredStock().length">No stock items found.</div>
     </div>
   </section>
 
   <section class="panel table-panel" *ngIf="activeTab() === 'requests'">
     <header>
       <h2>Purchase Requests</h2>
-      <div class="toolbar compact-tools">
+      <div class="toolbar">
+        <label class="search-field"><span class="material-icons-round">search</span><input [ngModel]="requestSearch()" (ngModelChange)="requestSearch.set($event)" placeholder="Search PR, item, requester..."></label>
         <select [ngModel]="requestStatusFilter()" (ngModelChange)="requestStatusFilter.set($event)">
           <option value="ALL">All Statuses</option>
           <option value="Draft">Draft</option>
           <option value="Submitted">Submitted</option>
           <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
           <option value="Ordered">Ordered</option>
         </select>
         <button class="primary-btn" (click)="openCreateModal('request')"><span class="material-icons-round">add</span>New PR</button>
       </div>
     </header>
     <div class="simple-table request-table">
-      <div class="table-head"><span>PR No.</span><span>Department</span><span>Requested By</span><span>Items</span><span>Needed By</span><span>Amount</span><span>Status</span><span>Actions</span></div>
+      <div class="table-head"><span>PR No.</span><span>Department</span><span>Requested By</span><span>Needed By</span><span>Items</span><span>Amount</span><span>Priority</span><span>Status</span><span>Actions</span></div>
+      <div class="table-state" *ngIf="!filteredRequests().length">No purchase requests found.</div>
       <div class="table-row" *ngFor="let request of filteredRequests()">
-        <strong>{{ request.id }}</strong><span>{{ request.department }}</span><span>{{ request.requestedBy }}</span><span>{{ request.items }}</span><span>{{ request.neededBy }}</span><b>{{ formatINR(request.amount) }}</b><em [class]="request.status.toLowerCase()">{{ request.status }}</em>
+        <strong>{{ request.id }}</strong>
+        <span>{{ request.department }}</span>
+        <span><b>{{ request.requestedBy }}</b><small>{{ request.purpose }}</small></span>
+        <span>{{ request.neededBy }}</span>
+        <span>{{ request.lines.length }}</span>
+        <b>{{ formatINR(requestTotal(request)) }}</b>
+        <em [class]="request.priority.toLowerCase()">{{ request.priority }}</em>
+        <em [class]="request.status.toLowerCase()">{{ request.status }}</em>
         <span class="row-actions">
+          <button type="button" title="View purchase request" (click)="viewPurchaseRequest(request)"><span class="material-icons-round">visibility</span></button>
           <button type="button" title="Edit purchase request" (click)="editPurchaseRequest(request)"><span class="material-icons-round">edit</span></button>
-          <button type="button" title="Delete purchase request" (click)="deletePurchaseRequest(request.id)"><span class="material-icons-round">delete</span></button>
+          <button type="button" title="Delete purchase request" (click)="deletePurchaseRequest(request)"><span class="material-icons-round">delete</span></button>
         </span>
       </div>
     </div>
@@ -115,18 +157,21 @@
     <header><h2>Store Issues</h2><button class="primary-btn" (click)="openCreateModal('issue')"><span class="material-icons-round">outbox</span>Issue Stock</button></header>
     <div class="simple-table issue-table">
       <div class="table-head"><span>Issue No.</span><span>Department</span><span>Issued To</span><span>Item</span><span>Qty</span><span>Date</span><span>Status</span><span>Actions</span></div>
+      <div class="table-state" *ngIf="isLoadingIssues()">Loading store issues...</div>
+      <div class="table-state error" *ngIf="!isLoadingIssues() && issueError()">{{ issueError() }}</div>
+      <div class="table-state" *ngIf="!isLoadingIssues() && !issueError() && !storeIssues().length">No store issues found.</div>
       <div class="table-row" *ngFor="let issue of storeIssues()">
         <strong>{{ issue.id }}</strong><span>{{ issue.department }}</span><span>{{ issue.issuedTo }}</span><span>{{ issue.item }}</span><b>{{ issue.quantity }} {{ issue.unit }}</b><span>{{ issue.date }}</span><em [class]="issue.status.toLowerCase()">{{ issue.status }}</em>
         <span class="row-actions">
           <button type="button" title="Edit issue" (click)="editStoreIssue(issue)"><span class="material-icons-round">edit</span></button>
-          <button type="button" title="Delete issue" (click)="deleteStoreIssue(issue.id)"><span class="material-icons-round">delete</span></button>
+          <button type="button" title="Delete issue" [disabled]="issueDeletingId() === issue.apiId" (click)="deleteStoreIssue(issue)"><span class="material-icons-round">delete</span></button>
         </span>
       </div>
     </div>
   </section>
 
   <div class="modal-backdrop" *ngIf="createModal()" (click)="closeCreateModal()">
-    <section class="entry-modal" (click)="$event.stopPropagation()">
+    <section class="entry-modal" [class.request-modal]="createModal() === 'request'" (click)="$event.stopPropagation()">
       <header>
         <div>
           <span class="material-icons-round">edit_note</span>
@@ -136,47 +181,114 @@
       </header>
 
       <div class="modal-body" [ngSwitch]="createModal()">
-        <div class="form-grid" *ngSwitchCase="'stock'">
-          <label><span>Item Code</span><input [value]="selectedStockItem()?.code || ''" placeholder="SKU / item code"></label>
-          <label><span>Item Name</span><input [value]="selectedStockItem()?.name || ''" placeholder="Inventory item name"></label>
-          <label><span>Category</span><select [value]="selectedStockItem()?.category || 'Housekeeping Linen'"><option>Housekeeping Linen</option><option>Guest Amenities</option><option>Laundry Consumable</option><option>Minibar</option><option>Cleaning Chemical</option></select></label>
-          <label><span>Store</span><select [value]="selectedStockItem()?.store || 'Main Store'"><option>Main Store</option><option>HK Pantry</option><option>Laundry Store</option><option>Minibar Store</option></select></label>
-          <label><span>On Hand</span><input type="number" [value]="selectedStockItem()?.onHand || ''" placeholder="Available qty"></label>
-          <label><span>Unit</span><input [value]="selectedStockItem()?.unit || ''" placeholder="Pcs / Kg / Ltr"></label>
-          <label><span>Reorder Level</span><input type="number" [value]="selectedStockItem()?.reorderLevel || ''" placeholder="Minimum stock"></label>
-          <label><span>Par Level</span><input type="number" [value]="selectedStockItem()?.parLevel || ''" placeholder="Ideal stock"></label>
-          <label><span>Unit Cost</span><input [value]="selectedStockItem()?.unitCost || ''" placeholder="Cost per unit"></label>
-        </div>
+        <div class="request-form" *ngSwitchCase="'request'">
+          <div class="form-grid">
+            <label><span>Department</span><select [ngModel]="purchaseRequestDraft().department" (ngModelChange)="updatePurchaseRequestDraft('department', $event)"><option>Housekeeping</option><option>Laundry</option><option>Engineering</option><option>Front Office</option><option>F&B</option></select></label>
+            <label><span>Requested By</span><input [ngModel]="purchaseRequestDraft().requestedBy" (ngModelChange)="updatePurchaseRequestDraft('requestedBy', $event)" placeholder="Requester name"></label>
+            <label><span>Needed By</span><input type="date" [ngModel]="purchaseRequestDraft().neededBy" (ngModelChange)="updatePurchaseRequestDraft('neededBy', $event)"></label>
+            <label><span>Priority</span><select [ngModel]="purchaseRequestDraft().priority" (ngModelChange)="updatePurchaseRequestDraft('priority', $event)"><option>Low</option><option>Normal</option><option>High</option><option>Urgent</option></select></label>
+            <label><span>Status</span><select [ngModel]="purchaseRequestDraft().status" (ngModelChange)="updatePurchaseRequestDraft('status', $event)"><option>Draft</option><option>Submitted</option><option>Approved</option><option>Rejected</option><option>Ordered</option></select></label>
+            <label class="wide"><span>Justification</span><input [ngModel]="purchaseRequestDraft().purpose" (ngModelChange)="updatePurchaseRequestDraft('purpose', $event)" placeholder="Reason for purchase request"></label>
+          </div>
 
-        <div class="form-grid" *ngSwitchCase="'minibar'">
-          <label><span>Room</span><input [value]="selectedMinibarItem()?.room || ''" placeholder="Room no."></label>
-          <label><span>Item</span><select [value]="selectedMinibarItem()?.item || 'Soda Can'"><option>Soda Can</option><option>Chocolate Bar</option><option>Mineral Water</option></select></label>
-          <label><span>Consumed Qty</span><input type="number" [value]="selectedMinibarItem()?.consumed || 1"></label>
-          <label><span>Charge</span><input [value]="selectedMinibarItem()?.charge || 95"></label>
-          <label class="wide"><span>Remarks</span><input placeholder="Posted to room folio"></label>
-        </div>
-
-        <div class="form-grid" *ngSwitchCase="'request'">
-          <label><span>Department</span><select [value]="selectedPurchaseRequest()?.department || 'Housekeeping'"><option>Housekeeping</option><option>Laundry</option><option>Minibar</option></select></label>
-          <label><span>Needed By</span><input type="date" [value]="selectedPurchaseRequest()?.neededBy || ''"></label>
-          <label><span>Item</span><select><option>Bath Towel</option><option>Dental Kit</option><option>Laundry Detergent</option></select></label>
-          <label><span>Item Count</span><input type="number" [value]="selectedPurchaseRequest()?.items || 1"></label>
-          <label><span>Expected Amount</span><input [value]="selectedPurchaseRequest()?.amount || ''" placeholder="Amount"></label>
-          <label class="wide"><span>Justification</span><input placeholder="Reorder stock for upcoming occupancy"></label>
+          <div class="request-lines">
+            <div class="section-toolbar">
+              <h3>Requested Items</h3>
+              <button type="button" class="secondary-btn" (click)="addRequestLine()"><span class="material-icons-round">add</span>Add Line</button>
+            </div>
+            <div class="line-grid line-head"><span>Item</span><span>Unit</span><span>Qty</span><span>Rate</span><span>Total</span><span></span></div>
+            <div class="line-grid" *ngFor="let line of purchaseRequestDraft().lines">
+              <select [ngModel]="line.itemId" (ngModelChange)="updateRequestLine(line.id, 'itemId', $event)">
+                <option value="">Select item</option>
+                <option *ngFor="let item of requestItemOptions()" [ngValue]="item.id">{{ item.name }}{{ item.code ? ' (' + item.code + ')' : '' }}</option>
+              </select>
+              <input [ngModel]="line.unit" (ngModelChange)="updateRequestLine(line.id, 'unit', $event)" placeholder="Unit">
+              <input type="number" min="1" [ngModel]="line.quantity" (ngModelChange)="updateRequestLine(line.id, 'quantity', +$event || 0)">
+              <input type="number" min="0" [ngModel]="line.estimatedRate" (ngModelChange)="updateRequestLine(line.id, 'estimatedRate', +$event || 0)">
+              <strong>{{ formatINR(line.quantity * line.estimatedRate) }}</strong>
+              <button type="button" title="Remove line" (click)="removeRequestLine(line.id)"><span class="material-icons-round">delete</span></button>
+            </div>
+            <div class="request-total"><span>Estimated Request Value</span><strong>{{ formatINR(requestTotal(purchaseRequestDraft())) }}</strong></div>
+          </div>
         </div>
 
         <div class="form-grid" *ngSwitchCase="'issue'">
-          <label><span>Department</span><select [value]="selectedStoreIssue()?.department || 'Housekeeping'"><option>Housekeeping</option><option>Laundry</option><option>Minibar</option></select></label>
-          <label><span>Issued To</span><input [value]="selectedStoreIssue()?.issuedTo || ''" placeholder="Floor pantry / user"></label>
-          <label><span>Item</span><select [value]="selectedStoreIssue()?.item || 'Bath Towel'"><option>Bath Towel</option><option>Floor Cleaner</option><option>Soda Can</option></select></label>
-          <label><span>Quantity</span><input type="number" [value]="selectedStoreIssue()?.quantity || 1"></label>
-          <label class="wide"><span>Issue Note</span><input placeholder="Operational issue note"></label>
+          <label><span>Department</span><select [ngModel]="storeIssueDraft().department" (ngModelChange)="updateStoreIssueDraft('department', $event)"><option>Housekeeping</option><option>Laundry</option></select></label>
+          <label><span>Issued To</span><input [ngModel]="storeIssueDraft().issuedTo" (ngModelChange)="updateStoreIssueDraft('issuedTo', $event)" placeholder="Floor pantry / user"></label>
+          <label>
+            <span>Item</span>
+            <select [ngModel]="storeIssueDraft().itemId" (ngModelChange)="onStoreIssueItemChange($event)" [disabled]="isLoadingIssueItems()">
+              <option value="">{{ isLoadingIssueItems() ? 'Loading items...' : 'Select item' }}</option>
+              <option *ngFor="let item of issueItems()" [ngValue]="item.id">{{ item.name }}{{ item.code ? ' (' + item.code + ')' : '' }}</option>
+            </select>
+          </label>
+          <label><span>Quantity</span><input type="number" [ngModel]="storeIssueDraft().quantity" (ngModelChange)="updateStoreIssueDraft('quantity', +$event || 0)"></label>
+          <label><span>Unit</span><select [ngModel]="storeIssueDraft().unit" (ngModelChange)="updateStoreIssueDraft('unit', $event)"><option>Pcs</option><option>Kg</option><option>Ltr</option><option>Box</option></select></label>
+          <label><span>Date</span><input type="date" [ngModel]="storeIssueDraft().date" (ngModelChange)="updateStoreIssueDraft('date', $event)"></label>
+          <label><span>Status</span><select [ngModel]="storeIssueDraft().status" (ngModelChange)="updateStoreIssueDraft('status', $event)"><option>Open</option><option>Issued</option><option>Closed</option></select></label>
+          <label class="wide"><span>Issue Note</span><input [ngModel]="storeIssueDraft().note" (ngModelChange)="updateStoreIssueDraft('note', $event)" placeholder="Operational issue note"></label>
+          <p class="form-error wide" *ngIf="issueItemError()">{{ issueItemError() }}</p>
+          <p class="form-error wide" *ngIf="issueError()">{{ issueError() }}</p>
         </div>
       </div>
 
       <footer>
-        <button type="button" class="secondary-btn" (click)="closeCreateModal()">Cancel</button>
-        <button type="button" class="primary-btn" (click)="closeCreateModal()"><span class="material-icons-round">save</span>Save</button>
+        <button type="button" class="secondary-btn" [disabled]="issueSaving()" (click)="closeCreateModal()">Cancel</button>
+        <button type="button" class="primary-btn" [disabled]="issueSaving()" (click)="createModal() === 'request' ? savePurchaseRequest() : saveStoreIssue()"><span class="material-icons-round">save</span>{{ issueSaving() ? 'Saving...' : 'Save' }}</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="purchaseRequestDetail() as request" (click)="closePurchaseRequestDetail()">
+    <section class="entry-modal detail-modal" (click)="$event.stopPropagation()">
+      <header>
+        <div><span class="material-icons-round">assignment</span><h2>Purchase Request Details</h2></div>
+        <button type="button" class="icon-btn" (click)="closePurchaseRequestDetail()"><span class="material-icons-round">close</span></button>
+      </header>
+      <div class="modal-body">
+        <div class="request-summary">
+          <div><strong>{{ request.id }}</strong><small>{{ request.department }} • {{ request.requestedBy }}</small></div>
+          <em [class]="request.status.toLowerCase()">{{ request.status }}</em>
+        </div>
+        <div class="detail-grid">
+          <article><span>Needed By</span><b>{{ request.neededBy }}</b><small>Required delivery date</small></article>
+          <article><span>Priority</span><b>{{ request.priority }}</b><small>Operational urgency</small></article>
+          <article><span>Estimated Value</span><b>{{ formatINR(requestTotal(request)) }}</b><small>{{ request.lines.length }} requested item{{ request.lines.length === 1 ? '' : 's' }}</small></article>
+          <article><span>Justification</span><b>{{ request.purpose || '—' }}</b><small>Request note</small></article>
+        </div>
+        <div class="simple-table request-detail-table">
+          <div class="table-head"><span>Item</span><span>Qty</span><span>Rate</span><span>Total</span></div>
+          <div class="table-row" *ngFor="let line of request.lines">
+            <span><b>{{ line.item }}</b><small>{{ line.unit }}</small></span><span>{{ line.quantity }} {{ line.unit }}</span><span>{{ formatINR(line.estimatedRate) }}</span><strong>{{ formatINR(line.quantity * line.estimatedRate) }}</strong>
+          </div>
+        </div>
+      </div>
+      <footer>
+        <button type="button" class="secondary-btn" (click)="closePurchaseRequestDetail()">Close</button>
+        <button type="button" class="primary-btn" (click)="closePurchaseRequestDetail(); editPurchaseRequest(request)"><span class="material-icons-round">edit</span>Edit PR</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="purchaseRequestPendingDelete() as request" (click)="closeDeletePurchaseRequest()">
+    <section class="entry-modal confirm-modal" (click)="$event.stopPropagation()">
+      <header>
+        <div><span class="material-icons-round">warning</span><h2>Delete Purchase Request</h2></div>
+        <button type="button" class="icon-btn" (click)="closeDeletePurchaseRequest()"><span class="material-icons-round">close</span></button>
+      </header>
+      <div class="modal-body">
+        <div class="confirm-copy">
+          <span class="material-icons-round">delete</span>
+          <div>
+            <strong>{{ request.id }}</strong>
+            <p>This purchase request will be removed from the dummy register.</p>
+            <small>{{ request.department }} • {{ request.requestedBy }} • {{ formatINR(requestTotal(request)) }}</small>
+          </div>
+        </div>
+      </div>
+      <footer>
+        <button type="button" class="secondary-btn" (click)="closeDeletePurchaseRequest()">Cancel</button>
+        <button type="button" class="danger-btn" (click)="confirmDeletePurchaseRequest()"><span class="material-icons-round">delete</span>Delete</button>
       </footer>
     </section>
   </div>

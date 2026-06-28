@@ -133,7 +133,7 @@
       </div>
     </header>
     <div class="simple-table request-table">
-      <div class="table-head"><span>PR No.</span><span>Department</span><span>Requested By</span><span>Needed By</span><span>Items</span><span>Amount</span><span>Priority</span><span>Status</span><span>Actions</span></div>
+      <div class="table-head"><span>PR No.</span><span>Department</span><span>Requested By</span><span>Needed By</span><span>Items</span><span>Amount</span><span>Status</span><span>Actions</span></div>
       <div class="table-state" *ngIf="!filteredRequests().length">No purchase requests found.</div>
       <div class="table-row" *ngFor="let request of filteredRequests()">
         <strong>{{ request.id }}</strong>
@@ -142,7 +142,6 @@
         <span>{{ request.neededBy }}</span>
         <span>{{ request.lines.length }}</span>
         <b>{{ formatINR(requestTotal(request)) }}</b>
-        <em [class]="request.priority.toLowerCase()">{{ request.priority }}</em>
         <em [class]="request.status.toLowerCase()">{{ request.status }}</em>
         <span class="row-actions">
           <button type="button" title="View purchase request" (click)="viewPurchaseRequest(request)"><span class="material-icons-round">visibility</span></button>
@@ -196,8 +195,17 @@
             </label>
             <label><span>Requested By</span><input [ngModel]="purchaseRequestDraft().requestedBy" (ngModelChange)="updatePurchaseRequestDraft('requestedBy', $event)" placeholder="Requester name"></label>
             <label><span>Needed By</span><input type="date" [ngModel]="purchaseRequestDraft().neededBy" (ngModelChange)="updatePurchaseRequestDraft('neededBy', $event)"></label>
-            <label><span>Priority</span><select [ngModel]="purchaseRequestDraft().priority" (ngModelChange)="updatePurchaseRequestDraft('priority', $event)"><option>Low</option><option>Normal</option><option>High</option><option>Urgent</option></select></label>
-            <label><span>Status</span><select [ngModel]="purchaseRequestDraft().status" (ngModelChange)="updatePurchaseRequestDraft('status', $event)"><option>Draft</option><option>Submitted</option><option>Approved</option><option>Rejected</option><option>Ordered</option></select></label>
+            <label>
+              <span>Status</span>
+              <select
+                [ngModel]="purchaseRequestDraft().statusId"
+                (ngModelChange)="onPurchaseRequestStatusChange($event)"
+                [disabled]="prStatuses().length === 0"
+              >
+                <option value="">{{ prStatuses().length === 0 ? 'Loading statuses...' : 'Select status' }}</option>
+                <option *ngFor="let s of prStatuses()" [ngValue]="s.id">{{ s.value }}</option>
+              </select>
+            </label>
             <label class="wide"><span>Justification</span><input [ngModel]="purchaseRequestDraft().purpose" (ngModelChange)="updatePurchaseRequestDraft('purpose', $event)" placeholder="Reason for purchase request"></label>
           </div>
 
@@ -287,7 +295,7 @@
         </div>
         <div class="detail-grid">
           <article><span>Needed By</span><b>{{ request.neededBy }}</b><small>Required delivery date</small></article>
-          <article><span>Priority</span><b>{{ request.priority }}</b><small>Operational urgency</small></article>
+          <article><span>Status</span><b>{{ request.status }}</b><small>Current request status</small></article>
           <article><span>Estimated Value</span><b>{{ formatINR(requestTotal(request)) }}</b><small>{{ request.lines.length }} requested item{{ request.lines.length === 1 ? '' : 's' }}</small></article>
           <article><span>Justification</span><b>{{ request.purpose || '—' }}</b><small>Request note</small></article>
         </div>

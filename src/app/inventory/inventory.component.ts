@@ -5,12 +5,12 @@ import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 import { InventoryService, ItemConfigPayload, PurchaseRequestLinePayload, PurchaseRequestPayload, StockItemPayload, StoreIssuePayload } from './inventory.service';
 import { DepartmentOption, UserManagementService } from '../user-management/user-management.service';
+import { PurchaseMasterOption, PurchaseService } from '../purchase/purchase.service';
 
 type InventoryTab = 'dashboard' | 'stock' | 'requests' | 'issues';
 type StockStatus = 'OK' | 'LOW' | 'CRITICAL' | 'OVERSTOCK';
 type IssueStatus = 'Open' | 'Issued' | 'Closed';
 type RequestStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected' | 'Ordered';
-type RequestPriority = 'Low' | 'Normal' | 'High' | 'Urgent';
 
 interface StoreItem {
   id: number;
@@ -86,10 +86,9 @@ interface PurchaseRequest {
   department: string;
   requestedBy: string;
   neededBy: string;
-  priority: RequestPriority;
-  priorityId?: number | string;
-  status: RequestStatus;
-  statusId?: number | string;
+  status: string;
+  statusId: number | string | '';
+  statusCode: string;
   purpose: string;
   lines: PurchaseRequestLine[];
 }
@@ -101,10 +100,9 @@ interface PurchaseRequestDraft {
   department: string;
   requestedBy: string;
   neededBy: string;
-  priority: RequestPriority;
-  priorityId?: number | string;
-  status: RequestStatus;
-  statusId?: number | string;
+  status: string;
+  statusId: number | string | '';
+  statusCode: string;
   purpose: string;
   lines: PurchaseRequestLine[];
 }
@@ -195,7 +193,9 @@ export class InventoryComponent implements OnInit, OnDestroy {
 
   /** Departments loaded from the User Management service (shared singleton). */
   private readonly userManagementService = inject(UserManagementService);
+  private readonly purchaseService = inject(PurchaseService);
   readonly departments = this.userManagementService.departments;
+  readonly prStatuses = signal<PurchaseMasterOption[]>([]);
 
   constructor(
     private readonly router: Router,
@@ -208,6 +208,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
     this.loadIssueItems();
     this.loadPurchaseRequests();
     this.loadStoreIssues();
+    this.loadPrStatuses();
     this.routerSub = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(event => this.updateTabFromUrl((event as NavigationEnd).urlAfterRedirects));
@@ -260,7 +261,6 @@ export class InventoryComponent implements OnInit, OnDestroy {
         request.id,
         request.department,
         request.requestedBy,
-        request.priority,
         request.status,
         request.purpose,
         ...request.lines.map(line => line.item)
@@ -429,6 +429,16 @@ export class InventoryComponent implements OnInit, OnDestroy {
       ...draft,
       departmentId,
       department: selected?.name || ''
+    }));
+  }
+
+  onPurchaseRequestStatusChange(statusId: number | string): void {
+    const selected = this.prStatuses().find(s => String(s.id) === String(statusId));
+    this.purchaseRequestDraft.update(draft => ({
+      ...draft,
+      statusId,
+      status: selected?.value || '',
+      statusCode: selected?.code || ''
     }));
   }
 
@@ -759,10 +769,9 @@ export class InventoryComponent implements OnInit, OnDestroy {
       department: '',
       requestedBy: '',
       neededBy: new Date().toISOString().slice(0, 10),
-      priority: 'Normal',
-      priorityId: '',
-      status: 'Draft',
+      status: '',
       statusId: '',
+      statusCode: '',
       purpose: '',
       lines: [
         { id: 1, itemId: '', item: '', uomId: '', unit: '', quantity: 1, estimatedRate: 0 }
@@ -778,10 +787,9 @@ export class InventoryComponent implements OnInit, OnDestroy {
       department: request.department,
       requestedBy: request.requestedBy,
       neededBy: request.neededBy,
-      priority: request.priority,
-      priorityId: request.priorityId,
       status: request.status,
       statusId: request.statusId,
+      statusCode: request.statusCode,
       purpose: request.purpose,
       lines: request.lines.map(line => ({ ...line }))
     };
@@ -793,6 +801,9 @@ export class InventoryComponent implements OnInit, OnDestroy {
     const deptName = deptId
       ? (this.departments().find((d: DepartmentOption) => String(d.id) === String(deptId))?.name ?? this.text(request.department ?? request.departmentName, '-'))
       : this.text(request.department ?? request.departmentName, '-');
+    const statusId = request.statusId ?? '';
+    const statusCode = this.text(request.statusCode, '');
+    const statusName = this.text(request.statusName ?? request.status, 'Draft');
 
     return {
       apiId,
@@ -801,10 +812,9 @@ export class InventoryComponent implements OnInit, OnDestroy {
       department: deptName,
       requestedBy: this.text(request.requestedBy, '-'),
       neededBy: this.formatDateValue(request.neededBy ?? request.issueDate ?? request.createdAt),
-      priority: this.normalizeRequestPriority(request.priority),
-      priorityId: request.priorityId ?? '',
-      status: this.normalizeRequestStatus(request.status ?? request.statusName),
-      statusId: request.statusId ?? '',
+      status: statusName,
+      statusId,
+      statusCode,
       purpose: this.text(request.purpose ?? request.justification, ''),
       lines: this.listData(request.lines ?? request.items).map((line, lIndex) => {
         const itemConfig = this.issueItems().find(item => String(item.id) === String(line.itemId));
@@ -815,27 +825,31 @@ export class InventoryComponent implements OnInit, OnDestroy {
           item: line.itemName ?? line.itemCode ?? itemConfig?.name ?? '-',
           uomId: itemConfig?.uomId || line.uomId || '',
           unit: itemConfig?.unit || this.text(line.unit, ''),
-          quantity: this.toNumber(line.quantity),
-          estimatedRate: this.toNumber(line.rate ?? line.estimatedRate)
+          quantity: this.toNumber(line.requiredQuantity ?? line.quantity),
+          estimatedRate: this.toNumber(line.unitPrice ?? line.rate ?? line.estimatedRate)
         };
       })
     };
   }
 
   private purchaseRequestPayload(draft: PurchaseRequestDraft): PurchaseRequestPayload {
+    const statusOption = this.prStatuses().find(s => String(s.id) === String(draft.statusId));
     return {
       departmentId: draft.departmentId || undefined,
       requestedBy: draft.requestedBy,
       neededBy: draft.neededBy,
-      priorityId: draft.priorityId || undefined,
+      justification: draft.purpose,
+      expectedAmount: draft.lines.reduce((sum, l) => sum + l.quantity * l.estimatedRate, 0),
       statusId: draft.statusId || undefined,
-      purpose: draft.purpose,
-      lines: draft.lines.map(line => ({
+      statusName: statusOption?.value || draft.status || undefined,
+      statusCode: statusOption?.code || draft.statusCode || undefined,
+      items: draft.lines.map(line => ({
         id: line.apiId || undefined,
         itemId: line.itemId || undefined,
-        quantity: line.quantity,
-        estimatedRate: line.estimatedRate,
-        rate: line.estimatedRate 
+        itemName: line.item || undefined,
+        itemCode: typeof line.itemId === 'string' ? line.itemId : undefined,
+        requiredQuantity: line.quantity,
+        unitPrice: line.estimatedRate
       }))
     };
   }
@@ -890,21 +904,11 @@ export class InventoryComponent implements OnInit, OnDestroy {
     return 'Issued';
   }
 
-  private normalizeRequestStatus(value: unknown): RequestStatus {
-    const status = String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
-    if (status === 'submitted') return 'Submitted';
-    if (status === 'approved') return 'Approved';
-    if (status === 'rejected') return 'Rejected';
-    if (status === 'ordered') return 'Ordered';
-    return 'Draft';
-  }
-
-  private normalizeRequestPriority(value: unknown): RequestPriority {
-    const priority = String(value || '').trim().toLowerCase();
-    if (priority === 'low') return 'Low';
-    if (priority === 'high') return 'High';
-    if (priority === 'urgent') return 'Urgent';
-    return 'Normal';
+  private loadPrStatuses(): void {
+    this.purchaseService.getCommonMaster('PR_STATUS').subscribe({
+      next: statuses => this.prStatuses.set(statuses),
+      error: () => this.prStatuses.set([])
+    });
   }
 
   private formatDateValue(value: unknown): string {

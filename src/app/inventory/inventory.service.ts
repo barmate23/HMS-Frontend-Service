@@ -133,6 +133,62 @@ export interface PurchaseRequestPayload {
   items?: PurchaseRequestLinePayload[];
 }
 
+export interface InventoryDashboardStats {
+  totalSkus: number;
+  lowStockCount: number;
+  totalStockValue: number;
+  openPrsCount: number;
+  openStoreIssuesCount: number;
+}
+
+export interface InventoryStockHealth {
+  healthyCount: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  overstockCount: number;
+}
+
+export interface InventoryReorderWatch {
+  itemId: number;
+  itemName: string;
+  storeName: string;
+  onHand: number;
+  reorderLevel: number;
+  unit: string;
+  status: string;
+}
+
+export interface PrPipelineStats {
+  count: number;
+  value: number;
+}
+
+export interface InventoryPrPipeline {
+  totalOpen: number;
+  draft: PrPipelineStats;
+  submitted: PrPipelineStats;
+  approved: PrPipelineStats;
+  ordered: PrPipelineStats;
+  rejected: PrPipelineStats;
+}
+
+export interface InventoryTodayMovement {
+  issueNo: string;
+  department: string;
+  itemName: string;
+  quantity: number;
+  unit: string;
+  status: string;
+}
+
+export interface InventoryDashboardData {
+  stats: InventoryDashboardStats;
+  stockHealth: InventoryStockHealth;
+  reorderWatch: InventoryReorderWatch[];
+  prPipeline: InventoryPrPipeline;
+  todayMovement: InventoryTodayMovement[];
+}
+
 interface StandardResponse<T> {
   success: boolean;
   message?: string;
@@ -146,6 +202,13 @@ export class InventoryService {
   private readonly storeIssueBase = '/api/hmsService/v1/inventory/store-issues';
   private readonly itemConfigBase = '/api/hmsService/v1/inventory/item-configs';
   private readonly purchaseRequestBase = '/api/hmsService/v1/inventory/purchase-requests';
+  private readonly dashboardBase = '/api/hmsService/v1/inventory/dashboard';
+
+  getInventoryDashboard(): Observable<InventoryDashboardData | null> {
+    return this.http
+      .get<InventoryDashboardData | StandardResponse<InventoryDashboardData>>(this.dashboardBase)
+      .pipe(map(response => this.itemData(response)));
+  }
 
   getAllStockItems(): Observable<StockItemPayload[]> {
     return this.http

@@ -3,7 +3,7 @@ import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
-import { InventoryService, ItemConfigPayload, PurchaseRequestLinePayload, PurchaseRequestPayload, StockItemPayload, StoreIssuePayload } from './inventory.service';
+import { InventoryService, ItemConfigPayload, PurchaseRequestLinePayload, PurchaseRequestPayload, StockItemPayload, StoreIssuePayload, InventoryDashboardData } from './inventory.service';
 import { DepartmentOption, UserManagementService } from '../user-management/user-management.service';
 import { PurchaseMasterOption, PurchaseService } from '../purchase/purchase.service';
 
@@ -135,7 +135,7 @@ interface DashboardMovement {
   department: string;
   item: string;
   qty: string;
-  status: IssueStatus;
+  status: IssueStatus | string;
   date: string;
 }
 
@@ -184,6 +184,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
   selectedStoreIssue = signal<StoreIssue | null>(null);
   storeIssuePendingDelete = signal<StoreIssue | null>(null);
   storeIssueDraft = signal<StoreIssueDraft>(this.emptyStoreIssueDraft());
+  dashboardData = signal<InventoryDashboardData | null>(null);
 
   readonly stockItems = signal<StoreItem[]>([]);
   readonly issueItems = signal<IssueItemOption[]>([]);
@@ -209,6 +210,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
     this.loadPurchaseRequests();
     this.loadStoreIssues();
     this.loadPrStatuses();
+    this.loadDashboard();
     this.routerSub = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(event => this.updateTabFromUrl((event as NavigationEnd).urlAfterRedirects));
@@ -269,43 +271,106 @@ export class InventoryComponent implements OnInit, OnDestroy {
     });
   });
 
-  readonly dashboardKpis = computed<InventoryDashboardKpi[]>(() => [
-    { label: 'Total SKUs', value: '1,248', delta: '+5.2% vs last 7 days', icon: 'inventory_2', tone: 'blue' },
-    { label: 'Low Stock SKUs', value: '36', delta: '+12.5% needs attention', icon: 'warning', tone: 'red' },
-    { label: 'Stock Value', value: this.formatINR(1248350), delta: '+8.7% vs last 7 days', icon: 'currency_rupee', tone: 'green' },
-    { label: 'Open PRs', value: '23', delta: '8 pending approval', icon: 'assignment_add', tone: 'amber' },
-    { label: 'Open Store Issues', value: '18', delta: '6 issued today', icon: 'outbox', tone: 'teal' }
-  ]);
+  readonly dashboardKpis = computed<InventoryDashboardKpi[]>(() => {
+    const data = this.dashboardData();
+    if (data) {
+      return [
+        { label: 'Total SKUs', value: String(data.stats.totalSkus), delta: 'Live catalogue size', icon: 'inventory_2', tone: 'blue' },
+        { label: 'Low Stock SKUs', value: String(data.stats.lowStockCount), delta: 'Needs attention', icon: 'warning', tone: 'red' },
+        { label: 'Stock Value', value: this.formatINR(data.stats.totalStockValue), delta: 'Current inventory val.', icon: 'currency_rupee', tone: 'green' },
+        { label: 'Open PRs', value: String(data.stats.openPrsCount), delta: 'Pending procurement', icon: 'assignment_add', tone: 'amber' },
+        { label: 'Open Store Issues', value: String(data.stats.openStoreIssuesCount), delta: 'Awaiting fulfillment', icon: 'outbox', tone: 'teal' }
+      ];
+    }
+    return [
+      { label: 'Total SKUs', value: '1,248', delta: '+5.2% vs last 7 days', icon: 'inventory_2', tone: 'blue' },
+      { label: 'Low Stock SKUs', value: '36', delta: '+12.5% needs attention', icon: 'warning', tone: 'red' },
+      { label: 'Stock Value', value: this.formatINR(1248350), delta: '+8.7% vs last 7 days', icon: 'currency_rupee', tone: 'green' },
+      { label: 'Open PRs', value: '23', delta: '8 pending approval', icon: 'assignment_add', tone: 'amber' },
+      { label: 'Open Store Issues', value: '18', delta: '6 issued today', icon: 'outbox', tone: 'teal' }
+    ];
+  });
 
-  readonly stockHealth = signal<StockHealthSlice[]>([
-    { label: 'Healthy', value: 924, percent: 74, color: '#149b72' },
-    { label: 'Low Stock', value: 36, percent: 3, color: '#dc7a28' },
-    { label: 'Out of Stock', value: 22, percent: 2, color: '#e64251' },
-    { label: 'Overstock', value: 266, percent: 21, color: '#2563eb' }
-  ]);
+  readonly stockHealth = computed<StockHealthSlice[]>(() => {
+    const data = this.dashboardData();
+    if (data) {
+      const h = data.stockHealth;
+      const total = (h.healthyCount + h.lowStockCount + h.outOfStockCount + h.overstockCount) || 1;
+      return [
+        { label: 'Healthy', value: h.healthyCount, percent: Math.round((h.healthyCount / total) * 100), color: '#149b72' },
+        { label: 'Low Stock', value: h.lowStockCount, percent: Math.round((h.lowStockCount / total) * 100), color: '#dc7a28' },
+        { label: 'Out of Stock', value: h.outOfStockCount, percent: Math.round((h.outOfStockCount / total) * 100), color: '#e64251' },
+        { label: 'Overstock', value: h.overstockCount, percent: Math.round((h.overstockCount / total) * 100), color: '#2563eb' }
+      ];
+    }
+    return [
+      { label: 'Healthy', value: 924, percent: 74, color: '#149b72' },
+      { label: 'Low Stock', value: 36, percent: 3, color: '#dc7a28' },
+      { label: 'Out of Stock', value: 22, percent: 2, color: '#e64251' },
+      { label: 'Overstock', value: 266, percent: 21, color: '#2563eb' }
+    ];
+  });
 
-  readonly reorderWatch = signal<ReorderWatchItem[]>([
-    { item: 'Bath Towel', store: 'Main Store', onHand: '82 Pcs', reorderAt: '140 Pcs', status: 'LOW' },
-    { item: 'Laundry Detergent', store: 'Laundry Store', onHand: '8 Kg', reorderAt: '25 Kg', status: 'CRITICAL' },
-    { item: 'Coffee Sachet', store: 'HK Pantry', onHand: '18 Pcs', reorderAt: '100 Pcs', status: 'LOW' },
-    { item: 'Dental Kit', store: 'HK Pantry', onHand: '6 Pcs', reorderAt: '40 Pcs', status: 'CRITICAL' },
-    { item: 'Floor Cleaner', store: 'Main Store', onHand: '4 Ltr', reorderAt: '18 Ltr', status: 'LOW' }
-  ]);
+  readonly reorderWatch = computed<ReorderWatchItem[]>(() => {
+    const data = this.dashboardData();
+    if (data) {
+      return data.reorderWatch.map(i => ({
+        item: i.itemName,
+        store: i.storeName,
+        onHand: `${i.onHand} ${i.unit}`,
+        reorderAt: `${i.reorderLevel} ${i.unit}`,
+        status: (i.status.toUpperCase() === 'CRITICAL' ? 'CRITICAL' : 'LOW') as 'LOW' | 'CRITICAL'
+      }));
+    }
+    return [
+      { item: 'Bath Towel', store: 'Main Store', onHand: '82 Pcs', reorderAt: '140 Pcs', status: 'LOW' },
+      { item: 'Laundry Detergent', store: 'Laundry Store', onHand: '8 Kg', reorderAt: '25 Kg', status: 'CRITICAL' },
+      { item: 'Coffee Sachet', store: 'HK Pantry', onHand: '18 Pcs', reorderAt: '100 Pcs', status: 'LOW' },
+      { item: 'Dental Kit', store: 'HK Pantry', onHand: '6 Pcs', reorderAt: '40 Pcs', status: 'CRITICAL' },
+      { item: 'Floor Cleaner', store: 'Main Store', onHand: '4 Ltr', reorderAt: '18 Ltr', status: 'LOW' }
+    ];
+  });
 
-  readonly prPipeline = signal([
-    { status: 'Draft', count: 5, value: 56240, color: '#8a8f91' },
-    { status: 'Submitted', count: 8, value: 248760, color: '#2563eb' },
-    { status: 'Approved', count: 6, value: 391820, color: '#dc7a28' },
-    { status: 'Ordered', count: 3, value: 132450, color: '#7c3aed' },
-    { status: 'Rejected', count: 1, value: 18900, color: '#e64251' }
-  ]);
+  readonly prPipeline = computed(() => {
+    const data = this.dashboardData();
+    if (data) {
+      const p = data.prPipeline;
+      return [
+        { status: 'Draft', count: p.draft.count, value: p.draft.value, color: '#8a8f91' },
+        { status: 'Submitted', count: p.submitted.count, value: p.submitted.value, color: '#2563eb' },
+        { status: 'Approved', count: p.approved.count, value: p.approved.value, color: '#dc7a28' },
+        { status: 'Ordered', count: p.ordered.count, value: p.ordered.value, color: '#7c3aed' },
+        { status: 'Rejected', count: p.rejected.count, value: p.rejected.value, color: '#e64251' }
+      ];
+    }
+    return [
+      { status: 'Draft', count: 5, value: 56240, color: '#8a8f91' },
+      { status: 'Submitted', count: 8, value: 248760, color: '#2563eb' },
+      { status: 'Approved', count: 6, value: 391820, color: '#dc7a28' },
+      { status: 'Ordered', count: 3, value: 132450, color: '#7c3aed' },
+      { status: 'Rejected', count: 1, value: 18900, color: '#e64251' }
+    ];
+  });
 
-  readonly dashboardMovements = signal<DashboardMovement[]>([
-    { id: 'ISS-2401', department: 'Housekeeping', item: 'Bath Towel', qty: '12 Pcs', status: 'Issued', date: 'May 11' },
-    { id: 'ISS-2402', department: 'Laundry', item: 'Laundry Detergent', qty: '8 Kg', status: 'Open', date: 'May 11' },
-    { id: 'ISS-2403', department: 'Housekeeping', item: 'Dental Kit', qty: '48 Pcs', status: 'Issued', date: 'May 10' },
-    { id: 'ISS-2404', department: 'Front Office', item: 'Coffee Sachet', qty: '75 Pcs', status: 'Closed', date: 'May 10' }
-  ]);
+  readonly dashboardMovements = computed<DashboardMovement[]>(() => {
+    const data = this.dashboardData();
+    if (data) {
+      return data.todayMovement.map(m => ({
+        id: m.issueNo,
+        department: m.department,
+        item: m.itemName,
+        qty: `${m.quantity} ${m.unit}`,
+        status: m.status,
+        date: 'Today'
+      }));
+    }
+    return [
+      { id: 'ISS-2401', department: 'Housekeeping', item: 'Bath Towel', qty: '12 Pcs', status: 'Issued', date: 'May 11' },
+      { id: 'ISS-2402', department: 'Laundry', item: 'Laundry Detergent', qty: '8 Kg', status: 'Open', date: 'May 11' },
+      { id: 'ISS-2403', department: 'Housekeeping', item: 'Dental Kit', qty: '48 Pcs', status: 'Issued', date: 'May 10' },
+      { id: 'ISS-2404', department: 'Front Office', item: 'Coffee Sachet', qty: '75 Pcs', status: 'Closed', date: 'May 10' }
+    ];
+  });
 
   readonly categoryExposure = signal<DashboardDistribution[]>([
     { name: 'Housekeeping Supplies', count: 520, value: 512450, percent: 41 },
@@ -411,6 +476,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
         this.requestDeletingId.set(null);
         this.purchaseRequestPendingDelete.set(null);
         this.loadPurchaseRequests();
+        this.loadDashboard();
       },
       error: error => {
         this.requestError.set(error?.error?.message || error?.message || 'Unable to delete purchase request.');
@@ -498,6 +564,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
         this.requestSaving.set(false);
         this.closeCreateModal();
         this.loadPurchaseRequests();
+        this.loadDashboard();
       },
       error: error => {
         this.requestError.set(error?.error?.message || error?.message || 'Unable to save purchase request.');
@@ -568,6 +635,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
         this.issueSaving.set(false);
         this.closeCreateModal();
         this.loadStoreIssues();
+        this.loadDashboard();
       },
       error: error => {
         this.issueError.set(error?.error?.message || error?.message || 'Unable to save store issue.');
@@ -597,6 +665,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
         this.issueDeletingId.set(null);
         this.storeIssuePendingDelete.set(null);
         this.loadStoreIssues();
+        this.loadDashboard();
       },
       error: error => {
         this.issueError.set(error?.error?.message || error?.message || 'Unable to delete store issue.');
@@ -618,6 +687,13 @@ export class InventoryComponent implements OnInit, OnDestroy {
 
   formatINR(value: number): string {
     return `₹${Number(value || 0).toLocaleString('en-IN')}`;
+  }
+
+  private loadDashboard(): void {
+    this.inventoryService.getInventoryDashboard().subscribe({
+      next: data => this.dashboardData.set(data),
+      error: () => this.dashboardData.set(null)
+    });
   }
 
   private loadStockItems(): void {

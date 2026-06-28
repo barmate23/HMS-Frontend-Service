@@ -3,7 +3,7 @@ import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter, forkJoin } from 'rxjs';
-import { ItemConfigPayload, PurchaseMasterOption, PurchaseOrderPayload, PurchaseService, SupplierPayload } from './purchase.service';
+import { ItemConfigPayload, PurchaseMasterOption, PurchaseOrderPayload, PurchaseService, SupplierPayload, PurchaseDashboardData } from './purchase.service';
 
 type PurchaseTab = 'dashboard' | 'suppliers' | 'orders' | 'items';
 type SupplierStatus = string;
@@ -139,6 +139,11 @@ interface MasterInventoryItem {
   isActive: boolean;
 }
 
+interface LowStockDisplayItem extends MasterInventoryItem {
+  currentStock: number;
+  isLow: boolean;
+}
+
 interface ItemDraft {
   id?: number;
   code: string;
@@ -189,6 +194,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
   poLoading = signal(false);
   poSaving = signal(false);
   poError = signal('');
+  dashboardData = signal<PurchaseDashboardData | null>(null);
 
   readonly suppliers = signal<Supplier[]>([]);
 
@@ -322,6 +328,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     this.loadItemConfigs();
     this.purchaseOrders.set([]);
     this.loadPurchaseOrders();
+    this.loadDashboard();
   }
 
   ngOnDestroy(): void {
@@ -338,19 +345,72 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     return this.purchaseOrders().filter(order => status === 'ALL' || order.status === status);
   });
 
-  readonly activePurchaseOrders = computed(() =>
-    this.purchaseOrders()
+  readonly activePurchaseOrders = computed<PurchaseOrder[]>(() => {
+    const data = this.dashboardData();
+    if (data) {
+      return data.pendingProcurement.map(po => ({
+        recordId: po.poId,
+        id: po.poNumber,
+        supplier: po.supplierName,
+        expectedOn: po.expectedDate,
+        status: po.status as PoStatus,
+        statusCode: po.statusCode,
+        department: '',
+        orderedOn: '',
+        items: 0,
+        amount: 0,
+        deliveryLocation: '',
+        paymentTerms: '',
+        requestedBy: '',
+        poDate: '',
+        shippingCharges: 0,
+        subtotal: 0,
+        taxTotal: 0,
+        lineItems: [] as PurchaseOrderItem[]
+      } as PurchaseOrder));
+    }
+    return this.purchaseOrders()
       .filter(order => order.status !== 'Closed')
-      .sort((left, right) => left.expectedOn.localeCompare(right.expectedOn))
-  );
+      .sort((left, right) => left.expectedOn.localeCompare(right.expectedOn));
+  });
 
   readonly summary = computed(() => {
+    const data = this.dashboardData();
+    if (data) {
+      return {
+        suppliers: data.stats.suppliersCount,
+        openPo: data.stats.openPosCount,
+        poValue: data.stats.poValue
+      };
+    }
     const openPo = this.activePurchaseOrders().length;
     const poValue = this.purchaseOrders().reduce((sum, order) => sum + order.amount, 0);
     return { suppliers: this.suppliers().length, openPo, poValue };
   });
 
-  readonly lowStockItems = computed(() => {
+  readonly lowStockItems = computed<LowStockDisplayItem[]>(() => {
+    const data = this.dashboardData();
+    if (data) {
+      return data.lowStockAlerts.map(alert => {
+        const item = this.masterItems().find(mi => mi.code === alert.itemCode);
+        return {
+          id: alert.itemConfigId ?? item?.id ?? 0,
+          code: alert.itemCode,
+          name: alert.itemName,
+          category: item?.category || 'General',
+          unit: alert.uom || item?.unit || 'Pcs',
+          unitCost: item?.unitCost ?? 0,
+          taxRate: item?.taxRate ?? 18,
+          description: item?.description || '',
+          hsnCode: item?.hsnCode || '',
+          reorderLevel: alert.reorderLevel,
+          parLevel: item?.parLevel ?? (alert.reorderLevel * 2),
+          isActive: item?.isActive ?? true,
+          currentStock: alert.currentStock,
+          isLow: true
+        } as LowStockDisplayItem;
+      });
+    }
     const stockLevels: Record<string, number> = {
       'HK-LIN-001': 35,
       'HK-AMN-014': 250,
@@ -369,11 +429,22 @@ export class PurchaseComponent implements OnInit, OnDestroy {
         ...item,
         currentStock: stockLevels[item.code] ?? 100,
         isLow: (stockLevels[item.code] ?? 100) < (item.reorderLevel || 0)
-      }))
+      } as LowStockDisplayItem))
       .filter(i => i.isLow);
   });
 
   readonly poStatusSummary = computed(() => {
+    const data = this.dashboardData();
+    if (data) {
+      const pipeline = data.procurementPipeline;
+      return {
+        draft: pipeline.draft,
+        approved: pipeline.approved,
+        partiallyReceived: pipeline.partiallyReceived,
+        closed: pipeline.closed,
+        total: pipeline.totalPos
+      };
+    }
     const orders = this.purchaseOrders();
     const draft = orders.filter(o => o.status === 'Draft').length;
     const approved = orders.filter(o => o.status === 'Approved').length;
@@ -383,6 +454,16 @@ export class PurchaseComponent implements OnInit, OnDestroy {
   });
 
   readonly supplierCategorySummary = computed(() => {
+    const data = this.dashboardData();
+    if (data) {
+      const totalSuppliers = data.stats.suppliersCount || 1;
+      return data.supplierCategories.map(cat => ({
+        name: cat.categoryName,
+        count: cat.supplierCount,
+        outstanding: cat.totalPoValue,
+        percentage: Math.min(100, Math.round((cat.supplierCount / totalSuppliers) * 100))
+      }));
+    }
     const sups = this.suppliers();
     const categories: Record<string, { count: number; outstanding: number }> = {};
     sups.forEach(s => {
@@ -587,6 +668,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
         this.purchaseOrders.update(orders => orders.filter(item => item.recordId !== order.recordId));
         this.poDeleting.set(false);
         this.purchaseOrderPendingDelete.set(null);
+        this.loadDashboard();
       },
       error: error => {
         this.poDeleting.set(false);
@@ -631,6 +713,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
           return next;
         });
         this.closeCreateModal();
+        this.loadDashboard();
       },
       error: () => alert('Unable to save supplier. Please check required fields and try again.')
     });
@@ -745,6 +828,15 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     printWindow.document.close();
     printWindow.focus();
     printWindow.print();
+  }
+
+  loadDashboard(): void {
+    this.purchaseService.getPurchaseDashboard().subscribe({
+      next: data => {
+        if (data) this.dashboardData.set(data);
+      },
+      error: () => {}
+    });
   }
 
   private updateTabFromUrl(url: string): void {
@@ -1378,6 +1470,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
         });
         this.poSaving.set(false);
         this.closeCreateModal();
+        this.loadDashboard();
       },
       error: error => {
         this.poSaving.set(false);
@@ -1430,6 +1523,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
         this.masterItems.update(items => items.filter(i => i.id !== item.id));
         this.itemDeleting.set(false);
         this.itemPendingDelete.set(null);
+        this.loadDashboard();
       },
       error: error => {
         this.itemDeleting.set(false);
@@ -1463,6 +1557,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
         });
         this.itemSaving.set(false);
         this.closeCreateModal();
+        this.loadDashboard();
       },
       error: error => {
         this.itemSaving.set(false);

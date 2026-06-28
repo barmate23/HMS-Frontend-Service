@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
-import { InventoryService, ItemConfigPayload, StockItemPayload, StoreIssuePayload } from './inventory.service';
+import { InventoryService, ItemConfigPayload, PurchaseRequestLinePayload, PurchaseRequestPayload, StockItemPayload, StoreIssuePayload } from './inventory.service';
+import { DepartmentOption, UserManagementService } from '../user-management/user-management.service';
 
 type InventoryTab = 'dashboard' | 'stock' | 'requests' | 'issues';
 type StockStatus = 'OK' | 'LOW' | 'CRITICAL' | 'OVERSTOCK';
@@ -29,25 +30,31 @@ interface StoreIssue {
   apiId: number | string;
   itemId: number | string | '';
   id: string;
+  departmentId: number | string | '';
   department: string;
   issuedTo: string;
   item: string;
   quantity: number;
+  uomId: number | string | '';
   unit: string;
   date: string;
   status: IssueStatus;
+  statusId: number | string | '';
   note: string;
 }
 
 interface StoreIssueDraft {
   itemId: number | string | '';
+  departmentId: number | string | '';
   department: string;
   issuedTo: string;
   item: string;
   quantity: number;
+  uomId: number | string | '';
   unit: string;
   date: string;
   status: IssueStatus;
+  statusId: number | string | '';
   note: string;
 }
 
@@ -55,36 +62,49 @@ interface IssueItemOption {
   id: number | string;
   code: string;
   name: string;
+  uomId: number | string | '';
   unit: string;
+  rate: number;
+  active?: boolean;
 }
 
 interface PurchaseRequestLine {
   id: number;
+  apiId?: number | string;
   itemId: number | string | '';
   item: string;
+  uomId: number | string | '';
   unit: string;
   quantity: number;
   estimatedRate: number;
 }
 
 interface PurchaseRequest {
+  apiId: number | string;
   id: string;
+  departmentId: number | string | '';
   department: string;
   requestedBy: string;
   neededBy: string;
   priority: RequestPriority;
+  priorityId?: number | string;
   status: RequestStatus;
+  statusId?: number | string;
   purpose: string;
   lines: PurchaseRequestLine[];
 }
 
 interface PurchaseRequestDraft {
+  apiId?: number | string;
   id?: string;
+  departmentId: number | string | '';
   department: string;
   requestedBy: string;
   neededBy: string;
   priority: RequestPriority;
+  priorityId?: number | string;
   status: RequestStatus;
+  statusId?: number | string;
   purpose: string;
   lines: PurchaseRequestLine[];
 }
@@ -148,62 +168,34 @@ export class InventoryComponent implements OnInit, OnDestroy {
   stockError = signal<string | null>(null);
   isLoadingIssues = signal(false);
   isLoadingIssueItems = signal(false);
+  isLoadingRequests = signal(false);
   issueError = signal<string | null>(null);
   issueItemError = signal<string | null>(null);
+  requestError = signal<string | null>(null);
   issueSaving = signal(false);
+  requestSaving = signal(false);
+  issueLoadingId = signal<number | string | null>(null);
   issueDeletingId = signal<number | string | null>(null);
+  requestLoadingId = signal<number | string | null>(null);
+  requestDeletingId = signal<number | string | null>(null);
   createModal = signal<'request' | 'issue' | null>(null);
   selectedPurchaseRequest = signal<PurchaseRequest | null>(null);
   purchaseRequestDetail = signal<PurchaseRequest | null>(null);
   purchaseRequestPendingDelete = signal<PurchaseRequest | null>(null);
   purchaseRequestDraft = signal<PurchaseRequestDraft>(this.emptyPurchaseRequestDraft());
   selectedStoreIssue = signal<StoreIssue | null>(null);
+  storeIssuePendingDelete = signal<StoreIssue | null>(null);
   storeIssueDraft = signal<StoreIssueDraft>(this.emptyStoreIssueDraft());
 
   readonly stockItems = signal<StoreItem[]>([]);
   readonly issueItems = signal<IssueItemOption[]>([]);
 
-  readonly purchaseRequests = signal<PurchaseRequest[]>([
-    {
-      id: 'PR-1007',
-      department: 'Housekeeping',
-      requestedBy: 'Meena Pillai',
-      neededBy: '2026-06-29',
-      priority: 'High',
-      status: 'Approved',
-      purpose: 'Replenish floor pantry linen for weekend occupancy.',
-      lines: [
-        { id: 1, itemId: 'HK-LIN-001', item: 'Bath Towel', unit: 'Pcs', quantity: 60, estimatedRate: 220 },
-        { id: 2, itemId: 'HK-AMN-014', item: 'Dental Kit', unit: 'Pcs', quantity: 120, estimatedRate: 18 }
-      ]
-    },
-    {
-      id: 'PR-1008',
-      department: 'Laundry',
-      requestedBy: 'Laundry Desk',
-      neededBy: '2026-06-30',
-      priority: 'Normal',
-      status: 'Submitted',
-      purpose: 'Monthly detergent and consumables requirement.',
-      lines: [
-        { id: 1, itemId: 'LND-DET-003', item: 'Laundry Detergent', unit: 'Kg', quantity: 75, estimatedRate: 96 }
-      ]
-    },
-    {
-      id: 'PR-1009',
-      department: 'Engineering',
-      requestedBy: 'Amit Rao',
-      neededBy: '2026-07-02',
-      priority: 'Urgent',
-      status: 'Draft',
-      purpose: 'Emergency cleaning chemical buffer for public area deep clean.',
-      lines: [
-        { id: 1, itemId: 'HK-CHEM-007', item: 'Floor Cleaner', unit: 'Ltr', quantity: 24, estimatedRate: 145 }
-      ]
-    }
-  ]);
-
+  readonly purchaseRequests = signal<PurchaseRequest[]>([]);
   readonly storeIssues = signal<StoreIssue[]>([]);
+
+  /** Departments loaded from the User Management service (shared singleton). */
+  private readonly userManagementService = inject(UserManagementService);
+  readonly departments = this.userManagementService.departments;
 
   constructor(
     private readonly router: Router,
@@ -214,6 +206,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
     this.updateTabFromUrl(this.router.url);
     this.loadStockItems();
     this.loadIssueItems();
+    this.loadPurchaseRequests();
     this.loadStoreIssues();
     this.routerSub = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
@@ -251,10 +244,10 @@ export class InventoryComponent implements OnInit, OnDestroy {
     const configured = this.issueItems();
     if (configured.length) return configured;
     return [
-      { id: 'HK-LIN-001', code: 'HK-LIN-001', name: 'Bath Towel', unit: 'Pcs' },
-      { id: 'HK-AMN-014', code: 'HK-AMN-014', name: 'Dental Kit', unit: 'Pcs' },
-      { id: 'LND-DET-003', code: 'LND-DET-003', name: 'Laundry Detergent', unit: 'Kg' },
-      { id: 'HK-CHEM-007', code: 'HK-CHEM-007', name: 'Floor Cleaner', unit: 'Ltr' }
+      { id: 'HK-LIN-001', code: 'HK-LIN-001', name: 'Bath Towel', unit: 'Pcs', uomId: '', rate: 0 },
+      { id: 'HK-AMN-014', code: 'HK-AMN-014', name: 'Dental Kit', unit: 'Pcs', uomId: '', rate: 0 },
+      { id: 'LND-DET-003', code: 'LND-DET-003', name: 'Laundry Detergent', unit: 'Kg', uomId: '', rate: 0 },
+      { id: 'HK-CHEM-007', code: 'HK-CHEM-007', name: 'Floor Cleaner', unit: 'Ltr', uomId: '', rate: 0 }
     ];
   });
 
@@ -378,6 +371,22 @@ export class InventoryComponent implements OnInit, OnDestroy {
   }
 
   editPurchaseRequest(request: PurchaseRequest): void {
+    if (this.requestLoadingId()) return;
+    this.requestLoadingId.set(request.apiId);
+    this.requestError.set(null);
+    this.inventoryService.getPurchaseRequestById(request.apiId).subscribe({
+      next: response => {
+        this.requestLoadingId.set(null);
+        this.openPurchaseRequestEditor(response ? this.mapPurchaseRequest(response, 0) : request);
+      },
+      error: error => {
+        this.requestLoadingId.set(null);
+        this.requestError.set(error?.error?.message || error?.message || 'Unable to load purchase request details.');
+      }
+    });
+  }
+
+  private openPurchaseRequestEditor(request: PurchaseRequest): void {
     this.selectedPurchaseRequest.set(request);
     this.purchaseRequestDraft.set(this.clonePurchaseRequest(request));
     this.createModal.set('request');
@@ -393,13 +402,34 @@ export class InventoryComponent implements OnInit, OnDestroy {
 
   confirmDeletePurchaseRequest(): void {
     const pending = this.purchaseRequestPendingDelete();
-    if (!pending) return;
-    this.purchaseRequests.update(requests => requests.filter(request => request.id !== pending.id));
-    this.purchaseRequestPendingDelete.set(null);
+    if (!pending || this.requestDeletingId()) return;
+
+    this.requestDeletingId.set(pending.apiId);
+    this.requestError.set(null);
+    this.inventoryService.deletePurchaseRequest(pending.apiId).subscribe({
+      next: () => {
+        this.requestDeletingId.set(null);
+        this.purchaseRequestPendingDelete.set(null);
+        this.loadPurchaseRequests();
+      },
+      error: error => {
+        this.requestError.set(error?.error?.message || error?.message || 'Unable to delete purchase request.');
+        this.requestDeletingId.set(null);
+      }
+    });
   }
 
   updatePurchaseRequestDraft(field: keyof Omit<PurchaseRequestDraft, 'lines'>, value: string): void {
     this.purchaseRequestDraft.update(draft => ({ ...draft, [field]: value }));
+  }
+
+  onPurchaseRequestDepartmentChange(departmentId: number | string): void {
+    const selected = this.departments().find((d: DepartmentOption) => String(d.id) === String(departmentId));
+    this.purchaseRequestDraft.update(draft => ({
+      ...draft,
+      departmentId,
+      department: selected?.name || ''
+    }));
   }
 
   addRequestLine(): void {
@@ -407,7 +437,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
       ...draft,
       lines: [
         ...draft.lines,
-        { id: Date.now(), itemId: '', item: '', unit: 'Pcs', quantity: 1, estimatedRate: 0 }
+        { id: Date.now(), itemId: '', item: '', uomId: '', unit: 'Pcs', quantity: 1, estimatedRate: 0 }
       ]
     }));
   }
@@ -424,7 +454,9 @@ export class InventoryComponent implements OnInit, OnDestroy {
           ...line,
           itemId: value,
           item: selected?.name || '',
-          unit: selected?.unit || line.unit
+          uomId: selected?.uomId || '',
+          unit: selected?.unit || line.unit,
+          estimatedRate: selected?.rate || line.estimatedRate
         };
       })
     }));
@@ -438,19 +470,30 @@ export class InventoryComponent implements OnInit, OnDestroy {
   }
 
   savePurchaseRequest(): void {
-    const draft = this.purchaseRequestDraft();
-    const selected = this.selectedPurchaseRequest();
-    const request: PurchaseRequest = {
-      ...draft,
-      id: selected?.id || this.nextPurchaseRequestId(),
-      lines: draft.lines.map((line, index) => ({ ...line, id: index + 1 }))
-    };
+    if (this.requestSaving()) return;
 
-    this.purchaseRequests.update(requests => selected
-      ? requests.map(existing => existing.id === selected.id ? request : existing)
-      : [request, ...requests]
-    );
-    this.closeCreateModal();
+    const draft = this.purchaseRequestDraft();
+    const payload = this.purchaseRequestPayload(draft);
+    const selected = this.selectedPurchaseRequest();
+    
+    this.requestSaving.set(true);
+    this.requestError.set(null);
+
+    const apiCall = selected?.apiId
+      ? this.inventoryService.updatePurchaseRequest(selected.apiId, payload)
+      : this.inventoryService.createPurchaseRequest(payload);
+
+    apiCall.subscribe({
+      next: () => {
+        this.requestSaving.set(false);
+        this.closeCreateModal();
+        this.loadPurchaseRequests();
+      },
+      error: error => {
+        this.requestError.set(error?.error?.message || error?.message || 'Unable to save purchase request.');
+        this.requestSaving.set(false);
+      }
+    });
   }
 
   requestTotal(request: PurchaseRequest | PurchaseRequestDraft): number {
@@ -458,19 +501,20 @@ export class InventoryComponent implements OnInit, OnDestroy {
   }
 
   editStoreIssue(issue: StoreIssue): void {
-    this.selectedStoreIssue.set(issue);
-    this.storeIssueDraft.set({
-      department: issue.department,
-      issuedTo: issue.issuedTo,
-      itemId: issue.itemId,
-      item: issue.item,
-      quantity: issue.quantity,
-      unit: issue.unit,
-      date: issue.date,
-      status: issue.status,
-      note: issue.note
+    if (this.issueLoadingId()) return;
+
+    this.issueLoadingId.set(issue.apiId);
+    this.issueError.set(null);
+    this.inventoryService.getStoreIssueById(issue.apiId).subscribe({
+      next: response => {
+        this.issueLoadingId.set(null);
+        this.openStoreIssueEditor(response ? this.mapStoreIssue(response, 0) : issue);
+      },
+      error: error => {
+        this.issueLoadingId.set(null);
+        this.issueError.set(error?.error?.message || error?.message || 'Unable to load store issue details.');
+      }
     });
-    this.createModal.set('issue');
   }
 
   updateStoreIssueDraft(field: keyof StoreIssueDraft, value: string | number): void {
@@ -483,7 +527,17 @@ export class InventoryComponent implements OnInit, OnDestroy {
       ...draft,
       itemId,
       item: selected?.name || '',
+      uomId: selected?.uomId || '',
       unit: selected?.unit || draft.unit
+    }));
+  }
+
+  onStoreIssueDepartmentChange(departmentId: number | string): void {
+    const selected = this.departments().find((d: DepartmentOption) => String(d.id) === String(departmentId));
+    this.storeIssueDraft.update(draft => ({
+      ...draft,
+      departmentId,
+      department: selected?.name || ''
     }));
   }
 
@@ -514,12 +568,24 @@ export class InventoryComponent implements OnInit, OnDestroy {
 
   deleteStoreIssue(issue: StoreIssue): void {
     if (this.issueDeletingId()) return;
+    this.storeIssuePendingDelete.set(issue);
+  }
+
+  closeDeleteStoreIssue(): void {
+    if (this.issueDeletingId()) return;
+    this.storeIssuePendingDelete.set(null);
+  }
+
+  confirmDeleteStoreIssue(): void {
+    const issue = this.storeIssuePendingDelete();
+    if (!issue || this.issueDeletingId()) return;
 
     this.issueDeletingId.set(issue.apiId);
     this.issueError.set(null);
     this.inventoryService.deleteStoreIssue(issue.apiId).subscribe({
       next: () => {
         this.issueDeletingId.set(null);
+        this.storeIssuePendingDelete.set(null);
         this.loadStoreIssues();
       },
       error: error => {
@@ -576,12 +642,30 @@ export class InventoryComponent implements OnInit, OnDestroy {
     });
   }
 
+  private loadPurchaseRequests(): void {
+    this.isLoadingRequests.set(true);
+    this.requestError.set(null);
+    this.inventoryService.getAllPurchaseRequests().subscribe({
+      next: requests => {
+        this.purchaseRequests.set(requests.map((req, index) => this.mapPurchaseRequest(req, index)));
+        this.isLoadingRequests.set(false);
+      },
+      error: error => {
+        this.purchaseRequests.set([]);
+        this.requestError.set(error?.error?.message || error?.message || 'Unable to load purchase requests.');
+        this.isLoadingRequests.set(false);
+      }
+    });
+  }
+
   private loadIssueItems(): void {
     this.isLoadingIssueItems.set(true);
     this.issueItemError.set(null);
     this.inventoryService.getItemConfigs().subscribe({
       next: items => {
-        this.issueItems.set(items.map((item, index) => this.mapIssueItemOption(item, index)).filter(item => item.name));
+        this.issueItems.set(items
+          .map((item, index) => this.mapIssueItemOption(item, index))
+          .filter(item => item.name && item.active !== false));
         this.isLoadingIssueItems.set(false);
       },
       error: error => {
@@ -616,18 +700,26 @@ export class InventoryComponent implements OnInit, OnDestroy {
     const apiId = issue.id ?? issue.storeIssueId ?? issue.issueId ?? index + 1;
     const itemName = this.text(issue.item ?? issue.itemName ?? issue.itemCode, '-');
     const status = this.normalizeIssueStatus(issue.statusName ?? issue.status ?? issue.statusCode);
+    // Resolve departmentName from the loaded departments list if departmentId is present
+    const deptId = issue.departmentId ?? '';
+    const deptName = deptId
+      ? (this.departments().find((d: DepartmentOption) => String(d.id) === String(deptId))?.name ?? this.text(issue.department ?? issue.departmentName, '-'))
+      : this.text(issue.department ?? issue.departmentName, '-');
 
     return {
       apiId,
       itemId: issue.itemId ?? '',
       id: this.text(issue.issueNo ?? issue.issueNumber ?? issue.storeIssueNo ?? issue.code ?? apiId, `ISS-${String(index + 1).padStart(4, '0')}`),
-      department: this.text(issue.department ?? issue.departmentName, '-'),
+      departmentId: deptId,
+      department: deptName,
       issuedTo: this.text(issue.issuedTo ?? issue.issuedToName, '-'),
       item: itemName,
       quantity: this.toNumber(issue.quantity ?? issue.qty),
+      uomId: issue.uomId ?? '',
       unit: this.text(issue.unit ?? issue.uom ?? issue.uomName, ''),
       date: this.formatDateValue(issue.issueDate ?? issue.date ?? issue.createdAt),
       status,
+      statusId: issue.statusId ?? '',
       note: this.text(issue.issueNote ?? issue.note ?? issue.remarks, '')
     };
   }
@@ -635,56 +727,121 @@ export class InventoryComponent implements OnInit, OnDestroy {
   private storeIssuePayload(draft: StoreIssueDraft): StoreIssuePayload {
     return {
       itemId: draft.itemId || undefined,
-      department: draft.department,
+      departmentId: draft.departmentId || undefined,
       issuedTo: draft.issuedTo,
-      item: draft.item,
       quantity: draft.quantity,
-      unit: draft.unit,
+      issueNote: draft.note,
       issueDate: draft.date,
-      status: draft.status,
-      note: draft.note
+      statusId: draft.statusId || undefined
     };
   }
 
   private emptyStoreIssueDraft(): StoreIssueDraft {
     return {
       itemId: '',
-      department: 'Housekeeping',
+      departmentId: '',
+      department: '',
       issuedTo: '',
       item: '',
       quantity: 1,
-      unit: 'Pcs',
+      uomId: '',
+      unit: '',
       date: new Date().toISOString().slice(0, 10),
       status: 'Issued',
+      statusId: '',
       note: ''
     };
   }
 
   private emptyPurchaseRequestDraft(): PurchaseRequestDraft {
     return {
-      department: 'Housekeeping',
-      requestedBy: 'Store Desk',
+      departmentId: '',
+      department: '',
+      requestedBy: '',
       neededBy: new Date().toISOString().slice(0, 10),
       priority: 'Normal',
+      priorityId: '',
       status: 'Draft',
+      statusId: '',
       purpose: '',
       lines: [
-        { id: 1, itemId: '', item: '', unit: 'Pcs', quantity: 1, estimatedRate: 0 }
+        { id: 1, itemId: '', item: '', uomId: '', unit: '', quantity: 1, estimatedRate: 0 }
       ]
     };
   }
 
   private clonePurchaseRequest(request: PurchaseRequest): PurchaseRequestDraft {
     return {
+      apiId: request.apiId,
       id: request.id,
+      departmentId: request.departmentId,
       department: request.department,
       requestedBy: request.requestedBy,
       neededBy: request.neededBy,
       priority: request.priority,
+      priorityId: request.priorityId,
       status: request.status,
+      statusId: request.statusId,
       purpose: request.purpose,
       lines: request.lines.map(line => ({ ...line }))
     };
+  }
+
+  private mapPurchaseRequest(request: PurchaseRequestPayload, index: number): PurchaseRequest {
+    const apiId = request.id ?? request.purchaseRequestId ?? index + 1;
+    const deptId = request.departmentId ?? '';
+    const deptName = deptId
+      ? (this.departments().find((d: DepartmentOption) => String(d.id) === String(deptId))?.name ?? this.text(request.department ?? request.departmentName, '-'))
+      : this.text(request.department ?? request.departmentName, '-');
+
+    return {
+      apiId,
+      id: this.text(request.prNo ?? request.prNumber, `PR-${String(index + 1).padStart(4, '0')}`),
+      departmentId: deptId,
+      department: deptName,
+      requestedBy: this.text(request.requestedBy, '-'),
+      neededBy: this.formatDateValue(request.neededBy ?? request.issueDate ?? request.createdAt),
+      priority: this.normalizeRequestPriority(request.priority),
+      priorityId: request.priorityId ?? '',
+      status: this.normalizeRequestStatus(request.status ?? request.statusName),
+      statusId: request.statusId ?? '',
+      purpose: this.text(request.purpose ?? request.justification, ''),
+      lines: this.listData(request.lines ?? request.items).map((line, lIndex) => {
+        const itemConfig = this.issueItems().find(item => String(item.id) === String(line.itemId));
+        return {
+          id: lIndex + 1,
+          apiId: line.id ?? '',
+          itemId: line.itemId ?? '',
+          item: line.itemName ?? line.itemCode ?? itemConfig?.name ?? '-',
+          uomId: itemConfig?.uomId || line.uomId || '',
+          unit: itemConfig?.unit || this.text(line.unit, ''),
+          quantity: this.toNumber(line.quantity),
+          estimatedRate: this.toNumber(line.rate ?? line.estimatedRate)
+        };
+      })
+    };
+  }
+
+  private purchaseRequestPayload(draft: PurchaseRequestDraft): PurchaseRequestPayload {
+    return {
+      departmentId: draft.departmentId || undefined,
+      requestedBy: draft.requestedBy,
+      neededBy: draft.neededBy,
+      priorityId: draft.priorityId || undefined,
+      statusId: draft.statusId || undefined,
+      purpose: draft.purpose,
+      lines: draft.lines.map(line => ({
+        id: line.apiId || undefined,
+        itemId: line.itemId || undefined,
+        quantity: line.quantity,
+        estimatedRate: line.estimatedRate,
+        rate: line.estimatedRate 
+      }))
+    };
+  }
+
+  private listData<T>(res: T[] | undefined | null): T[] {
+    return Array.isArray(res) ? res : [];
   }
 
   private nextPurchaseRequestId(): string {
@@ -698,8 +855,32 @@ export class InventoryComponent implements OnInit, OnDestroy {
       id,
       code: this.text(item.code ?? item.itemCode, ''),
       name: this.text(item.name ?? item.itemName, ''),
-      unit: this.text(item.unit ?? item.uom ?? item.uomName, 'Pcs')
+      uomId: item.uomId ?? '',
+      unit: this.text(item.unit ?? item.uom ?? item.uomName, 'Pcs'),
+      rate: this.toNumber(item.rate ?? item.unitPrice ?? item.costPrice ?? item.unitCost),
+      active: item.isActive ?? item.active ?? true
     };
+  }
+
+  private openStoreIssueEditor(issue: StoreIssue): void {
+    const itemConfig = this.issueItems().find(item => String(item.id) === String(issue.itemId));
+    
+    this.selectedStoreIssue.set(issue);
+    this.storeIssueDraft.set({
+      departmentId: issue.departmentId,
+      department: issue.department,
+      issuedTo: issue.issuedTo,
+      itemId: issue.itemId,
+      item: itemConfig?.name || issue.item,
+      quantity: issue.quantity,
+      uomId: itemConfig?.uomId || issue.uomId,
+      unit: itemConfig?.unit || issue.unit,
+      date: issue.date,
+      status: issue.status,
+      statusId: issue.statusId,
+      note: issue.note
+    });
+    this.createModal.set('issue');
   }
 
   private normalizeIssueStatus(value: unknown): IssueStatus {
@@ -707,6 +888,23 @@ export class InventoryComponent implements OnInit, OnDestroy {
     if (status === 'open') return 'Open';
     if (status === 'closed') return 'Closed';
     return 'Issued';
+  }
+
+  private normalizeRequestStatus(value: unknown): RequestStatus {
+    const status = String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
+    if (status === 'submitted') return 'Submitted';
+    if (status === 'approved') return 'Approved';
+    if (status === 'rejected') return 'Rejected';
+    if (status === 'ordered') return 'Ordered';
+    return 'Draft';
+  }
+
+  private normalizeRequestPriority(value: unknown): RequestPriority {
+    const priority = String(value || '').trim().toLowerCase();
+    if (priority === 'low') return 'Low';
+    if (priority === 'high') return 'High';
+    if (priority === 'urgent') return 'Urgent';
+    return 'Normal';
   }
 
   private formatDateValue(value: unknown): string {

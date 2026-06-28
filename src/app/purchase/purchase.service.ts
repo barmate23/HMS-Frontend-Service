@@ -103,6 +103,53 @@ export interface ItemConfigPayload {
   updatedAt?: string;
 }
 
+export interface PurchaseDashboardStats {
+  suppliersCount: number;
+  openPosCount: number;
+  poValue: number;
+  lowStockItemsCount: number;
+}
+
+export interface PendingProcurementItem {
+  poId: number;
+  poNumber: string;
+  supplierName: string;
+  expectedDate: string;
+  status: string;
+  statusCode: string;
+}
+
+export interface LowStockAlertItem {
+  itemConfigId: number;
+  itemCode: string;
+  itemName: string;
+  currentStock: number;
+  reorderLevel: number;
+  uom: string;
+}
+
+export interface SupplierCategoryItem {
+  categoryName: string;
+  supplierCount: number;
+  totalPoValue: number;
+}
+
+export interface ProcurementPipeline {
+  totalPos: number;
+  draft: number;
+  approved: number;
+  partiallyReceived: number;
+  closed: number;
+}
+
+export interface PurchaseDashboardData {
+  stats: PurchaseDashboardStats;
+  pendingProcurement: PendingProcurementItem[];
+  lowStockAlerts: LowStockAlertItem[];
+  supplierCategories: SupplierCategoryItem[];
+  procurementPipeline: ProcurementPipeline;
+}
+
 interface StandardResponse<T> {
   success: boolean;
   message?: string;
@@ -256,6 +303,12 @@ export class PurchaseService {
         value: String(department.name || '').trim(),
         isActive: department.isActive ?? true
       })).filter(department => department.isActive && department.value)));
+  }
+
+  getPurchaseDashboard(): Observable<PurchaseDashboardData | null> {
+    return this.http
+      .get<PurchaseDashboardData | StandardResponse<PurchaseDashboardData>>(`${this.purchaseBase}/dashboard/getPurchaseDashboard`)
+      .pipe(map(response => this.itemData(response)));
   }
 
   private listData<T>(response: T[] | StandardResponse<T[]> | null): T[] {

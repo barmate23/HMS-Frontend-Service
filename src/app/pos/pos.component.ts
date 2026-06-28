@@ -79,6 +79,8 @@ export class PosComponent implements OnInit, OnDestroy {
   currentBill = signal<Partial<PosBill>>({});
   currentTable = signal<Partial<PosTable>>({});
   selectedTable = signal<PosTable | null>(null);
+  tableOrderEditMode = signal(false);
+  isTableOrderDetailOpen = signal(false);
   diningAction = signal<DiningAction | null>(null);
   isDiningActionOpen = signal(false);
   deleteTarget = signal<DeleteTarget | null>(null);
@@ -432,6 +434,11 @@ export class PosComponent implements OnInit, OnDestroy {
     return this.pos.tables().filter(table => table.outletId === outlet);
   });
 
+  selectedTableOrder = computed(() => {
+    const table = this.selectedTable();
+    return table ? this.activeOrderForTable(table) : null;
+  });
+
   mergeCandidates = computed(() => {
     const selected = this.selectedTable();
     return this.outletTables().filter(table => table.id !== selected?.id);
@@ -539,6 +546,7 @@ export class PosComponent implements OnInit, OnDestroy {
   openCreate(kind: ModalKind): void {
     this.modalKind.set(kind);
     this.modalMode.set('create');
+    this.tableOrderEditMode.set(false);
     if (kind === 'outlet') this.currentOutlet.set({ name: '', type: this.pos.outletTypes()[0] || 'Restaurant', location: '', timing: this.pos.shiftSchedules()[0] || '09:00 AM - 09:00 PM', taxProfile: 'GST 5%', active: true, manager: 'Outlet Manager' });
     if (kind === 'menu') this.currentMenuItem.set({ outletId: this.defaultOutletId(), name: '', category: this.pos.menuCategories()[0] || 'Food', subcategory: this.pos.menuSubcategories()[0] || '', price: 0, taxPercent: 5, variants: [], modifiers: [], available: true, featured: false, stockItem: '', imageUrl: '' });
     if (kind === 'order') {
@@ -558,6 +566,7 @@ export class PosComponent implements OnInit, OnDestroy {
   openEdit(kind: ModalKind, item: any): void {
     this.modalKind.set(kind);
     this.modalMode.set('edit');
+    this.tableOrderEditMode.set(false);
     if (kind === 'outlet') this.currentOutlet.set({ ...item });
     if (kind === 'menu') this.currentMenuItem.set({ ...item, variants: [...item.variants], modifiers: [...item.modifiers] });
     if (kind === 'order') this.currentOrder.set({ ...item, lines: item.lines.map((line: PosOrderLine) => ({ ...line })) });
@@ -581,9 +590,20 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   openBillFromOrder(order: PosOrder): void {
+    this.isTableOrderDetailOpen.set(false);
     this.modalKind.set('bill');
     this.modalMode.set('create');
     this.currentBill.set(this.billDraftForOrder(order, { status: this.pos.billStatuses()[0] || 'OPEN', paymentModes: [this.pos.paymentModes()[0] || 'Cash'], discount: 0, paid: 0 }));
+    this.isModalOpen.set(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  openSelectedTableOrder(order: PosOrder): void {
+    this.isTableOrderDetailOpen.set(false);
+    this.modalKind.set('order');
+    this.modalMode.set('edit');
+    this.tableOrderEditMode.set(true);
+    this.currentOrder.set({ ...order, lines: order.lines.map(line => ({ ...line })) });
     this.isModalOpen.set(true);
     document.body.style.overflow = 'hidden';
   }
@@ -595,6 +615,12 @@ export class PosComponent implements OnInit, OnDestroy {
 
   closeModal(): void {
     this.isModalOpen.set(false);
+    this.tableOrderEditMode.set(false);
+    document.body.style.overflow = '';
+  }
+
+  closeTableOrderDetail(): void {
+    this.isTableOrderDetailOpen.set(false);
     document.body.style.overflow = '';
   }
 
@@ -787,6 +813,21 @@ export class PosComponent implements OnInit, OnDestroy {
       bookingTime: table.bookingTime || 'Today, 08:00 PM',
       notes: ''
     });
+
+    if (this.activeOrderForTable(table)) {
+      this.isTableOrderDetailOpen.set(true);
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  activeOrderForTable(table: PosTable): PosOrder | null {
+    const inactiveStatuses = new Set(['BILLED', 'PAID', 'CLOSED', 'CANCELLED', 'VOID']);
+    return this.pos.orders().find(order =>
+      order.type === 'TABLE' &&
+      order.outletId === table.outletId &&
+      order.tableNo === table.number &&
+      !inactiveStatuses.has(String(order.status || '').toUpperCase())
+    ) || null;
   }
 
   openDiningAction(action: DiningAction): void {

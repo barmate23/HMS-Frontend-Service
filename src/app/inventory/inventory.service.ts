@@ -39,32 +39,38 @@ export interface StoreIssuePayload {
   id?: number | string;
   storeIssueId?: number | string;
   issueId?: number | string;
+  /* Write fields — match actual API contract */
   itemId?: number | string;
+  departmentId?: number | string;
+  issuedTo?: string;
+  quantity?: number | string;
+  issueNote?: string;
+  issueDate?: string;
+  statusId?: number | string;
+  /* Read aliases — returned by GET endpoints */
   issueNo?: string;
   issueNumber?: string;
   storeIssueNo?: string;
   code?: string;
   department?: string;
   departmentName?: string;
-  issuedTo?: string;
   issuedToName?: string;
   item?: string;
   itemName?: string;
   itemCode?: string;
-  quantity?: number | string;
   qty?: number | string;
+  uomId?: number | string;
   unit?: string;
   uom?: string;
   uomName?: string;
   date?: string;
-  issueDate?: string;
   createdAt?: string;
+  updatedAt?: string;
   status?: string;
   statusName?: string;
   statusCode?: string;
   remarks?: string;
   note?: string;
-  issueNote?: string;
 }
 
 export interface ItemConfigPayload {
@@ -76,11 +82,111 @@ export interface ItemConfigPayload {
   itemName?: string;
   category?: string;
   categoryName?: string;
+  uomId?: number | string;
   unit?: string;
   uom?: string;
   uomName?: string;
+  unitCost?: number | string;
+  rate?: number | string;
+  unitPrice?: number | string;
+  costPrice?: number | string;
   isActive?: boolean;
   active?: boolean;
+}
+
+export interface PurchaseRequestLinePayload {
+  id?: number | string;
+  itemId?: number | string;
+  itemName?: string;
+  itemCode?: string;
+  quantity?: number | string;
+  requiredQuantity?: number | string;
+  rate?: number | string;
+  estimatedRate?: number | string;
+  unitPrice?: number | string;
+  uomId?: number | string;
+  unit?: string;
+}
+
+export interface PurchaseRequestPayload {
+  id?: number | string;
+  purchaseRequestId?: number | string;
+  prNo?: string;
+  prNumber?: string;
+  departmentId?: number | string;
+  departmentName?: string;
+  department?: string;
+  requestedBy?: string;
+  neededBy?: string;
+  justification?: string;
+  purpose?: string;
+  expectedAmount?: number | string;
+  totalAmount?: number | string;
+  statusId?: number | string;
+  status?: string;
+  statusName?: string;
+  statusCode?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  issueDate?: string;
+  lines?: PurchaseRequestLinePayload[];
+  items?: PurchaseRequestLinePayload[];
+}
+
+export interface InventoryDashboardStats {
+  totalSkus: number;
+  lowStockCount: number;
+  totalStockValue: number;
+  openPrsCount: number;
+  openStoreIssuesCount: number;
+}
+
+export interface InventoryStockHealth {
+  healthyCount: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  overstockCount: number;
+}
+
+export interface InventoryReorderWatch {
+  itemId: number;
+  itemName: string;
+  storeName: string;
+  onHand: number;
+  reorderLevel: number;
+  unit: string;
+  status: string;
+}
+
+export interface PrPipelineStats {
+  count: number;
+  value: number;
+}
+
+export interface InventoryPrPipeline {
+  totalOpen: number;
+  draft: PrPipelineStats;
+  submitted: PrPipelineStats;
+  approved: PrPipelineStats;
+  ordered: PrPipelineStats;
+  rejected: PrPipelineStats;
+}
+
+export interface InventoryTodayMovement {
+  issueNo: string;
+  department: string;
+  itemName: string;
+  quantity: number;
+  unit: string;
+  status: string;
+}
+
+export interface InventoryDashboardData {
+  stats: InventoryDashboardStats;
+  stockHealth: InventoryStockHealth;
+  reorderWatch: InventoryReorderWatch[];
+  prPipeline: InventoryPrPipeline;
+  todayMovement: InventoryTodayMovement[];
 }
 
 interface StandardResponse<T> {
@@ -95,6 +201,14 @@ export class InventoryService {
   private readonly stockBase = '/api/hmsService/v1/inventory/stocks';
   private readonly storeIssueBase = '/api/hmsService/v1/inventory/store-issues';
   private readonly itemConfigBase = '/api/hmsService/v1/inventory/item-configs';
+  private readonly purchaseRequestBase = '/api/hmsService/v1/inventory/purchase-requests';
+  private readonly dashboardBase = '/api/hmsService/v1/inventory/dashboard';
+
+  getInventoryDashboard(): Observable<InventoryDashboardData | null> {
+    return this.http
+      .get<InventoryDashboardData | StandardResponse<InventoryDashboardData>>(this.dashboardBase)
+      .pipe(map(response => this.itemData(response)));
+  }
 
   getAllStockItems(): Observable<StockItemPayload[]> {
     return this.http
@@ -106,6 +220,12 @@ export class InventoryService {
     return this.http
       .get<StoreIssuePayload[] | StandardResponse<StoreIssuePayload[]> | { data?: { content?: StoreIssuePayload[] } }>(`${this.storeIssueBase}/getAllStoreIssue`)
       .pipe(map(response => this.listData(response)));
+  }
+
+  getStoreIssueById(id: number | string): Observable<StoreIssuePayload | null> {
+    return this.http
+      .get<StoreIssuePayload | StandardResponse<StoreIssuePayload>>(`${this.storeIssueBase}/getByStoreIssueId/${id}`)
+      .pipe(map(response => this.itemData(response)));
   }
 
   getItemConfigs(): Observable<ItemConfigPayload[]> {
@@ -129,6 +249,38 @@ export class InventoryService {
   deleteStoreIssue(id: number | string): Observable<void> {
     return this.http
       .delete<void | StandardResponse<void>>(`${this.storeIssueBase}/deleteStoreIssue/${id}`)
+      .pipe(map(() => void 0));
+  }
+
+  // --- Purchase Requests ---
+
+  getAllPurchaseRequests(): Observable<PurchaseRequestPayload[]> {
+    return this.http
+      .get<PurchaseRequestPayload[] | StandardResponse<PurchaseRequestPayload[]> | { data?: { content?: PurchaseRequestPayload[] } }>(`${this.purchaseRequestBase}/getAllPurchaseRequest`)
+      .pipe(map(response => this.listData(response)));
+  }
+
+  getPurchaseRequestById(id: number | string): Observable<PurchaseRequestPayload | null> {
+    return this.http
+      .get<PurchaseRequestPayload | StandardResponse<PurchaseRequestPayload>>(`${this.purchaseRequestBase}/getPurchaseRequestById/${id}`)
+      .pipe(map(response => this.itemData(response)));
+  }
+
+  createPurchaseRequest(payload: PurchaseRequestPayload): Observable<PurchaseRequestPayload> {
+    return this.http
+      .post<PurchaseRequestPayload | StandardResponse<PurchaseRequestPayload>>(`${this.purchaseRequestBase}/createPurchaseRequest`, payload)
+      .pipe(map(response => this.itemData(response) || payload));
+  }
+
+  updatePurchaseRequest(id: number | string, payload: PurchaseRequestPayload): Observable<PurchaseRequestPayload> {
+    return this.http
+      .put<PurchaseRequestPayload | StandardResponse<PurchaseRequestPayload>>(`${this.purchaseRequestBase}/updatePurchaseRequest/${id}`, payload)
+      .pipe(map(response => this.itemData(response) || { ...payload, id }));
+  }
+
+  deletePurchaseRequest(id: number | string): Observable<void> {
+    return this.http
+      .delete<void | StandardResponse<void>>(`${this.purchaseRequestBase}/deletePurchaseRequest/${id}`)
       .pipe(map(() => void 0));
   }
 

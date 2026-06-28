@@ -1,15 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
-import { InventoryService, ItemConfigPayload, StockItemPayload, StoreIssuePayload } from './inventory.service';
+import { InventoryService, ItemConfigPayload, PurchaseRequestLinePayload, PurchaseRequestPayload, StockItemPayload, StoreIssuePayload, InventoryDashboardData } from './inventory.service';
+import { DepartmentOption, UserManagementService } from '../user-management/user-management.service';
+import { PurchaseMasterOption, PurchaseService } from '../purchase/purchase.service';
 
 type InventoryTab = 'dashboard' | 'stock' | 'requests' | 'issues';
 type StockStatus = 'OK' | 'LOW' | 'CRITICAL' | 'OVERSTOCK';
 type IssueStatus = 'Open' | 'Issued' | 'Closed';
 type RequestStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected' | 'Ordered';
-type RequestPriority = 'Low' | 'Normal' | 'High' | 'Urgent';
 
 interface StoreItem {
   id: number;
@@ -29,25 +30,31 @@ interface StoreIssue {
   apiId: number | string;
   itemId: number | string | '';
   id: string;
+  departmentId: number | string | '';
   department: string;
   issuedTo: string;
   item: string;
   quantity: number;
+  uomId: number | string | '';
   unit: string;
   date: string;
   status: IssueStatus;
+  statusId: number | string | '';
   note: string;
 }
 
 interface StoreIssueDraft {
   itemId: number | string | '';
+  departmentId: number | string | '';
   department: string;
   issuedTo: string;
   item: string;
   quantity: number;
+  uomId: number | string | '';
   unit: string;
   date: string;
   status: IssueStatus;
+  statusId: number | string | '';
   note: string;
 }
 
@@ -55,36 +62,47 @@ interface IssueItemOption {
   id: number | string;
   code: string;
   name: string;
+  uomId: number | string | '';
   unit: string;
+  rate: number;
+  active?: boolean;
 }
 
 interface PurchaseRequestLine {
   id: number;
+  apiId?: number | string;
   itemId: number | string | '';
   item: string;
+  uomId: number | string | '';
   unit: string;
   quantity: number;
   estimatedRate: number;
 }
 
 interface PurchaseRequest {
+  apiId: number | string;
   id: string;
+  departmentId: number | string | '';
   department: string;
   requestedBy: string;
   neededBy: string;
-  priority: RequestPriority;
-  status: RequestStatus;
+  status: string;
+  statusId: number | string | '';
+  statusCode: string;
   purpose: string;
   lines: PurchaseRequestLine[];
 }
 
 interface PurchaseRequestDraft {
+  apiId?: number | string;
   id?: string;
+  departmentId: number | string | '';
   department: string;
   requestedBy: string;
   neededBy: string;
-  priority: RequestPriority;
-  status: RequestStatus;
+  status: string;
+  statusId: number | string | '';
+  statusCode: string;
   purpose: string;
   lines: PurchaseRequestLine[];
 }
@@ -117,7 +135,7 @@ interface DashboardMovement {
   department: string;
   item: string;
   qty: string;
-  status: IssueStatus;
+  status: IssueStatus | string;
   date: string;
 }
 
@@ -148,62 +166,37 @@ export class InventoryComponent implements OnInit, OnDestroy {
   stockError = signal<string | null>(null);
   isLoadingIssues = signal(false);
   isLoadingIssueItems = signal(false);
+  isLoadingRequests = signal(false);
   issueError = signal<string | null>(null);
   issueItemError = signal<string | null>(null);
+  requestError = signal<string | null>(null);
   issueSaving = signal(false);
+  requestSaving = signal(false);
+  issueLoadingId = signal<number | string | null>(null);
   issueDeletingId = signal<number | string | null>(null);
+  requestLoadingId = signal<number | string | null>(null);
+  requestDeletingId = signal<number | string | null>(null);
   createModal = signal<'request' | 'issue' | null>(null);
   selectedPurchaseRequest = signal<PurchaseRequest | null>(null);
   purchaseRequestDetail = signal<PurchaseRequest | null>(null);
   purchaseRequestPendingDelete = signal<PurchaseRequest | null>(null);
   purchaseRequestDraft = signal<PurchaseRequestDraft>(this.emptyPurchaseRequestDraft());
   selectedStoreIssue = signal<StoreIssue | null>(null);
+  storeIssuePendingDelete = signal<StoreIssue | null>(null);
   storeIssueDraft = signal<StoreIssueDraft>(this.emptyStoreIssueDraft());
+  dashboardData = signal<InventoryDashboardData | null>(null);
 
   readonly stockItems = signal<StoreItem[]>([]);
   readonly issueItems = signal<IssueItemOption[]>([]);
 
-  readonly purchaseRequests = signal<PurchaseRequest[]>([
-    {
-      id: 'PR-1007',
-      department: 'Housekeeping',
-      requestedBy: 'Meena Pillai',
-      neededBy: '2026-06-29',
-      priority: 'High',
-      status: 'Approved',
-      purpose: 'Replenish floor pantry linen for weekend occupancy.',
-      lines: [
-        { id: 1, itemId: 'HK-LIN-001', item: 'Bath Towel', unit: 'Pcs', quantity: 60, estimatedRate: 220 },
-        { id: 2, itemId: 'HK-AMN-014', item: 'Dental Kit', unit: 'Pcs', quantity: 120, estimatedRate: 18 }
-      ]
-    },
-    {
-      id: 'PR-1008',
-      department: 'Laundry',
-      requestedBy: 'Laundry Desk',
-      neededBy: '2026-06-30',
-      priority: 'Normal',
-      status: 'Submitted',
-      purpose: 'Monthly detergent and consumables requirement.',
-      lines: [
-        { id: 1, itemId: 'LND-DET-003', item: 'Laundry Detergent', unit: 'Kg', quantity: 75, estimatedRate: 96 }
-      ]
-    },
-    {
-      id: 'PR-1009',
-      department: 'Engineering',
-      requestedBy: 'Amit Rao',
-      neededBy: '2026-07-02',
-      priority: 'Urgent',
-      status: 'Draft',
-      purpose: 'Emergency cleaning chemical buffer for public area deep clean.',
-      lines: [
-        { id: 1, itemId: 'HK-CHEM-007', item: 'Floor Cleaner', unit: 'Ltr', quantity: 24, estimatedRate: 145 }
-      ]
-    }
-  ]);
-
+  readonly purchaseRequests = signal<PurchaseRequest[]>([]);
   readonly storeIssues = signal<StoreIssue[]>([]);
+
+  /** Departments loaded from the User Management service (shared singleton). */
+  private readonly userManagementService = inject(UserManagementService);
+  private readonly purchaseService = inject(PurchaseService);
+  readonly departments = this.userManagementService.departments;
+  readonly prStatuses = signal<PurchaseMasterOption[]>([]);
 
   constructor(
     private readonly router: Router,
@@ -214,7 +207,10 @@ export class InventoryComponent implements OnInit, OnDestroy {
     this.updateTabFromUrl(this.router.url);
     this.loadStockItems();
     this.loadIssueItems();
+    this.loadPurchaseRequests();
     this.loadStoreIssues();
+    this.loadPrStatuses();
+    this.loadDashboard();
     this.routerSub = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(event => this.updateTabFromUrl((event as NavigationEnd).urlAfterRedirects));
@@ -251,10 +247,10 @@ export class InventoryComponent implements OnInit, OnDestroy {
     const configured = this.issueItems();
     if (configured.length) return configured;
     return [
-      { id: 'HK-LIN-001', code: 'HK-LIN-001', name: 'Bath Towel', unit: 'Pcs' },
-      { id: 'HK-AMN-014', code: 'HK-AMN-014', name: 'Dental Kit', unit: 'Pcs' },
-      { id: 'LND-DET-003', code: 'LND-DET-003', name: 'Laundry Detergent', unit: 'Kg' },
-      { id: 'HK-CHEM-007', code: 'HK-CHEM-007', name: 'Floor Cleaner', unit: 'Ltr' }
+      { id: 'HK-LIN-001', code: 'HK-LIN-001', name: 'Bath Towel', unit: 'Pcs', uomId: '', rate: 0 },
+      { id: 'HK-AMN-014', code: 'HK-AMN-014', name: 'Dental Kit', unit: 'Pcs', uomId: '', rate: 0 },
+      { id: 'LND-DET-003', code: 'LND-DET-003', name: 'Laundry Detergent', unit: 'Kg', uomId: '', rate: 0 },
+      { id: 'HK-CHEM-007', code: 'HK-CHEM-007', name: 'Floor Cleaner', unit: 'Ltr', uomId: '', rate: 0 }
     ];
   });
 
@@ -267,7 +263,6 @@ export class InventoryComponent implements OnInit, OnDestroy {
         request.id,
         request.department,
         request.requestedBy,
-        request.priority,
         request.status,
         request.purpose,
         ...request.lines.map(line => line.item)
@@ -276,43 +271,106 @@ export class InventoryComponent implements OnInit, OnDestroy {
     });
   });
 
-  readonly dashboardKpis = computed<InventoryDashboardKpi[]>(() => [
-    { label: 'Total SKUs', value: '1,248', delta: '+5.2% vs last 7 days', icon: 'inventory_2', tone: 'blue' },
-    { label: 'Low Stock SKUs', value: '36', delta: '+12.5% needs attention', icon: 'warning', tone: 'red' },
-    { label: 'Stock Value', value: this.formatINR(1248350), delta: '+8.7% vs last 7 days', icon: 'currency_rupee', tone: 'green' },
-    { label: 'Open PRs', value: '23', delta: '8 pending approval', icon: 'assignment_add', tone: 'amber' },
-    { label: 'Open Store Issues', value: '18', delta: '6 issued today', icon: 'outbox', tone: 'teal' }
-  ]);
+  readonly dashboardKpis = computed<InventoryDashboardKpi[]>(() => {
+    const data = this.dashboardData();
+    if (data) {
+      return [
+        { label: 'Total SKUs', value: String(data.stats.totalSkus), delta: 'Live catalogue size', icon: 'inventory_2', tone: 'blue' },
+        { label: 'Low Stock SKUs', value: String(data.stats.lowStockCount), delta: 'Needs attention', icon: 'warning', tone: 'red' },
+        { label: 'Stock Value', value: this.formatINR(data.stats.totalStockValue), delta: 'Current inventory val.', icon: 'currency_rupee', tone: 'green' },
+        { label: 'Open PRs', value: String(data.stats.openPrsCount), delta: 'Pending procurement', icon: 'assignment_add', tone: 'amber' },
+        { label: 'Open Store Issues', value: String(data.stats.openStoreIssuesCount), delta: 'Awaiting fulfillment', icon: 'outbox', tone: 'teal' }
+      ];
+    }
+    return [
+      { label: 'Total SKUs', value: '1,248', delta: '+5.2% vs last 7 days', icon: 'inventory_2', tone: 'blue' },
+      { label: 'Low Stock SKUs', value: '36', delta: '+12.5% needs attention', icon: 'warning', tone: 'red' },
+      { label: 'Stock Value', value: this.formatINR(1248350), delta: '+8.7% vs last 7 days', icon: 'currency_rupee', tone: 'green' },
+      { label: 'Open PRs', value: '23', delta: '8 pending approval', icon: 'assignment_add', tone: 'amber' },
+      { label: 'Open Store Issues', value: '18', delta: '6 issued today', icon: 'outbox', tone: 'teal' }
+    ];
+  });
 
-  readonly stockHealth = signal<StockHealthSlice[]>([
-    { label: 'Healthy', value: 924, percent: 74, color: '#149b72' },
-    { label: 'Low Stock', value: 36, percent: 3, color: '#dc7a28' },
-    { label: 'Out of Stock', value: 22, percent: 2, color: '#e64251' },
-    { label: 'Overstock', value: 266, percent: 21, color: '#2563eb' }
-  ]);
+  readonly stockHealth = computed<StockHealthSlice[]>(() => {
+    const data = this.dashboardData();
+    if (data) {
+      const h = data.stockHealth;
+      const total = (h.healthyCount + h.lowStockCount + h.outOfStockCount + h.overstockCount) || 1;
+      return [
+        { label: 'Healthy', value: h.healthyCount, percent: Math.round((h.healthyCount / total) * 100), color: '#149b72' },
+        { label: 'Low Stock', value: h.lowStockCount, percent: Math.round((h.lowStockCount / total) * 100), color: '#dc7a28' },
+        { label: 'Out of Stock', value: h.outOfStockCount, percent: Math.round((h.outOfStockCount / total) * 100), color: '#e64251' },
+        { label: 'Overstock', value: h.overstockCount, percent: Math.round((h.overstockCount / total) * 100), color: '#2563eb' }
+      ];
+    }
+    return [
+      { label: 'Healthy', value: 924, percent: 74, color: '#149b72' },
+      { label: 'Low Stock', value: 36, percent: 3, color: '#dc7a28' },
+      { label: 'Out of Stock', value: 22, percent: 2, color: '#e64251' },
+      { label: 'Overstock', value: 266, percent: 21, color: '#2563eb' }
+    ];
+  });
 
-  readonly reorderWatch = signal<ReorderWatchItem[]>([
-    { item: 'Bath Towel', store: 'Main Store', onHand: '82 Pcs', reorderAt: '140 Pcs', status: 'LOW' },
-    { item: 'Laundry Detergent', store: 'Laundry Store', onHand: '8 Kg', reorderAt: '25 Kg', status: 'CRITICAL' },
-    { item: 'Coffee Sachet', store: 'HK Pantry', onHand: '18 Pcs', reorderAt: '100 Pcs', status: 'LOW' },
-    { item: 'Dental Kit', store: 'HK Pantry', onHand: '6 Pcs', reorderAt: '40 Pcs', status: 'CRITICAL' },
-    { item: 'Floor Cleaner', store: 'Main Store', onHand: '4 Ltr', reorderAt: '18 Ltr', status: 'LOW' }
-  ]);
+  readonly reorderWatch = computed<ReorderWatchItem[]>(() => {
+    const data = this.dashboardData();
+    if (data) {
+      return data.reorderWatch.map(i => ({
+        item: i.itemName,
+        store: i.storeName,
+        onHand: `${i.onHand} ${i.unit}`,
+        reorderAt: `${i.reorderLevel} ${i.unit}`,
+        status: (i.status.toUpperCase() === 'CRITICAL' ? 'CRITICAL' : 'LOW') as 'LOW' | 'CRITICAL'
+      }));
+    }
+    return [
+      { item: 'Bath Towel', store: 'Main Store', onHand: '82 Pcs', reorderAt: '140 Pcs', status: 'LOW' },
+      { item: 'Laundry Detergent', store: 'Laundry Store', onHand: '8 Kg', reorderAt: '25 Kg', status: 'CRITICAL' },
+      { item: 'Coffee Sachet', store: 'HK Pantry', onHand: '18 Pcs', reorderAt: '100 Pcs', status: 'LOW' },
+      { item: 'Dental Kit', store: 'HK Pantry', onHand: '6 Pcs', reorderAt: '40 Pcs', status: 'CRITICAL' },
+      { item: 'Floor Cleaner', store: 'Main Store', onHand: '4 Ltr', reorderAt: '18 Ltr', status: 'LOW' }
+    ];
+  });
 
-  readonly prPipeline = signal([
-    { status: 'Draft', count: 5, value: 56240, color: '#8a8f91' },
-    { status: 'Submitted', count: 8, value: 248760, color: '#2563eb' },
-    { status: 'Approved', count: 6, value: 391820, color: '#dc7a28' },
-    { status: 'Ordered', count: 3, value: 132450, color: '#7c3aed' },
-    { status: 'Rejected', count: 1, value: 18900, color: '#e64251' }
-  ]);
+  readonly prPipeline = computed(() => {
+    const data = this.dashboardData();
+    if (data) {
+      const p = data.prPipeline;
+      return [
+        { status: 'Draft', count: p.draft.count, value: p.draft.value, color: '#8a8f91' },
+        { status: 'Submitted', count: p.submitted.count, value: p.submitted.value, color: '#2563eb' },
+        { status: 'Approved', count: p.approved.count, value: p.approved.value, color: '#dc7a28' },
+        { status: 'Ordered', count: p.ordered.count, value: p.ordered.value, color: '#7c3aed' },
+        { status: 'Rejected', count: p.rejected.count, value: p.rejected.value, color: '#e64251' }
+      ];
+    }
+    return [
+      { status: 'Draft', count: 5, value: 56240, color: '#8a8f91' },
+      { status: 'Submitted', count: 8, value: 248760, color: '#2563eb' },
+      { status: 'Approved', count: 6, value: 391820, color: '#dc7a28' },
+      { status: 'Ordered', count: 3, value: 132450, color: '#7c3aed' },
+      { status: 'Rejected', count: 1, value: 18900, color: '#e64251' }
+    ];
+  });
 
-  readonly dashboardMovements = signal<DashboardMovement[]>([
-    { id: 'ISS-2401', department: 'Housekeeping', item: 'Bath Towel', qty: '12 Pcs', status: 'Issued', date: 'May 11' },
-    { id: 'ISS-2402', department: 'Laundry', item: 'Laundry Detergent', qty: '8 Kg', status: 'Open', date: 'May 11' },
-    { id: 'ISS-2403', department: 'Housekeeping', item: 'Dental Kit', qty: '48 Pcs', status: 'Issued', date: 'May 10' },
-    { id: 'ISS-2404', department: 'Front Office', item: 'Coffee Sachet', qty: '75 Pcs', status: 'Closed', date: 'May 10' }
-  ]);
+  readonly dashboardMovements = computed<DashboardMovement[]>(() => {
+    const data = this.dashboardData();
+    if (data) {
+      return data.todayMovement.map(m => ({
+        id: m.issueNo,
+        department: m.department,
+        item: m.itemName,
+        qty: `${m.quantity} ${m.unit}`,
+        status: m.status,
+        date: 'Today'
+      }));
+    }
+    return [
+      { id: 'ISS-2401', department: 'Housekeeping', item: 'Bath Towel', qty: '12 Pcs', status: 'Issued', date: 'May 11' },
+      { id: 'ISS-2402', department: 'Laundry', item: 'Laundry Detergent', qty: '8 Kg', status: 'Open', date: 'May 11' },
+      { id: 'ISS-2403', department: 'Housekeeping', item: 'Dental Kit', qty: '48 Pcs', status: 'Issued', date: 'May 10' },
+      { id: 'ISS-2404', department: 'Front Office', item: 'Coffee Sachet', qty: '75 Pcs', status: 'Closed', date: 'May 10' }
+    ];
+  });
 
   readonly categoryExposure = signal<DashboardDistribution[]>([
     { name: 'Housekeeping Supplies', count: 520, value: 512450, percent: 41 },
@@ -378,6 +436,22 @@ export class InventoryComponent implements OnInit, OnDestroy {
   }
 
   editPurchaseRequest(request: PurchaseRequest): void {
+    if (this.requestLoadingId()) return;
+    this.requestLoadingId.set(request.apiId);
+    this.requestError.set(null);
+    this.inventoryService.getPurchaseRequestById(request.apiId).subscribe({
+      next: response => {
+        this.requestLoadingId.set(null);
+        this.openPurchaseRequestEditor(response ? this.mapPurchaseRequest(response, 0) : request);
+      },
+      error: error => {
+        this.requestLoadingId.set(null);
+        this.requestError.set(error?.error?.message || error?.message || 'Unable to load purchase request details.');
+      }
+    });
+  }
+
+  private openPurchaseRequestEditor(request: PurchaseRequest): void {
     this.selectedPurchaseRequest.set(request);
     this.purchaseRequestDraft.set(this.clonePurchaseRequest(request));
     this.createModal.set('request');
@@ -393,13 +467,45 @@ export class InventoryComponent implements OnInit, OnDestroy {
 
   confirmDeletePurchaseRequest(): void {
     const pending = this.purchaseRequestPendingDelete();
-    if (!pending) return;
-    this.purchaseRequests.update(requests => requests.filter(request => request.id !== pending.id));
-    this.purchaseRequestPendingDelete.set(null);
+    if (!pending || this.requestDeletingId()) return;
+
+    this.requestDeletingId.set(pending.apiId);
+    this.requestError.set(null);
+    this.inventoryService.deletePurchaseRequest(pending.apiId).subscribe({
+      next: () => {
+        this.requestDeletingId.set(null);
+        this.purchaseRequestPendingDelete.set(null);
+        this.loadPurchaseRequests();
+        this.loadDashboard();
+      },
+      error: error => {
+        this.requestError.set(error?.error?.message || error?.message || 'Unable to delete purchase request.');
+        this.requestDeletingId.set(null);
+      }
+    });
   }
 
   updatePurchaseRequestDraft(field: keyof Omit<PurchaseRequestDraft, 'lines'>, value: string): void {
     this.purchaseRequestDraft.update(draft => ({ ...draft, [field]: value }));
+  }
+
+  onPurchaseRequestDepartmentChange(departmentId: number | string): void {
+    const selected = this.departments().find((d: DepartmentOption) => String(d.id) === String(departmentId));
+    this.purchaseRequestDraft.update(draft => ({
+      ...draft,
+      departmentId,
+      department: selected?.name || ''
+    }));
+  }
+
+  onPurchaseRequestStatusChange(statusId: number | string): void {
+    const selected = this.prStatuses().find(s => String(s.id) === String(statusId));
+    this.purchaseRequestDraft.update(draft => ({
+      ...draft,
+      statusId,
+      status: selected?.value || '',
+      statusCode: selected?.code || ''
+    }));
   }
 
   addRequestLine(): void {
@@ -407,7 +513,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
       ...draft,
       lines: [
         ...draft.lines,
-        { id: Date.now(), itemId: '', item: '', unit: 'Pcs', quantity: 1, estimatedRate: 0 }
+        { id: Date.now(), itemId: '', item: '', uomId: '', unit: 'Pcs', quantity: 1, estimatedRate: 0 }
       ]
     }));
   }
@@ -424,7 +530,9 @@ export class InventoryComponent implements OnInit, OnDestroy {
           ...line,
           itemId: value,
           item: selected?.name || '',
-          unit: selected?.unit || line.unit
+          uomId: selected?.uomId || '',
+          unit: selected?.unit || line.unit,
+          estimatedRate: selected?.rate || line.estimatedRate
         };
       })
     }));
@@ -438,19 +546,31 @@ export class InventoryComponent implements OnInit, OnDestroy {
   }
 
   savePurchaseRequest(): void {
-    const draft = this.purchaseRequestDraft();
-    const selected = this.selectedPurchaseRequest();
-    const request: PurchaseRequest = {
-      ...draft,
-      id: selected?.id || this.nextPurchaseRequestId(),
-      lines: draft.lines.map((line, index) => ({ ...line, id: index + 1 }))
-    };
+    if (this.requestSaving()) return;
 
-    this.purchaseRequests.update(requests => selected
-      ? requests.map(existing => existing.id === selected.id ? request : existing)
-      : [request, ...requests]
-    );
-    this.closeCreateModal();
+    const draft = this.purchaseRequestDraft();
+    const payload = this.purchaseRequestPayload(draft);
+    const selected = this.selectedPurchaseRequest();
+    
+    this.requestSaving.set(true);
+    this.requestError.set(null);
+
+    const apiCall = selected?.apiId
+      ? this.inventoryService.updatePurchaseRequest(selected.apiId, payload)
+      : this.inventoryService.createPurchaseRequest(payload);
+
+    apiCall.subscribe({
+      next: () => {
+        this.requestSaving.set(false);
+        this.closeCreateModal();
+        this.loadPurchaseRequests();
+        this.loadDashboard();
+      },
+      error: error => {
+        this.requestError.set(error?.error?.message || error?.message || 'Unable to save purchase request.');
+        this.requestSaving.set(false);
+      }
+    });
   }
 
   requestTotal(request: PurchaseRequest | PurchaseRequestDraft): number {
@@ -458,19 +578,20 @@ export class InventoryComponent implements OnInit, OnDestroy {
   }
 
   editStoreIssue(issue: StoreIssue): void {
-    this.selectedStoreIssue.set(issue);
-    this.storeIssueDraft.set({
-      department: issue.department,
-      issuedTo: issue.issuedTo,
-      itemId: issue.itemId,
-      item: issue.item,
-      quantity: issue.quantity,
-      unit: issue.unit,
-      date: issue.date,
-      status: issue.status,
-      note: issue.note
+    if (this.issueLoadingId()) return;
+
+    this.issueLoadingId.set(issue.apiId);
+    this.issueError.set(null);
+    this.inventoryService.getStoreIssueById(issue.apiId).subscribe({
+      next: response => {
+        this.issueLoadingId.set(null);
+        this.openStoreIssueEditor(response ? this.mapStoreIssue(response, 0) : issue);
+      },
+      error: error => {
+        this.issueLoadingId.set(null);
+        this.issueError.set(error?.error?.message || error?.message || 'Unable to load store issue details.');
+      }
     });
-    this.createModal.set('issue');
   }
 
   updateStoreIssueDraft(field: keyof StoreIssueDraft, value: string | number): void {
@@ -483,7 +604,17 @@ export class InventoryComponent implements OnInit, OnDestroy {
       ...draft,
       itemId,
       item: selected?.name || '',
+      uomId: selected?.uomId || '',
       unit: selected?.unit || draft.unit
+    }));
+  }
+
+  onStoreIssueDepartmentChange(departmentId: number | string): void {
+    const selected = this.departments().find((d: DepartmentOption) => String(d.id) === String(departmentId));
+    this.storeIssueDraft.update(draft => ({
+      ...draft,
+      departmentId,
+      department: selected?.name || ''
     }));
   }
 
@@ -504,6 +635,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
         this.issueSaving.set(false);
         this.closeCreateModal();
         this.loadStoreIssues();
+        this.loadDashboard();
       },
       error: error => {
         this.issueError.set(error?.error?.message || error?.message || 'Unable to save store issue.');
@@ -514,13 +646,26 @@ export class InventoryComponent implements OnInit, OnDestroy {
 
   deleteStoreIssue(issue: StoreIssue): void {
     if (this.issueDeletingId()) return;
+    this.storeIssuePendingDelete.set(issue);
+  }
+
+  closeDeleteStoreIssue(): void {
+    if (this.issueDeletingId()) return;
+    this.storeIssuePendingDelete.set(null);
+  }
+
+  confirmDeleteStoreIssue(): void {
+    const issue = this.storeIssuePendingDelete();
+    if (!issue || this.issueDeletingId()) return;
 
     this.issueDeletingId.set(issue.apiId);
     this.issueError.set(null);
     this.inventoryService.deleteStoreIssue(issue.apiId).subscribe({
       next: () => {
         this.issueDeletingId.set(null);
+        this.storeIssuePendingDelete.set(null);
         this.loadStoreIssues();
+        this.loadDashboard();
       },
       error: error => {
         this.issueError.set(error?.error?.message || error?.message || 'Unable to delete store issue.');
@@ -542,6 +687,13 @@ export class InventoryComponent implements OnInit, OnDestroy {
 
   formatINR(value: number): string {
     return `₹${Number(value || 0).toLocaleString('en-IN')}`;
+  }
+
+  private loadDashboard(): void {
+    this.inventoryService.getInventoryDashboard().subscribe({
+      next: data => this.dashboardData.set(data),
+      error: () => this.dashboardData.set(null)
+    });
   }
 
   private loadStockItems(): void {
@@ -576,12 +728,30 @@ export class InventoryComponent implements OnInit, OnDestroy {
     });
   }
 
+  private loadPurchaseRequests(): void {
+    this.isLoadingRequests.set(true);
+    this.requestError.set(null);
+    this.inventoryService.getAllPurchaseRequests().subscribe({
+      next: requests => {
+        this.purchaseRequests.set(requests.map((req, index) => this.mapPurchaseRequest(req, index)));
+        this.isLoadingRequests.set(false);
+      },
+      error: error => {
+        this.purchaseRequests.set([]);
+        this.requestError.set(error?.error?.message || error?.message || 'Unable to load purchase requests.');
+        this.isLoadingRequests.set(false);
+      }
+    });
+  }
+
   private loadIssueItems(): void {
     this.isLoadingIssueItems.set(true);
     this.issueItemError.set(null);
     this.inventoryService.getItemConfigs().subscribe({
       next: items => {
-        this.issueItems.set(items.map((item, index) => this.mapIssueItemOption(item, index)).filter(item => item.name));
+        this.issueItems.set(items
+          .map((item, index) => this.mapIssueItemOption(item, index))
+          .filter(item => item.name && item.active !== false));
         this.isLoadingIssueItems.set(false);
       },
       error: error => {
@@ -616,18 +786,26 @@ export class InventoryComponent implements OnInit, OnDestroy {
     const apiId = issue.id ?? issue.storeIssueId ?? issue.issueId ?? index + 1;
     const itemName = this.text(issue.item ?? issue.itemName ?? issue.itemCode, '-');
     const status = this.normalizeIssueStatus(issue.statusName ?? issue.status ?? issue.statusCode);
+    // Resolve departmentName from the loaded departments list if departmentId is present
+    const deptId = issue.departmentId ?? '';
+    const deptName = deptId
+      ? (this.departments().find((d: DepartmentOption) => String(d.id) === String(deptId))?.name ?? this.text(issue.department ?? issue.departmentName, '-'))
+      : this.text(issue.department ?? issue.departmentName, '-');
 
     return {
       apiId,
       itemId: issue.itemId ?? '',
       id: this.text(issue.issueNo ?? issue.issueNumber ?? issue.storeIssueNo ?? issue.code ?? apiId, `ISS-${String(index + 1).padStart(4, '0')}`),
-      department: this.text(issue.department ?? issue.departmentName, '-'),
+      departmentId: deptId,
+      department: deptName,
       issuedTo: this.text(issue.issuedTo ?? issue.issuedToName, '-'),
       item: itemName,
       quantity: this.toNumber(issue.quantity ?? issue.qty),
+      uomId: issue.uomId ?? '',
       unit: this.text(issue.unit ?? issue.uom ?? issue.uomName, ''),
       date: this.formatDateValue(issue.issueDate ?? issue.date ?? issue.createdAt),
       status,
+      statusId: issue.statusId ?? '',
       note: this.text(issue.issueNote ?? issue.note ?? issue.remarks, '')
     };
   }
@@ -635,56 +813,125 @@ export class InventoryComponent implements OnInit, OnDestroy {
   private storeIssuePayload(draft: StoreIssueDraft): StoreIssuePayload {
     return {
       itemId: draft.itemId || undefined,
-      department: draft.department,
+      departmentId: draft.departmentId || undefined,
       issuedTo: draft.issuedTo,
-      item: draft.item,
       quantity: draft.quantity,
-      unit: draft.unit,
+      issueNote: draft.note,
       issueDate: draft.date,
-      status: draft.status,
-      note: draft.note
+      statusId: draft.statusId || undefined
     };
   }
 
   private emptyStoreIssueDraft(): StoreIssueDraft {
     return {
       itemId: '',
-      department: 'Housekeeping',
+      departmentId: '',
+      department: '',
       issuedTo: '',
       item: '',
       quantity: 1,
-      unit: 'Pcs',
+      uomId: '',
+      unit: '',
       date: new Date().toISOString().slice(0, 10),
       status: 'Issued',
+      statusId: '',
       note: ''
     };
   }
 
   private emptyPurchaseRequestDraft(): PurchaseRequestDraft {
     return {
-      department: 'Housekeeping',
-      requestedBy: 'Store Desk',
+      departmentId: '',
+      department: '',
+      requestedBy: '',
       neededBy: new Date().toISOString().slice(0, 10),
-      priority: 'Normal',
-      status: 'Draft',
+      status: '',
+      statusId: '',
+      statusCode: '',
       purpose: '',
       lines: [
-        { id: 1, itemId: '', item: '', unit: 'Pcs', quantity: 1, estimatedRate: 0 }
+        { id: 1, itemId: '', item: '', uomId: '', unit: '', quantity: 1, estimatedRate: 0 }
       ]
     };
   }
 
   private clonePurchaseRequest(request: PurchaseRequest): PurchaseRequestDraft {
     return {
+      apiId: request.apiId,
       id: request.id,
+      departmentId: request.departmentId,
       department: request.department,
       requestedBy: request.requestedBy,
       neededBy: request.neededBy,
-      priority: request.priority,
       status: request.status,
+      statusId: request.statusId,
+      statusCode: request.statusCode,
       purpose: request.purpose,
       lines: request.lines.map(line => ({ ...line }))
     };
+  }
+
+  private mapPurchaseRequest(request: PurchaseRequestPayload, index: number): PurchaseRequest {
+    const apiId = request.id ?? request.purchaseRequestId ?? index + 1;
+    const deptId = request.departmentId ?? '';
+    const deptName = deptId
+      ? (this.departments().find((d: DepartmentOption) => String(d.id) === String(deptId))?.name ?? this.text(request.department ?? request.departmentName, '-'))
+      : this.text(request.department ?? request.departmentName, '-');
+    const statusId = request.statusId ?? '';
+    const statusCode = this.text(request.statusCode, '');
+    const statusName = this.text(request.statusName ?? request.status, 'Draft');
+
+    return {
+      apiId,
+      id: this.text(request.prNo ?? request.prNumber, `PR-${String(index + 1).padStart(4, '0')}`),
+      departmentId: deptId,
+      department: deptName,
+      requestedBy: this.text(request.requestedBy, '-'),
+      neededBy: this.formatDateValue(request.neededBy ?? request.issueDate ?? request.createdAt),
+      status: statusName,
+      statusId,
+      statusCode,
+      purpose: this.text(request.purpose ?? request.justification, ''),
+      lines: this.listData(request.lines ?? request.items).map((line, lIndex) => {
+        const itemConfig = this.issueItems().find(item => String(item.id) === String(line.itemId));
+        return {
+          id: lIndex + 1,
+          apiId: line.id ?? '',
+          itemId: line.itemId ?? '',
+          item: line.itemName ?? line.itemCode ?? itemConfig?.name ?? '-',
+          uomId: itemConfig?.uomId || line.uomId || '',
+          unit: itemConfig?.unit || this.text(line.unit, ''),
+          quantity: this.toNumber(line.requiredQuantity ?? line.quantity),
+          estimatedRate: this.toNumber(line.unitPrice ?? line.rate ?? line.estimatedRate)
+        };
+      })
+    };
+  }
+
+  private purchaseRequestPayload(draft: PurchaseRequestDraft): PurchaseRequestPayload {
+    const statusOption = this.prStatuses().find(s => String(s.id) === String(draft.statusId));
+    return {
+      departmentId: draft.departmentId || undefined,
+      requestedBy: draft.requestedBy,
+      neededBy: draft.neededBy,
+      justification: draft.purpose,
+      expectedAmount: draft.lines.reduce((sum, l) => sum + l.quantity * l.estimatedRate, 0),
+      statusId: draft.statusId || undefined,
+      statusName: statusOption?.value || draft.status || undefined,
+      statusCode: statusOption?.code || draft.statusCode || undefined,
+      items: draft.lines.map(line => ({
+        id: line.apiId || undefined,
+        itemId: line.itemId || undefined,
+        itemName: line.item || undefined,
+        itemCode: typeof line.itemId === 'string' ? line.itemId : undefined,
+        requiredQuantity: line.quantity,
+        unitPrice: line.estimatedRate
+      }))
+    };
+  }
+
+  private listData<T>(res: T[] | undefined | null): T[] {
+    return Array.isArray(res) ? res : [];
   }
 
   private nextPurchaseRequestId(): string {
@@ -698,8 +945,32 @@ export class InventoryComponent implements OnInit, OnDestroy {
       id,
       code: this.text(item.code ?? item.itemCode, ''),
       name: this.text(item.name ?? item.itemName, ''),
-      unit: this.text(item.unit ?? item.uom ?? item.uomName, 'Pcs')
+      uomId: item.uomId ?? '',
+      unit: this.text(item.unit ?? item.uom ?? item.uomName, 'Pcs'),
+      rate: this.toNumber(item.rate ?? item.unitPrice ?? item.costPrice ?? item.unitCost),
+      active: item.isActive ?? item.active ?? true
     };
+  }
+
+  private openStoreIssueEditor(issue: StoreIssue): void {
+    const itemConfig = this.issueItems().find(item => String(item.id) === String(issue.itemId));
+    
+    this.selectedStoreIssue.set(issue);
+    this.storeIssueDraft.set({
+      departmentId: issue.departmentId,
+      department: issue.department,
+      issuedTo: issue.issuedTo,
+      itemId: issue.itemId,
+      item: itemConfig?.name || issue.item,
+      quantity: issue.quantity,
+      uomId: itemConfig?.uomId || issue.uomId,
+      unit: itemConfig?.unit || issue.unit,
+      date: issue.date,
+      status: issue.status,
+      statusId: issue.statusId,
+      note: issue.note
+    });
+    this.createModal.set('issue');
   }
 
   private normalizeIssueStatus(value: unknown): IssueStatus {
@@ -707,6 +978,13 @@ export class InventoryComponent implements OnInit, OnDestroy {
     if (status === 'open') return 'Open';
     if (status === 'closed') return 'Closed';
     return 'Issued';
+  }
+
+  private loadPrStatuses(): void {
+    this.purchaseService.getCommonMaster('PR_STATUS').subscribe({
+      next: statuses => this.prStatuses.set(statuses),
+      error: () => this.prStatuses.set([])
+    });
   }
 
   private formatDateValue(value: unknown): string {

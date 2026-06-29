@@ -84,6 +84,52 @@ export interface PurchaseOrderPayload {
   updatedAt?: string;
 }
 
+export interface VendorBillLinePayload {
+  id?: number;
+  vendorBillId?: number;
+  itemId?: number;
+  itemName: string;
+  receivedQuantity: number;
+  rate: number;
+  totalAmount: number;
+  createdAt?: string;
+}
+
+export interface VendorBillPayload {
+  id?: number;
+  billNumber: string;
+  supplierId?: number;
+  supplierName: string;
+  purchaseOrderId?: number | null;
+  poNumber?: string | null;
+  billDate: string;
+  dueDate: string;
+  amountBeforeTax: number;
+  taxAmount: number;
+  totalAmount: number;
+  statusId?: number;
+  statusName: string;
+  statusCode: string;
+  createdAt?: string;
+  updatedAt?: string;
+  lines: VendorBillLinePayload[];
+}
+
+export interface GrnPayload {
+  id?: number;
+  grnNumber: string;
+  purchaseOrderId?: number | null;
+  poNumber?: string | null;
+  supplierName: string;
+  receivedBy: string;
+  receivedDate: string;
+  acceptedValue: number;
+  varianceNote: string;
+  vendorBill?: VendorBillPayload | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ItemConfigPayload {
   id?: number;
   itemCode: string;
@@ -239,6 +285,88 @@ export class PurchaseService {
   deletePurchaseOrder(id: number): Observable<void> {
     return this.http
       .delete<void | StandardResponse<void>>(`${this.purchaseBase}/orders/deletePurchaseOrder/${id}`)
+      .pipe(map(() => void 0));
+  }
+
+  createVendorBill(payload: VendorBillPayload): Observable<VendorBillPayload> {
+    return this.http
+      .post<VendorBillPayload | StandardResponse<VendorBillPayload>>(
+        `${this.purchaseBase}/vendor-bills/createVendorBill`,
+        payload
+      )
+      .pipe(map(response => this.itemData(response) || payload));
+  }
+
+  getVendorBills(): Observable<VendorBillPayload[]> {
+    return this.http
+      .get<VendorBillPayload[] | StandardResponse<VendorBillPayload[]>>(
+        `${this.purchaseBase}/vendor-bills/getAllVendorBill`
+      )
+      .pipe(map(response => this.listData(response)));
+  }
+
+  getVendorBillById(id: number): Observable<VendorBillPayload | null> {
+    return this.http
+      .get<VendorBillPayload | StandardResponse<VendorBillPayload>>(
+        `${this.purchaseBase}/vendor-bills/getByVendorBillId/${id}`
+      )
+      .pipe(map(response => this.itemData(response)));
+  }
+
+  updateVendorBill(id: number, payload: VendorBillPayload): Observable<VendorBillPayload> {
+    return this.http
+      .put<VendorBillPayload | StandardResponse<VendorBillPayload>>(
+        `${this.purchaseBase}/vendor-bills/updateVendorBill/${id}`,
+        payload
+      )
+      .pipe(map(response => this.itemData(response) || { ...payload, id }));
+  }
+
+  updateVendorBillStatus(id: number, statusId: number): Observable<VendorBillPayload> {
+    return this.http
+      .patch<VendorBillPayload | StandardResponse<VendorBillPayload>>(
+        `${this.purchaseBase}/vendor-bills/updateVendorBillStatus`,
+        null,
+        { params: { id, statusId } }
+      )
+      .pipe(map(response => this.itemData(response) || { id } as VendorBillPayload));
+  }
+
+  deleteVendorBill(id: number): Observable<void> {
+    return this.http
+      .delete<void | StandardResponse<void>>(
+        `${this.purchaseBase}/vendor-bills/deleteVendorBill/${id}`
+      )
+      .pipe(map(() => void 0));
+  }
+
+  getGrns(): Observable<GrnPayload[]> {
+    return this.http
+      .get<GrnPayload[] | StandardResponse<GrnPayload[]>>(`${this.purchaseBase}/grn/getAllGrn`)
+      .pipe(map(response => this.listData(response)));
+  }
+
+  getGrnById(id: number): Observable<GrnPayload | null> {
+    return this.http
+      .get<GrnPayload | StandardResponse<GrnPayload>>(`${this.purchaseBase}/grn/getGrnById/${id}`)
+      .pipe(map(response => this.itemData(response)));
+  }
+
+  createGrn(payload: GrnPayload): Observable<GrnPayload> {
+    return this.http
+      .post<GrnPayload | StandardResponse<GrnPayload>>(`${this.purchaseBase}/grn/createGrn`, payload)
+      .pipe(map(response => this.itemData(response) || payload));
+  }
+
+  updateGrn(id: number, payload: GrnPayload): Observable<GrnPayload> {
+    return this.http
+      .put<GrnPayload | StandardResponse<GrnPayload>>(`${this.purchaseBase}/grn/updateGrn/${id}`, payload)
+      .pipe(map(response => this.itemData(response) || { ...payload, id }));
+  }
+
+  deleteGrn(id: number): Observable<void> {
+    return this.http
+      .delete<void | StandardResponse<void>>(`${this.purchaseBase}/grn/deleteGrn/${id}`)
       .pipe(map(() => void 0));
   }
 

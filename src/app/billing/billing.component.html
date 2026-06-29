@@ -407,6 +407,7 @@
 
       <div class="modal-body" [ngSwitch]="billingModal()">
         <div class="grn-flow" *ngSwitchCase="'grn'">
+          <div class="bill-save-error" *ngIf="grnSaveError()">{{ grnSaveError() }}</div>
           <section class="bill-form-section">
             <div class="bill-section-heading">
               <span class="bill-step">1</span>
@@ -502,6 +503,7 @@
         </div>
 
         <div class="vendor-bill-flow" *ngSwitchCase="'bill'">
+          <div class="bill-save-error" *ngIf="billSaveError()">{{ billSaveError() }}</div>
           <section class="bill-form-section">
             <div class="bill-section-heading">
               <span class="bill-step">1</span>
@@ -616,12 +618,13 @@
       </div>
 
       <footer>
-        <button type="button" class="secondary-btn" (click)="closeBillingModal()">Cancel</button>
+        <button type="button" class="secondary-btn" [disabled]="billSaving() || grnSaving()" (click)="closeBillingModal()">Cancel</button>
         <button type="button" class="primary-btn"
-          [disabled]="(billingModal() === 'bill' && billFormSubmitted() && billValidationErrors().length > 0) ||
+          [disabled]="billSaving() || grnSaving() ||
+                      (billingModal() === 'bill' && billFormSubmitted() && billValidationErrors().length > 0) ||
                       (billingModal() === 'grn' && grnFormSubmitted() && grnValidationErrors().length > 0)"
           (click)="billingModal() === 'bill' ? saveVendorBill() : (billingModal() === 'grn' ? saveGrn() : closeBillingModal())">
-          <span class="material-icons-round">save</span>Save
+          <span class="material-icons-round">{{ (billSaving() || grnSaving()) ? 'hourglass_top' : 'save' }}</span>{{ (billSaving() || grnSaving()) ? 'Saving...' : 'Save' }}
         </button>
       </footer>
     </section>

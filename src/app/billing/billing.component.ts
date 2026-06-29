@@ -3,6 +3,16 @@ import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
+import {
+  GrnPayload,
+  ItemConfigPayload,
+  PurchaseMasterOption,
+  PurchaseOrderLinePayload,
+  PurchaseOrderPayload,
+  PurchaseService,
+  SupplierPayload,
+  VendorBillPayload
+} from '../purchase/purchase.service';
 
 type BillingTab = 'folios' | 'payments' | 'invoices' | 'refunds' | 'inward' | 'bills';
 type FolioStatus = 'Open' | 'Due Out' | 'Settled' | 'Hold';
@@ -25,11 +35,13 @@ interface VendorBillDraft {
 }
 
 interface VendorBillLineDraft {
+  itemId?: number;
   itemCode: string;
   invoiceQty: number | null;
 }
 
 interface VendorBillLine {
+  itemId?: number;
   itemCode: string;
   itemName: string;
   unit: string;
@@ -50,6 +62,7 @@ interface GrnDraft {
 }
 
 interface GrnLineDraft {
+  itemId?: number;
   itemCode: string;
   itemName: string;
   unit: string;
@@ -58,6 +71,7 @@ interface GrnLineDraft {
 }
 
 interface GrnLine {
+  itemId?: number;
   itemCode: string;
   itemName: string;
   unit: string;
@@ -66,7 +80,9 @@ interface GrnLine {
 }
 
 interface InwardReceipt {
+  recordId?: number;
   id: string;
+  purchaseOrderId?: number;
   poNo: string;
   billNo?: string;
   supplier: string;
@@ -80,14 +96,18 @@ interface InwardReceipt {
 }
 
 interface VendorBill {
+  recordId?: number;
   id: string;
+  supplierId?: number;
   supplier: string;
+  purchaseOrderId?: number;
   poNo: string;
   billDate: string;
   dueDate: string;
   totalAmount: number;
   netAmount: number;
   status: BillStatus;
+  statusId?: number;
   grnNo?: string;
   lines: VendorBillLine[];
 }
@@ -98,19 +118,24 @@ interface MiniSupplier {
 }
 
 interface MiniPurchaseOrder {
+  recordId?: number;
+  supplierId?: number;
   id: string;
   supplier: string;
   items: number;
   totalAmount: number;
   netAmount: number;
   lines: VendorBillLineDraft[];
+  sourceLines?: PurchaseOrderLinePayload[];
 }
 
 interface VendorBillItem {
+  id?: number;
   code: string;
   name: string;
   unit: string;
   category: string;
+  unitCost?: number;
 }
 
 interface FolioLine {
@@ -369,10 +394,15 @@ export class BillingComponent implements OnInit, OnDestroy {
   billDraft = signal<VendorBillDraft>(this.emptyBillDraft());
   billFormSubmitted = signal(false);
   billTouchedFields = signal<Record<string, boolean>>({});
+  billSaving = signal(false);
+  billSaveError = signal('');
+  vendorBillStatuses = signal<PurchaseMasterOption[]>([]);
 
   grnDraft = signal<GrnDraft>(this.emptyGrnDraft());
   grnFormSubmitted = signal(false);
   grnTouchedFields = signal<Record<string, boolean>>({});
+  grnSaving = signal(false);
+  grnSaveError = signal('');
 
   selectedVendorBill = signal<VendorBill | null>(null);
   selectedGrn = signal<InwardReceipt | null>(null);
@@ -382,7 +412,10 @@ export class BillingComponent implements OnInit, OnDestroy {
   billingModal = signal<'grn' | 'bill' | null>(null);
   billStatusFilter = signal<'ALL' | BillStatus>('ALL');
 
-  constructor(private readonly router: Router) {}
+  constructor(
+    private readonly router: Router,
+    private readonly purchaseService: PurchaseService
+  ) {}
 
   ngOnInit(): void {
     this.updateTabFromUrl(this.router.url);
@@ -390,6 +423,9 @@ export class BillingComponent implements OnInit, OnDestroy {
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(event => this.updateTabFromUrl((event as NavigationEnd).urlAfterRedirects));
     this.syncPaymentAmount();
+    this.loadVendorBills();
+    this.loadGrns();
+    this.loadVendorBillReferenceData();
   }
 
   ngOnDestroy(): void {
@@ -746,15 +782,18 @@ export class BillingComponent implements OnInit, OnDestroy {
   }
 
   closeBillingModal(): void {
+    if (this.billSaving() || this.grnSaving()) return;
     this.billingModal.set(null);
     this.selectedVendorBill.set(null);
     this.billDraft.set(this.emptyBillDraft());
     this.billFormSubmitted.set(false);
     this.billTouchedFields.set({});
+    this.billSaveError.set('');
     this.selectedGrn.set(null);
     this.grnDraft.set(this.emptyGrnDraft());
     this.grnFormSubmitted.set(false);
     this.grnTouchedFields.set({});
+    this.grnSaveError.set('');
   }
 
   openBillingModal(type: 'grn' | 'bill'): void {
@@ -768,6 +807,17 @@ export class BillingComponent implements OnInit, OnDestroy {
     this.billFormSubmitted.set(false);
     this.billTouchedFields.set({});
     this.billingModal.set('bill');
+    if (bill.recordId) {
+      this.purchaseService.getVendorBillById(bill.recordId).subscribe({
+        next: response => {
+          if (!response) return;
+          const detailedBill = this.mapVendorBill(response);
+          this.selectedVendorBill.set(detailedBill);
+          this.billDraft.set(this.draftFromBill(detailedBill));
+        },
+        error: () => this.billSaveError.set('Unable to load the latest vendor bill details.')
+      });
+    }
   }
 
   createGrnForBill(bill: VendorBill): void {
@@ -792,6 +842,17 @@ export class BillingComponent implements OnInit, OnDestroy {
     this.grnFormSubmitted.set(false);
     this.grnTouchedFields.set({});
     this.billingModal.set('grn');
+    if (grn.recordId) {
+      this.purchaseService.getGrnById(grn.recordId).subscribe({
+        next: response => {
+          if (!response) return;
+          const detailedGrn = this.mapGrn(response);
+          this.selectedGrn.set(detailedGrn);
+          this.grnDraft.set(this.draftFromGrn(detailedGrn));
+        },
+        error: () => this.grnSaveError.set('Unable to load the latest GRN details.')
+      });
+    }
   }
 
   deleteGrn(id: string): void {
@@ -820,13 +881,37 @@ export class BillingComponent implements OnInit, OnDestroy {
   closeDeleteVendorBill(): void { this.vendorBillPendingDelete.set(null); }
   confirmDeleteVendorBill(): void {
     const bill = this.vendorBillPendingDelete();
-    if (bill) { this.deleteVendorBill(bill.id); this.closeDeleteVendorBill(); }
+    if (!bill) return;
+    if (!bill.recordId) {
+      this.deleteVendorBill(bill.id);
+      this.closeDeleteVendorBill();
+      return;
+    }
+    this.purchaseService.deleteVendorBill(bill.recordId).subscribe({
+      next: () => {
+        this.deleteVendorBill(bill.id);
+        this.closeDeleteVendorBill();
+      },
+      error: error => alert(error?.error?.message || 'Unable to delete vendor bill. Please try again.')
+    });
   }
 
   closeDeleteGrn(): void { this.grnPendingDelete.set(null); }
   confirmDeleteGrn(): void {
     const grn = this.grnPendingDelete();
-    if (grn) { this.deleteGrn(grn.id); this.closeDeleteGrn(); }
+    if (!grn) return;
+    if (!grn.recordId) {
+      this.deleteGrn(grn.id);
+      this.closeDeleteGrn();
+      return;
+    }
+    this.purchaseService.deleteGrn(grn.recordId).subscribe({
+      next: () => {
+        this.deleteGrn(grn.id);
+        this.closeDeleteGrn();
+      },
+      error: error => alert(error?.error?.message || 'Unable to delete GRN. Please try again.')
+    });
   }
 
   emptyBillDraft(): VendorBillDraft {
@@ -942,12 +1027,14 @@ export class BillingComponent implements OnInit, OnDestroy {
 
   saveVendorBill(): void {
     this.billFormSubmitted.set(true);
+    this.billSaveError.set('');
     if (this.billValidationErrors().length > 0) return;
     const draft = this.billDraft();
     const existing = this.selectedVendorBill();
     const lines: VendorBillLine[] = draft.lines.map(line => {
       const item = this.mockItemConfigs().find(i => i.code === line.itemCode);
       return {
+        itemId: item?.id,
         itemCode: line.itemCode,
         itemName: item?.name || line.itemCode,
         unit: item?.unit || '',
@@ -966,11 +1053,290 @@ export class BillingComponent implements OnInit, OnDestroy {
       grnNo: (draft.grnNo || '').trim(),
       lines
     };
-    this.vendorBills.update(bills => {
-      if (existing) { const index = bills.findIndex(b => b.id === existing.id); if (index > -1) { const next = [...bills]; next[index] = savedBill; return next; } }
-      return [savedBill, ...bills];
+
+    const payload = this.vendorBillPayloadFromDraft(draft, existing);
+    if (!payload) return;
+
+    this.billSaving.set(true);
+    const status = this.vendorBillStatuses().find(option =>
+      option.code === draft.status.toUpperCase() || option.value.toLowerCase() === draft.status.toLowerCase()
+    );
+    const statusOnlyUpdate = !!existing?.recordId && !this.vendorBillDetailsChanged(existing, savedBill) && existing.status !== savedBill.status && !!status?.id;
+    const request = statusOnlyUpdate
+      ? this.purchaseService.updateVendorBillStatus(existing!.recordId!, status!.id!)
+      : existing?.recordId
+        ? this.purchaseService.updateVendorBill(existing.recordId, { ...payload, id: existing.recordId })
+        : this.purchaseService.createVendorBill(payload);
+
+    request.subscribe({
+      next: response => {
+        const persistedBill = response.billNumber
+          ? this.mapVendorBill(response)
+          : { ...savedBill, recordId: existing?.recordId, statusId: status?.id };
+        this.vendorBills.update(bills => {
+          if (!existing) return [persistedBill, ...bills];
+          return bills.map(bill => bill.id === existing.id ? persistedBill : bill);
+        });
+        this.billSaving.set(false);
+        this.closeBillingModal();
+      },
+      error: error => {
+        this.billSaving.set(false);
+        this.billSaveError.set(error?.error?.message || 'Unable to create vendor bill. Please verify the selected supplier, purchase order, and items.');
+      }
     });
-    this.closeBillingModal();
+  }
+
+  private vendorBillPayloadFromDraft(draft: VendorBillDraft, existing: VendorBill | null = null): VendorBillPayload | null {
+    const supplier = this.mockSuppliers().find(item => item.name === draft.supplier);
+    const order = this.mockPurchaseOrders().find(item => item.id === draft.poNo);
+    const supplierId = supplier?.id || existing?.supplierId;
+    const purchaseOrderId = order?.recordId || existing?.purchaseOrderId;
+    if (!supplierId || !purchaseOrderId) {
+      this.billSaveError.set('Supplier or purchase order data is not available from the server. Please refresh and try again.');
+      return null;
+    }
+
+    const linePayloads = draft.lines.map(line => {
+      const item = this.mockItemConfigs().find(config => config.code === line.itemCode);
+      const poLine = order?.sourceLines?.find(source =>
+        Number(source.itemId) === Number(item?.id) || source.itemCode === line.itemCode
+      );
+      const quantity = Number(line.invoiceQty || 0);
+      const rate = Number(poLine?.rate ?? item?.unitCost ?? 0);
+      return {
+        itemId: item?.id,
+        itemName: item?.name || line.itemCode,
+        receivedQuantity: quantity,
+        rate,
+        totalAmount: Math.round(quantity * rate * 100) / 100
+      };
+    });
+
+    if (linePayloads.some(line => !line.itemId)) {
+      this.billSaveError.set('One or more invoice items are not available from Item Config. Please refresh and select them again.');
+      return null;
+    }
+
+    const statusCode = draft.status.trim().toUpperCase().replace(/\s+/g, '_');
+    const status = this.vendorBillStatuses().find(option =>
+      option.code === statusCode || option.value.toLowerCase() === draft.status.toLowerCase()
+    );
+    const amountBeforeTax = Number(draft.netAmount || 0);
+    const totalAmount = Number(draft.totalAmount || 0);
+
+    return {
+      billNumber: draft.id.trim(),
+      supplierId,
+      supplierName: supplier?.name || draft.supplier.trim(),
+      purchaseOrderId,
+      poNumber: order?.id || draft.poNo.trim(),
+      billDate: draft.billDate,
+      dueDate: draft.dueDate,
+      amountBeforeTax,
+      taxAmount: Math.round(Math.max(0, totalAmount - amountBeforeTax) * 100) / 100,
+      totalAmount,
+      statusId: status?.id,
+      statusName: status?.value || draft.status,
+      statusCode: status?.code || statusCode,
+      lines: linePayloads
+    };
+  }
+
+  private vendorBillDetailsChanged(existing: VendorBill, next: VendorBill): boolean {
+    return existing.id !== next.id ||
+      existing.supplier !== next.supplier ||
+      existing.poNo !== next.poNo ||
+      existing.billDate !== next.billDate ||
+      existing.dueDate !== next.dueDate ||
+      existing.totalAmount !== next.totalAmount ||
+      existing.netAmount !== next.netAmount ||
+      JSON.stringify(existing.lines) !== JSON.stringify(next.lines);
+  }
+
+  private loadVendorBillReferenceData(): void {
+    this.purchaseService.getSuppliers().subscribe({
+      next: suppliers => {
+        const mapped = suppliers.map(supplier => this.mapVendorBillSupplier(supplier)).filter(supplier => supplier.id && supplier.name);
+        if (mapped.length) this.mockSuppliers.set(mapped);
+      },
+      error: () => {}
+    });
+    this.purchaseService.getPurchaseOrders().subscribe({
+      next: orders => {
+        const mapped = orders.map(order => this.mapVendorBillPurchaseOrder(order)).filter(order => order.recordId && order.id);
+        if (mapped.length) this.mockPurchaseOrders.set(mapped);
+      },
+      error: () => {}
+    });
+    this.purchaseService.getItemConfigs().subscribe({
+      next: items => {
+        const mapped = items.map(item => this.mapVendorBillItem(item)).filter(item => item.id && item.code);
+        if (mapped.length) {
+          this.mockItemConfigs.set(mapped);
+          this.vendorBills.update(bills => bills.map(bill => ({
+            ...bill,
+            lines: bill.lines.map(line => this.patchItemMetadata(line, mapped))
+          })));
+          this.inwardReceipts.update(grns => grns.map(grn => ({
+            ...grn,
+            lines: grn.lines.map(line => this.patchItemMetadata(line, mapped))
+          })));
+          this.grnDraft.update(draft => ({
+            ...draft,
+            lines: draft.lines.map(line => this.patchItemMetadata(line, mapped))
+          }));
+        }
+      },
+      error: () => {}
+    });
+    this.purchaseService.getCommonMaster('VENDOR_BILL_STATUS').subscribe({
+      next: statuses => this.vendorBillStatuses.set(statuses),
+      error: () => this.vendorBillStatuses.set([])
+    });
+  }
+
+  private loadVendorBills(): void {
+    this.purchaseService.getVendorBills().subscribe({
+      next: bills => this.vendorBills.set(bills.map(bill => {
+        const mapped = this.mapVendorBill(bill);
+        const grn = this.inwardReceipts().find(receipt => receipt.billNo === mapped.id);
+        return grn ? { ...mapped, grnNo: grn.id } : mapped;
+      })),
+      error: () => {}
+    });
+  }
+
+  private loadGrns(): void {
+    this.purchaseService.getGrns().subscribe({
+      next: grns => {
+        const mapped = grns.map(grn => this.mapGrn(grn));
+        this.inwardReceipts.set(mapped);
+        this.vendorBills.update(bills => bills.map(bill => {
+          const grn = mapped.find(receipt => receipt.billNo === bill.id);
+          return grn ? { ...bill, grnNo: grn.id } : bill;
+        }));
+      },
+      error: () => {}
+    });
+  }
+
+  private mapGrn(input: GrnPayload): InwardReceipt {
+    const vendorBill = input.vendorBill;
+    const lines: GrnLine[] = (vendorBill?.lines || []).map(line => {
+      const item = this.mockItemConfigs().find(config => Number(config.id) === Number(line.itemId));
+      return {
+        itemId: line.itemId ? Number(line.itemId) : item?.id,
+        itemCode: item?.code || String(line.itemId || ''),
+        itemName: String(line.itemName || item?.name || ''),
+        unit: item?.unit || '',
+        invoiceQty: Number(line.receivedQuantity || 0),
+        receivedQty: Number(line.receivedQuantity || 0)
+      };
+    });
+    return {
+      recordId: input.id ? Number(input.id) : undefined,
+      id: String(input.grnNumber || input.id || ''),
+      purchaseOrderId: input.purchaseOrderId ? Number(input.purchaseOrderId) : undefined,
+      poNo: String(input.poNumber || ''),
+      billNo: vendorBill?.billNumber ? String(vendorBill.billNumber) : undefined,
+      supplier: String(input.supplierName || ''),
+      receivedBy: String(input.receivedBy || ''),
+      receivedOn: String(input.receivedDate || ''),
+      items: lines.length,
+      acceptedValue: Number(input.acceptedValue || 0),
+      variance: String(input.varianceNote || 'No variance'),
+      remarks: String(input.varianceNote || ''),
+      lines
+    };
+  }
+
+  private mapVendorBill(input: VendorBillPayload): VendorBill {
+    const statusName = String(input.statusName || input.statusCode || 'Pending').toLowerCase();
+    const status: BillStatus = statusName === 'approved'
+      ? 'Approved'
+      : statusName === 'paid'
+        ? 'Paid'
+        : statusName === 'disputed'
+          ? 'Disputed'
+          : 'Pending';
+
+    return {
+      recordId: input.id ? Number(input.id) : undefined,
+      id: String(input.billNumber || input.id || ''),
+      supplierId: input.supplierId ? Number(input.supplierId) : undefined,
+      supplier: String(input.supplierName || ''),
+      purchaseOrderId: input.purchaseOrderId ? Number(input.purchaseOrderId) : undefined,
+      poNo: String(input.poNumber || ''),
+      billDate: String(input.billDate || ''),
+      dueDate: String(input.dueDate || ''),
+      totalAmount: Number(input.totalAmount || 0),
+      netAmount: Number(input.amountBeforeTax || 0),
+      status,
+      statusId: input.statusId ? Number(input.statusId) : undefined,
+      lines: (input.lines || []).map(line => {
+        const item = this.mockItemConfigs().find(config => Number(config.id) === Number(line.itemId));
+      return {
+        itemId: line.itemId ? Number(line.itemId) : item?.id,
+        itemCode: item?.code || String(line.itemId || ''),
+          itemName: String(line.itemName || item?.name || ''),
+          unit: item?.unit || '',
+          invoiceQty: Number(line.receivedQuantity || 0)
+        };
+      })
+    };
+  }
+
+  private mapVendorBillSupplier(input: SupplierPayload): MiniSupplier {
+    return { id: Number(input.id || 0), name: String(input.supplierName || '').trim() };
+  }
+
+  private mapVendorBillPurchaseOrder(input: PurchaseOrderPayload): MiniPurchaseOrder {
+    const sourceLines = input.lines || [];
+    const netAmount = sourceLines.reduce((sum, line) => {
+      const gross = Number(line.quantity || 0) * Number(line.rate || 0);
+      return sum + gross - (gross * Number(line.discountPercentage || 0) / 100);
+    }, 0);
+    return {
+      recordId: input.id ? Number(input.id) : undefined,
+      supplierId: input.supplierId ? Number(input.supplierId) : undefined,
+      id: String(input.poNumber || '').trim(),
+      supplier: String(input.supplierName || '').trim(),
+      items: Number(input.itemCount ?? sourceLines.length),
+      totalAmount: Number(input.totalAmount || sourceLines.reduce((sum, line) => sum + Number(line.totalAmount || 0), 0)),
+      netAmount: Math.round(netAmount * 100) / 100,
+      lines: sourceLines.map(line => ({
+        itemCode: String(line.itemCode || '').trim(),
+        invoiceQty: Number(line.quantity || 0)
+      })),
+      sourceLines
+    };
+  }
+
+  private mapVendorBillItem(input: ItemConfigPayload): VendorBillItem {
+    return {
+      id: input.id ? Number(input.id) : undefined,
+      code: String(input.itemCode || '').trim(),
+      name: String(input.itemName || '').trim(),
+      unit: String(input.uomName || '').trim() || 'Pcs',
+      category: String(input.categoryName || '').trim(),
+      unitCost: Number(input.unitCost || 0)
+    };
+  }
+
+  private patchItemMetadata<T extends VendorBillLine | GrnLine | GrnLineDraft>(line: T, items: VendorBillItem[]): T {
+    const item = items.find(config =>
+      Number(config.id) === Number(line.itemCode) ||
+      config.code === line.itemCode ||
+      config.name.toLowerCase() === line.itemName.toLowerCase()
+    );
+    if (!item) return line;
+    return {
+      ...line,
+      itemCode: item.code,
+      itemName: item.name,
+      unit: item.unit
+    };
   }
 
   emptyGrnDraft(): GrnDraft {
@@ -1061,7 +1427,6 @@ export class BillingComponent implements OnInit, OnDestroy {
     if (!draft.billNo.trim()) errors.push({ field: 'billNo', message: 'Vendor Bill reference is required.' });
     if (!draft.receivedBy.trim()) errors.push({ field: 'receivedBy', message: 'Received by name is required.' });
     if (!draft.receivedOn) errors.push({ field: 'receivedOn', message: 'Received date is required.' });
-    if (!draft.lines.length) errors.push({ field: 'lines', message: 'The selected invoice has no items.' });
     draft.lines.forEach((line, index) => {
       if (line.receivedQty === null || line.receivedQty === undefined || Number(line.receivedQty) < 0) {
         errors.push({ field: `line-${index}-receivedQty`, message: 'Enter received qty.' });
@@ -1079,13 +1444,16 @@ export class BillingComponent implements OnInit, OnDestroy {
 
   saveGrn(): void {
     this.grnFormSubmitted.set(true);
+    this.grnSaveError.set('');
     if (this.grnValidationErrors().length > 0) return;
     const draft = this.grnDraft();
     const existing = this.selectedGrn();
     const bill = this.vendorBills().find(b => b.id === draft.billNo);
     const lines: GrnLine[] = draft.lines.map(line => ({ ...line, receivedQty: Number(line.receivedQty) }));
     const savedGrn: InwardReceipt = {
+      recordId: existing?.recordId,
       id: draft.id.trim(),
+      purchaseOrderId: bill?.purchaseOrderId || existing?.purchaseOrderId,
       poNo: draft.poNo.trim() || bill?.poNo || '',
       billNo: draft.billNo.trim(),
       supplier: draft.supplier.trim() || bill?.supplier || '',
@@ -1097,14 +1465,94 @@ export class BillingComponent implements OnInit, OnDestroy {
       remarks: draft.remarks.trim(),
       lines
     };
-    if (existing && existing.billNo && existing.billNo !== savedGrn.billNo) {
-      this.vendorBills.update(bills => bills.map(b => { if (b.id === existing.billNo) { const { grnNo, ...rest } = b; return rest as VendorBill; } return b; }));
+    if (!bill) {
+      this.grnSaveError.set('The selected vendor bill is not available. Please refresh and select it again.');
+      return;
     }
-    this.inwardReceipts.update(grns => {
-      if (existing) { const index = grns.findIndex(g => g.id === existing.id); if (index > -1) { const next = [...grns]; next[index] = savedGrn; return next; } }
-      return [savedGrn, ...grns];
+
+    const payload: GrnPayload = {
+      id: existing?.recordId,
+      grnNumber: savedGrn.id,
+      purchaseOrderId: savedGrn.purchaseOrderId,
+      poNumber: savedGrn.poNo,
+      supplierName: savedGrn.supplier,
+      receivedBy: savedGrn.receivedBy,
+      receivedDate: savedGrn.receivedOn,
+      acceptedValue: savedGrn.acceptedValue,
+      varianceNote: savedGrn.remarks || savedGrn.variance,
+      vendorBill: this.vendorBillPayloadFromBill(bill)
+    };
+    const request = existing?.recordId
+      ? this.purchaseService.updateGrn(existing.recordId, payload)
+      : this.purchaseService.createGrn(payload);
+
+    this.grnSaving.set(true);
+    request.subscribe({
+      next: response => {
+        const mapped = this.mapGrn(response);
+        const persistedGrn: InwardReceipt = {
+          ...mapped,
+          recordId: mapped.recordId || existing?.recordId,
+          billNo: mapped.billNo || savedGrn.billNo,
+          lines: mapped.lines.length ? mapped.lines : savedGrn.lines,
+          items: mapped.lines.length ? mapped.items : savedGrn.items
+        };
+        if (existing && existing.billNo && existing.billNo !== persistedGrn.billNo) {
+          this.vendorBills.update(bills => bills.map(item => {
+            if (item.id !== existing.billNo) return item;
+            const { grnNo, ...rest } = item;
+            return rest as VendorBill;
+          }));
+        }
+        this.inwardReceipts.update(grns => {
+          if (!existing) return [persistedGrn, ...grns];
+          return grns.map(grn => grn.id === existing.id ? persistedGrn : grn);
+        });
+        this.vendorBills.update(bills => bills.map(item =>
+          item.id === persistedGrn.billNo ? { ...item, grnNo: persistedGrn.id } : item
+        ));
+        this.grnSaving.set(false);
+        this.closeBillingModal();
+      },
+      error: error => {
+        this.grnSaving.set(false);
+        this.grnSaveError.set(error?.error?.message || 'Unable to save GRN. Please verify the entered details and try again.');
+      }
     });
-    this.vendorBills.update(bills => bills.map(b => { if (b.id === savedGrn.billNo) return { ...b, grnNo: savedGrn.id }; return b; }));
-    this.closeBillingModal();
+  }
+
+  private vendorBillPayloadFromBill(bill: VendorBill): VendorBillPayload {
+    const statusCode = bill.status.toUpperCase().replace(/\s+/g, '_');
+    return {
+      id: bill.recordId,
+      billNumber: bill.id,
+      supplierId: bill.supplierId,
+      supplierName: bill.supplier,
+      purchaseOrderId: bill.purchaseOrderId,
+      poNumber: bill.poNo,
+      billDate: bill.billDate,
+      dueDate: bill.dueDate,
+      amountBeforeTax: bill.netAmount,
+      taxAmount: Math.round(Math.max(0, bill.totalAmount - bill.netAmount) * 100) / 100,
+      totalAmount: bill.totalAmount,
+      statusId: bill.statusId,
+      statusName: bill.status,
+      statusCode,
+      lines: bill.lines.map(line => {
+        const item = this.mockItemConfigs().find(config =>
+          Number(config.id) === Number(line.itemId || line.itemCode) ||
+          config.code === line.itemCode ||
+          config.name.toLowerCase() === line.itemName.toLowerCase()
+        );
+        const rate = Number(item?.unitCost || 0);
+        return {
+          itemId: line.itemId || item?.id,
+          itemName: line.itemName,
+          receivedQuantity: line.invoiceQty,
+          rate,
+          totalAmount: Math.round(line.invoiceQty * rate * 100) / 100
+        };
+      })
+    };
   }
 }

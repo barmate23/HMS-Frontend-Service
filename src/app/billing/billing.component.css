@@ -1439,6 +1439,16 @@ button {
   gap: 12px;
 }
 
+.bill-save-error {
+  padding: 10px 12px;
+  border: 1px solid #f4b4bc;
+  border-radius: 6px;
+  background: #fff1f3;
+  color: #a50f2d;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .grn-reference-grid,
 .grn-receipt-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));

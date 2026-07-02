@@ -77,8 +77,12 @@ export class PosComponent implements OnInit, OnDestroy {
   currentMenuItem = signal<Partial<PosMenuItem>>({});
   currentOrder = signal<Partial<PosOrder>>({});
   currentBill = signal<Partial<PosBill>>({});
+  selectedBillingOrder = signal<PosOrder | null>(null);
   currentTable = signal<Partial<PosTable>>({});
   selectedTable = signal<PosTable | null>(null);
+  activeTableOrders = signal<PosOrder[]>([]);
+  activeTableOrdersLoading = signal(false);
+  activeTableOrdersError = signal('');
   tableOrderEditMode = signal(false);
   isTableOrderDetailOpen = signal(false);
   diningAction = signal<DiningAction | null>(null);
@@ -140,7 +144,7 @@ export class PosComponent implements OnInit, OnDestroy {
     return this.sampleDashboardOutlets();
   });
   readonly dashboardMenuItems = computed(() => this.sampleDashboardMenuItems());
-  readonly dashboardTables = computed(() => this.dashboardTablesFromApi(this.pos.posDashboard()) || this.sampleDashboardTables());
+  readonly dashboardTables = computed(() => this.pos.tables());
   readonly dashboardOrders = computed(() => this.dashboardOrdersFromApi(this.pos.posDashboard()) || this.sampleDashboardOrders());
   readonly dashboardBills = computed(() => this.sampleDashboardBills());
   readonly dashboardAuditLogs = computed(() => this.dashboardActivityFromApi(this.pos.posDashboard()) || this.sampleDashboardAuditLogs());
@@ -430,11 +434,15 @@ export class PosComponent implements OnInit, OnDestroy {
   });
 
   outletTables = computed(() => {
-    const outlet = this.outletFilter() === 'ALL' ? this.pos.outlets()[0]?.id : Number(this.outletFilter());
-    return this.pos.tables().filter(table => table.outletId === outlet);
+    const outlet = this.outletFilter();
+    return this.pos.tables()
+      .filter(table => outlet === 'ALL' || table.outletId === Number(outlet))
+      .sort((a, b) => a.outletId - b.outletId || a.number.localeCompare(b.number, undefined, { numeric: true }));
   });
 
   selectedTableOrder = computed(() => {
+    const orders = this.activeTableOrders();
+    if (orders.length) return orders[0];
     const table = this.selectedTable();
     return table ? this.activeOrderForTable(table) : null;
   });
@@ -543,6 +551,17 @@ export class PosComponent implements OnInit, OnDestroy {
     this.router.navigate([`/pos/${tab}`]);
   }
 
+  changeOutletFilter(value: number | string): void {
+    const outlet = value === 'ALL' ? 'ALL' : Number(value);
+    this.outletFilter.set(outlet);
+    this.selectedTable.set(null);
+    this.activeTableOrders.set([]);
+
+    if (this.activeTab() === 'dining') {
+      this.pos.loadTables(outlet === 'ALL' ? undefined : outlet);
+    }
+  }
+
   openCreate(kind: ModalKind): void {
     this.modalKind.set(kind);
     this.modalMode.set('create');
@@ -555,8 +574,19 @@ export class PosComponent implements OnInit, OnDestroy {
       this.currentOrder.set({ outletId, type: 'TABLE', tableNo: table?.number || '', roomNo: '', guestName: '', server: 'Unassigned', status: this.pos.orderStatuses()[0] || 'OPEN', notes: '', lines: [] });
     }
     if (kind === 'bill') {
-      const order = this.billableOrders()[0] || this.pos.orders()[0];
-      this.currentBill.set(this.billDraftForOrder(order, { status: this.pos.billStatuses()[0] || 'OPEN', paymentModes: [this.pos.paymentModes()[0] || 'Cash'], discount: 0, paid: 0 }));
+      this.currentBill.set({
+        orderId: undefined,
+        orderType: 'TABLE',
+        tableNo: '',
+        guestName: '',
+        status: this.pos.billStatuses()[0] || 'OPEN',
+        paymentModes: [this.pos.paymentModes()[0] || 'Cash'],
+        discount: 0,
+        paid: 0,
+        compReason: '',
+        postedToFolio: false
+      });
+      this.selectedBillingOrder.set(null);
     }
     if (kind === 'table') this.currentTable.set({ outletId: this.defaultOutletId(), number: '', section: this.pos.tableSections()[0] || 'Indoor', status: this.pos.tableStatuses()[0] || 'AVAILABLE', covers: 0, server: 'Unassigned', mergedWith: '' });
     this.isModalOpen.set(true);
@@ -567,12 +597,29 @@ export class PosComponent implements OnInit, OnDestroy {
     this.modalKind.set(kind);
     this.modalMode.set('edit');
     this.tableOrderEditMode.set(false);
+    if (kind === 'table') {
+      this.pos.getTableById(Number(item.id)).subscribe({
+        next: table => {
+          this.currentTable.set(table);
+          this.isModalOpen.set(true);
+          document.body.style.overflow = 'hidden';
+        },
+        error: error => {
+          console.error('[POS] Unable to load table details', error);
+          this.currentTable.set({ ...item });
+          this.isModalOpen.set(true);
+          document.body.style.overflow = 'hidden';
+        }
+      });
+      return;
+    }
     if (kind === 'outlet') this.currentOutlet.set({ ...item });
     if (kind === 'menu') this.currentMenuItem.set({ ...item, variants: [...item.variants], modifiers: [...item.modifiers] });
     if (kind === 'order') this.currentOrder.set({ ...item, lines: item.lines.map((line: PosOrderLine) => ({ ...line })) });
     if (kind === 'bill') {
       const order = this.pos.orders().find(value => value.id === Number(item.orderId));
       const synced = this.billDraftForOrder(order, item);
+      this.selectedBillingOrder.set(order || null);
       this.currentBill.set({
         ...synced,
         orderType: item.orderType || order?.type || synced.orderType,
@@ -584,7 +631,6 @@ export class PosComponent implements OnInit, OnDestroy {
         paymentModes: [...item.paymentModes]
       });
     }
-    if (kind === 'table') this.currentTable.set({ ...item });
     this.isModalOpen.set(true);
     document.body.style.overflow = 'hidden';
   }
@@ -593,6 +639,7 @@ export class PosComponent implements OnInit, OnDestroy {
     this.isTableOrderDetailOpen.set(false);
     this.modalKind.set('bill');
     this.modalMode.set('create');
+    this.selectedBillingOrder.set(order);
     this.currentBill.set(this.billDraftForOrder(order, { status: this.pos.billStatuses()[0] || 'OPEN', paymentModes: [this.pos.paymentModes()[0] || 'Cash'], discount: 0, paid: 0 }));
     this.isModalOpen.set(true);
     document.body.style.overflow = 'hidden';
@@ -621,6 +668,8 @@ export class PosComponent implements OnInit, OnDestroy {
 
   closeTableOrderDetail(): void {
     this.isTableOrderDetailOpen.set(false);
+    this.activeTableOrdersLoading.set(false);
+    this.activeTableOrdersError.set('');
     document.body.style.overflow = '';
   }
 
@@ -802,6 +851,8 @@ export class PosComponent implements OnInit, OnDestroy {
 
   selectDiningTable(table: PosTable): void {
     this.selectedTable.set(table);
+    this.activeTableOrders.set([]);
+    this.activeTableOrdersError.set('');
     this.diningForm.set({
       server: table.server === 'Unassigned' ? 'Arjun Menon' : table.server,
       covers: table.covers || 2,
@@ -814,14 +865,27 @@ export class PosComponent implements OnInit, OnDestroy {
       notes: ''
     });
 
-    if (this.activeOrderForTable(table)) {
-      this.isTableOrderDetailOpen.set(true);
-      document.body.style.overflow = 'hidden';
-    }
+    this.activeTableOrdersLoading.set(true);
+    this.pos.getActiveOrders(table.id).subscribe({
+      next: orders => {
+        this.activeTableOrdersLoading.set(false);
+        this.activeTableOrders.set(orders);
+        if (orders.length) {
+          this.isTableOrderDetailOpen.set(true);
+          document.body.style.overflow = 'hidden';
+        }
+      },
+      error: error => {
+        this.activeTableOrdersLoading.set(false);
+        this.activeTableOrdersError.set(error?.error?.message || error?.message || 'Unable to load active orders');
+      }
+    });
   }
 
   activeOrderForTable(table: PosTable): PosOrder | null {
     const inactiveStatuses = new Set(['BILLED', 'PAID', 'CLOSED', 'CANCELLED', 'VOID']);
+    if (String(table.status || '').toUpperCase() !== 'OCCUPIED') return null;
+
     return this.pos.orders().find(order =>
       order.type === 'TABLE' &&
       order.outletId === table.outletId &&
@@ -1013,13 +1077,23 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   updateBillOrderType(value: 'TABLE' | 'TAKEAWAY' | 'ROOM'): void {
-    const order = this.pos.orders().find(item => item.type === value);
-    this.currentBill.update(bill => this.billDraftForOrder(order, { ...bill, orderType: value }));
+    this.selectedBillingOrder.set(null);
+    this.currentBill.update(bill => ({
+      ...bill,
+      orderId: undefined,
+      orderType: value,
+      tableNo: '',
+      floorId: null,
+      roomId: null,
+      roomNo: '',
+      guestName: ''
+    }));
   }
 
   updateBillOrder(value: number | string): void {
     const order = this.pos.orders().find(item => item.id === Number(value));
     if (!order) return;
+    this.selectedBillingOrder.set(order);
     this.currentBill.update(bill => this.billDraftForOrder(order, bill));
   }
 
@@ -1072,6 +1146,12 @@ export class PosComponent implements OnInit, OnDestroy {
 
   billOrder(bill: Partial<PosBill>): PosOrder | null {
     return this.pos.orders().find(order => order.id === Number(bill.orderId || 0)) || null;
+  }
+
+  billingOrderForDisplay(): PosOrder | null {
+    return this.selectedBillingOrder()
+      || this.billOrder(this.currentBill())
+      || null;
   }
 
   billBreakdown(bill: Partial<PosBill>): BillBreakdown {
@@ -1154,7 +1234,21 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   orderTotal(order: PosOrder | Partial<PosOrder>): number {
+    if (order.totalAmount != null) return Number(order.totalAmount || 0);
     return (order.lines || []).reduce((sum, line) => sum + line.qty * line.price, 0);
+  }
+
+  orderOpenedLabel(order: PosOrder): string {
+    const value = order.createdAt || order.openedAt;
+    if (!value) return 'Just now';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   percent(value: number, total: number): number {
@@ -1238,34 +1332,6 @@ export class PosComponent implements OnInit, OnDestroy {
     })));
   }
 
-  private dashboardTablesFromApi(data: PosDashboardData | null): PosTable[] | null {
-    const pulse = data?.floorPulse;
-    if (!pulse?.totalTables) return null;
-
-    const tables: PosTable[] = [];
-    const addTables = (status: TableStatus, count: number): void => {
-      for (let index = 0; index < count; index++) {
-        const id = tables.length + 1;
-        tables.push({
-          id,
-          outletId: 1,
-          number: `D${String(id).padStart(2, '0')}`,
-          section: 'Dashboard',
-          status,
-          covers: 0,
-          server: 'Unassigned'
-        });
-      }
-    };
-
-    addTables('AVAILABLE', Number(pulse.available || 0));
-    addTables('OCCUPIED', Number(pulse.occupied || 0));
-    addTables('RESERVED', Number(pulse.reserved || 0));
-    addTables('OTHER', Math.max(0, Number(pulse.totalTables || 0) - tables.length));
-
-    return tables;
-  }
-
   private dashboardOrdersFromApi(data: PosDashboardData | null): PosOrder[] | null {
     const queue = data?.kotQueue || [];
     if (!queue.length) return null;
@@ -1347,19 +1413,6 @@ export class PosComponent implements OnInit, OnDestroy {
     ];
   }
 
-  private sampleDashboardTables(): PosTable[] {
-    return [
-      { id: 1, outletId: 1, number: 'T01', section: 'Indoor', status: 'OCCUPIED', covers: 4, server: 'Arjun Menon', guestName: 'Nisha Rao' },
-      { id: 2, outletId: 1, number: 'T02', section: 'Indoor', status: 'AVAILABLE', covers: 0, server: 'Unassigned' },
-      { id: 3, outletId: 1, number: 'T03', section: 'Patio', status: 'RESERVED', covers: 3, server: 'Meena Pillai', guestName: 'Kapoor Family', bookingTime: 'Today, 08:30 PM' },
-      { id: 4, outletId: 1, number: 'T04', section: 'Patio', status: 'OCCUPIED', covers: 2, server: 'Deepa Thomas', guestName: 'Amit Shah' },
-      { id: 5, outletId: 2, number: 'B01', section: 'Bar Counter', status: 'OCCUPIED', covers: 2, server: 'Rajan Mehta', guestName: 'Walk-in Guest' },
-      { id: 6, outletId: 2, number: 'B02', section: 'Lounge', status: 'AVAILABLE', covers: 0, server: 'Unassigned' },
-      { id: 7, outletId: 4, number: 'C01', section: 'Indoor', status: 'RESERVED', covers: 2, server: 'Arjun Menon', guestName: 'Cafe Booking', bookingTime: 'Today, 07:30 PM' },
-      { id: 8, outletId: 4, number: 'C02', section: 'Indoor', status: 'AVAILABLE', covers: 0, server: 'Unassigned' }
-    ];
-  }
-
   private sampleDashboardOrders(): PosOrder[] {
     return [
       { id: 1, outletId: 1, orderNo: 'ORD-1001', type: 'TABLE', tableNo: 'T01', guestName: 'Nisha Rao', server: 'Arjun Menon', status: 'KOT_SENT', kotNo: 'KOT-501', openedAt: '18 min ago', notes: 'Anniversary table', lines: [
@@ -1405,7 +1458,12 @@ export class PosComponent implements OnInit, OnDestroy {
 
   private updateTabFromUrl(url: string): void {
     const last = url.split('/').pop()?.split('?')[0] as PosTab;
-    this.activeTab.set(['dashboard', 'outlets', 'dining', 'orders', 'billing', 'menu', 'billing-setup'].includes(last) ? last : 'dashboard');
+    const tab = ['dashboard', 'outlets', 'dining', 'orders', 'billing', 'menu', 'billing-setup'].includes(last) ? last : 'dashboard';
+    this.activeTab.set(tab);
+    if (tab === 'dining') {
+      const outlet = this.outletFilter();
+      this.pos.loadTables(outlet === 'ALL' ? undefined : Number(outlet));
+    }
     this.search.set('');
     this.statusFilter.set('ALL');
   }

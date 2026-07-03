@@ -770,3 +770,19 @@
     </div>
   </div>
 </div>
+
+<!-- KOT Toast Notification -->
+<div class="kot-toast-wrapper" [class.visible]="kotToast().visible" [attr.role]="kotToast().visible ? 'alert' : null">
+  <div class="kot-toast" [class.success]="kotToast().type === 'success'" [class.error]="kotToast().type === 'error'">
+    <div class="kot-toast-icon">
+      <span class="material-icons-round">{{ kotToast().type === 'success' ? 'check_circle' : 'error' }}</span>
+    </div>
+    <div class="kot-toast-body">
+      <strong>{{ kotToast().title }}</strong>
+      <span>{{ kotToast().message }}</span>
+    </div>
+    <button class="kot-toast-close" (click)="dismissKotToast()" title="Dismiss">
+      <span class="material-icons-round">close</span>
+    </button>
+  </div>
+</div>

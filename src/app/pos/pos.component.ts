@@ -87,6 +87,12 @@ export class PosComponent implements OnInit, OnDestroy {
   isTableOrderDetailOpen = signal(false);
   diningAction = signal<DiningAction | null>(null);
   isDiningActionOpen = signal(false);
+  kotToast = signal<{ visible: boolean; type: 'success' | 'error'; title: string; message: string }>({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: ''
+  });
   deleteTarget = signal<DeleteTarget | null>(null);
   diningForm = signal<{ server: string; covers: number; secondaryTableId: number | null; floorId: number | null; roomId: number | null; roomNo: string; guestName: string; bookingTime: string; notes: string }>({
     server: 'Arjun Menon',
@@ -745,6 +751,21 @@ export class PosComponent implements OnInit, OnDestroy {
 
   updateOrderStatus(order: PosOrder, status: OrderStatus): void {
     this.pos.updateOrderStatus(order.id, status);
+
+    // Show toast notification when KOT is sent
+    if (status === 'KOT_SENT') {
+      this.kotToast.set({
+        visible: true,
+        type: 'success',
+        title: '✅ KOT Sent Successfully',
+        message: 'The kitchen has received this order.'
+      });
+      setTimeout(() => this.dismissKotToast(), 4000);
+    }
+  }
+
+  dismissKotToast(): void {
+    this.kotToast.update(t => ({ ...t, visible: false }));
   }
 
   voidBill(bill: PosBill): void {

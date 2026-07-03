@@ -201,7 +201,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
   constructor(
     private readonly router: Router,
     private readonly inventoryService: InventoryService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.updateTabFromUrl(this.router.url);
@@ -551,7 +551,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
     const draft = this.purchaseRequestDraft();
     const payload = this.purchaseRequestPayload(draft);
     const selected = this.selectedPurchaseRequest();
-    
+
     this.requestSaving.set(true);
     this.requestError.set(null);
 
@@ -954,7 +954,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
 
   private openStoreIssueEditor(issue: StoreIssue): void {
     const itemConfig = this.issueItems().find(item => String(item.id) === String(issue.itemId));
-    
+
     this.selectedStoreIssue.set(issue);
     this.storeIssueDraft.set({
       departmentId: issue.departmentId,

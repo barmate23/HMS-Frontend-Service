@@ -53,7 +53,11 @@ export interface Room {
   floorId: number;
   roomTypeId: number;
   typeId: number; // alias for UI compatibility
-  status: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED' | 'CLEANING';
+  statusId?: number;
+  statusValue?: string;
+  hkStatusId?: number;
+  hkStatusValue?: string;
+  status: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED' | 'CLEANING' | string;
   maxOccupancy: number;
   telephone: string;
   createdAt: string;
@@ -176,8 +180,12 @@ export class HotelMastersService {
         if (results.roomTypes.success) this._roomTypes.set(results.roomTypes.data ?? []);
         if (results.ratePlans.success) this._ratePlans.set(results.ratePlans.data ?? []);
         if (results.rooms.success) {
-          // Normalise: backend uses roomTypeId, UI also needs typeId alias
-          const rooms = (results.rooms.data ?? []).map(r => ({ ...r, typeId: r.roomTypeId }));
+          // Normalise: backend uses roomTypeId, UI also needs typeId alias, map status correctly to stop UI break
+          const rooms = (results.rooms.data ?? []).map((r: any) => ({ 
+            ...r, 
+            typeId: r.roomTypeId,
+            status: r.statusValue ? r.statusValue.toUpperCase() : 'VACANT'
+          }));
           this._rooms.set(rooms);
         }
         this.isLoading.set(false);

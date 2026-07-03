@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { map, switchMap, tap } from 'rxjs';
+import { Observable, map, switchMap, tap } from 'rxjs';
 import { UserManagementService } from '../user-management/user-management.service';
 
 export type PosTab = 'dashboard' | 'outlets' | 'dining' | 'orders' | 'billing' | 'menu' | 'billing-setup';
@@ -551,7 +551,7 @@ export class PosService {
       : `${this.posBaseUrl}/tables/getAllTables`;
     this.tables.set([]);
     this.http.get<ApiDiningTable[] | ApiListResponse<ApiDiningTable> | StandardResponse<ApiDiningTable[]>>(url).subscribe({
-      next: response => this.tables.set(this.listData(response).map(item => this.mapTable(item))),
+      next: response => this.tables.set(this.listData(response).map(item => this.mapTable(item, outletId))),
       error: error => {
         this.tables.set([]);
         this.addAudit('Unable to load dining tables from API', 'Table Dining', error?.error?.message || error?.message || 'API error');
@@ -565,7 +565,7 @@ export class PosService {
       .pipe(map(response => {
         const table = this.itemData(response);
         if (!table) throw new Error(`Table #${id} was not found`);
-        return this.mapTable(table);
+        return this.mapTable(table, this.tablesOutletId);
       }));
   }
 
@@ -733,6 +733,10 @@ export class PosService {
     });
   }
 
+  sendKOT(id: number): Observable<ApiOrder | StandardResponse<ApiOrder>> {
+    return this.http.post<ApiOrder | StandardResponse<ApiOrder>>(`${this.posBaseUrl}/orders/sendKot/${id}`, null);
+  }
+
   updateOrderStatus(id: number, status: OrderStatus): void {
     const normalizedStatus = status.replace(/[_-]+/g, ' ').trim().toUpperCase();
 
@@ -797,7 +801,7 @@ export class PosService {
     request$.subscribe({
       next: response => {
         const responseTable = this.itemData(response);
-        const saved = responseTable ? this.mapTable(responseTable) : table;
+        const saved = responseTable ? this.mapTable(responseTable, table.outletId) : table;
         this.loadTables(this.tablesOutletId);
         this.addAudit(input.id ? 'Dining table updated' : 'Dining table created', 'Table Dining', saved.number);
       },
@@ -928,6 +932,7 @@ export class PosService {
     this.addAudit(input.id ? 'Bill updated' : 'Bill generated', 'Billing', bill.billNo);
   }
 
+
   postBillToRoom(id: number): void {
     this.bills.update(items => items.map(item => item.id === id ? { ...item, postedToFolio: true, status: item.status === 'OPEN' ? 'PARTIAL' : item.status } : item));
     this.addAudit('Posted POS charge to room folio', 'Room Posting', `Bill #${id}`);
@@ -996,10 +1001,10 @@ export class PosService {
     };
   }
 
-  private mapTable(item: ApiDiningTable): PosTable {
+  private mapTable(item: ApiDiningTable, fallbackOutletId?: number): PosTable {
     return {
       id: Number(item.id),
-      outletId: Number(item.outletId || this.outlets()[0]?.id || 1),
+      outletId: Number(item.outletId || fallbackOutletId || this.outlets()[0]?.id || 1),
       number: item.tableNumber || `T${item.id}`,
       section: item.sectionName || '',
       status: this.asTableStatus(item.statusName),

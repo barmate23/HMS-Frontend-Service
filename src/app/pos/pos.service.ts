@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { map, switchMap, tap } from 'rxjs';
 import { UserManagementService } from '../user-management/user-management.service';
 
 export type PosTab = 'dashboard' | 'outlets' | 'dining' | 'orders' | 'billing' | 'menu' | 'billing-setup';
@@ -57,10 +58,12 @@ export interface PosTable {
 }
 
 export interface PosOrderLine {
+  id?: number;
   itemId: number;
   name: string;
   qty: number;
   price: number;
+  subtotal?: number;
   course: string;
   notes: string;
 }
@@ -68,18 +71,25 @@ export interface PosOrderLine {
 export interface PosOrder {
   id: number;
   outletId: number;
+  outletName?: string;
   orderNo: string;
   type: OrderType;
   floorId?: number | null;
   roomId?: number | null;
+  tableId?: number | null;
   tableNo?: string;
   roomNo?: string;
   guestName?: string;
+  serverId?: number;
   server: string;
+  statusId?: number;
   status: OrderStatus;
   kotNo?: string;
   openedAt: string;
   notes: string;
+  totalAmount?: number;
+  createdAt?: string;
+  updatedAt?: string;
   lines: PosOrderLine[];
 }
 
@@ -243,6 +253,7 @@ interface ApiMenuItem {
 }
 
 interface ApiOrderLine {
+  id?: number;
   itemId?: number;
   menuId?: number;
   menuItemId?: number;
@@ -251,6 +262,7 @@ interface ApiOrderLine {
   qty?: number;
   price?: number;
   rate?: number;
+  subtotal?: number;
   course?: string;
   notes?: string;
 }
@@ -259,6 +271,8 @@ interface ApiOrder {
   id: number;
   outletId?: number;
   outletName?: string;
+  orderTypeId?: number | null;
+  orderTypeName?: string | null;
   orderNo?: string;
   orderNumber?: string;
   orderType?: OrderType;
@@ -275,15 +289,20 @@ interface ApiOrder {
   serverName?: string;
   orderTakerId?: number;
   orderTakerName?: string;
+  covers?: number | null;
+  statusId?: number;
   status?: OrderStatus;
   statusName?: OrderStatus;
   kotNo?: string;
   kotNumber?: string;
   openedAt?: string;
   notes?: string;
+  totalAmount?: number;
   orderLines?: ApiOrderLine[];
   lines?: ApiOrderLine[];
   items?: ApiOrderLine[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface StandardResponse<T = any> {
@@ -312,6 +331,7 @@ export class PosService {
   private readonly userManagement = inject(UserManagementService);
   private readonly posBaseUrl = '/api/hmsService/v1/pos';
   private readonly hmsBaseUrl = '/api/hmsService/v1';
+  private tablesOutletId?: number;
   private readonly defaultOutletTypes: OutletType[] = ['Restaurant', 'Bar', 'Cafe', 'Spa', 'Gift Shop', 'Room Service', 'Mini Bar'];
   private readonly defaultShiftSchedules: string[] = ['09:00 AM - 09:00 PM', '07:00 AM - 11:00 PM', '05:00 PM - 01:00 AM', '24 Hours'];
   private readonly defaultTableStatuses: TableStatus[] = ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'BILLED', 'MOPPING', 'DIRTY'];
@@ -525,13 +545,28 @@ export class PosService {
   }
 
   loadTables(outletId?: number): void {
+    this.tablesOutletId = outletId;
     const url = outletId
       ? `${this.posBaseUrl}/tables/getAllTables?outletId=${outletId}`
       : `${this.posBaseUrl}/tables/getAllTables`;
+    this.tables.set([]);
     this.http.get<ApiDiningTable[] | ApiListResponse<ApiDiningTable> | StandardResponse<ApiDiningTable[]>>(url).subscribe({
       next: response => this.tables.set(this.listData(response).map(item => this.mapTable(item))),
-      error: error => this.addAudit('Unable to load dining tables from API', 'Table Dining', error?.error?.message || error?.message || 'API error')
+      error: error => {
+        this.tables.set([]);
+        this.addAudit('Unable to load dining tables from API', 'Table Dining', error?.error?.message || error?.message || 'API error');
+      }
     });
+  }
+
+  getTableById(id: number) {
+    return this.http
+      .get<ApiDiningTable | StandardResponse<ApiDiningTable>>(`${this.posBaseUrl}/tables/getTableById/${id}`)
+      .pipe(map(response => {
+        const table = this.itemData(response);
+        if (!table) throw new Error(`Table #${id} was not found`);
+        return this.mapTable(table);
+      }));
   }
 
   loadMenuItems(outletId?: number): void {
@@ -552,6 +587,21 @@ export class PosService {
       next: response => this.orders.set(this.listData(response).map(item => this.mapOrder(item))),
       error: error => this.addAudit('Unable to load orders from API', 'Orders', error?.error?.message || error?.message || 'API error')
     });
+  }
+
+  getActiveOrders(tableId: number) {
+    return this.http.get<ApiOrder[] | ApiListResponse<ApiOrder> | StandardResponse<ApiOrder[]>>(`${this.posBaseUrl}/orders/getActiveOrders?tableId=${tableId}`).pipe(
+      map(response => this.listData(response).map(item => this.mapOrder(item))),
+      tap(activeOrders => {
+        this.orders.update(items => {
+          const activeIds = new Set(activeOrders.map(order => order.id));
+          return [
+            ...activeOrders,
+            ...items.filter(order => !activeIds.has(order.id))
+          ];
+        });
+      })
+    );
   }
 
   loadPosDashboard(): void {
@@ -684,8 +734,46 @@ export class PosService {
   }
 
   updateOrderStatus(id: number, status: OrderStatus): void {
-    this.orders.update(items => items.map(item => item.id === id ? { ...item, status, kotNo: status === 'KOT_SENT' ? item.kotNo || `KOT-${500 + id}` : item.kotNo } : item));
-    this.addAudit(`Order marked ${status}`, 'Orders', `ORD-${1000 + id}`);
+    const normalizedStatus = status.replace(/[_-]+/g, ' ').trim().toUpperCase();
+
+    this.http
+      .get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/ORDER_STATUS`)
+      .pipe(
+        map(response => {
+          const statusMaster = this.commonMastersData(response).find(item => {
+            const masterStatus = String(item.value || item.code || '')
+              .replace(/[_-]+/g, ' ')
+              .trim()
+              .toUpperCase();
+            return masterStatus === normalizedStatus;
+          });
+          const statusId = Number(statusMaster?.id);
+
+          if (!statusMaster || !Number.isFinite(statusId) || statusId <= 0) {
+            throw new Error(`${normalizedStatus} was not found in ORDER_STATUS`);
+          }
+
+          return statusId;
+        }),
+        switchMap(statusId => this.http.patch<ApiOrder | StandardResponse<ApiOrder>>(
+          `${this.posBaseUrl}/orders/updateOrderStatus/${id}?statusId=${statusId}`,
+          null
+        ))
+      )
+      .subscribe({
+        next: () => {
+          this.orders.update(items => items.map(item => item.id === id
+            ? { ...item, status, kotNo: status === 'KOT_SENT' ? item.kotNo || `KOT-${500 + id}` : item.kotNo }
+            : item));
+          this.loadOrders();
+          this.addAudit(`Order marked ${normalizedStatus}`, 'Orders', `ORD-${1000 + id}`);
+        },
+        error: error => this.addAudit(
+          `Order status update failed`,
+          'Orders',
+          error?.error?.message || error?.message || `ORD-${1000 + id}`
+        )
+      });
   }
 
   saveTable(input: PosTable): void {
@@ -710,7 +798,7 @@ export class PosService {
       next: response => {
         const responseTable = this.itemData(response);
         const saved = responseTable ? this.mapTable(responseTable) : table;
-        this.loadTables();
+        this.loadTables(this.tablesOutletId);
         this.addAudit(input.id ? 'Dining table updated' : 'Dining table created', 'Table Dining', saved.number);
       },
       error: error => this.addAudit(input.id ? 'Dining table update failed' : 'Dining table create failed', 'Table Dining', error?.error?.message || error?.message || table.number)
@@ -722,7 +810,7 @@ export class PosService {
     this.http.delete<void>(`${this.posBaseUrl}/tables/deleteTable/${id}`).subscribe({
       next: () => {
         this.tables.update(items => items.filter(item => item.id !== id));
-        this.loadTables();
+        this.loadTables(this.tablesOutletId);
         if (table) this.addAudit('Dining table deleted', 'Table Dining', table.number);
       },
       error: error => this.addAudit('Dining table delete failed', 'Table Dining', error?.error?.message || error?.message || `Table #${id}`)
@@ -1004,18 +1092,25 @@ export class PosService {
     return {
       id: Number(item.id),
       outletId: Number(item.outletId || this.outlets()[0]?.id || 1),
+      outletName: item.outletName || '',
       orderNo: item.orderNo || item.orderNumber || `ORD-${item.id}`,
       type,
       floorId: item.floorId || null,
       roomId: item.roomId || null,
+      tableId: item.tableId || null,
       tableNo: item.tableNo || item.tableNumber || '',
       roomNo: item.roomNo || item.roomNumber || '',
       guestName: item.guestName || '',
+      serverId: item.serverId,
       server: item.serverName || item.orderTakerName || 'Unassigned',
+      statusId: item.statusId,
       status: item.statusName || item.status || 'OPEN',
       kotNo: item.kotNo || item.kotNumber || '',
-      openedAt: item.openedAt || 'Just now',
+      openedAt: item.openedAt || item.createdAt || 'Just now',
       notes: item.notes || '',
+      totalAmount: item.totalAmount,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
       lines: lines.map(line => this.mapOrderLine(line))
     };
   }
@@ -1025,10 +1120,12 @@ export class PosService {
     const menuItem = this.menuItems().find(item => item.id === itemId);
 
     return {
+      id: line.id ? Number(line.id) : undefined,
       itemId,
       name: line.itemName || menuItem?.name || 'Menu Item',
       qty: Number(line.quantity || line.qty || 1),
       price: Number(line.price || line.rate || menuItem?.price || 0),
+      subtotal: line.subtotal ? Number(line.subtotal) : undefined,
       course: line.course || menuItem?.subcategory || 'Main',
       notes: line.notes || ''
     };
@@ -1048,22 +1145,26 @@ export class PosService {
       type: item.type,
       floorId: item.floorId || null,
       roomId: item.roomId || null,
-      tableId: table?.id,
+      tableId: item.tableId || table?.id,
       tableNo: item.tableNo || '',
       tableNumber: item.tableNo || '',
       roomNo: item.roomNo || '',
       roomNumber: item.roomNo || '',
       guestName: item.guestName || '',
-      serverId: server?.id,
+      serverId: item.serverId || server?.id,
       serverName: item.server,
       orderTakerId: server?.id,
       orderTakerName: item.server,
+      statusId: item.statusId,
       status: item.status,
       statusName: item.status,
       kotNo: item.kotNo || '',
       kotNumber: item.kotNo || '',
       openedAt: item.openedAt,
       notes: item.notes,
+      totalAmount: item.totalAmount,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
       orderLines: lines,
       lines,
       items: lines
@@ -1072,6 +1173,7 @@ export class PosService {
 
   private toApiOrderLine(line: PosOrderLine): ApiOrderLine {
     return {
+      id: line.id,
       itemId: line.itemId,
       menuId: line.itemId,
       menuItemId: line.itemId,
@@ -1080,6 +1182,7 @@ export class PosService {
       qty: Number(line.qty || 1),
       price: Number(line.price || 0),
       rate: Number(line.price || 0),
+      subtotal: Number(line.subtotal || (line.qty || 1) * (line.price || 0)),
       course: line.course,
       notes: line.notes
     };

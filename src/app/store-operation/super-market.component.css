@@ -1,0 +1,14 @@
+.super-market-page { padding: 24px; color: #17212b; }
+header { margin-bottom: 20px; }
+h1, h2, p { margin: 0; }
+header p, .item-card > p { margin-top: 6px; color: #667085; }
+.item-grid { display: grid; gap: 14px; }
+.item-card { padding: 16px; border: 1px solid #e4e7ec; border-radius: 10px; background: #fff; }
+.item-heading, footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.item-heading h2 { font-size: 16px; }
+.item-heading small { color: #667085; }
+.item-heading > span { padding: 5px 9px; border-radius: 999px; background: #eef4ff; color: #3538cd; font-size: 11px; font-weight: 700; }
+.item-heading > span.replenish { background: #fff1f3; color: #c01048; }
+.progress { height: 7px; margin: 14px 0 9px; overflow: hidden; border-radius: 999px; background: #eaecf0; }
+.progress i { display: block; height: 100%; border-radius: inherit; background: #1570ef; }
+footer { color: #475467; font-size: 12px; }

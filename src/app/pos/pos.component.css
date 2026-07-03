@@ -127,6 +127,11 @@
   max-width: 160px;
 }
 
+.table-outlet-filter {
+  min-width: 190px;
+  max-width: 220px;
+}
+
 .btn-primary {
   display: flex;
   align-items: center;
@@ -1253,8 +1258,16 @@
 }
 
 .table-order-detail.popup-detail {
-  padding: 0;
+  padding: 0 0 16px;
   overflow: visible;
+  border-bottom: 1px solid var(--surface-200);
+  margin-bottom: 16px;
+}
+
+.table-order-detail.popup-detail:last-child {
+  border-bottom: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .table-order-heading,
@@ -1667,6 +1680,10 @@
   border-bottom: 1px solid var(--surface-100);
   font-size: 11px;
   font-weight: 700;
+}
+
+.bill-line-row.order-pricing-row {
+  grid-template-columns: minmax(220px, 1fr) 70px 120px 130px;
 }
 
 .bill-line-row.head {

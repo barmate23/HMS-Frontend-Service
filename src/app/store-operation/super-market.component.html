@@ -1,0 +1,26 @@
+<section class="super-market-page">
+  <header>
+    <div>
+      <h1>Super Market</h1>
+      <p>Line-store material requirements and replenishment status.</p>
+    </div>
+  </header>
+
+  <div class="item-grid">
+    <article class="item-card" *ngFor="let item of items()">
+      <div class="item-heading">
+        <div>
+          <h2>{{ item.name }}</h2>
+          <small>{{ item.code }} · {{ item.storeName }} · {{ item.storeLine }}</small>
+        </div>
+        <span [class.replenish]="item.status === 'REPLENISH'">{{ item.status }}</span>
+      </div>
+      <p>{{ item.planId }} · {{ item.planDate }}</p>
+      <div class="progress"><i [style.width]="progressWidth(item.issued, item.required)"></i></div>
+      <footer>
+        <span>Issued {{ item.issued }} / {{ item.required }}</span>
+        <span>Bin {{ item.activeBinQty }} / {{ item.binCapacity }}</span>
+      </footer>
+    </article>
+  </div>
+</section>

@@ -489,20 +489,123 @@ button {
   font-weight: 800;
 }
 
-.ledger-row i {
+.simplified-table,
+.data-table {
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.simplified-head,
+.simplified-row {
+  display: grid;
+  grid-template-columns: 100px 120px minmax(180px, 1fr) 100px 80px 100px;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+}
+
+.simplified-head,
+.table-head {
+  background: #fbfaf7;
+  color: var(--surface-600);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.simplified-row {
+  min-height: 48px;
+  border-top: 1px solid var(--surface-200);
+  color: var(--surface-800);
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.simplified-row strong {
+  display: block;
+  color: var(--surface-800);
+  font-size: 10.5px;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.simplified-row small {
+  display: block;
+  margin-top: 3px;
+  color: var(--surface-500);
+  font-size: 8.5px;
+  line-height: 1.15;
+  font-weight: 800;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.simplified-row i {
   width: 8px;
   height: 8px;
   display: inline-block;
   border-radius: 2px;
-  margin-right: 5px;
   background: #0a82c4;
 }
 
-.ledger-row i.pos { background: #dc7a28; }
-.ledger-row i.laundry { background: #15956f; }
-.ledger-row i.discount { background: #2c9d50; }
-.ledger-row i.service { background: #c57650; }
-.ledger-row i.adjustment { background: #5b6675; }
+.simplified-row i.pos { background: #dc7a28; }
+.simplified-row i.laundry { background: #15956f; }
+.simplified-row i.discount { background: #2c9d50; }
+.simplified-row i.service { background: #c57650; }
+.simplified-row i.adjustment { background: #5b6675; }
+
+.simplified-totals {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  border-top: 1px solid var(--surface-200);
+  background: #fbfaf7;
+  padding: 12px 16px;
+  gap: 8px;
+}
+
+.simplified-totals div {
+  width: 260px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.simplified-totals span {
+  color: var(--surface-500);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.simplified-totals strong {
+  color: var(--primary-color);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: right;
+  min-width: 90px;
+}
+
+.final-balance {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--surface-200);
+}
+.final-balance strong {
+  font-size: 16px;
+  color: #b14f2f;
+}
+.final-balance.settled strong {
+  color: #138764;
+}
 
 .ledger-totals {
   display: grid;

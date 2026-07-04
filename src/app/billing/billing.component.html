@@ -89,10 +89,10 @@
       </div>
 
       <div class="folio-summary">
-        <div><span>Charges</span><strong>{{ formatINR(selectedCharges()) }}</strong></div>
-        <div><span>Payments</span><strong>{{ formatINR(selectedCredits()) }}</strong></div>
-        <div><span>Tax</span><strong>{{ formatINR(selectedTax()) }}</strong></div>
-        <div><span>Credit Limit</span><strong>{{ formatINR(folio.creditLimit) }}</strong></div>
+        <div><span>Services Consumed</span><strong>{{ formatINR(selectedCharges()) }}</strong></div>
+        <div><span>Taxes Applied</span><strong>{{ formatINR(selectedTax()) }}</strong></div>
+        <div><span>Total Bill</span><strong>{{ formatINR(selectedTotalAmount()) }}</strong></div>
+        <div><span>Advance Payments</span><strong class="credit">{{ formatINR(selectedCredits()) }}</strong></div>
       </div>
 
       <div class="folio-actions">
@@ -110,27 +110,30 @@
         </button>
       </div>
 
-      <div class="ledger-table" *ngIf="folioAction() === 'ledger'">
-        <div class="ledger-head">
-          <span>Date</span><span>Source</span><span>Description</span><span>Debit</span><span>GST</span><span>Credit</span>
+      <div class="simplified-table" *ngIf="folioAction() === 'ledger'">
+        <div class="simplified-head">
+          <span>Date</span><span>Category</span><span>Service Details</span><span style="text-align: right;">Net Amount</span><span style="text-align: right;">Tax</span><span style="text-align: right;">Total</span>
         </div>
-        <div class="ledger-row" *ngFor="let line of selectedLines()">
-          <span>{{ line.date }}</span>
-          <span><i [ngClass]="line.source.toLowerCase().replace(' ', '-')"></i>{{ line.source }}</span>
-          <span>
-            <strong>{{ line.description }}</strong>
-            <small>{{ line.reference }} • {{ line.user }}<ng-container *ngIf="line.taxCode"> • {{ line.taxCode }}</ng-container></small>
-          </span>
-          <span>{{ line.debit ? formatINR(line.debit) : '-' }}</span>
-          <span>{{ line.gst ? formatINR(line.gst) : '-' }}</span>
-          <span class="credit">{{ line.credit ? formatINR(line.credit) : '-' }}</span>
-        </div>
-        <div class="ledger-totals">
-          <div><span>Net Amount</span><strong>{{ formatINR(selectedNetAmount()) }}</strong></div>
-          <div><span>Tax</span><strong>{{ formatINR(selectedTax()) }}</strong></div>
-          <div><span>Total Amount</span><strong>{{ formatINR(selectedTotalAmount()) }}</strong></div>
-          <div><span>Payments</span><strong class="credit">{{ formatINR(selectedCredits()) }}</strong></div>
-          <div><span>Balance</span><strong [class.credit]="selectedBalance() <= 0">{{ formatINR(selectedBalance()) }}</strong></div>
+        
+        <ng-container *ngFor="let line of selectedLines()">
+          <!-- Only list the actual charges/services consumed in the main body -->
+          <div class="simplified-row" *ngIf="line.debit || line.gst">
+            <span>{{ line.date }}</span>
+            <span><i [ngClass]="line.source.toLowerCase().replace(' ', '-')"></i>{{ line.source }}</span>
+            <span>
+              <strong>{{ line.description || line.source }}</strong>
+              <small>{{ line.reference || 'System' }} • {{ line.user }}<ng-container *ngIf="line.taxCode"> • {{ line.taxCode }}</ng-container></small>
+            </span>
+            <span style="text-align: right; font-weight: 700; color: #4b5563;">{{ formatINR(line.debit || 0) }}</span>
+            <span style="text-align: right; font-weight: 700; color: #6b7280;">{{ formatINR(line.gst || 0) }}</span>
+            <span style="text-align: right; font-weight: 800; color: #111827;">{{ formatINR((line.debit || 0) + (line.gst || 0)) }}</span>
+          </div>
+        </ng-container>
+
+        <div class="simplified-totals">
+          <div><span>Total Consumption Amount</span><strong>{{ formatINR(selectedTotalAmount()) }}</strong></div>
+          <div><span>Advance Paid By Guest</span><strong class="credit">- {{ formatINR(selectedCredits()) }}</strong></div>
+          <div><span>Balance Outstanding</span><strong [class.credit]="selectedBalance() <= 0">{{ formatINR(selectedBalance()) }}</strong></div>
         </div>
       </div>
 

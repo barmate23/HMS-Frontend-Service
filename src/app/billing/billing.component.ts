@@ -13,10 +13,11 @@ import {
   SupplierPayload,
   VendorBillPayload
 } from '../purchase/purchase.service';
+import { BillingService, FolioLedgerDTO, InvoiceDTO } from './billing.service';
 
 type BillingTab = 'folios' | 'payments' | 'invoices' | 'refunds' | 'inward' | 'bills';
 type FolioStatus = 'Open' | 'Due Out' | 'Settled' | 'Hold';
-type ChargeType = 'Room' | 'POS' | 'Laundry' | 'Discount' | 'Service Charge' | 'Adjustment';
+type ChargeType = 'Room' | 'POS' | 'Laundry' | 'Discount' | 'Service Charge' | 'Adjustment' | 'Payment' | 'Reservation';
 type PaymentMode = 'Cash' | 'Card' | 'UPI' | 'Bank Transfer' | 'Company Credit';
 type InvoiceStatus = 'Draft' | 'Issued' | 'Paid' | 'Void';
 type BillStatus = 'Pending' | 'Approved' | 'Paid' | 'Disputed';
@@ -163,6 +164,10 @@ interface Folio {
   status: FolioStatus;
   creditLimit: number;
   lines: FolioLine[];
+  totalCharges: number;
+  totalPayments: number;
+  taxAmount: number;
+  balance: number;
 }
 
 interface Invoice {
@@ -247,60 +252,9 @@ export class BillingComponent implements OnInit, OnDestroy {
   readonly paymentModes: PaymentMode[] = ['Cash', 'Card', 'UPI', 'Bank Transfer', 'Company Credit'];
   readonly taxCodes = ['GST 0%', 'GST 5%', 'GST 12%', 'GST 18%'];
 
-  folios = signal<Folio[]>([
-    {
-      id: 1001,
-      folioNo: 'FOL-1001',
-      reservationNo: 'RES-2407',
-      room: '101',
-      guest: 'Akshay Barmate',
-      company: 'Helixion Technologies',
-      checkIn: '2026-06-12',
-      checkOut: '2026-06-16',
-      status: 'Due Out',
-      creditLimit: 25000,
-      lines: [
-        { id: 1, date: '2026-06-12', source: 'Room', reference: 'NIGHT-01', description: 'Deluxe room rent', debit: 4500, credit: 0, gst: 540, taxCode: 'GST 12%', user: 'Front Desk' },
-        { id: 3, date: '2026-06-13', source: 'POS', reference: 'POS-883', description: 'Restaurant dinner posting', debit: 1860, credit: 0, gst: 93, taxCode: 'GST 5%', user: 'POS Outlet' },
-        { id: 4, date: '2026-06-13', source: 'Laundry', reference: 'LND-1002', description: 'Laundry guest order', debit: 550, credit: 0, gst: 28, taxCode: 'GST 5%', user: 'Laundry Desk' },
-        { id: 5, date: '2026-06-13', source: 'Room', reference: 'ADV-001', description: 'Advance received', debit: 0, credit: 5000, gst: 0, user: 'Cashier' }
-      ]
-    },
-    {
-      id: 1002,
-      folioNo: 'FOL-1002',
-      reservationNo: 'RES-2408',
-      room: '205',
-      guest: 'Priya Shah',
-      checkIn: '2026-06-14',
-      checkOut: '2026-06-17',
-      status: 'Open',
-      creditLimit: 18000,
-      lines: [
-        { id: 1, date: '2026-06-14', source: 'Room', reference: 'NIGHT-01', description: 'Luxury room rent', debit: 5200, credit: 0, gst: 624, taxCode: 'GST 12%', user: 'System' }
-      ]
-    },
-    {
-      id: 1003,
-      folioNo: 'FOL-1003',
-      reservationNo: 'RES-2398',
-      room: '304',
-      guest: 'Rahul Mehta',
-      checkIn: '2026-06-10',
-      checkOut: '2026-06-14',
-      status: 'Settled',
-      creditLimit: 20000,
-      lines: [
-        { id: 1, date: '2026-06-10', source: 'Room', reference: 'NIGHT-01', description: 'Suite room rent', debit: 7800, credit: 0, gst: 1404, taxCode: 'GST 18%', user: 'System' },
-        { id: 2, date: '2026-06-14', source: 'Room', reference: 'PAY-118', description: 'Card settlement', debit: 0, credit: 9204, gst: 0, user: 'Cashier' }
-      ]
-    }
-  ]);
+  folios = signal<Folio[]>([]);
 
-  invoices = signal<Invoice[]>([
-    { id: 1, invoiceNo: 'INV-2026-1001', folioNo: 'FOL-1003', guest: 'Rahul Mehta', issuedDate: '2026-06-14', amount: 9204, netAmount: 7800, gstAmount: 1404, paidAmount: 9204, balanceAmount: 0, status: 'Paid', issuedAt: '2026-06-14 10:35', grnNo: 'GRN-3301' },
-    { id: 2, invoiceNo: 'INV-DRAFT-1001', folioNo: 'FOL-1001', guest: 'Akshay Barmate', issuedDate: '', amount: 7571, netAmount: 6910, gstAmount: 661, paidAmount: 5000, balanceAmount: 2571, status: 'Draft', issuedAt: 'Not issued' }
-  ]);
+  invoices = signal<Invoice[]>([]);
 
   refunds = signal<Refund[]>([
     { id: 1, folioNo: 'FOL-0998', guest: 'Nisha Rao', amount: 1200, mode: 'UPI', reason: 'Duplicate advance', status: 'Processed' },
@@ -414,7 +368,8 @@ export class BillingComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly router: Router,
-    private readonly purchaseService: PurchaseService
+    private readonly purchaseService: PurchaseService,
+    private readonly billingService: BillingService
   ) {}
 
   ngOnInit(): void {
@@ -426,11 +381,116 @@ export class BillingComponent implements OnInit, OnDestroy {
     this.loadVendorBills();
     this.loadGrns();
     this.loadVendorBillReferenceData();
+    this.loadFolios();
+    this.loadInvoices();
   }
 
   ngOnDestroy(): void {
     this.routerSub?.unsubscribe();
   }
+
+  loadFolios(): void {
+    this.billingService.getActiveFolios().subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          const apiFolios = res.data.map(dto => this.mapFolio(dto));
+          
+          const mockFolio: Folio = {
+            id: 9999,
+            folioNo: 'FOL-DEMO-001',
+            reservationNo: 'RES-X10',
+            room: '101 King Suite',
+            guest: 'Mr. John Doe',
+            company: 'Acme Corp',
+            checkIn: '2026-07-01',
+            checkOut: '2026-07-04',
+            status: 'Open',
+            creditLimit: 0,
+            totalCharges: 11500,
+            taxAmount: 1470,
+            totalPayments: 5000,
+            balance: 7970,
+            lines: [
+              { id: 1, date: '2026-07-01', source: 'Payment', reference: 'UPI-987654321', description: 'Advance Payment', debit: 0, gst: 0, credit: 5000, user: 'Reception' },
+              { id: 2, date: '2026-07-01', source: 'Room', reference: 'SYS-N1', description: 'Room charges - Night 1', debit: 5000, gst: 600, credit: 0, user: 'System' },
+              { id: 3, date: '2026-07-02', source: 'POS', reference: 'KOT-104', description: 'In-Room Dining', debit: 1500, gst: 270, credit: 0, user: 'Restaurant' },
+              { id: 4, date: '2026-07-02', source: 'Room', reference: 'SYS-N2', description: 'Room charges - Night 2', debit: 5000, gst: 600, credit: 0, user: 'System' }
+            ]
+          };
+
+          this.folios.set([mockFolio, ...apiFolios]);
+
+          if (this.folios().length) {
+            this.selectedFolioId.set(this.folios()[0].id);
+            this.syncPaymentAmount();
+            
+            // Only trigger API if it's not our mock
+            if (this.folios()[0].id !== 9999) {
+               this.selectFolio(this.folios()[0].id);
+            }
+          }
+        }
+      },
+      error: (err) => console.error('Failed to fetch folios', err)
+    });
+  }
+
+  loadInvoices(): void {
+    this.billingService.getAllInvoices().subscribe({
+      next: (res) => {
+        this.invoices.set(res.map(dto => this.mapInvoice(dto)));
+      },
+      error: (err) => console.error('Failed to fetch invoices', err)
+    });
+  }
+
+  private mapFolio(dto: FolioLedgerDTO): Folio {
+    return {
+      id: dto.folioId,
+      folioNo: dto.folioNumber,
+      reservationNo: dto.reservationNumber,
+      room: dto.roomNumber,
+      guest: dto.guestName,
+      checkIn: '',
+      checkOut: '',
+      status: dto.status as FolioStatus,
+      creditLimit: 0,
+      totalCharges: dto.totalCharges || 0,
+      totalPayments: dto.totalPayments || 0,
+      taxAmount: dto.taxAmount || 0,
+      balance: dto.balance || 0,
+      lines: (dto.entries || []).map((e, idx) => ({
+        id: idx + 1,
+        date: new Date(e.date).toISOString().slice(0, 10),
+        source: e.source as ChargeType,
+        reference: '',
+        description: e.description,
+        debit: e.debit || 0,
+        credit: e.credit || e.paid || 0,
+        gst: e.tax || 0,
+        user: 'System'
+      }))
+    };
+  }
+
+  private mapInvoice(dto: InvoiceDTO): Invoice {
+    return {
+      id: dto.id,
+      invoiceNo: dto.invoiceNumber,
+      folioNo: dto.folioNumber,
+      guest: dto.guestName,
+      issuedDate: new Date(dto.date).toISOString().slice(0, 10),
+      amount: dto.amount || 0,
+      netAmount: dto.amount || 0,
+      gstAmount: 0,
+      paidAmount: dto.status === 'Paid' ? dto.amount : 0,
+      balanceAmount: dto.status === 'Paid' ? 0 : dto.amount,
+      status: dto.status as InvoiceStatus,
+      issuedAt: dto.date,
+      grnNo: undefined
+    };
+  }
+
 
   readonly filteredFolios = computed(() => {
     const q = this.search().toLowerCase().trim();
@@ -457,9 +517,8 @@ export class BillingComponent implements OnInit, OnDestroy {
   readonly selectedBalance = computed(() => this.balanceFor(this.selectedFolio()));
   readonly selectedCharges = computed(() => this.debitFor(this.selectedFolio()));
   readonly selectedCredits = computed(() => this.creditFor(this.selectedFolio()));
-  readonly selectedTax = computed(() => this.selectedLines().reduce((sum, line) => sum + line.gst, 0));
-  readonly selectedNetAmount = computed(() => this.selectedLines()
-    .reduce((sum, line) => sum + line.debit, 0));
+  readonly selectedTax = computed(() => this.gstFor(this.selectedFolio()));
+  readonly selectedNetAmount = computed(() => this.debitFor(this.selectedFolio()));
   readonly selectedTotalAmount = computed(() => this.selectedNetAmount() + this.selectedTax());
 
   readonly summary = computed(() => {
@@ -522,6 +581,21 @@ export class BillingComponent implements OnInit, OnDestroy {
   selectFolio(id: number): void {
     this.selectedFolioId.set(id);
     this.syncPaymentAmount();
+    
+    // Prevent API call for our mock folio
+    if (id === 9999) return;
+    
+    // Fetch detailed ledger and patch the specific folio record
+    this.billingService.getLedger(id).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          const updatedFolio = this.mapFolio(res.data);
+          this.folios.update(folios => folios.map(f => f.id === id ? updatedFolio : f));
+          this.syncPaymentAmount();
+        }
+      },
+      error: (err) => console.error('Failed to fetch ledger details', err)
+    });
   }
 
   setTab(tab: BillingTab): void {
@@ -549,22 +623,20 @@ export class BillingComponent implements OnInit, OnDestroy {
     const draft = this.postingDraft();
     if (!folio || !draft.amount) return;
 
-    const isCredit = draft.source === 'Discount';
-    const line: FolioLine = {
-      id: Date.now(),
-      date: this.today(),
+    this.billingService.postCharge({
+      folioId: folio.id,
       source: draft.source,
-      reference: `${draft.source.slice(0, 3).toUpperCase()}-${Math.floor(Math.random() * 900 + 100)}`,
-      description: draft.description || draft.source,
-      debit: isCredit ? 0 : Number(draft.amount),
-      credit: isCredit ? Number(draft.amount) : 0,
-      gst: isCredit ? 0 : this.calculateGst(Number(draft.amount), draft.taxCode),
-      taxCode: isCredit ? undefined : draft.taxCode,
-      user: 'Cashier'
-    };
-
-    this.folios.update(items => items.map(item => item.id === folio.id ? { ...item, lines: [line, ...item.lines] } : item));
-    this.syncPaymentAmount();
+      amount: draft.amount,
+      taxType: draft.taxCode,
+      description: draft.description || draft.source
+    }).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.loadFolios();
+        }
+      },
+      error: (err) => console.error('Failed to post charge', err)
+    });
   }
 
   postPayment(): void {
@@ -572,33 +644,41 @@ export class BillingComponent implements OnInit, OnDestroy {
     const draft = this.paymentDraft();
     if (!folio || !draft.amount) return;
 
-    const line: FolioLine = {
-      id: Date.now(),
-      date: this.today(),
-      source: 'Room',
-      reference: draft.reference || `PAY-${Math.floor(Math.random() * 900 + 100)}`,
-      description: `${draft.mode} payment${draft.note ? ` - ${draft.note}` : ''}`,
-      debit: 0,
-      credit: Number(draft.amount),
-      gst: 0,
-      user: 'Cashier'
-    };
-
-    this.folios.update(items => items.map(item => item.id === folio.id ? { ...item, lines: [line, ...item.lines] } : item));
-    this.paymentDraft.set({ mode: draft.mode, amount: Math.max(0, this.balanceFor(this.selectedFolio())), reference: '', note: '' });
-    const updatedFolio = this.folios().find(item => item.id === folio.id);
-    if (updatedFolio && this.balanceFor(updatedFolio) <= 0) {
-      this.folios.update(items => items.map(item => item.id === folio.id ? { ...item, status: 'Settled' } : item));
-      this.createInvoiceForFolio(updatedFolio, true);
-      this.setTab('invoices');
-    }
+    this.billingService.collectPayment({
+      folioId: folio.id,
+      mode: draft.mode,
+      amount: draft.amount,
+      referenceNumber: draft.reference,
+      notes: draft.note
+    }).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.paymentDraft.set({ mode: draft.mode, amount: 0, reference: '', note: '' });
+          this.loadFolios();
+          this.loadInvoices();
+          
+          if (this.balanceFor(folio) - draft.amount <= 0) {
+            this.setTab('invoices');
+          }
+        }
+      },
+      error: (err) => console.error('Failed to post payment', err)
+    });
   }
 
   issueInvoice(): void {
     const folio = this.selectedFolio();
     if (!folio) return;
-    const invoice = this.createInvoiceForFolio(folio, this.balanceFor(folio) <= 0);
-    this.viewInvoice(invoice);
+    this.billingService.generateInvoice(folio.id).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.loadFolios();
+          this.loadInvoices();
+          this.setTab('invoices');
+        }
+      },
+      error: (err) => console.error('Failed to generate invoice', err)
+    });
   }
 
   requestRefund(): void {
@@ -620,9 +700,7 @@ export class BillingComponent implements OnInit, OnDestroy {
   markSettled(): void {
     const folio = this.selectedFolio();
     if (!folio || this.balanceFor(folio) !== 0) return;
-    this.folios.update(items => items.map(item => item.id === folio.id ? { ...item, status: 'Settled' } : item));
-    this.createInvoiceForFolio(folio, true);
-    this.setTab('invoices');
+    this.issueInvoice();
   }
 
   viewInvoice(invoice: Invoice): void {
@@ -693,19 +771,20 @@ export class BillingComponent implements OnInit, OnDestroy {
   }
 
   debitFor(folio?: Folio): number {
-    return (folio?.lines || []).reduce((sum, line) => sum + line.debit, 0);
+    return folio?.totalCharges || 0;
   }
 
   creditFor(folio?: Folio): number {
-    return (folio?.lines || []).reduce((sum, line) => sum + line.credit, 0);
+    return folio?.totalPayments || 0;
   }
 
   balanceFor(folio?: Folio): number {
-    return this.debitFor(folio) + this.gstFor(folio) - this.creditFor(folio);
+    if (!folio) return 0;
+    return folio.totalCharges + folio.taxAmount - folio.totalPayments;
   }
 
   gstFor(folio?: Folio): number {
-    return (folio?.lines || []).reduce((sum, line) => sum + line.gst, 0);
+    return folio?.taxAmount || 0;
   }
 
   formatINR(value: number): string {

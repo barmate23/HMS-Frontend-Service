@@ -85,8 +85,15 @@ export class PosComponent implements OnInit, OnDestroy {
   activeTableOrdersError = signal('');
   tableOrderEditMode = signal(false);
   isTableOrderDetailOpen = signal(false);
+  billingError = signal<string>('');
   diningAction = signal<DiningAction | null>(null);
   isDiningActionOpen = signal(false);
+  kotToast = signal<{ visible: boolean; type: 'success' | 'error'; title: string; message: string }>({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: ''
+  });
   deleteTarget = signal<DeleteTarget | null>(null);
   diningForm = signal<{ server: string; covers: number; secondaryTableId: number | null; floorId: number | null; roomId: number | null; roomNo: string; guestName: string; bookingTime: string; notes: string }>({
     server: 'Arjun Menon',
@@ -146,7 +153,10 @@ export class PosComponent implements OnInit, OnDestroy {
   readonly dashboardMenuItems = computed(() => this.sampleDashboardMenuItems());
   readonly dashboardTables = computed(() => this.pos.tables());
   readonly dashboardOrders = computed(() => this.dashboardOrdersFromApi(this.pos.posDashboard()) || this.sampleDashboardOrders());
-  readonly dashboardBills = computed(() => this.sampleDashboardBills());
+  readonly dashboardBills = computed(() => {
+    const liveBills = this.pos.bills();
+    return liveBills.length ? liveBills : this.sampleDashboardBills();
+  });
   readonly dashboardAuditLogs = computed(() => this.dashboardActivityFromApi(this.pos.posDashboard()) || this.sampleDashboardAuditLogs());
 
   stats = computed(() => {
@@ -589,6 +599,7 @@ export class PosComponent implements OnInit, OnDestroy {
       this.selectedBillingOrder.set(null);
     }
     if (kind === 'table') this.currentTable.set({ outletId: this.defaultOutletId(), number: '', section: this.pos.tableSections()[0] || 'Indoor', status: this.pos.tableStatuses()[0] || 'AVAILABLE', covers: 0, server: 'Unassigned', mergedWith: '' });
+    this.billingError.set('');
     this.isModalOpen.set(true);
     document.body.style.overflow = 'hidden';
   }
@@ -597,6 +608,7 @@ export class PosComponent implements OnInit, OnDestroy {
     this.modalKind.set(kind);
     this.modalMode.set('edit');
     this.tableOrderEditMode.set(false);
+    this.billingError.set('');
     if (kind === 'table') {
       this.pos.getTableById(Number(item.id)).subscribe({
         next: table => {
@@ -617,19 +629,45 @@ export class PosComponent implements OnInit, OnDestroy {
     if (kind === 'menu') this.currentMenuItem.set({ ...item, variants: [...item.variants], modifiers: [...item.modifiers] });
     if (kind === 'order') this.currentOrder.set({ ...item, lines: item.lines.map((line: PosOrderLine) => ({ ...line })) });
     if (kind === 'bill') {
-      const order = this.pos.orders().find(value => value.id === Number(item.orderId));
-      const synced = this.billDraftForOrder(order, item);
-      this.selectedBillingOrder.set(order || null);
+      const orderId = Number(item.orderId);
+      const fallback = orderId ? this.pos.orders().find(value => value.id === orderId) : null;
+      const synced = this.billDraftForOrder(fallback, item);
+      this.selectedBillingOrder.set(fallback || null);
       this.currentBill.set({
         ...synced,
-        orderType: item.orderType || order?.type || synced.orderType,
-        tableNo: item.tableNo || order?.tableNo || synced.tableNo || '',
-        floorId: item.floorId || order?.floorId || synced.floorId || null,
-        roomId: item.roomId || order?.roomId || synced.roomId || null,
-        roomNo: item.roomNo || order?.roomNo || synced.roomNo || '',
-        guestName: item.guestName || order?.guestName || synced.guestName || '',
+        orderId: orderId || undefined,
+        orderType: item.orderType || fallback?.type || synced.orderType,
+        tableNo: item.tableNo || fallback?.tableNo || synced.tableNo || '',
+        floorId: item.floorId || fallback?.floorId || synced.floorId || null,
+        roomId: item.roomId || fallback?.roomId || synced.roomId || null,
+        roomNo: item.roomNo || fallback?.roomNo || synced.roomNo || '',
+        guestName: item.guestName || fallback?.guestName || synced.guestName || '',
         paymentModes: [...item.paymentModes]
       });
+      this.isModalOpen.set(true);
+      document.body.style.overflow = 'hidden';
+
+      if (orderId) {
+        this.pos.getOrderById(orderId).subscribe({
+          next: detailOrder => {
+            const syncedDetail = this.billDraftForOrder(detailOrder, this.currentBill());
+            this.selectedBillingOrder.set(detailOrder);
+            this.currentBill.set({
+              ...syncedDetail,
+              orderId,
+              orderType: item.orderType || detailOrder.type || syncedDetail.orderType,
+              tableNo: item.tableNo || detailOrder.tableNo || syncedDetail.tableNo || '',
+              floorId: item.floorId || detailOrder.floorId || syncedDetail.floorId || null,
+              roomId: item.roomId || detailOrder.roomId || syncedDetail.roomId || null,
+              roomNo: item.roomNo || detailOrder.roomNo || syncedDetail.roomNo || '',
+              guestName: item.guestName || detailOrder.guestName || syncedDetail.guestName || '',
+              paymentModes: [...item.paymentModes]
+            });
+          },
+          error: error => console.error('[POS] Async order detail fetch failed during bill edit', error)
+        });
+      }
+      return;
     }
     this.isModalOpen.set(true);
     document.body.style.overflow = 'hidden';
@@ -639,10 +677,37 @@ export class PosComponent implements OnInit, OnDestroy {
     this.isTableOrderDetailOpen.set(false);
     this.modalKind.set('bill');
     this.modalMode.set('create');
+    this.billingError.set('');
+    
+    // Set immediately using local order data
     this.selectedBillingOrder.set(order);
-    this.currentBill.set(this.billDraftForOrder(order, { status: this.pos.billStatuses()[0] || 'OPEN', paymentModes: [this.pos.paymentModes()[0] || 'Cash'], discount: 0, paid: 0 }));
+    const draft = this.billDraftForOrder(order, { status: this.pos.billStatuses()[0] || 'OPEN', paymentModes: [this.pos.paymentModes()[0] || 'Cash'], discount: 0 });
+    const netTotal = this.billTotal(draft);
+    this.currentBill.set({
+      ...draft,
+      paid: netTotal,
+      orderId: order.id
+    });
     this.isModalOpen.set(true);
     document.body.style.overflow = 'hidden';
+
+    // Fetch full detail in the background
+    this.pos.getOrderById(order.id).subscribe({
+      next: detailOrder => {
+        this.selectedBillingOrder.set(detailOrder);
+        this.currentBill.update(bill => {
+          const updatedDraft = this.billDraftForOrder(detailOrder, bill);
+          const currentTotal = this.billTotal(updatedDraft);
+          const hasBeenEdited = bill.paid !== undefined && bill.paid !== netTotal;
+          return {
+            ...updatedDraft,
+            paid: hasBeenEdited ? bill.paid : currentTotal,
+            orderId: order.id
+          };
+        });
+      },
+      error: error => console.error('[POS] Async order detail fetch failed', error)
+    });
   }
 
   openSelectedTableOrder(order: PosOrder): void {
@@ -663,6 +728,7 @@ export class PosComponent implements OnInit, OnDestroy {
   closeModal(): void {
     this.isModalOpen.set(false);
     this.tableOrderEditMode.set(false);
+    this.billingError.set('');
     document.body.style.overflow = '';
   }
 
@@ -675,12 +741,49 @@ export class PosComponent implements OnInit, OnDestroy {
 
   saveModal(): void {
     const kind = this.modalKind();
-    if (kind === 'outlet') this.pos.saveOutlet(this.currentOutlet());
-    if (kind === 'menu') this.pos.saveMenuItem(this.currentMenuItem());
-    if (kind === 'order') this.pos.saveOrder(this.currentOrder());
-    if (kind === 'bill') this.pos.saveBill(this.billDraftForOrder(this.billOrder(this.currentBill()), this.currentBill()));
-    if (kind === 'table') this.pos.saveTable(this.currentTable() as PosTable);
-    this.closeModal();
+    if (kind === 'outlet') {
+      this.pos.saveOutlet(this.currentOutlet());
+      this.closeModal();
+    }
+    if (kind === 'menu') {
+      this.pos.saveMenuItem(this.currentMenuItem());
+      this.closeModal();
+    }
+    if (kind === 'order') {
+      this.pos.saveOrder(this.currentOrder());
+      this.closeModal();
+    }
+    if (kind === 'table') {
+      this.pos.saveTable(this.currentTable() as PosTable);
+      this.closeModal();
+    }
+    if (kind === 'bill') {
+      this.billingError.set('');
+      this.pos.saveBill(this.billDraftForOrder(this.billOrder(this.currentBill()), this.currentBill())).subscribe({
+        next: (savedBill) => {
+          this.closeModal();
+          this.kotToast.set({
+            visible: true,
+            type: 'success',
+            title: '✅ Bill Generated Successfully',
+            message: `Bill ${savedBill.billNo || ''} has been created.`
+          });
+          setTimeout(() => this.dismissKotToast(), 4000);
+        },
+        error: error => {
+          const apiMsg = error?.error?.message || error?.error?.error?.message || error?.message;
+          const finalMsg = apiMsg || 'A bill already exists for the selected Order ID.';
+          this.billingError.set(finalMsg);
+          this.kotToast.set({
+            visible: true,
+            type: 'error',
+            title: '❌ Billing Error',
+            message: finalMsg
+          });
+          setTimeout(() => this.dismissKotToast(), 5000);
+        }
+      });
+    }
   }
 
   deleteOutlet(id: number): void {
@@ -745,10 +848,25 @@ export class PosComponent implements OnInit, OnDestroy {
 
   updateOrderStatus(order: PosOrder, status: OrderStatus): void {
     this.pos.updateOrderStatus(order.id, status);
+
+    // Show toast notification when KOT is sent
+    if (status === 'KOT_SENT') {
+      this.kotToast.set({
+        visible: true,
+        type: 'success',
+        title: '✅ KOT Sent Successfully',
+        message: 'The kitchen has received this order.'
+      });
+      setTimeout(() => this.dismissKotToast(), 4000);
+    }
+  }
+
+  dismissKotToast(): void {
+    this.kotToast.update(t => ({ ...t, visible: false }));
   }
 
   voidBill(bill: PosBill): void {
-    this.pos.saveBill({ ...bill, status: 'VOID', compReason: bill.compReason || 'Void marked by supervisor' });
+    this.pos.voidBill(bill.id, bill.compReason || 'Void marked by supervisor');
   }
 
   addOrderLine(): void {
@@ -1023,7 +1141,11 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   updateBillDiscount(value: number | string): void {
-    this.currentBill.update(bill => this.billDraftForOrder(this.billOrder(bill), { ...bill, discount: Number(value || 0) }));
+    this.currentBill.update(bill => {
+      const draft = this.billDraftForOrder(this.billOrder(bill), { ...bill, discount: Number(value || 0) });
+      const netTotal = this.billTotal(draft);
+      return { ...draft, paid: netTotal };
+    });
   }
 
   updateBillPaid(value: number | string): void {
@@ -1091,10 +1213,38 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   updateBillOrder(value: number | string): void {
-    const order = this.pos.orders().find(item => item.id === Number(value));
-    if (!order) return;
-    this.selectedBillingOrder.set(order);
-    this.currentBill.update(bill => this.billDraftForOrder(order, bill));
+    const id = Number(value);
+    if (!id) return;
+    
+    // Immediately select order and update orderId to make the container visible instantly
+    const fallback = this.pos.orders().find(item => item.id === id);
+    this.selectedBillingOrder.set(fallback || null);
+    const draft = this.billDraftForOrder(fallback, { status: this.pos.billStatuses()[0] || 'OPEN', paymentModes: [this.pos.paymentModes()[0] || 'Cash'], discount: 0 });
+    const netTotal = this.billTotal(draft);
+    this.currentBill.set({
+      ...draft,
+      paid: netTotal,
+      orderId: id
+    });
+
+    this.pos.getOrderById(id).subscribe({
+      next: order => {
+        this.selectedBillingOrder.set(order);
+        this.currentBill.update(bill => {
+          const updatedDraft = this.billDraftForOrder(order, bill);
+          const currentTotal = this.billTotal(updatedDraft);
+          const hasBeenEdited = bill.paid !== undefined && bill.paid !== netTotal;
+          return {
+            ...updatedDraft,
+            paid: hasBeenEdited ? bill.paid : currentTotal,
+            orderId: id
+          };
+        });
+      },
+      error: error => {
+        console.error('[POS] Unable to fetch order details for billing', error);
+      }
+    });
   }
 
   updateBillTable(value: string): void {
@@ -1145,6 +1295,10 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   billOrder(bill: Partial<PosBill>): PosOrder | null {
+    const sel = this.selectedBillingOrder();
+    if (sel && sel.id === Number(bill.orderId || 0)) {
+      return sel;
+    }
     return this.pos.orders().find(order => order.id === Number(bill.orderId || 0)) || null;
   }
 

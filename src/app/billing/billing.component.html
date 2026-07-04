@@ -112,7 +112,7 @@
 
       <div class="simplified-table" *ngIf="folioAction() === 'ledger'">
         <div class="simplified-head">
-          <span>Date</span><span>Category</span><span>Service Details</span><span style="text-align: right;">Amount & Tax</span>
+          <span>Date</span><span>Category</span><span>Service Details</span><span style="text-align: right;">Net Amount</span><span style="text-align: right;">Tax</span><span style="text-align: right;">Total</span>
         </div>
         
         <ng-container *ngFor="let line of selectedLines()">
@@ -124,6 +124,8 @@
               <strong>{{ line.description || line.source }}</strong>
               <small>{{ line.reference || 'System' }} • {{ line.user }}<ng-container *ngIf="line.taxCode"> • {{ line.taxCode }}</ng-container></small>
             </span>
+            <span style="text-align: right; font-weight: 700; color: #4b5563;">{{ formatINR(line.debit || 0) }}</span>
+            <span style="text-align: right; font-weight: 700; color: #6b7280;">{{ formatINR(line.gst || 0) }}</span>
             <span style="text-align: right; font-weight: 800; color: #111827;">{{ formatINR((line.debit || 0) + (line.gst || 0)) }}</span>
           </div>
         </ng-container>

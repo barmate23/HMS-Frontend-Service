@@ -681,36 +681,87 @@
       </ng-container>
 
       <ng-container *ngSwitchCase="'bill'">
+        <!-- Premium Error Alert/Banner -->
+        <div class="billing-error-banner" *ngIf="billingError()">
+          <span class="material-icons-round">error_outline</span>
+          <div class="error-content">
+            <strong>Billing Error</strong>
+            <p>{{ billingError() }}</p>
+          </div>
+          <button class="close-error-btn" type="button" (click)="billingError.set('')">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+
         <div class="ci-form-grid"><div class="ci-input-group"><label>Order</label><select [ngModel]="currentBill().orderId" (ngModelChange)="updateBillOrder($event)"><option [ngValue]="undefined" disabled>Select order</option><option *ngFor="let order of billOrders()" [ngValue]="order.id">{{ order.orderNo }}</option></select></div><div class="ci-input-group"><label>Order From</label><select [ngModel]="currentBill().orderType" (ngModelChange)="updateBillOrderType($event)"><option value="TABLE">Table</option><option value="TAKEAWAY">Takeaway</option><option value="ROOM">Room</option></select></div></div>
         <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Status</label><select [(ngModel)]="currentBill().status"><option *ngFor="let status of pos.billStatuses()" [value]="status">{{ status }}</option></select></div><div class="ci-input-group" *ngIf="currentBill().orderType === 'TABLE'"><label>Table</label><select [ngModel]="currentBill().tableNo" (ngModelChange)="updateBillTable($event)"><option value="" disabled>Select table</option><option *ngFor="let table of billTables()" [value]="table.number">{{ table.number }} - {{ table.section }}</option></select></div></div>
         <div class="ci-form-grid mt-3" *ngIf="currentBill().orderType === 'ROOM'"><div class="ci-input-group"><label>Floor</label><select [ngModel]="currentBill().floorId" (ngModelChange)="updateBillFloor($event)"><option [ngValue]="null" disabled>Select floor</option><option *ngFor="let floor of billRoomFloors()" [ngValue]="floor.id">{{ floor.floorNumber }}</option></select></div><div class="ci-input-group"><label>Room</label><select [ngModel]="currentBill().roomId" (ngModelChange)="updateBillRoom($event)"><option [ngValue]="null" disabled>Select room</option><option *ngFor="let room of billRooms()" [ngValue]="room.id">{{ room.roomNumber }} - {{ room.status }}</option></select></div></div>
         <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Guest Name</label><input [(ngModel)]="currentBill().guestName"></div><div class="ci-input-group" *ngIf="currentBill().orderType === 'ROOM'"><label>Room No.</label><input [(ngModel)]="currentBill().roomNo"></div></div>
-        <div class="bill-preview" *ngIf="currentBill().orderId">
-          <ng-container *ngIf="billingOrderForDisplay() as order; else selectedOrderMissing">
-            <div class="bill-preview-head">
-              <div><strong>Selected Order Items</strong><span>{{ order.orderNo }} • {{ order.lines.length }} item{{ order.lines.length === 1 ? '' : 's' }}</span></div>
-              <em>₹{{ orderTotal(order) | number:'1.0-0' }}</em>
+        
+        <!-- Order Bill Details Block -->
+        <ng-container *ngIf="currentBill().orderId && billingOrderForDisplay() as order">
+          <div class="bill-details-section mt-3">
+            <h3 class="section-title">Order Items Details ({{ order.orderNo }})</h3>
+            
+            <div class="payment-summary-bar">
+              <span><strong>Item Count:</strong> {{ order.lines.length }}</span>
+              <span><strong>Order Total:</strong> ₹{{ (orderTotal(order) || 0) | number:'1.0-0' }}</span>
             </div>
-            <div class="bill-line-table" *ngIf="order.lines.length; else noBillLines">
-              <div class="bill-line-row order-pricing-row head"><span>Item</span><span>Qty</span><span>Rate</span><span>Amount</span></div>
-              <div class="bill-line-row order-pricing-row" *ngFor="let line of order.lines">
-                <span><strong>{{ line.name }}</strong><small>{{ line.course }}</small></span>
-                <span>{{ line.qty }}</span>
-                <span>₹{{ line.price | number:'1.2-2' }}</span>
-                <span>₹{{ (line.subtotal ?? (line.qty * line.price)) | number:'1.2-2' }}</span>
+
+            <!-- Itemized Table -->
+            <div class="bill-table-container">
+              <table class="classic-bill-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-right">Price</th>
+                    <th class="text-right">Tax</th>
+                    <th class="text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let line of currentBillBreakdown().lines">
+                    <td>
+                      <strong>{{ line.name }}</strong>
+                      <span class="course-label" *ngIf="line.course">{{ line.course }}</span>
+                    </td>
+                    <td class="text-center">{{ line.qty }}</td>
+                    <td class="text-right">₹{{ (line.price || 0) | number:'1.2-2' }}</td>
+                    <td class="text-right">
+                      <div *ngIf="line.taxRate">
+                        <span class="tax-rate-pill">{{ line.taxRate }}% GST</span>
+                        <strong class="tax-amt-text">₹{{ (line.taxAmount || 0) | number:'1.2-2' }}</strong>
+                      </div>
+                      <span *ngIf="!line.taxRate">-</span>
+                    </td>
+                    <td class="text-right">₹{{ (line.totalAmount || 0) | number:'1.2-2' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- GST Breakdown -->
+            <div class="tax-breakdown-panel" *ngIf="currentBillBreakdown().taxBuckets.length">
+              <div class="tax-bucket-card" *ngFor="let bucket of currentBillBreakdown().taxBuckets">
+                <h4>{{ bucket.rate }}% GST Details</h4>
+                <div class="tax-detail-row"><span>Taxable:</span><strong>₹{{ (bucket.taxableAmount || 0) | number:'1.2-2' }}</strong></div>
+                <div class="tax-detail-row"><span>CGST:</span><strong>₹{{ (bucket.cgst || 0) | number:'1.2-2' }}</strong></div>
+                <div class="tax-detail-row"><span>SGST:</span><strong>₹{{ (bucket.sgst || 0) | number:'1.2-2' }}</strong></div>
+                <div class="tax-detail-row total"><span>Total Tax:</span><strong>₹{{ (bucket.taxAmount || 0) | number:'1.2-2' }}</strong></div>
               </div>
             </div>
-            <ng-template #noBillLines><div class="empty-order-builder">No item details are available for this order.</div></ng-template>
-            <div class="bill-total-stack" *ngIf="currentBillBreakdown() as bill">
-              <span><small>Subtotal</small><strong>₹{{ bill.grossAmount | number:'1.2-2' }}</strong></span>
-              <span><small>Discount</small><strong>₹{{ bill.discount | number:'1.2-2' }}</strong></span>
-              <span><small>Tax</small><strong>₹{{ bill.taxTotal | number:'1.2-2' }}</strong></span>
-              <span><small>Total</small><strong>₹{{ bill.total | number:'1.2-2' }}</strong></span>
-              <span><small>Due</small><strong>₹{{ bill.due | number:'1.2-2' }}</strong></span>
+
+            <!-- Bill Totals Summary -->
+            <div class="bill-totals-summary-card" *ngIf="currentBillBreakdown() as bill">
+              <div class="total-summary-row"><span>Subtotal:</span><strong>₹{{ (bill.grossAmount || 0) | number:'1.2-2' }}</strong></div>
+              <div class="total-summary-row"><span>Discount:</span><strong>₹{{ (bill.discount || 0) | number:'1.2-2' }}</strong></div>
+              <div class="total-summary-row"><span>Tax Total:</span><strong>₹{{ (bill.taxTotal || 0) | number:'1.2-2' }}</strong></div>
+              <div class="total-summary-row final"><span>Net Total:</span><strong>₹{{ (bill.total || 0) | number:'1.2-2' }}</strong></div>
+              <div class="total-summary-row due"><span>Due Amount:</span><strong>₹{{ (bill.due || 0) | number:'1.2-2' }}</strong></div>
             </div>
-          </ng-container>
-          <ng-template #selectedOrderMissing><div class="empty-order-builder">Unable to load the selected order details.</div></ng-template>
-        </div>
+          </div>
+        </ng-container>
         <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Discount</label><input type="number" [ngModel]="currentBill().discount" (ngModelChange)="updateBillDiscount($event)"></div><div class="ci-input-group"><label>Paid Amount</label><input type="number" [ngModel]="currentBill().paid" (ngModelChange)="updateBillPaid($event)"></div></div>
         <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Payment Modes</label><select [ngModel]="currentBill().paymentModes?.[0]" (ngModelChange)="updatePaymentMode($event)"><option *ngFor="let mode of pos.paymentModes()" [value]="mode">{{ mode }}</option></select></div><div class="ci-input-group"><label>Comp / Void Reason</label><select [(ngModel)]="currentBill().compReason"><option value="">Select reason</option><option *ngFor="let reason of pos.voidReasons()" [value]="reason">{{ reason }}</option></select></div></div>
         <label class="toggle-option mt-3"><input type="checkbox" [(ngModel)]="currentBill().postedToFolio"> Posted to guest folio</label>

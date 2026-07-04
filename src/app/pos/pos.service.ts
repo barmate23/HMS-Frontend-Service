@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, map, switchMap, tap } from 'rxjs';
+import { Observable, catchError, map, switchMap, tap, throwError } from 'rxjs';
 import { UserManagementService } from '../user-management/user-management.service';
 
 export type PosTab = 'dashboard' | 'outlets' | 'dining' | 'orders' | 'billing' | 'menu' | 'billing-setup';
@@ -305,6 +305,47 @@ interface ApiOrder {
   updatedAt?: string;
 }
 
+interface ApiBill {
+  id: number;
+  orderId?: number;
+  billNo?: string;
+  billNumber?: string;
+  orderType?: OrderType;
+  tableNo?: string;
+  tableNumber?: string;
+  floorId?: number | null;
+  roomId?: number | null;
+  guestName?: string;
+  roomNo?: string;
+  roomNumber?: string;
+  subtotal?: number;
+  discount?: number;
+  tax?: number;
+  compReason?: string;
+  paid?: number;
+  statusId?: number;
+  statusName?: BillStatus;
+  status?: BillStatus;
+  paymentModes?: string;
+  postedToFolio?: boolean;
+  isPostedToFolio?: boolean;
+
+  // Authorities matching backend PosBillDTO
+  orderRef?: string;
+  orderFrom?: string;
+  tableId?: number;
+  grossAmount?: number;
+  netAmount?: number;
+  paidAmount?: number;
+  paymentMethodId?: number;
+  paymentMethodName?: string;
+  compVoidReasonId?: number;
+  compVoidReasonName?: string;
+  postToFolio?: boolean;
+  folioPostingId?: number;
+  notes?: string;
+}
+
 interface StandardResponse<T = any> {
   success: boolean;
   message?: string;
@@ -357,6 +398,7 @@ export class PosService {
   readonly menuSubcategoryMasters = signal<ApiCommonMaster[]>([]);
   readonly orderStatuses = signal<OrderStatus[]>(this.defaultOrderStatuses);
   readonly billStatuses = signal<BillStatus[]>(this.defaultBillStatuses);
+  readonly billStatusMasters = signal<ApiCommonMaster[]>([]);
   readonly paymentModes = signal<PaymentMode[]>(this.defaultPaymentModes);
   readonly voidReasons = signal<string[]>(this.defaultVoidReasons);
   readonly users = computed(() => {
@@ -397,6 +439,7 @@ export class PosService {
     this.loadTables();
     this.loadMenuItems();
     this.loadOrders();
+    this.loadBills();
     this.loadPosDashboard();
   }
 
@@ -501,7 +544,9 @@ export class PosService {
   loadBillStatuses(): void {
     this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/BILL_STATUS`).subscribe({
       next: response => {
-        const billStatuses = this.commonMastersData(response)
+        const masters = this.commonMastersData(response);
+        this.billStatusMasters.set(masters);
+        const billStatuses = masters
           .map(item => item.value || item.code || '')
           .map(value => value.trim())
           .filter(Boolean);
@@ -569,6 +614,16 @@ export class PosService {
       }));
   }
 
+  getOrderById(id: number): Observable<PosOrder> {
+    return this.http
+      .get<ApiOrder | StandardResponse<ApiOrder>>(`${this.posBaseUrl}/orders/getOrderById/${id}`)
+      .pipe(map(response => {
+        const order = this.itemData(response);
+        if (!order) throw new Error(`Order #${id} was not found`);
+        return this.mapOrder(order);
+      }));
+  }
+
   loadMenuItems(outletId?: number): void {
     const url = outletId
       ? `${this.posBaseUrl}/menu/getAllMenu?outletId=${outletId}`
@@ -586,6 +641,13 @@ export class PosService {
     this.http.get<ApiOrder[] | ApiListResponse<ApiOrder> | StandardResponse<ApiOrder[]>>(`${this.posBaseUrl}/orders/getAllOrders`).subscribe({
       next: response => this.orders.set(this.listData(response).map(item => this.mapOrder(item))),
       error: error => this.addAudit('Unable to load orders from API', 'Orders', error?.error?.message || error?.message || 'API error')
+    });
+  }
+
+  loadBills(): void {
+    this.http.get<ApiBill[] | ApiListResponse<ApiBill> | StandardResponse<ApiBill[]>>(`${this.posBaseUrl}/billing/getAllBills`).subscribe({
+      next: response => this.bills.set(this.listData(response).map(item => this.mapBill(item))),
+      error: error => this.addAudit('Unable to load bills from API', 'Billing', error?.error?.message || error?.message || 'API error')
     });
   }
 
@@ -907,7 +969,8 @@ export class PosService {
     this.addAudit('Reset paid table layout', 'Table Dining', released.length ? released.join(', ') : 'No paid tables');
   }
 
-  saveBill(input: Partial<PosBill>): void {
+  saveBill(input: Partial<PosBill>): Observable<PosBill> {
+    const isUpdate = !!input.id && this.bills().some(item => item.id === input.id);
     const nextId = Math.max(0, ...this.bills().map(item => item.id)) + 1;
     const bill: PosBill = {
       id: input.id ?? nextId,
@@ -928,14 +991,71 @@ export class PosService {
       paymentModes: input.paymentModes?.length ? input.paymentModes : ['Cash'],
       postedToFolio: !!input.postedToFolio
     };
-    this.bills.update(items => input.id ? items.map(existing => existing.id === input.id ? bill : existing) : [bill, ...items]);
-    this.addAudit(input.id ? 'Bill updated' : 'Bill generated', 'Billing', bill.billNo);
+
+    const request$ = isUpdate
+      ? this.http.put<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/updateBill/${input.id}`, this.toApiBill(bill))
+      : this.http.post<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/createBill`, this.toApiBill(bill));
+
+    return request$.pipe(
+      map(response => {
+        const responseBill = this.itemData(response);
+        const saved = responseBill ? this.mapBill(responseBill) : bill;
+        this.loadBills();
+        this.loadTables(this.tablesOutletId);
+        this.addAudit(isUpdate ? 'Bill updated' : 'Bill generated', 'Billing', saved.billNo);
+        return saved;
+      }),
+      catchError(error => {
+        this.addAudit(isUpdate ? 'Bill update failed' : 'Bill generation failed', 'Billing', error?.error?.message || error?.message || bill.billNo);
+        return throwError(() => error);
+      })
+    );
   }
 
+  voidBill(id: number, compReason: string): void {
+    const url = `${this.posBaseUrl}/billing/voidBill/${id}?reason=${encodeURIComponent(compReason)}`;
+    this.http.patch<ApiBill | StandardResponse<ApiBill>>(url, null).subscribe({
+      next: response => {
+        this.loadBills();
+        const responseBill = this.itemData(response);
+        const billNo = responseBill?.billNo || responseBill?.billNumber || `Bill #${id}`;
+        this.addAudit('Bill marked VOID', 'Billing', billNo);
+      },
+      error: error => {
+        const existingBill = this.bills().find(b => b.id === id);
+        if (existingBill) {
+          this.saveBill({ ...existingBill, status: 'VOID', compReason }).subscribe();
+        } else {
+          this.addAudit('Void bill failed', 'Billing', `Bill #${id}`);
+        }
+      }
+    });
+  }
 
   postBillToRoom(id: number): void {
-    this.bills.update(items => items.map(item => item.id === id ? { ...item, postedToFolio: true, status: item.status === 'OPEN' ? 'PARTIAL' : item.status } : item));
-    this.addAudit('Posted POS charge to room folio', 'Room Posting', `Bill #${id}`);
+    const bill = this.bills().find(item => item.id === id);
+    if (!bill) return;
+    const updated = { ...bill, postedToFolio: true, status: bill.status === 'OPEN' ? 'PARTIAL' : bill.status };
+    this.http.put<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/updateBill/${id}`, this.toApiBill(updated)).subscribe({
+      next: () => {
+        this.loadBills();
+        this.addAudit('Posted POS charge to room folio', 'Room Posting', bill.billNo);
+      },
+      error: error => {
+        this.addAudit('Room posting update failed', 'Room Posting', error?.error?.message || error?.message || bill.billNo);
+      }
+    });
+  }
+
+  deleteBill(id: number): void {
+    const bill = this.bills().find(item => item.id === id);
+    this.http.delete<void>(`${this.posBaseUrl}/billing/deleteBill/${id}`).subscribe({
+      next: () => {
+        this.loadBills();
+        if (bill) this.addAudit('Bill deleted', 'Billing', bill.billNo);
+      },
+      error: error => this.addAudit('Bill delete failed', 'Billing', error?.error?.message || error?.message || `Bill #${id}`)
+    });
   }
 
   saveShift(input: Partial<PosShift>): void {
@@ -1191,6 +1311,79 @@ export class PosService {
       course: line.course,
       notes: line.notes
     };
+  }
+
+  private mapBill(item: ApiBill): PosBill {
+    return {
+      id: Number(item.id),
+      orderId: Number(item.orderId || 0),
+      billNo: item.billNumber || item.billNo || item.orderRef || `BILL-${item.id}`,
+      orderType: item.orderType || (item.orderFrom as OrderType) || 'TABLE',
+      tableNo: item.tableNumber || item.tableNo || '',
+      floorId: item.floorId ? Number(item.floorId) : null,
+      roomId: item.roomId ? Number(item.roomId) : null,
+      guestName: item.guestName || '',
+      roomNo: item.roomNumber || item.roomNo || '',
+      subtotal: Number(item.grossAmount ?? item.subtotal ?? 0),
+      discount: Number(item.discount || 0),
+      tax: Number(item.tax || 0),
+      compReason: item.compVoidReasonName || item.compReason || '',
+      paid: Number(item.paidAmount ?? item.paid ?? 0),
+      status: this.asBillStatus(item.statusName || item.status),
+      paymentModes: this.toTokens(item.paymentMethodName || item.paymentModes || 'Cash'),
+      postedToFolio: item.postToFolio === true || item.postedToFolio === true || item.isPostedToFolio === true
+    };
+  }
+
+  private toApiBill(item: PosBill): ApiBill {
+    const statusMaster = this.billStatusMasters().find(master =>
+      [master.value, master.code].some(value => String(value || '').toLowerCase() === String(item.status).toLowerCase())
+    );
+    const order = this.orders().find(o => o.id === item.orderId);
+
+    return {
+      // Old structure support
+      id: item.id,
+      orderId: item.orderId,
+      billNo: item.billNo,
+      billNumber: item.billNo,
+      orderType: item.orderType,
+      tableNo: item.tableNo,
+      tableNumber: item.tableNo,
+      floorId: item.floorId,
+      roomId: item.roomId || order?.roomId || undefined,
+      guestName: item.guestName,
+      roomNo: item.roomNo,
+      roomNumber: item.roomNo,
+      subtotal: item.subtotal,
+      discount: item.discount,
+      tax: item.tax,
+      compReason: item.compReason,
+      paid: item.paid,
+      statusId: statusMaster?.id ? Number(statusMaster.id) : undefined,
+      statusName: item.status,
+      status: item.status,
+      paymentModes: item.paymentModes.join(', '),
+      postedToFolio: item.postedToFolio,
+      isPostedToFolio: item.postedToFolio,
+
+      // Authoritative backend PosBillDTO fields
+      orderRef: order?.orderNo || String(item.orderId),
+      orderFrom: item.orderType,
+      tableId: order?.tableId || undefined,
+      grossAmount: item.subtotal,
+      netAmount: (item.subtotal || 0) + (item.tax || 0) - (item.discount || 0),
+      paidAmount: item.paid,
+      paymentMethodName: item.paymentModes.join(', '),
+      compVoidReasonName: item.compReason,
+      postToFolio: item.postedToFolio,
+      notes: order?.notes || ''
+    };
+  }
+
+  private asBillStatus(value?: string): BillStatus {
+    const normalized = String(value || 'OPEN').toUpperCase();
+    return this.billStatuses().find(status => status.toUpperCase() === normalized) || value || this.billStatuses()[0] || 'OPEN';
   }
 
   private asOutletType(value?: string): OutletType {

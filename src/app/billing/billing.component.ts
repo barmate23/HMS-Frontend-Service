@@ -395,39 +395,13 @@ export class BillingComponent implements OnInit, OnDestroy {
         if (res.success && res.data) {
           const apiFolios = res.data.map(dto => this.mapFolio(dto));
           
-          const mockFolio: Folio = {
-            id: 9999,
-            folioNo: 'FOL-DEMO-001',
-            reservationNo: 'RES-X10',
-            room: '101 King Suite',
-            guest: 'Mr. John Doe',
-            company: 'Acme Corp',
-            checkIn: '2026-07-01',
-            checkOut: '2026-07-04',
-            status: 'Open',
-            creditLimit: 0,
-            totalCharges: 11500,
-            taxAmount: 1470,
-            totalPayments: 5000,
-            balance: 7970,
-            lines: [
-              { id: 1, date: '2026-07-01', source: 'Payment', reference: 'UPI-987654321', description: 'Advance Payment', debit: 0, gst: 0, credit: 5000, user: 'Reception' },
-              { id: 2, date: '2026-07-01', source: 'Room', reference: 'SYS-N1', description: 'Room charges - Night 1', debit: 5000, gst: 600, credit: 0, user: 'System' },
-              { id: 3, date: '2026-07-02', source: 'POS', reference: 'KOT-104', description: 'In-Room Dining', debit: 1500, gst: 270, credit: 0, user: 'Restaurant' },
-              { id: 4, date: '2026-07-02', source: 'Room', reference: 'SYS-N2', description: 'Room charges - Night 2', debit: 5000, gst: 600, credit: 0, user: 'System' }
-            ]
-          };
-
-          this.folios.set([mockFolio, ...apiFolios]);
+          this.folios.set(apiFolios);
 
           if (this.folios().length) {
-            this.selectedFolioId.set(this.folios()[0].id);
+            const firstFolio = this.folios()[0];
+            this.selectedFolioId.set(firstFolio.id);
             this.syncPaymentAmount();
-            
-            // Only trigger API if it's not our mock
-            if (this.folios()[0].id !== 9999) {
-               this.selectFolio(this.folios()[0].id);
-            }
+            this.selectFolio(firstFolio.id);
           }
         }
       },
@@ -449,7 +423,7 @@ export class BillingComponent implements OnInit, OnDestroy {
       id: dto.folioId,
       folioNo: dto.folioNumber,
       reservationNo: dto.reservationNumber,
-      room: dto.roomNumber,
+      room: dto.roomNumber || '',
       guest: dto.guestName,
       checkIn: '',
       checkOut: '',
@@ -459,17 +433,30 @@ export class BillingComponent implements OnInit, OnDestroy {
       totalPayments: dto.totalPayments || 0,
       taxAmount: dto.taxAmount || 0,
       balance: dto.balance || 0,
-      lines: (dto.entries || []).map((e, idx) => ({
-        id: idx + 1,
-        date: new Date(e.date).toISOString().slice(0, 10),
-        source: e.source as ChargeType,
-        reference: '',
-        description: e.description,
-        debit: e.debit || 0,
-        credit: e.credit || e.paid || 0,
-        gst: e.tax || 0,
-        user: 'System'
-      }))
+      lines: (dto.entries || []).map((e, idx) => {
+        let formattedDate = '';
+        try {
+          if (e.date) {
+            const d = new Date(e.date);
+            if (!isNaN(d.getTime())) {
+              formattedDate = d.toISOString().slice(0, 10);
+            }
+          }
+        } catch (err) {
+          console.error('[Billing] Invalid date:', e.date);
+        }
+        return {
+          id: idx + 1,
+          date: formattedDate,
+          source: (e.source || 'Room') as ChargeType,
+          reference: '',
+          description: e.description || '',
+          debit: Number(e.debit || e.grossAmount || 0),
+          credit: Number(e.credit || e.paid || 0),
+          gst: Number(e.tax || e.taxAmount || 0),
+          user: 'System'
+        };
+      })
     };
   }
 
@@ -581,9 +568,6 @@ export class BillingComponent implements OnInit, OnDestroy {
   selectFolio(id: number): void {
     this.selectedFolioId.set(id);
     this.syncPaymentAmount();
-    
-    // Prevent API call for our mock folio
-    if (id === 9999) return;
     
     // Fetch detailed ledger and patch the specific folio record
     this.billingService.getLedger(id).subscribe({

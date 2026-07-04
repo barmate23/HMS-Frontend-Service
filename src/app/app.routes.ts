@@ -23,7 +23,6 @@ export const routes: Routes = [
       { path: 'guests', loadComponent: () => import('./guests/guest-profiles.component').then(m => m.GuestProfilesComponent) },
       { path: 'billing', redirectTo: 'billing/folios', pathMatch: 'full' },
       { path: 'billing/folios', loadComponent: () => import('./billing/billing.component').then(m => m.BillingComponent) },
-      { path: 'billing/payments', loadComponent: () => import('./billing/billing.component').then(m => m.BillingComponent) },
       { path: 'billing/invoices', loadComponent: () => import('./billing/billing.component').then(m => m.BillingComponent) },
       { path: 'billing/refunds', loadComponent: () => import('./billing/billing.component').then(m => m.BillingComponent) },
       { path: 'billing/inward', loadComponent: () => import('./billing/billing.component').then(m => m.BillingComponent) },

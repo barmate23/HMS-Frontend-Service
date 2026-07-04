@@ -53,7 +53,6 @@ export class Layout {
       expanded: false,
       children: [
         { label: 'Guest Folios', icon: 'receipt_long', route: '/billing/folios' },
-        { label: 'Payments', icon: 'payments', route: '/billing/payments' },
         { label: 'Invoices', icon: 'request_quote', route: '/billing/invoices' },
         { label: 'Refunds', icon: 'currency_exchange', route: '/billing/refunds' },
         { label: 'Inward Stock', icon: 'move_to_inbox', route: '/billing/inward' },

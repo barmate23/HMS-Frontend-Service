@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,8 +11,125 @@ import { AuthService } from '../auth/auth.service';
   templateUrl: './layout.html',
   styleUrls: ['./layout.css']
 })
-export class Layout {
+export class Layout implements OnInit {
   isCollapsed = signal(false);
+  activeTheme = signal('oasis');
+  activeBg = signal('warm');
+
+  themeOptions = [
+    { name: 'Oasis Pine', primary: '#0F3D3E', light: '#E8F3F1', accent: '#C08261', value: 'oasis' },
+    { name: 'Royal Sapphire', primary: '#1E3A8A', light: '#EFF6FF', accent: '#F59E0B', value: 'sapphire' },
+    { name: 'Amethyst Violet', primary: '#6D28D9', light: '#F5F3FF', accent: '#EC4899', value: 'violet' },
+    { name: 'Terracotta Rust', primary: '#B45309', light: '#FFFBEB', accent: '#10B981', value: 'terracotta' }
+  ];
+
+  bgOptions = [
+    {
+      name: 'Beige (Warm)',
+      value: 'warm',
+      s50: '#FFFFFF',
+      s100: '#F4F1EA',
+      s200: '#E6E2D8',
+      s500: '#737373',
+      s700: '#404040',
+      s800: '#262626',
+      s900: '#171717'
+    },
+    {
+      name: 'Slate (Cool)',
+      value: 'cool',
+      s50: '#FFFFFF',
+      s100: '#F1F5F9',
+      s200: '#E2E8F0',
+      s500: '#64748B',
+      s700: '#334155',
+      s800: '#1E293B',
+      s900: '#0F172A'
+    },
+    {
+      name: 'Mint (Fresh)',
+      value: 'mint',
+      s50: '#FFFFFF',
+      s100: '#F0FDF8',
+      s200: '#CCFBEF',
+      s500: '#4B9E87',
+      s700: '#1A5C4A',
+      s800: '#0F3D30',
+      s900: '#062820'
+    },
+    {
+      name: 'Lavender (Soft)',
+      value: 'lavender',
+      s50: '#FFFFFF',
+      s100: '#F5F3FF',
+      s200: '#EDE9FE',
+      s500: '#7C6FAF',
+      s700: '#4C3D8F',
+      s800: '#2E2260',
+      s900: '#1A1240'
+    },
+    {
+      name: 'Sand (Desert)',
+      value: 'sand',
+      s50: '#FFFFFF',
+      s100: '#FDF8F0',
+      s200: '#F5E9D0',
+      s500: '#9C7B4E',
+      s700: '#6B4E27',
+      s800: '#4A3118',
+      s900: '#2E1C09'
+    },
+    {
+      name: 'Stone (Neutral)',
+      value: 'stone',
+      s50: '#FFFFFF',
+      s100: '#F5F5F4',
+      s200: '#E7E5E4',
+      s500: '#78716C',
+      s700: '#44403C',
+      s800: '#292524',
+      s900: '#1C1917'
+    }
+  ];
+
+  ngOnInit() {
+    const savedTheme = localStorage.getItem('hms-theme-color') || 'oasis';
+    this.applyTheme(savedTheme);
+
+    const savedBg = localStorage.getItem('hms-bg-theme') || 'warm';
+    this.applyBgTheme(savedBg);
+  }
+
+  applyTheme(themeValue: string) {
+    const option = this.themeOptions.find(t => t.value === themeValue);
+    if (!option) return;
+
+    this.activeTheme.set(themeValue);
+    localStorage.setItem('hms-theme-color', themeValue);
+    document.documentElement.style.setProperty('--primary-color', option.primary);
+    document.documentElement.style.setProperty('--primary-light', option.light);
+    document.documentElement.style.setProperty('--accent-color', option.accent);
+  }
+
+  applyBgTheme(bgValue: string) {
+    const opt = this.bgOptions.find(b => b.value === bgValue);
+    if (!opt) return;
+
+    this.activeBg.set(bgValue);
+    localStorage.setItem('hms-bg-theme', bgValue);
+    document.documentElement.style.setProperty('--surface-50', opt.s50);
+    document.documentElement.style.setProperty('--surface-100', opt.s100);
+    document.documentElement.style.setProperty('--surface-200', opt.s200);
+    document.documentElement.style.setProperty('--surface-500', opt.s500);
+    document.documentElement.style.setProperty('--surface-700', opt.s700);
+    document.documentElement.style.setProperty('--surface-800', opt.s800);
+    document.documentElement.style.setProperty('--surface-900', opt.s900);
+  }
+
+  getActiveThemeColor(): string {
+    const opt = this.themeOptions.find(t => t.value === this.activeTheme());
+    return opt ? opt.primary : '#0F3D3E';
+  }
 
   constructor(
     readonly auth: AuthService,

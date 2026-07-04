@@ -72,6 +72,42 @@
           </div>
         </div>
         <div class="actions">
+          <!-- Theme Selector Dropdown -->
+          <div class="theme-dropdown">
+            <button class="icon-btn theme-toggle-btn" type="button" title="Select Theme Color">
+              <span class="material-icons-round" [style.color]="getActiveThemeColor()">palette</span>
+            </button>
+            <div class="theme-dropdown-menu">
+              <header class="theme-menu-header">Accent Colors</header>
+              <div class="theme-options-grid">
+                <button type="button" *ngFor="let option of themeOptions"
+                  class="theme-color-option"
+                  [class.active]="activeTheme() === option.value"
+                  (click)="applyTheme(option.value); $event.stopPropagation();"
+                  [title]="option.name">
+                  <span class="color-dot" [style.background]="option.primary"></span>
+                  <span class="color-name">{{ option.name }}</span>
+                  <span class="material-icons-round select-check" *ngIf="activeTheme() === option.value">check</span>
+                </button>
+              </div>
+
+              <div class="dropdown-divider" style="margin: 8px -8px 6px;"></div>
+
+              <header class="theme-menu-header">Background Theme</header>
+              <div class="theme-options-grid">
+                <button type="button" *ngFor="let bg of bgOptions"
+                  class="theme-color-option"
+                  [class.active]="activeBg() === bg.value"
+                  (click)="applyBgTheme(bg.value); $event.stopPropagation();"
+                  [title]="bg.name">
+                  <span class="color-dot" [style.background]="bg.s100" style="border: 1px solid var(--surface-200);"></span>
+                  <span class="color-name">{{ bg.name }}</span>
+                  <span class="material-icons-round select-check" *ngIf="activeBg() === bg.value">check</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           <button class="icon-btn" title="Notifications">
             <span class="material-icons-round">notifications</span>
             <span class="dot"></span>

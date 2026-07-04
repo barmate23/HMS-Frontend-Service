@@ -30,10 +30,12 @@ export interface LedgerEntryDTO {
   date: string;
   source: string;
   description: string;
-  debit: number;
-  tax: number;
-  paid: number;
-  credit: number;
+  debit?: number;
+  tax?: number;
+  paid?: number;
+  credit?: number;
+  grossAmount?: number | null;
+  taxAmount?: number | null;
 }
 
 export interface FolioLedgerDTO {

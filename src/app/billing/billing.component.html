@@ -4,10 +4,6 @@
       <span class="material-icons-round">receipt_long</span>
       Guest Folios
     </button>
-    <button type="button" [class.active]="activeTab() === 'payments'" (click)="setTab('payments')">
-      <span class="material-icons-round">payments</span>
-      Payments
-    </button>
     <button type="button" [class.active]="activeTab() === 'invoices'" (click)="setTab('invoices')">
       <span class="material-icons-round">request_quote</span>
       Invoices
@@ -135,6 +131,12 @@
           <div><span>Advance Paid By Guest</span><strong class="credit">- {{ formatINR(selectedCredits()) }}</strong></div>
           <div><span>Balance Outstanding</span><strong [class.credit]="selectedBalance() <= 0">{{ formatINR(selectedBalance()) }}</strong></div>
         </div>
+        <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+          <button type="button" class="primary-btn" (click)="openFolioAction('charge')">
+            Next: Post Charge
+            <span class="material-icons-round">arrow_forward</span>
+          </button>
+        </div>
       </div>
 
       <section class="process-panel" *ngIf="folioAction() === 'charge'">
@@ -162,10 +164,16 @@
             <input [ngModel]="postingDraft().description" (ngModelChange)="updatePosting('description', $event)">
           </label>
         </div>
-        <button type="button" class="block-btn" (click)="addPosting()">
-          <span class="material-icons-round">add_card</span>
-          Add Posting
-        </button>
+        <div style="display: flex; gap: 8px; margin-top: 12px;">
+          <button type="button" class="block-btn" style="margin-top: 0; flex: 1;" (click)="addPosting()">
+            <span class="material-icons-round">add_card</span>
+            Add Posting
+          </button>
+          <button type="button" class="block-btn ghost-btn" style="margin-top: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 1;" (click)="openFolioAction('payment')">
+            Next: Settlement
+            <span class="material-icons-round">arrow_forward</span>
+          </button>
+        </div>
       </section>
 
       <section class="process-panel" *ngIf="folioAction() === 'payment'">
@@ -199,20 +207,11 @@
           <span class="material-icons-round">verified</span>
           Collect Payment
         </button>
-        <button type="button" class="outline-btn" [disabled]="selectedBalance() !== 0" (click)="markSettled()">Mark Settled</button>
       </section>
     </main>
   </section>
 
-  <section class="tab-table" *ngIf="activeTab() === 'payments'">
-    <header><h2>Payment Register</h2><button class="primary-btn" (click)="setTab('folios')"><span class="material-icons-round">add</span> New Payment</button></header>
-    <div class="data-table">
-      <div class="table-head"><span>Folio</span><span>Guest</span><span>Room</span><span>Mode / Reference</span><span>Amount</span></div>
-      <div class="table-row" *ngFor="let row of paymentRows()">
-        <span>{{ row.folioNo }}</span><span>{{ row.guest }}</span><span>{{ row.room }}</span><span>{{ row.description }} • {{ row.reference }}</span><strong>{{ formatINR(row.credit) }}</strong>
-      </div>
-    </div>
-  </section>
+
 
   <section class="tab-table invoice-view" *ngIf="activeTab() === 'invoices'">
     <header><h2>Invoice Register</h2></header>
@@ -655,5 +654,21 @@
         <button type="button" class="primary-btn danger" (click)="confirmDeleteGrn()">Delete GRN</button>
       </div>
     </section>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="billing-toast-wrapper" [class.visible]="billingToast().visible" [attr.role]="billingToast().visible ? 'alert' : null">
+    <div class="billing-toast" [class.success]="billingToast().type === 'success'" [class.error]="billingToast().type === 'error'">
+      <div class="billing-toast-icon">
+        <span class="material-icons-round">{{ billingToast().type === 'success' ? 'check_circle' : 'error' }}</span>
+      </div>
+      <div class="billing-toast-body">
+        <strong>{{ billingToast().title }}</strong>
+        <span>{{ billingToast().message }}</span>
+      </div>
+      <button class="billing-toast-close" (click)="dismissBillingToast()" title="Dismiss">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
   </div>
 </div>

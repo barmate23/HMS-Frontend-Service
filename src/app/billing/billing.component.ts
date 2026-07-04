@@ -230,7 +230,7 @@ export class BillingComponent implements OnInit, OnDestroy {
   postingDraft = signal<PostingDraft>({
     source: 'Room',
     description: 'Room rent',
-    amount: 4500,
+    amount: 0,
     taxCode: 'GST 12%'
   });
   paymentDraft = signal<PaymentDraft>({
@@ -365,6 +365,17 @@ export class BillingComponent implements OnInit, OnDestroy {
 
   billingModal = signal<'grn' | 'bill' | null>(null);
   billStatusFilter = signal<'ALL' | BillStatus>('ALL');
+
+  billingToast = signal<{ visible: boolean; type: 'success' | 'error'; title: string; message: string }>({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: ''
+  });
+
+  dismissBillingToast(): void {
+    this.billingToast.update(t => ({ ...t, visible: false }));
+  }
 
   constructor(
     private readonly router: Router,
@@ -638,9 +649,35 @@ export class BillingComponent implements OnInit, OnDestroy {
           if (this.balanceFor(folio) - draft.amount <= 0) {
             this.setTab('invoices');
           }
+
+          this.billingToast.set({
+            visible: true,
+            type: 'success',
+            title: 'Payment Collected',
+            message: 'Folio payment recorded successfully.'
+          });
+          setTimeout(() => this.dismissBillingToast(), 4000);
+        } else {
+          this.billingToast.set({
+            visible: true,
+            type: 'error',
+            title: 'Payment Failed',
+            message: res.message || 'Failed to collect payment.'
+          });
+          setTimeout(() => this.dismissBillingToast(), 5000);
         }
       },
-      error: (err) => console.error('Failed to post payment', err)
+      error: (err) => {
+        console.error('Failed to post payment', err);
+        const errMsg = err.error?.error?.message || err.error?.message || err.error?.details || err.message || 'An unexpected error occurred';
+        this.billingToast.set({
+          visible: true,
+          type: 'error',
+          title: 'Payment Error',
+          message: errMsg
+        });
+        setTimeout(() => this.dismissBillingToast(), 6000);
+      }
     });
   }
 

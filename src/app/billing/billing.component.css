@@ -2082,3 +2082,116 @@ em.closed {
     align-items: flex-start;
   }
 }
+
+/* ── Billing Toast Notification ─────────────────────────────────────────── */
+.billing-toast-wrapper {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -16px);
+  transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.billing-toast-wrapper.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+.billing-toast {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 14px 18px 14px 14px;
+  min-width: 300px;
+  max-width: 380px;
+  border-left: 5px solid #ccc;
+  font-family: var(--font-poppins, 'Poppins', sans-serif);
+}
+
+.billing-toast.success {
+  border-left-color: #10b981;
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdf9 100%);
+}
+
+.billing-toast.error {
+  border-left-color: #ef4444;
+  background: linear-gradient(135deg, #ffffff 0%, #fff5f5 100%);
+}
+
+.billing-toast-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.billing-toast.success .billing-toast-icon {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.billing-toast.error .billing-toast-icon {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.billing-toast-icon .material-icons-round {
+  font-size: 22px;
+}
+
+.billing-toast-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.billing-toast-body strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+  margin-bottom: 3px;
+}
+
+.billing-toast-body span {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.billing-toast-close {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.billing-toast-close:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.billing-toast-close .material-icons-round {
+  font-size: 16px;
+}

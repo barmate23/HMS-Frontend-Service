@@ -13,7 +13,7 @@ import {
   SupplierPayload,
   VendorBillPayload
 } from '../purchase/purchase.service';
-import { BillingService, FolioLedgerDTO, InvoiceDTO } from './billing.service';
+import { BillingService, FolioLedgerDTO, InvoiceDTO, InvoiceDocumentDetailsDTO, InvoiceLineItemDTO } from './billing.service';
 
 type BillingTab = 'folios' | 'invoices' | 'refunds' | 'inward' | 'bills';
 type FolioStatus = 'Open' | 'Due Out' | 'Settled' | 'Hold';
@@ -241,6 +241,7 @@ export class BillingComponent implements OnInit, OnDestroy {
   });
   refundReason = signal('Advance reversal');
   selectedInvoiceId = signal<number | null>(null);
+  selectedInvoiceDetails = signal<InvoiceDocumentDetailsDTO | null>(null);
   invoiceSearch = signal('');
   invoiceStatusFilter = signal<'ALL' | InvoiceStatus>('ALL');
   invoiceFromDate = signal('');
@@ -423,7 +424,11 @@ export class BillingComponent implements OnInit, OnDestroy {
   loadInvoices(): void {
     this.billingService.getAllInvoices().subscribe({
       next: (res) => {
-        this.invoices.set(res.map(dto => this.mapInvoice(dto)));
+        if (res.success && res.data) {
+          this.invoices.set(res.data.map(dto => this.mapInvoice(dto)));
+        } else {
+          this.invoices.set([]);
+        }
       },
       error: (err) => console.error('Failed to fetch invoices', err)
     });
@@ -720,10 +725,20 @@ export class BillingComponent implements OnInit, OnDestroy {
 
   viewInvoice(invoice: Invoice): void {
     this.selectedInvoiceId.set(invoice.id);
+    this.selectedInvoiceDetails.set(null);
+    this.billingService.getInvoiceDocumentDetails(invoice.id).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.selectedInvoiceDetails.set(res.data);
+        }
+      },
+      error: (err) => console.error('Failed to load invoice document details', err)
+    });
   }
 
   closeInvoicePreview(): void {
     this.selectedInvoiceId.set(null);
+    this.selectedInvoiceDetails.set(null);
   }
 
   folioForInvoice(invoice: Invoice): Folio | undefined {
@@ -751,59 +766,152 @@ export class BillingComponent implements OnInit, OnDestroy {
   }
 
   printInvoice(invoice: Invoice): void {
-    this.viewInvoice(invoice);
-    setTimeout(() => window.print(), 0);
+    this.selectedInvoiceId.set(invoice.id);
+    this.selectedInvoiceDetails.set(null);
+    this.billingService.getInvoiceDocumentDetails(invoice.id).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.selectedInvoiceDetails.set(res.data);
+          setTimeout(() => window.print(), 200);
+        }
+      },
+      error: (err) => console.error('Failed to fetch invoice details for print', err)
+    });
   }
 
   downloadInvoice(invoice: Invoice): void {
-    const folio = this.folios().find(item => item.folioNo === invoice.folioNo);
-    const lines = (folio?.lines || [])
-      .filter(line => line.debit || line.gst)
-      .map(line => `${line.date},${line.source},${line.description},${line.debit},${line.gst},${line.debit + line.gst}`)
-      .join('\n');
-    const content = [
-      'HMS Cloud Invoice',
-      `Invoice,${invoice.invoiceNo}`,
-      `Guest,${invoice.guest}`,
-      `Folio,${invoice.folioNo}`,
-      `Room,${folio?.room || '-'}`,
-      `Net,${invoice.netAmount}`,
-      `GST,${invoice.gstAmount}`,
-      `Total,${invoice.amount}`,
-      `Paid,${invoice.paidAmount}`,
-      `Balance,${invoice.balanceAmount}`,
-      '',
-      'Date,Source,Description,Net,GST,Total',
-      lines
-    ].join('\n');
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${invoice.invoiceNo}.csv`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    this.printInvoice(invoice);
   }
 
-  debitFor(folio?: Folio): number {
+  debitFor(folio?: Folio | null): number {
     return folio?.totalCharges || 0;
   }
 
-  creditFor(folio?: Folio): number {
+  creditFor(folio?: Folio | null): number {
     return folio?.totalPayments || 0;
   }
 
-  balanceFor(folio?: Folio): number {
+  balanceFor(folio?: Folio | null): number {
     if (!folio) return 0;
     return folio.totalCharges + folio.taxAmount - folio.totalPayments;
   }
 
-  gstFor(folio?: Folio): number {
+  gstFor(folio?: Folio | null): number {
     return folio?.taxAmount || 0;
   }
 
   formatINR(value: number): string {
     return `₹${Number(value || 0).toLocaleString('en-IN')}`;
+  }
+
+  getConsolidatedLines(lines?: FolioLine[]): any[] {
+    if (!lines || lines.length === 0) return [];
+    
+    const consolidated: any[] = [];
+    let roomDebitTotal = 0;
+    let roomGstTotal = 0;
+    const roomDates: string[] = [];
+    
+    for (const line of lines) {
+      if (line.source === 'Room') {
+        roomDebitTotal += (line.debit || 0);
+        roomGstTotal += (line.gst || 0);
+        if (line.date) {
+          roomDates.push(line.date);
+        }
+      } else {
+        consolidated.push(line);
+      }
+    }
+    
+    if (roomDebitTotal > 0 || roomGstTotal > 0) {
+      roomDates.sort();
+      let stayPeriodStr = '';
+      if (roomDates.length > 0) {
+        const start = roomDates[0];
+        const end = roomDates[roomDates.length - 1];
+        stayPeriodStr = start === end ? ` (${start})` : ` (${start} to ${end})`;
+      }
+      
+      consolidated.unshift({
+        id: -99,
+        date: roomDates.length > 0 ? (roomDates.length > 1 ? `${roomDates[0]} to ${roomDates[roomDates.length - 1]}` : roomDates[0]) : 'System',
+        source: 'Room',
+        description: `Room Accommodation Charges${stayPeriodStr}`,
+        debit: roomDebitTotal,
+        credit: 0,
+        gst: roomGstTotal,
+        taxCode: 'GST 12%',
+        user: 'system'
+      });
+    }
+    
+    return consolidated;
+  }
+
+  formatDateString(dateStr?: string): string {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = months[d.getMonth()];
+      const year = d.getFullYear();
+      return `${day}-${month}-${year}`;
+    } catch {
+      return dateStr;
+    }
+  }
+
+  getConsolidatedInvoiceLines(lines?: InvoiceLineItemDTO[]): any[] {
+    if (!lines || lines.length === 0) return [];
+    
+    const consolidated: any[] = [];
+    let roomBaseTotal = 0;
+    let roomTaxTotal = 0;
+    const roomDates: string[] = [];
+    
+    for (const line of lines) {
+      if (line.sacCode === '996311' || line.serviceTitle?.toLowerCase().includes('room')) {
+        roomBaseTotal += (line.baseValue || 0);
+        roomTaxTotal += (line.taxAmount || 0);
+        if (line.date) {
+          roomDates.push(line.date);
+        }
+      } else {
+        consolidated.push({
+          ...line,
+          date: this.formatDateString(line.date)
+        });
+      }
+    }
+    
+    if (roomBaseTotal > 0 || roomTaxTotal > 0) {
+      roomDates.sort();
+      let stayPeriodStr = '';
+      let dateString = '';
+      if (roomDates.length > 0) {
+        const start = this.formatDateString(roomDates[0]);
+        const end = this.formatDateString(roomDates[roomDates.length - 1]);
+        stayPeriodStr = start === end ? ` (${start})` : ` (${start} to ${end})`;
+        dateString = start === end ? start : `${start} to ${end}`;
+      }
+      
+      consolidated.unshift({
+        srNo: 1,
+        date: dateString || 'System',
+        sacCode: '996311',
+        serviceTitle: 'Room Accommodation Charges',
+        serviceDescription: `Room Accommodation Charges${stayPeriodStr}`,
+        baseValue: roomBaseTotal,
+        taxAmount: roomTaxTotal,
+        totalAmount: roomBaseTotal + roomTaxTotal
+      });
+    }
+    
+    return consolidated.map((item, idx) => ({ ...item, srNo: idx + 1 }));
   }
 
   private updateTabFromUrl(url: string): void {

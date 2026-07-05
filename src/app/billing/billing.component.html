@@ -299,52 +299,199 @@
 
   <div class="invoice-preview-overlay" *ngIf="selectedInvoice() as invoice" (click)="closeInvoicePreview()">
     <section class="invoice-preview" (click)="$event.stopPropagation()">
-      <header class="invoice-preview-header">
+      <header class="invoice-preview-header print-hide">
         <div>
-          <h2>HMS Cloud</h2>
-          <p>Tax Invoice • {{ invoice.invoiceNo }}</p>
+          <h2>Invoice System Preview</h2>
+          <p>HMS Cloud Tax Invoice • Reference {{ invoice.invoiceNo }}</p>
         </div>
         <div class="invoice-preview-actions">
-          <button type="button" (click)="downloadInvoice(invoice)">
-            <span class="material-icons-round">download</span>
-            Download
+          <button type="button" class="outline-btn" (click)="downloadInvoice(invoice)" [disabled]="!selectedInvoiceDetails()">
+            <span class="material-icons-round">picture_as_pdf</span>
+            Save PDF
           </button>
-          <button type="button" (click)="printInvoice(invoice)">
+          <button type="button" class="primary-btn" (click)="printInvoice(invoice)" [disabled]="!selectedInvoiceDetails()">
             <span class="material-icons-round">print</span>
-            Print
+            Print Invoice
           </button>
-          <button type="button" (click)="closeInvoicePreview()">
+          <button type="button" class="outline-btn" (click)="closeInvoicePreview()">
             <span class="material-icons-round">close</span>
           </button>
         </div>
       </header>
 
-      <div class="invoice-meta">
-        <div><span>Guest</span><strong>{{ invoice.guest }}</strong></div>
-        <div><span>Folio</span><strong>{{ invoice.folioNo }}</strong></div>
-        <div><span>Status</span><strong>{{ invoice.status }}</strong></div>
-        <div><span>Issued</span><strong>{{ invoice.issuedAt }}</strong></div>
+      <!-- Loading State -->
+      <div class="invoice-details-loading" *ngIf="!selectedInvoiceDetails()">
+        <div class="loading-spinner"></div>
+        <p>Fetching dynamic invoice documents from secure storage...</p>
       </div>
 
-      <div class="bill-table" *ngIf="selectedInvoiceFolio() as folio">
-        <div class="bill-head"><span>Date</span><span>Particulars</span><span>Net</span><span>GST</span><span>Total</span></div>
-        <div class="bill-row" *ngFor="let line of folio.lines">
-          <ng-container *ngIf="line.debit || line.gst">
-            <span>{{ line.date }}</span>
-            <span><strong>{{ line.description }}</strong><small>{{ line.source }} • {{ line.reference }}<ng-container *ngIf="line.taxCode"> • {{ line.taxCode }}</ng-container></small></span>
-            <span>{{ formatINR(line.debit) }}</span>
-            <span>{{ formatINR(line.gst) }}</span>
-            <span>{{ formatINR(line.debit + line.gst) }}</span>
-          </ng-container>
+      <!-- Standard Tax Invoice Layout -->
+      <div class="print-invoice-container" *ngIf="selectedInvoiceDetails() as detail">
+        <!-- Brand Header Section -->
+        <div class="invoice-brand-header">
+          <div class="company-logo-section">
+            <div>
+              <div class="brand-logo-mock">HMS</div>
+              <div class="company-address">
+                <h2>{{ detail.hotelInfo.name }}</h2>
+                <p>{{ detail.hotelInfo.address }}</p>
+                <p><strong>GSTIN:</strong> {{ detail.hotelInfo.gstin }} | <strong>PAN:</strong> {{ detail.hotelInfo.pan }}</p>
+                <p><strong>Email:</strong> {{ detail.hotelInfo.email }} | <strong>Tel:</strong> {{ detail.hotelInfo.tel }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="invoice-title-block">
+            <h1>TAX INVOICE</h1>
+            <div class="invoice-tag-row">
+              <span>Invoice No:</span><strong>{{ detail.invoiceNumber }}</strong>
+            </div>
+            <div class="invoice-tag-row">
+              <span>Date:</span><strong>{{ detail.invoiceDate | date:'dd-MMM-yyyy' }}</strong>
+            </div>
+            <div class="invoice-tag-row">
+              <span>Folio No:</span><strong>{{ detail.folioNumber }}</strong>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div class="bill-summary">
-        <div><span>Net Amount</span><strong>{{ formatINR(invoice.netAmount) }}</strong></div>
-        <div><span>GST</span><strong>{{ formatINR(invoice.gstAmount) }}</strong></div>
-        <div><span>Total Bill</span><strong>{{ formatINR(invoice.amount) }}</strong></div>
-        <div><span>Paid</span><strong class="credit">{{ formatINR(invoice.paidAmount) }}</strong></div>
-        <div><span>Balance</span><strong>{{ formatINR(invoice.balanceAmount) }}</strong></div>
+        <!-- Recipient & Stay Details -->
+        <section class="invoice-parties-details">
+          <div class="party-block billing-to">
+            <h3>Billing To:</h3>
+            <p class="guest-name"><strong>{{ detail.billingTo.guestName }}</strong></p>
+            <p *ngIf="detail.billingTo.organisationName"><strong>Company:</strong> {{ detail.billingTo.organisationName }}</p>
+            <p>
+              {{ detail.billingTo.addressLine1 }}
+              <span *ngIf="detail.billingTo.addressLine2">, {{ detail.billingTo.addressLine2 }}</span>
+              <span *ngIf="detail.billingTo.city">, {{ detail.billingTo.city }}</span>
+              <span *ngIf="detail.billingTo.state">, {{ detail.billingTo.state }}</span>
+              <span *ngIf="detail.billingTo.postCode"> - {{ detail.billingTo.postCode }}</span>
+            </p>
+            <p><strong>Place of Supply:</strong> {{ detail.billingTo.placeOfSupply }}</p>
+            <p *ngIf="detail.billingTo.gstNumber"><strong>Recipient GST:</strong> {{ detail.billingTo.gstNumber }}</p>
+          </div>
+          <div class="party-block stay-details">
+            <h3>Stay Records:</h3>
+            <div class="stay-grid">
+              <span>Room Number:</span><strong>{{ detail.stayRecord.roomNumber }} ({{ detail.stayRecord.roomTypeName }})</strong>
+              <span>Check-in Date:</span><strong>{{ detail.stayRecord.checkInDateTime | date:'dd-MMM-yyyy HH:mm' }}</strong>
+              <span>Check-out Date:</span><strong>{{ detail.stayRecord.checkOutDateTime | date:'dd-MMM-yyyy HH:mm' }}</strong>
+              <span>Nights Stayed:</span><strong>{{ detail.stayRecord.numberOfNights }} Night(s) ({{ detail.stayRecord.numberOfAdults }}A / {{ detail.stayRecord.numberOfChildren }}C)</strong>
+            </div>
+          </div>
+        </section>
+
+        <!-- Consumption Item Table -->
+        <table class="items-invoice-table">
+          <thead>
+            <tr>
+              <th style="width: 8%">Sr.</th>
+              <th style="width: 15%">Date</th>
+              <th style="width: 15%">SAC Code</th>
+              <th style="width: 32%">Service Description</th>
+              <th style="width: 15%; text-align: right;">Base Value (₹)</th>
+              <th style="width: 15%; text-align: right;">Total Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of getConsolidatedInvoiceLines(detail.lineItems)">
+              <td>{{ item.srNo }}</td>
+              <td>{{ item.date }}</td>
+              <td>
+                <span class="sac-badge">{{ item.sacCode }}</span>
+              </td>
+              <td>
+                <strong>{{ item.serviceTitle }}</strong>
+                <small>{{ item.serviceDescription }}</small>
+              </td>
+              <td style="text-align: right;">{{ formatINR(item.baseValue) }}</td>
+              <td style="text-align: right;">{{ formatINR(item.totalAmount) }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Summaries & Tax Splits -->
+        <section class="invoice-financial-summary">
+          <!-- GST Splits Table -->
+          <div class="gst-breakdown-subtable">
+            <h3>Statutory GST Breakdown</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>SAC Code</th>
+                  <th>Category</th>
+                  <th>Taxable (₹)</th>
+                  <th>CGST (%)</th>
+                  <th>CGST Amt (₹)</th>
+                  <th>SGST (%)</th>
+                  <th>SGST Amt (₹)</th>
+                  <th>Total Tax (₹)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let tax of detail.gstBreakdown">
+                  <td>{{ tax.sacCode }}</td>
+                  <td>{{ tax.category }}</td>
+                  <td>{{ formatINR(tax.taxableAmount) }}</td>
+                  <td>{{ tax.cgstRate }}%</td>
+                  <td>{{ formatINR(tax.cgstAmount) }}</td>
+                  <td>{{ tax.sgstRate }}%</td>
+                  <td>{{ formatINR(tax.sgstAmount) }}</td>
+                  <td>{{ formatINR(tax.totalTax) }}</td>
+                </tr>
+                <tr style="font-weight: 700; border-top: 1.5px solid var(--surface-200);">
+                  <td colspan="2">Total</td>
+                  <td>{{ formatINR(detail.netTaxableBase) }}</td>
+                  <td>-</td>
+                  <td>{{ formatINR(detail.cgstSubtotal) }}</td>
+                  <td>-</td>
+                  <td>{{ formatINR(detail.sgstSubtotal) }}</td>
+                  <td>{{ formatINR(detail.totalTax) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Total Dues Block -->
+          <div class="totals-block">
+            <div class="total-row">
+              <span>Net Taxable Base:</span>
+              <strong>{{ formatINR(detail.netTaxableBase) }}</strong>
+            </div>
+            <div class="total-row">
+              <span>CGST:</span>
+              <strong>{{ formatINR(detail.cgstSubtotal) }}</strong>
+            </div>
+            <div class="total-row">
+              <span>SGST:</span>
+              <strong>{{ formatINR(detail.sgstSubtotal) }}</strong>
+            </div>
+            <div class="total-row grand-total">
+              <span>Grand Total:</span>
+              <strong>{{ formatINR(detail.grandTotal) }}</strong>
+            </div>
+            <div class="total-row payment-paid">
+              <span>Payments Received:</span>
+              <strong>{{ formatINR(detail.paymentsReceived) }}</strong>
+            </div>
+          </div>
+        </section>
+
+        <!-- Terms Footer -->
+        <footer class="invoice-legal-footer">
+          <div class="terms-notes-column">
+            <h4>Terms & Conditions:</h4>
+            <ol>
+              <li>Disputes are subject to local state laws only.</li>
+              <li>Taxes charged are as per statutory guidelines laid by government tax authorities.</li>
+            </ol>
+          </div>
+          <div class="signature-box-column">
+            <p>For <strong>{{ detail.hotelInfo.name }}</strong></p>
+            <div class="signature-line-gap"></div>
+            <p class="designation">Authorized Signatory Signature</p>
+          </div>
+        </footer>
       </div>
     </section>
   </div>

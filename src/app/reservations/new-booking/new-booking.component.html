@@ -619,7 +619,7 @@
     <div class="guest-modal-body">
       <div class="search-bar">
         <span class="material-icons-round">search</span>
-        <input type="text" placeholder="Search by name, email or phone..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" autofocus>
+        <input type="text" placeholder="Search by name, email or phone..." [ngModel]="searchQuery()" (ngModelChange)="searchGuests($event)" autofocus>
       </div>
       
       <div class="guest-list">
@@ -639,12 +639,17 @@
           <button class="btn-select-guest">Select</button>
         </div>
         
-        <div class="empty-state" *ngIf="filteredGuests().length === 0 && searchQuery()">
+        <div class="empty-state" *ngIf="isSearchingGuests()">
+          <span class="material-icons-round spin">sync</span>
+          <p>Searching guests...</p>
+        </div>
+
+        <div class="empty-state" *ngIf="!isSearchingGuests() && filteredGuests().length === 0 && searchQuery()">
           <span class="material-icons-round">person_search</span>
           <p>No guests found matching "{{ searchQuery() }}"</p>
           <button class="btn-premium mt-3" style="width: auto; padding: 8px 16px" (click)="closeSearchGuest(); openCreateGuest()">Create New Guest</button>
         </div>
-        <div class="empty-state" *ngIf="filteredGuests().length === 0 && !searchQuery()">
+        <div class="empty-state" *ngIf="!isSearchingGuests() && filteredGuests().length === 0 && !searchQuery()">
           <span class="material-icons-round">person_search</span>
           <p>Type to search guests...</p>
         </div>
@@ -672,6 +677,12 @@
     </div>
     
     <div class="guest-modal-body guest-create-form card-body">
+      <!-- Error Message Banner -->
+      <div class="reservation-message error mb-3" *ngIf="createGuestError()" style="padding: 10px 12px; margin-bottom: 16px; border-radius: 6px; display: flex; align-items: center; gap: 8px; width: 100%;">
+        <span class="material-icons-round" style="color: #991B1B; font-size: 20px;">error_outline</span>
+        <span style="font-weight: 700; font-size: 11px;">{{ createGuestError() }}</span>
+      </div>
+
       <div class="grid-3">
         <div class="input-group">
           <label>Title</label>
@@ -681,7 +692,12 @@
         </div>
         <div class="input-group span-2">
           <label>Guest Full Name *</label>
-          <input type="text" placeholder="Enter full name" [ngModel]="guestData().fullName" (ngModelChange)="updateGuestField('fullName', $event)">
+          <input type="text" placeholder="Enter full name" 
+                 [ngModel]="guestData().fullName" 
+                 (ngModelChange)="updateGuestField('fullName', $event)"
+                 (blur)="markCreateGuestFieldTouched('fullName')"
+                 [class.invalid]="shouldShowCreateGuestError('fullName')">
+          <span class="field-error" *ngIf="shouldShowCreateGuestError('fullName')">{{ createGuestValidationMessage('fullName') }}</span>
         </div>
       </div>
       
@@ -692,12 +708,22 @@
             <select style="width: 120px;" [ngModel]="guestData().phoneCode" (ngModelChange)="updateGuestField('phoneCode', $event)">
               <option>+91 (India)</option><option>+1 (USA)</option>
             </select>
-            <input type="tel" placeholder="Phone number" style="flex:1" [ngModel]="guestData().phone" (ngModelChange)="updateGuestField('phone', $event)">
+            <input type="tel" placeholder="Phone number" style="flex:1" 
+                   [ngModel]="guestData().phone" 
+                   (ngModelChange)="updateGuestField('phone', $event)"
+                   (blur)="markCreateGuestFieldTouched('phone')"
+                   [class.invalid]="shouldShowCreateGuestError('phone')">
           </div>
+          <span class="field-error" *ngIf="shouldShowCreateGuestError('phone')">{{ createGuestValidationMessage('phone') }}</span>
         </div>
         <div class="input-group">
           <label>Email Address</label>
-          <input type="email" placeholder="email@example.com" [ngModel]="guestData().email" (ngModelChange)="updateGuestField('email', $event)">
+          <input type="email" placeholder="email@example.com" 
+                 [ngModel]="guestData().email" 
+                 (ngModelChange)="updateGuestField('email', $event)"
+                 (blur)="markCreateGuestFieldTouched('email')"
+                 [class.invalid]="shouldShowCreateGuestError('email')">
+          <span class="field-error" *ngIf="shouldShowCreateGuestError('email')">{{ createGuestValidationMessage('email') }}</span>
         </div>
       </div>
       
@@ -710,7 +736,12 @@
         </div>
         <div class="input-group">
           <label>ID Number</label>
-          <input type="text" placeholder="Enter ID Number" [ngModel]="guestData().idNumber" (ngModelChange)="updateGuestField('idNumber', $event)">
+          <input type="text" placeholder="Enter ID Number" 
+                 [ngModel]="guestData().idNumber" 
+                 (ngModelChange)="updateGuestField('idNumber', $event)"
+                 (blur)="markCreateGuestFieldTouched('idNumber')"
+                 [class.invalid]="shouldShowCreateGuestError('idNumber')">
+          <span class="field-error" *ngIf="shouldShowCreateGuestError('idNumber')">{{ createGuestValidationMessage('idNumber') }}</span>
         </div>
       </div>
     </div>
@@ -718,12 +749,28 @@
     <div class="fmap-footer" style="justify-content: flex-end;">
       <div class="fmf-actions">
         <button class="fmf-cancel" (click)="closeCreateGuest()">Cancel</button>
-        <button class="fmf-confirm" [disabled]="!guestData().fullName || !guestData().phone" (click)="saveNewGuest()">
+        <button class="fmf-confirm" (click)="saveNewGuest()">
           <span class="material-icons-round">save</span>
           Save Guest Profile
         </button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="booking-toast-wrapper" [class.visible]="bookingToast().visible" [attr.role]="bookingToast().visible ? 'alert' : null">
+  <div class="booking-toast" [class.success]="bookingToast().type === 'success'" [class.error]="bookingToast().type === 'error'">
+    <div class="booking-toast-icon">
+      <span class="material-icons-round">{{ bookingToast().type === 'success' ? 'check_circle' : 'error' }}</span>
+    </div>
+    <div class="booking-toast-body">
+      <strong>{{ bookingToast().title }}</strong>
+      <span>{{ bookingToast().message }}</span>
+    </div>
+    <button class="booking-toast-close" (click)="dismissToast()" title="Dismiss">
+      <span class="material-icons-round">close</span>
+    </button>
   </div>
 </div>
 

@@ -35,6 +35,7 @@ interface ApiRoom {
   status: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED' | 'CLEANING';
   maxOccupancy?: number;
   isActive?: boolean;
+  basePricePerNight?: number;
 }
 
 interface ApiRatePlan {
@@ -177,6 +178,15 @@ export class NewBookingComponent implements OnInit {
   searchGuestModalOpen = signal(false);
   createGuestModalOpen = signal(false);
   searchQuery = signal('');
+  createGuestError = signal<string | null>(null);
+  createGuestSubmitted = signal(false);
+  createGuestTouched = signal<Record<string, boolean>>({});
+  bookingToast = signal<{ visible: boolean; type: 'success' | 'error'; title: string; message: string }>({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: ''
+  });
   
   mockGuests: GuestProfile[] = [
     { id: 'G1001', title: 'Mr.', fullName: 'Rajesh Kumar', phoneCode: '+91 (India)', phone: '9876543210', email: 'rajesh.k@example.com', country: 'India', address1: '123 Park Street', address2: '', city: 'Mumbai', state: 'MH', zip: '400001', vip: true, nationality: 'Indian', gender: 'Male', dob: '1985-06-15', idProof: 'Aadhar Card', idNumber: '1234 5678 9012', notes: 'Prefers quiet rooms.', visits: 5, lastVisit: '2026-03-10' },
@@ -443,7 +453,7 @@ export class NewBookingComponent implements OnInit {
       hotelId: roomType?.hotelId,
       floor,
       status: this.mapRoomStatus(room.status),
-      rate: Number(roomType?.basePricePerNight ?? 0),
+      rate: Number(room.basePricePerNight ?? roomType?.basePricePerNight ?? 0),
       view: this.resolveFloorLabel(room, floor),
       beds: `${room.maxOccupancy || 1} Pax`
     };
@@ -774,6 +784,9 @@ export class NewBookingComponent implements OnInit {
   openCreateGuest() { 
     this.createGuestModalOpen.set(true); 
     document.body.style.overflow = 'hidden'; 
+    this.createGuestError.set(null);
+    this.createGuestSubmitted.set(false);
+    this.createGuestTouched.set({});
     // Reset form for new guest
     this.guestData.set({
       title: 'Mr.', fullName: '', phoneCode: '+91 (India)', phone: '', email: '',
@@ -783,28 +796,253 @@ export class NewBookingComponent implements OnInit {
   }
   closeCreateGuest() { this.createGuestModalOpen.set(false); document.body.style.overflow = ''; }
 
+  searchResults = signal<GuestProfile[]>([]);
+  isSearchingGuests = signal(false);
+
   filteredGuests = computed(() => {
     const q = this.searchQuery().toLowerCase();
     if (!q) return [];
-    return this.mockGuests.filter(g => g.fullName.toLowerCase().includes(q) || g.phone.includes(q) || g.email.toLowerCase().includes(q));
+    const localMatches = this.mockGuests.filter(g => g.fullName.toLowerCase().includes(q) || g.phone.includes(q) || g.email.toLowerCase().includes(q));
+    const remoteMatches = this.searchResults();
+    const combined = [...remoteMatches, ...localMatches];
+    const unique: GuestProfile[] = [];
+    const keys = new Set<string>();
+    for (const g of combined) {
+      const key = `${g.email || ''}_${g.phone || ''}`;
+      if (!keys.has(key)) {
+        keys.add(key);
+        unique.push(g);
+      }
+    }
+    return unique;
   });
+
+  searchGuests(query: string) {
+    this.searchQuery.set(query);
+    if (!query.trim()) {
+      this.searchResults.set([]);
+      return;
+    }
+    this.isSearchingGuests.set(true);
+    this.http.get<StandardResponse<any[]>>(`${this.frontOfficeBaseUrl}/guests/getAllGuests?search=${encodeURIComponent(query)}`).subscribe({
+      next: (res) => {
+        this.isSearchingGuests.set(false);
+        if (res.success && res.data) {
+          this.searchResults.set(res.data.map(g => this.mapApiGuestToProfile(g)));
+        } else {
+          this.searchResults.set([]);
+        }
+      },
+      error: (err) => {
+        console.error('Error fetching guests:', err);
+        this.isSearchingGuests.set(false);
+        this.searchResults.set([]);
+      }
+    });
+  }
 
   selectGuest(guest: GuestProfile) {
     this.guestData.set({ ...guest });
     this.closeSearchGuest();
   }
 
+  markCreateGuestFieldTouched(field: string) {
+    this.createGuestTouched.update(fields => ({ ...fields, [field]: true }));
+  }
+
+  shouldShowCreateGuestError(field: string): boolean {
+    return !!(this.createGuestSubmitted() || this.createGuestTouched()[field]) && !!this.createGuestValidationMessage(field);
+  }
+
+  createGuestValidationMessage(field: string): string {
+    const guest = this.guestData();
+    switch (field) {
+      case 'fullName': {
+        const name = guest.fullName.trim();
+        if (!name) return 'Guest full name is required.';
+        if (name.length < 2) return 'Enter a valid guest name.';
+        if (!/^[A-Za-z][A-Za-z .'-]*$/.test(name)) return 'Name must contain letters, spaces, dots or hyphens only.';
+        return '';
+      }
+      case 'phone': {
+        const phone = this.onlyDigits(guest.phone);
+        if (!phone) return 'Phone number is required.';
+        if (this.extractCountryCode(guest.phoneCode) === '+91') {
+          if (!/^[6-9]\d{9}$/.test(phone)) return 'Enter a valid 10 digit Indian mobile number.';
+        } else if (!/^\d{7,15}$/.test(phone)) {
+          return 'Enter a valid phone number (7-15 digits).';
+        }
+        return '';
+      }
+      case 'email': {
+        const email = (guest.email || '').trim();
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+          return 'Enter a valid email address.';
+        }
+        return '';
+      }
+      case 'idNumber': {
+        const idNumber = (guest.idNumber || '').trim();
+        if (idNumber) {
+          if (guest.idProof === 'Aadhar Card' && !/^[2-9]\d{11}$/.test(this.onlyDigits(idNumber))) {
+            return 'Enter a valid 12 digit Aadhaar number.';
+          }
+          if (guest.idProof === 'Passport' && !/^[A-Z][0-9]{7}$/i.test(idNumber.replace(/\s/g, ''))) {
+            return 'Enter a valid passport number, e.g. A1234567.';
+          }
+          if (guest.idProof === 'Driving License' && idNumber.replace(/\s|-/g, '').length < 8) {
+            return 'Enter a valid driving license number.';
+          }
+        }
+        return '';
+      }
+      default:
+        return '';
+    }
+  }
+
+  validateCreateGuest(): string | null {
+    const fields = ['fullName', 'phone', 'email', 'idNumber'];
+    return fields.map(f => this.createGuestValidationMessage(f)).find(Boolean) || null;
+  }
+
   saveNewGuest() {
-    // In a real app, this would save to backend.
-    const newGuest = { ...this.guestData(), id: 'G' + Math.floor(Math.random() * 10000), visits: 0 };
-    this.mockGuests.push(newGuest);
-    this.guestData.set(newGuest); // Set as selected
-    this.closeCreateGuest();
-    console.log('Guest created:', newGuest);
+    this.createGuestSubmitted.set(true);
+    this.createGuestError.set(null);
+    const validationError = this.validateCreateGuest();
+    if (validationError) {
+      this.createGuestError.set(validationError);
+      return;
+    }
+
+    const payload = this.profileToGuestRequest(this.guestData());
+    this.isCreatingReservation.set(true);
+    this.http.post<StandardResponse<any>>(`${this.frontOfficeBaseUrl}/guests/createGuest`, payload).subscribe({
+      next: (res) => {
+        this.isCreatingReservation.set(false);
+        if (res.success && res.data) {
+          const profile = this.mapApiGuestToProfile(res.data);
+          this.guestData.set(profile);
+          this.closeCreateGuest();
+          this.showToast('success', 'Success', 'Guest profile created successfully.');
+        } else {
+          const errMsg = res.message || 'Unable to save guest profile.';
+          this.createGuestError.set(errMsg);
+          this.showToast('error', 'Error', errMsg);
+        }
+      },
+      error: (err) => {
+        console.error('Error creating guest profile:', err);
+        this.isCreatingReservation.set(false);
+        const errMsg = err?.error?.message || err?.error?.error?.message || 'Unable to save guest profile.';
+        this.createGuestError.set(errMsg);
+        this.showToast('error', 'Error', errMsg);
+      }
+    });
+  }
+
+  showToast(type: 'success' | 'error', title: string, message: string, duration = 4000) {
+    this.bookingToast.set({ visible: true, type, title, message });
+    setTimeout(() => this.dismissToast(), duration);
+  }
+
+  dismissToast() {
+    this.bookingToast.update(t => ({ ...t, visible: false }));
+  }
+
+  private mapApiGuestToProfile(apiGuest: any): GuestProfile {
+    const titleMap: Record<string, string> = {
+      'MR': 'Mr.', 'MRS': 'Mrs.', 'MS': 'Ms.', 'MISS': 'Miss', 'DR': 'Dr.', 'PROF': 'Prof.'
+    };
+    const title = titleMap[apiGuest.title] || apiGuest.title || 'Mr.';
+    const fullName = apiGuest.fullName || `${apiGuest.firstName || ''} ${apiGuest.lastName || ''}`.trim();
+    const idProofMap: Record<string, string> = {
+      'AADHAR': 'Aadhar Card',
+      'PASSPORT': 'Passport',
+      'DRIVING_LICENSE': 'Driving License',
+      'PAN': 'PAN Card',
+      'VOTER_ID': 'Voter ID'
+    };
+    const idProof = idProofMap[apiGuest.idProofType] || apiGuest.idProofType || 'Aadhar Card';
+    const genderMap: Record<string, string> = {
+      'MALE': 'Male', 'FEMALE': 'Female', 'OTHER': 'Other'
+    };
+    const gender = genderMap[apiGuest.gender] || apiGuest.gender || '';
+
+    return {
+      id: String(apiGuest.id),
+      title,
+      fullName,
+      phoneCode: apiGuest.countryCode ? `${apiGuest.countryCode}` : '+91 (India)',
+      phone: apiGuest.phone || '',
+      email: apiGuest.email || '',
+      country: apiGuest.country || 'India',
+      address1: apiGuest.addressLine1 || '',
+      address2: apiGuest.addressLine2 || '',
+      city: apiGuest.city || '',
+      state: apiGuest.state || '',
+      zip: apiGuest.postCode || '',
+      vip: !!apiGuest.isVip,
+      nationality: apiGuest.nationality || '',
+      gender,
+      dob: apiGuest.dateOfBirth || '',
+      idProof,
+      idNumber: apiGuest.idProofNumber || '',
+      notes: apiGuest.guestNotes || apiGuest.preference || '',
+      visits: 0
+    };
+  }
+
+  private profileToGuestRequest(profile: GuestProfile): any {
+    const revTitleMap: Record<string, string> = {
+      'Mr.': 'MR', 'Mrs.': 'MRS', 'Ms.': 'MS', 'Miss': 'MISS', 'Dr.': 'DR', 'Prof.': 'PROF'
+    };
+    const title = revTitleMap[profile.title] || 'MR';
+    const nameParts = profile.fullName.trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '.';
+    const revIdProofMap: Record<string, string> = {
+      'Aadhar Card': 'AADHAR',
+      'Passport': 'PASSPORT',
+      'Driving License': 'DRIVING_LICENSE',
+      'PAN Card': 'PAN',
+      'Voter ID': 'VOTER_ID'
+    };
+    const idProofType = revIdProofMap[profile.idProof] || 'AADHAR';
+    const revGenderMap: Record<string, string> = {
+      'Male': 'MALE', 'Female': 'FEMALE', 'Other': 'OTHER'
+    };
+    const gender = revGenderMap[profile.gender] || 'MALE';
+
+    return {
+      title,
+      firstName,
+      lastName,
+      countryCode: profile.phoneCode ? profile.phoneCode.split(' ')[0] : '+91',
+      phone: profile.phone || '',
+      email: profile.email || '',
+      addressLine1: profile.address1 || '',
+      addressLine2: profile.address2 || '',
+      city: profile.city || '',
+      state: profile.state || '',
+      postCode: profile.zip || '',
+      country: profile.country || 'India',
+      nationality: profile.nationality || '',
+      gender,
+      dateOfBirth: profile.dob || null,
+      idProofType,
+      idProofNumber: profile.idNumber || '',
+      guestNotes: profile.notes || '',
+      preference: '',
+      isVip: !!profile.vip
+    };
   }
 
   updateGuestField(field: keyof GuestProfile, value: any) {
     this.guestData.update(data => ({ ...data, [field]: value }));
+    if (this.createGuestModalOpen()) {
+      this.markCreateGuestFieldTouched(field);
+    }
   }
 
   markFieldTouched(field: BookingValidationField) {
@@ -985,7 +1223,6 @@ export class NewBookingComponent implements OnInit {
 
   private buildReservationPayload(status: ReservationRequest['reservationStatus']): ReservationRequest {
     const room = this.selectedRoom()!;
-    const guestId = this.getNumericGuestId();
     const payload: ReservationRequest = {
       hotelId: room.hotelId ?? this.editHotelId() ?? 1,
       checkInDate: this.checkIn(),
@@ -1001,14 +1238,9 @@ export class NewBookingComponent implements OnInit {
       billingAddress: [this.guestData().address1, this.guestData().address2, this.guestData().city, this.guestData().state, this.guestData().zip]
         .filter(Boolean)
         .join(', '),
-      notes: this.guestData().notes
+      notes: this.guestData().notes,
+      guestDetails: this.buildGuestDetailsPayload()
     };
-
-    if (guestId) {
-      payload.guestId = guestId;
-    } else {
-      payload.guestDetails = this.buildGuestDetailsPayload();
-    }
 
     return payload;
   }
@@ -1017,27 +1249,39 @@ export class NewBookingComponent implements OnInit {
     const guest = this.guestData();
     const { firstName, lastName } = this.splitGuestName(guest.fullName);
 
-    return {
+    const guestDetails: any = {
       title: this.mapGuestTitle(guest.title),
       firstName,
       lastName,
       countryCode: this.extractCountryCode(guest.phoneCode),
-      phone: this.onlyDigits(guest.phone),
-      email: guest.email.trim(),
-      addressLine1: guest.address1,
-      addressLine2: guest.address2,
-      city: guest.city,
-      state: guest.state,
-      postCode: guest.zip,
-      country: guest.country,
-      nationality: guest.nationality,
-      gender: this.mapGender(guest.gender),
-      dateOfBirth: guest.dob || undefined,
-      idProofType: this.mapIdProof(guest.idProof),
-      idProofNumber: guest.idProof === 'Aadhar Card' ? this.onlyDigits(guest.idNumber) : guest.idNumber.trim(),
-      guestNotes: guest.notes,
-      isVip: guest.vip
+      phone: this.onlyDigits(guest.phone)
     };
+
+    if (guest.email && guest.email.trim()) guestDetails.email = guest.email.trim();
+    if (guest.address1 && guest.address1.trim()) guestDetails.addressLine1 = guest.address1.trim();
+    if (guest.address2 && guest.address2.trim()) guestDetails.addressLine2 = guest.address2.trim();
+    if (guest.city && guest.city.trim()) guestDetails.city = guest.city.trim();
+    if (guest.state && guest.state.trim()) guestDetails.state = guest.state.trim();
+    if (guest.zip && guest.zip.trim()) guestDetails.postCode = guest.zip.trim();
+    if (guest.country && guest.country.trim()) guestDetails.country = guest.country.trim();
+    if (guest.nationality && guest.nationality.trim()) guestDetails.nationality = guest.nationality.trim();
+
+    const genderMapped = this.mapGender(guest.gender);
+    if (genderMapped) guestDetails.gender = genderMapped;
+
+    if (guest.dob) guestDetails.dateOfBirth = guest.dob;
+
+    const idProofMapped = this.mapIdProof(guest.idProof);
+    if (idProofMapped) guestDetails.idProofType = idProofMapped;
+
+    if (guest.idNumber && guest.idNumber.trim()) {
+      guestDetails.idProofNumber = guest.idProof === 'Aadhar Card' ? this.onlyDigits(guest.idNumber) : guest.idNumber.trim();
+    }
+
+    if (guest.notes && guest.notes.trim()) guestDetails.guestNotes = guest.notes.trim();
+    if (guest.vip !== undefined) guestDetails.isVip = guest.vip;
+
+    return guestDetails;
   }
 
   private onlyDigits(value: string): string {

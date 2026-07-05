@@ -91,7 +91,83 @@ export class BillingService {
     return this.http.post<StandardResponse<void>>(`${this.apiUrl}/folios/generateInvoice/${folioId}`, {});
   }
 
-  getAllInvoices(): Observable<InvoiceDTO[]> {
-    return this.http.get<InvoiceDTO[]>(`${this.apiUrl}/invoices/getAllInvoices`);
+  getAllInvoices(): Observable<StandardResponse<InvoiceDTO[]>> {
+    return this.http.get<StandardResponse<InvoiceDTO[]>>(`${this.apiUrl}/invoices/getAllInvoices`);
   }
+
+  getInvoiceDocumentDetails(invoiceId: number): Observable<StandardResponse<InvoiceDocumentDetailsDTO>> {
+    return this.http.get<StandardResponse<InvoiceDocumentDetailsDTO>>(`${this.apiUrl}/invoices/getInvoiceDocumentDatails/${invoiceId}`);
+  }
+}
+
+export interface HotelInfoDTO {
+  name: string;
+  address: string;
+  gstin: string;
+  pan: string;
+  email: string;
+  tel: string;
+}
+
+export interface BillingToDTO {
+  guestName: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  postCode: string;
+  placeOfSupply: string;
+  organisationName: string | null;
+  gstNumber: string | null;
+}
+
+export interface StayRecordDTO {
+  roomNumber: string;
+  roomTypeName: string;
+  checkInDateTime: string;
+  checkOutDateTime: string;
+  numberOfNights: number;
+  numberOfAdults: number;
+  numberOfChildren: number;
+}
+
+export interface InvoiceLineItemDTO {
+  srNo: number;
+  date: string;
+  sacCode: string;
+  serviceTitle: string;
+  serviceDescription: string;
+  baseValue: number;
+  taxAmount: number;
+  totalAmount: number;
+}
+
+export interface GstBreakdownDTO {
+  sacCode: string;
+  category: string;
+  taxableAmount: number;
+  cgstRate: number;
+  cgstAmount: number;
+  sgstRate: number;
+  sgstAmount: number;
+  totalTax: number;
+}
+
+export interface InvoiceDocumentDetailsDTO {
+  invoiceNumber: string;
+  invoiceDate: string;
+  folioNumber: string;
+  invoiceStatus: string;
+  hotelInfo: HotelInfoDTO;
+  billingTo: BillingToDTO;
+  stayRecord: StayRecordDTO;
+  lineItems: InvoiceLineItemDTO[];
+  gstBreakdown: GstBreakdownDTO[];
+  netTaxableBase: number;
+  cgstSubtotal: number;
+  sgstSubtotal: number;
+  totalTax: number;
+  grandTotal: number;
+  paymentsReceived: number;
+  balanceDue: number;
 }

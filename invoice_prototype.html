@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HMS Tax Invoice Prototype</title>
+  <!-- Import Corporate Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* Styling variables corresponding to HMS premium colors */
+    :root {
+      --primary-color: #0f8b88;
+      --primary-light: #edf8f7;
+      --surface-50: #f8fafc;
+      --surface-100: #f1f5f9;
+      --surface-200: #e2e8f0;
+      --surface-500: #64748b;
+      --surface-800: #1e293b;
+      --accent-red: #b91c1c;
+      --accent-green: #15803d;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--surface-100);
+      color: var(--surface-800);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    /* Interactive Controller Bar (Hidden on print) */
+    .control-panel {
+      width: 100%;
+      max-width: 900px;
+      margin: 20px 0 10px;
+      padding: 15px 25px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--surface-200);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .control-panel h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--primary-color);
+      letter-spacing: -0.2px;
+    }
+
+    .control-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      height: 36px;
+      padding: 0 16px;
+      border-radius: 6px;
+      border: 1px solid var(--surface-200);
+      background: white;
+      color: var(--surface-800);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: var(--surface-50);
+      border-color: var(--surface-500);
+    }
+
+    .btn-primary {
+      background: var(--primary-color);
+      color: white;
+      border-color: transparent;
+    }
+
+    .btn-primary:hover {
+      background: #0d7a77;
+    }
+
+    .btn-active {
+      background: var(--primary-light);
+      color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+
+    /* Print-ready Template Container */
+    .print-invoice-container {
+      width: 100%;
+      max-width: 900px;
+      margin: 10px 0 40px;
+      background: #ffffff;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--surface-200);
+      color: var(--surface-800);
+    }
+
+    /* Branding & Invoice Title Header */
+    .invoice-brand-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid var(--surface-200);
+      padding-bottom: 25px;
+      margin-bottom: 25px;
+    }
+
+    .company-logo-section {
+      display: flex;
+      gap: 15px;
+    }
+
+    .brand-logo-mock {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--primary-color);
+      letter-spacing: -1.5px;
+      line-height: 1;
+    }
+
+    .company-address h2 {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0 0 6px;
+      color: var(--surface-800);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .company-address p {
+      margin: 0 0 4px;
+      color: var(--surface-500);
+      font-size: 11.5px;
+      line-height: 1.4;
+    }
+
+    .invoice-title-block {
+      text-align: right;
+    }
+
+    .invoice-title-block h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--primary-color);
+      margin: 0 0 15px;
+      letter-spacing: 0.5px;
+    }
+
+    .invoice-tag-row {
+      margin-top: 5px;
+      font-size: 12px;
+    }
+
+    .invoice-tag-row span {
+      color: var(--surface-500);
+      margin-right: 8px;
+    }
+
+    .invoice-tag-row strong {
+      color: var(--surface-800);
+    }
+
+    /* Parties Layout Map */
+    .invoice-parties-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 35px;
+    }
+
+    .party-block {
+      background: var(--surface-50);
+      padding: 18px;
+      border-radius: 8px;
+      border: 1px solid var(--surface-200);
+    }
+
+    .party-block h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--surface-500);
+      margin: 0 0 12px;
+      letter-spacing: 0.8px;
+    }
+
+    .guest-name {
+      font-size: 15px;
+      color: var(--primary-color);
+      margin: 0 0 6px;
+    }
+
+    .party-block p {
+      margin: 0 0 5px;
+      font-size: 12px;
+      color: var(--surface-800);
+    }
+
+    .stay-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 5px 15px;
+      font-size: 12px;
+    }
+
+    .stay-grid span {
+      color: var(--surface-500);
+    }
+
+    /* Invoice Line Table */
+    .items-invoice-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 35px;
+    }
+
+    .items-invoice-table th {
+      background: var(--surface-100);
+      border-bottom: 2px solid var(--surface-200);
+      color: var(--surface-500);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 10px;
+      padding: 12px 10px;
+      text-align: left;
+      letter-spacing: 0.5px;
+    }
+
+    .items-invoice-table td {
+      padding: 14px 10px;
+      border-bottom: 1px solid var(--surface-100);
+      vertical-align: middle;
+      font-size: 12px;
+    }
+
+    .sac-badge {
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .items-invoice-table td strong {
+      display: block;
+      font-size: 12.5px;
+      color: var(--surface-800);
+    }
+
+    .items-invoice-table td small {
+      display: block;
+      font-size: 10px;
+      color: var(--surface-500);
+      margin-top: 3px;
+    }
+
+    /* Financial Summary Area */
+    .invoice-financial-summary {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 30px;
+      margin-bottom: 40px;
+      align-items: start;
+    }
+
+    .gst-breakdown-subtable h3 {
+      font-size: 11px;
+      color: var(--surface-500);
+      text-transform: uppercase;
+      margin: 0 0 12px;
+      letter-spacing: 0.8px;
+    }
+
+    .gst-breakdown-subtable table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10.5px;
+    }
+
+    .gst-breakdown-subtable th {
+      background: var(--surface-50);
+      border-bottom: 1px solid var(--surface-200);
+      padding: 8px 6px;
+      color: var(--surface-500);
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .gst-breakdown-subtable th:first-child,
+    .gst-breakdown-subtable td:first-child {
+      text-align: left;
+    }
+
+    .gst-breakdown-subtable td {
+      padding: 10px 6px;
+      border-bottom: 1px solid var(--surface-100);
+      color: var(--surface-800);
+      text-align: right;
+    }
+
+    /* Totals Summary Card */
+    .totals-block {
+      background: var(--surface-50);
+      border-radius: 8px;
+      border: 1px solid var(--surface-200);
+      padding: 20px;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 12px;
+      color: var(--surface-500);
+    }
+
+    .total-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .grand-total {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--surface-800);
+      border-top: 1px solid var(--surface-200);
+      padding-top: 10px;
+      margin-top: 10px;
+    }
+
+    .payment-paid {
+      color: var(--accent-green);
+    }
+
+    .balance-due-highlight {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--accent-red);
+      background: #fee2e2;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      border: 1px solid #fca5a5;
+    }
+
+    .balance-due-settled {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--accent-green);
+      background: #dcfce7;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      border: 1px solid #86efac;
+    }
+
+    /* Legal Footer styling */
+    .invoice-legal-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-top: 1px dashed var(--surface-200);
+      padding-top: 30px;
+      margin-top: 20px;
+    }
+
+    .terms-notes-column {
+      max-width: 60%;
+    }
+
+    .terms-notes-column h4 {
+      font-size: 12px;
+      color: var(--surface-800);
+      margin: 0 0 8px;
+    }
+
+    .terms-notes-column ol {
+      padding-left: 18px;
+      margin: 0;
+      font-size: 11px;
+      color: var(--surface-500);
+      line-height: 1.5;
+    }
+
+    .terms-notes-column li {
+      margin-bottom: 4px;
+    }
+
+    .signature-box-column {
+      text-align: center;
+      min-width: 220px;
+    }
+
+    .signature-line-gap {
+      height: 60px;
+      border-bottom: 1px solid var(--surface-500);
+      margin-bottom: 10px;
+    }
+
+    .signature-box-column .designation {
+      font-size: 11px;
+      color: var(--surface-500);
+      margin: 0;
+    }
+
+    /* Print Styles overrides */
+    @media print {
+      body {
+        background-color: transparent !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      
+      .control-panel {
+        display: none !important;
+      }
+
+      .print-invoice-container {
+        border: none !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 5mm 10mm !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        font-size: 10.5px !important;
+      }
+
+      .invoice-brand-header {
+        border-bottom: 1.5px solid var(--surface-200) !important;
+        padding-bottom: 10px !important;
+        margin-bottom: 12px !important;
+      }
+
+      .brand-logo-mock {
+        font-size: 26px !important;
+        margin-bottom: 3px !important;
+      }
+
+      .company-address h2 {
+        font-size: 13px !important;
+        margin-bottom: 3px !important;
+      }
+
+      .company-address p {
+        font-size: 9.5px !important;
+        margin-bottom: 2px !important;
+      }
+
+      .invoice-title-block h1 {
+        font-size: 22px !important;
+        margin-bottom: 8px !important;
+      }
+
+      .invoice-tag-row {
+        margin-top: 3px !important;
+        font-size: 10.5px !important;
+      }
+
+      .invoice-parties-details {
+        gap: 16px !important;
+        margin-bottom: 16px !important;
+      }
+
+      .party-block {
+        padding: 10px 14px !important;
+      }
+
+      .party-block h3 {
+        margin-bottom: 6px !important;
+      }
+
+      .guest-name {
+        font-size: 13px !important;
+      }
+
+      .stay-grid {
+        gap: 3px 10px !important;
+        font-size: 10.5px !important;
+      }
+
+      .items-invoice-table {
+        margin-bottom: 16px !important;
+      }
+
+      .items-invoice-table th {
+        padding: 8px 8px !important;
+        font-size: 9px !important;
+      }
+
+      .items-invoice-table td {
+        padding: 8px 8px !important;
+        font-size: 10.5px !important;
+      }
+
+      .items-invoice-table td strong {
+        font-size: 11px !important;
+      }
+
+      .items-invoice-table td small {
+        font-size: 9px !important;
+        margin-top: 1px !important;
+      }
+
+      .invoice-financial-summary {
+        gap: 20px !important;
+        margin-bottom: 18px !important;
+      }
+
+      .gst-breakdown-subtable h3 {
+        margin-bottom: 8px !important;
+      }
+
+      .gst-breakdown-subtable th {
+        padding: 5px !important;
+        font-size: 8.5px !important;
+      }
+
+      .gst-breakdown-subtable td {
+        padding: 5px !important;
+        font-size: 8.5px !important;
+      }
+
+      .totals-block {
+        padding: 12px !important;
+      }
+
+      .total-row {
+        margin-bottom: 5px !important;
+        font-size: 10px !important;
+      }
+
+      .totals-block .grand-total {
+        font-size: 11.5px !important;
+        padding-top: 7px !important;
+        margin-top: 7px !important;
+      }
+
+      .invoice-legal-footer {
+        padding-top: 12px !important;
+        margin-top: 15px !important;
+      }
+
+      .terms-notes-column {
+        max-width: 55% !important;
+      }
+
+      .terms-notes-column h4 {
+        font-size: 10.5px !important;
+        margin-bottom: 4px !important;
+      }
+
+      .terms-notes-column ol {
+        font-size: 9px !important;
+      }
+
+      .signature-box-column {
+        min-width: 170px !important;
+      }
+
+      .signature-line-gap {
+        height: 38px !important;
+        margin-bottom: 5px !important;
+      }
+
+      .items-invoice-table tr,
+      .gst-breakdown-subtable,
+      .totals-block,
+      .invoice-legal-footer {
+        page-break-inside: avoid !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Controls panel for user interaction in mock template -->
+  <div class="control-panel">
+    <h2>HMS Print Invoice Prototype Controller</h2>
+    <div class="control-buttons">
+      <button class="btn btn-active" id="btn-b2c" onclick="toggleMode('B2C')">Personal (B2C)</button>
+      <button class="btn" id="btn-b2b" onclick="toggleMode('B2B')">Corporate (B2B)</button>
+      <button class="btn" id="btn-settle" onclick="toggleSettlement()">Total Settled: Off</button>
+      <button class="btn btn-primary" onclick="window.print()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        Print / PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Invoice Area -->
+  <div class="print-invoice-container">
+    
+    <!-- Invoice Header -->
+    <header class="invoice-brand-header">
+      <div class="company-logo-section">
+        <div>
+          <div class="brand-logo-mock">HMS</div>
+          <div class="company-address">
+            <h2>HMS Cloud Hotels & Resorts</h2>
+            <p>123 Hospitality Way, Sector 62, Noida, UP - 201301</p>
+            <p><strong>GSTIN:</strong> 09AAAAA1111A1Z0 | <strong>PAN:</strong> AAAA0000A</p>
+            <p><strong>Email:</strong> billing@hmscloud.com | <strong>Tel:</strong> +91 120 444555</p>
+          </div>
+        </div>
+      </div>
+      <div class="invoice-title-block">
+        <h1>TAX INVOICE</h1>
+        <div class="invoice-tag-row">
+          <span>Invoice No:</span><strong id="invoice-no">INV-2026-10492</strong>
+        </div>
+        <div class="invoice-tag-row">
+          <span>Date:</span><strong id="invoice-date">05-Jul-2026</strong>
+        </div>
+        <div class="invoice-tag-row">
+          <span>Folio No:</span><strong id="folio-no">FOL-1001-A</strong>
+        </div>
+      </div>
+    </header>
+
+    <!-- Guest and Booking details section -->
+    <section class="invoice-parties-details">
+      <div class="party-block billing-to">
+        <h3>Billing To:</h3>
+        <p class="guest-name"><strong id="guest-name">Akshay Barmate</strong></p>
+        <div id="company-container" style="display: none;">
+          <p><strong>Company Name:</strong> Barmate Technologies Private Limited</p>
+          <p><strong>Company GSTIN:</strong> 09BBBBB2222B1Z1</p>
+        </div>
+        <p id="guest-address">E-49, Ground Floor, Sector 3, Noida, Uttar Pradesh - 201301</p>
+        <p><strong>Place of Supply:</strong> Uttar Pradesh (State Code: 09)</p>
+      </div>
+      <div class="party-block stay-details">
+        <h3>Stay Records:</h3>
+        <div class="stay-grid">
+          <span>Room Number:</span><strong id="stay-room">302 (Executive Suite)</strong>
+          <span>Check-in Date:</span><strong id="stay-checkin">01-Jul-2026 12:00 PM</strong>
+          <span>Check-out Date:</span><strong id="stay-checkout">05-Jul-2026 11:00 AM</strong>
+          <span>Nights / Guests:</span><strong id="stay-nights">4 Nights / 2 Adults</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main consumption lines list -->
+    <table class="items-invoice-table">
+      <thead>
+        <tr>
+          <th style="width: 5%">Sr.</th>
+          <th style="width: 13%">Date</th>
+          <th style="width: 12%">SAC Code</th>
+          <th style="width: 40%">Service Description</th>
+          <th style="width: 15%; text-align: right;">Base Value (₹)</th>
+          <th style="width: 15%; text-align: right;">Total Amount (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>01-Jul-2026 to 05-Jul-2026</td>
+          <td><span class="sac-badge">996311</span></td>
+          <td>
+            <strong>Room Accommodation Charges</strong>
+            <small>Executive Suite - Room 302 (Stay Period: 01-Jul-2026 to 05-Jul-2026, 4 Nights)</small>
+          </td>
+          <td style="text-align: right;">24,000.00</td>
+          <td style="text-align: right;">26,880.00</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>03-Jul-2026</td>
+          <td><span class="sac-badge">996331</span></td>
+          <td>
+            <strong>Food & Beverage (POS Billing)</strong>
+            <small>Table 4 Restaurant Dinner - Order #KOT-9932</small>
+          </td>
+          <td style="text-align: right;">2,500.00</td>
+          <td style="text-align: right;">2,950.00</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>04-Jul-2026</td>
+          <td><span class="sac-badge">996322</span></td>
+          <td>
+            <strong>Laundry Services</strong>
+            <small>Ironing & Dry Clean - Reference #LND-3011</small>
+          </td>
+          <td style="text-align: right;">850.00</td>
+          <td style="text-align: right;">952.00</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>04-Jul-2026</td>
+          <td><span class="sac-badge">996399</span></td>
+          <td>
+            <strong>Service Surcharge</strong>
+            <small>Late Checkout convenience fee</small>
+          </td>
+          <td style="text-align: right;">1,500.00</td>
+          <td style="text-align: right;">1,770.00</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Ledger Totals and tax breakouts -->
+    <section class="invoice-financial-summary">
+      <!-- Detailed Statutory GST splits -->
+      <div class="gst-breakdown-subtable">
+        <h3>Statutory GST Breakdown</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>SAC Code</th>
+              <th>Taxable (₹)</th>
+              <th>CGST (%)</th>
+              <th>CGST Amt (₹)</th>
+              <th>SGST (%)</th>
+              <th>SGST Amt (₹)</th>
+              <th>Total Tax (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>996311 (Room)</td>
+              <td>24,000.00</td>
+              <td>6.0%</td>
+              <td>1,440.00</td>
+              <td>6.0%</td>
+              <td>1,440.00</td>
+              <td>2,880.00</td>
+            </tr>
+            <tr>
+              <td>996331 (F&B)</td>
+              <td>2,500.00</td>
+              <td>9.0%</td>
+              <td>225.00</td>
+              <td>9.0%</td>
+              <td>225.00</td>
+              <td>450.00</td>
+            </tr>
+            <tr>
+              <td>996322 (Laundry)</td>
+              <td>850.00</td>
+              <td>6.0%</td>
+              <td>51.00</td>
+              <td>6.0%</td>
+              <td>51.00</td>
+              <td>102.00</td>
+            </tr>
+            <tr>
+              <td>996399 (Other Fee)</td>
+              <td>1,500.00</td>
+              <td>9.0%</td>
+              <td>135.00</td>
+              <td>135.00</td>
+              <td>9.0%</td>
+              <td>270.00</td>
+            </tr>
+            <tr style="font-weight: 700; border-top: 1.5px solid var(--surface-200);">
+              <td>Total</td>
+              <td>28,850.00</td>
+              <td>-</td>
+              <td>1,851.00</td>
+              <td>-</td>
+              <td>1,851.00</td>
+              <td>3,702.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Financial balance highlights column -->
+      <div class="totals-block">
+        <div class="total-row">
+          <span>Net Taxable Base:</span>
+          <span>₹28,850.00</span>
+        </div>
+        <div class="total-row">
+          <span>CGST Subtotal:</span>
+          <span>₹1,851.00</span>
+        </div>
+        <div class="total-row">
+          <span>SGST Subtotal:</span>
+          <span>₹1,851.00</span>
+        </div>
+        <div class="total-row grand-total">
+          <span>Grand Total (Incl. Tax):</span>
+          <span>₹32,552.00</span>
+        </div>
+        <div class="total-row payment-paid">
+          <span>Payments / Advance Paid:</span>
+          <span id="label-paid">₹12,000.00</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Terms and Signatories signatures line -->
+    <footer class="invoice-legal-footer">
+      <div class="terms-notes-column">
+        <h4>Terms & Conditions:</h4>
+        <ol>
+          <li>Standard check-out time is 11:00 AM. Delayed checkouts attract surcharge.</li>
+          <li>All payments are to be completed in favour of 'HMS Cloud Hotels'.</li>
+          <li>In case of credit billing, payment timeline is 15 calendar days from billing date.</li>
+        </ol>
+      </div>
+      <div class="signature-box-column">
+        <p>For <strong>HMS Cloud Hotels Ltd.</strong></p>
+        <div class="signature-line-gap"></div>
+        <p class="designation">Authorized Signatory Signature</p>
+      </div>
+    </footer>
+
+  </div>
+
+  <script>
+    let isSettle = false;
+
+    function toggleMode(mode) {
+      const b2cBtn = document.getElementById('btn-b2c');
+      const b2bBtn = document.getElementById('btn-b2b');
+      const companyContainer = document.getElementById('company-container');
+      const clientAddress = document.getElementById('guest-address');
+
+      if (mode === 'B2C') {
+        b2cBtn.classList.add('btn-active');
+        b2bBtn.classList.remove('btn-active');
+        companyContainer.style.display = 'none';
+        clientAddress.innerText = 'E-49, Ground Floor, Sector 3, Noida, Uttar Pradesh - 201301';
+      } else {
+        b2bBtn.classList.add('btn-active');
+        b2cBtn.classList.remove('btn-active');
+        companyContainer.style.display = 'block';
+        clientAddress.innerText = 'Barmate Tower, Phase II, Sector 62, Noida, UP - 201309';
+      }
+    }
+
+    function toggleSettlement() {
+      isSettle = !isSettle;
+      const settleBtn = document.getElementById('btn-settle');
+      const labelPaid = document.getElementById('label-paid');
+
+      if (isSettle) {
+        settleBtn.innerText = 'Total Settled: On';
+        settleBtn.classList.add('btn-active');
+        labelPaid.innerText = '₹32,552.00';
+      } else {
+        settleBtn.innerText = 'Total Settled: Off';
+        settleBtn.classList.remove('btn-active');
+        labelPaid.innerText = '₹12,000.00';
+      }
+    }
+  </script>
+</body>
+</html>

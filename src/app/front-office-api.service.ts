@@ -224,8 +224,10 @@ export class FrontOfficeApiService {
     return this.http.get<ApiResponse<FrontOfficeDashboardData>>(`${this.frontOfficeBaseUrl}/frontOffice/dashboard/getDashboardData`, { params });
   }
 
-  getGuests(): Observable<ApiResponse<GuestApiItem[]>> {
-    return this.http.get<ApiResponse<GuestApiItem[]>>(`${this.frontOfficeBaseUrl}/guests/getAllGuests`);
+  getGuests(search = ''): Observable<ApiResponse<GuestApiItem[]>> {
+    let params = new HttpParams();
+    if (search) params = params.set('search', search);
+    return this.http.get<ApiResponse<GuestApiItem[]>>(`${this.frontOfficeBaseUrl}/guests/getAllGuests`, { params });
   }
 
   createGuest(payload: GuestRequest): Observable<ApiResponse<unknown>> {

@@ -1,0 +1,778 @@
+<div class="booking-page font-poppins">
+  
+  <!-- Sticky Nav matching HMS layout -->
+  <div class="sticky-nav">
+    <div class="nav-left">
+      <div class="title-group">
+        <h1 class="nav-title">Enquiry & Sales CRM</h1>
+        <span class="nav-subtitle">Enquiry, Quotations & Sales Pipeline Management</span>
+      </div>
+    </div>
+
+    <div class="ribbon-tabs">
+      <button type="button" class="ribbon-tab-btn" [class.active]="currentTab() === 'dashboard'" (click)="setTab('dashboard')">
+        <span class="material-icons-round">space_dashboard</span>
+        <span>Dashboard</span>
+      </button>
+
+      <button type="button" class="ribbon-tab-btn" [class.active]="currentTab() === 'new'" (click)="setTab('new')">
+        <span class="material-icons-round">add_box</span>
+        <span>New Enquiry</span>
+      </button>
+
+      <button type="button" class="ribbon-tab-btn" [class.active]="currentTab() === 'list'" (click)="setTab('list')">
+        <span class="material-icons-round">groups</span>
+        <span>Enquiries List</span>
+      </button>
+
+      <button type="button" class="ribbon-tab-btn" [class.active]="currentTab() === 'quotations'" (click)="setTab('quotations')">
+        <span class="material-icons-round">description</span>
+        <span>Quotations</span>
+      </button>
+
+      <button type="button" class="ribbon-tab-btn" [class.active]="currentTab() === 'sales'" (click)="setTab('sales')">
+        <span class="material-icons-round">badge</span>
+        <span>Sales Team</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Page Main Content Viewport -->
+  <div class="crm-content-viewport">
+    
+    <!-- Tab View: CRM Dashboard -->
+    <div class="tab-content-container animate-fade-in" *ngIf="currentTab() === 'dashboard'">
+      <div class="dashboard-action-header mb-3">
+        <h2 class="section-main-title">CRM Executive Summary</h2>
+        <button type="button" class="btn btn-primary" (click)="setTab('new')">
+          <span class="material-icons-round font-icon">add</span>
+          Create Enquiry
+        </button>
+      </div>
+
+      <!-- Count Stats Cards -->
+      <div class="grid-6 gap-3 mb-3">
+        <div class="dash-stat-card border-left-new">
+          <div class="stat-meta">
+            <span class="stat-indicator-val">{{ newEnquiriesCount() }}</span>
+            <span class="material-icons-round text-blue icon-bg">inbox</span>
+          </div>
+          <span class="stat-sec-label">New Enquiries</span>
+        </div>
+
+        <div class="dash-stat-card border-left-inprogress">
+          <div class="stat-meta">
+            <span class="stat-indicator-val">{{ inProgressCount() }}</span>
+            <span class="material-icons-round text-purple icon-bg">sync</span>
+          </div>
+          <span class="stat-sec-label">In Progress</span>
+        </div>
+
+        <div class="dash-stat-card border-left-quotesent">
+          <div class="stat-meta">
+            <span class="stat-indicator-val">{{ quotationSentCount() }}</span>
+            <span class="material-icons-round text-orange icon-bg">send</span>
+          </div>
+          <span class="stat-sec-label">Quotation Sent</span>
+        </div>
+
+        <div class="dash-stat-card border-left-hold">
+          <div class="stat-meta">
+            <span class="stat-indicator-val">{{ onHoldCount() }}</span>
+            <span class="material-icons-round text-gray icon-bg">pause_circle</span>
+          </div>
+          <span class="stat-sec-label">On Hold</span>
+        </div>
+
+        <div class="dash-stat-card border-left-booked">
+          <div class="stat-meta">
+            <span class="stat-indicator-val">{{ bookedCount() }}</span>
+            <span class="material-icons-round text-green icon-bg">check_circle</span>
+          </div>
+          <span class="stat-sec-label">Booked (Month)</span>
+        </div>
+
+        <div class="dash-stat-card border-left-lost">
+          <div class="stat-meta">
+            <span class="stat-indicator-val">{{ lostCount() }}</span>
+            <span class="material-icons-round text-red icon-bg">cancel</span>
+          </div>
+          <span class="stat-sec-label">Lost (Month)</span>
+        </div>
+      </div>
+
+      <!-- Financial Metrics & Status Grid -->
+      <div class="grid-2 gap-3 mb-3">
+        <!-- Financial cards -->
+        <div class="financial-val-stack gap-3">
+          <div class="modern-card finance-accent-green">
+            <div class="card-body py-3">
+              <span class="text-caption font-semibold"><span class="material-icons-round inline-icon">payments</span> OPEN PIPELINE VALUE</span>
+              <h2 class="currency-value mt-2">{{ formatCurrency(calcOpenPipelineValue()) }}</h2>
+              <p class="subtitle-desc mt-1">{{ totalEnquiriesCount() }} enquiries active across pipeline channels</p>
+            </div>
+          </div>
+
+          <div class="modern-card finance-accent-gold">
+            <div class="card-body py-3">
+              <span class="text-caption font-semibold"><span class="material-icons-round inline-icon font-success">verified</span> CONFIRMED MONTHLY REVENUE</span>
+              <h2 class="currency-value mt-2">{{ formatCurrency(calcBookedValue()) }}</h2>
+              <p class="subtitle-desc mt-1">{{ bookedCount() }} bookings successfully checked-in / confirmed</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pipeline Status Breakdown -->
+        <div class="modern-card">
+          <div class="card-header pb-2">
+            <div class="header-title">
+              <span class="material-icons-round">analytics</span>
+              <h2>Revenue Pipeline by Status</h2>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="pipeline-progress-list">
+              
+              <div class="progress-item-row">
+                <span class="lbl">New</span>
+                <div class="bar-container"><div class="bar bg-blue" style="width: 75%"></div></div>
+                <strong class="count font-mono">{{ newEnquiriesCount() }}</strong>
+                <span class="price font-mono">{{ formatCurrency(0) }}</span>
+              </div>
+
+              <div class="progress-item-row">
+                <span class="lbl">In Progress</span>
+                <div class="bar-container"><div class="bar bg-purple" style="width: 25%"></div></div>
+                <strong class="count font-mono">{{ inProgressCount() }}</strong>
+                <span class="price font-mono">{{ formatCurrency(0) }}</span>
+              </div>
+
+              <div class="progress-item-row">
+                <span class="lbl">Quotation Sent</span>
+                <div class="bar-container"><div class="bar bg-orange" style="width: 40%"></div></div>
+                <strong class="count font-mono">{{ quotationSentCount() }}</strong>
+                <span class="price font-mono">{{ formatCurrency(0) }}</span>
+              </div>
+
+              <div class="progress-item-row">
+                <span class="lbl">Negotiation</span>
+                <div class="bar-container"><div class="bar" style="width: 0%"></div></div>
+                <strong class="count font-mono">0</strong>
+                <span class="price font-mono">{{ formatCurrency(0) }}</span>
+              </div>
+
+              <div class="progress-item-row">
+                <span class="lbl">Hold</span>
+                <div class="bar-container"><div class="bar bg-gray" style="width: 15%"></div></div>
+                <strong class="count font-mono">{{ onHoldCount() }}</strong>
+                <span class="price font-mono">{{ formatCurrency(0) }}</span>
+              </div>
+
+              <div class="progress-item-row">
+                <span class="lbl">Confirmed</span>
+                <div class="bar-container"><div class="bar bg-green" style="width: 60%"></div></div>
+                <strong class="count font-mono">{{ bookedCount() }}</strong>
+                <span class="price font-mono">{{ formatCurrency(0) }}</span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Follow Ups and Recent Enquiries Split Row -->
+      <div class="grid-2 gap-3">
+        <!-- Follow ups -->
+        <div class="modern-card">
+          <div class="card-header pb-2">
+            <div class="header-title">
+              <span class="material-icons-round text-warn">notification_important</span>
+              <h2>Active Follow Ups (Today)</h2>
+            </div>
+            <span class="timeline-badge">0 Pending</span>
+          </div>
+          <div class="card-body empty-state-container">
+            <div class="empty-state-illustration">
+              <span class="material-icons-round text-success">done_all</span>
+              <p class="empty-state-msg">All caught up! No active follow-ups scheduled for today.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Enquiries -->
+        <div class="modern-card">
+          <div class="card-header pb-2">
+            <div class="header-title">
+              <span class="material-icons-round">history</span>
+              <h2>Recent Enquiries Activity</h2>
+            </div>
+            <button type="button" class="btn-text primary" (click)="setTab('list')">View All</button>
+          </div>
+          <div class="card-body">
+            <div class="activity-feed">
+              <div class="feed-item" *ngFor="let item of enquiries().slice(0, 3)">
+                <div class="feed-avatar" [ngClass]="item.status.toLowerCase().replace(' ', '-')">
+                  {{ getInitials(item.guestName) }}
+                </div>
+                <div class="feed-desc">
+                  <div class="feed-header-line">
+                    <span class="feed-name">{{ item.guestName }}</span>
+                    <span class="tag" [ngClass]="item.status.toLowerCase().replace(' ', '-')">{{ item.status }}</span>
+                  </div>
+                  <span class="feed-meta">{{ item.id }} · Assigned to {{ item.salesPerson }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab View: New Enquiry Form -->
+    <div class="tab-content-container animate-fade-in" *ngIf="currentTab() === 'new'">
+      <form (submit)="onSubmitEnquiry(); $event.preventDefault()">
+        <div class="two-column-layout">
+          
+          <!-- LEFT COLUMN: Guest Info inside modern card -->
+          <div class="form-column">
+            <div class="modern-card">
+              <div class="card-header">
+                <div class="header-title">
+                  <span class="material-icons-round">person</span>
+                  <h2>Guest Information</h2>
+                </div>
+                <div class="header-actions">
+                  <button type="button" class="btn-text primary">
+                    <span class="material-icons-round inline-icon">search</span>
+                    Quick Search Guest
+                  </button>
+                </div>
+              </div>
+              <div class="card-body pr-3">
+                
+                <div class="grid-3">
+                  <div class="input-group span-2">
+                    <label>Guest Full Name <span class="required-star">*</span></label>
+                    <input type="text" placeholder="Enter guest's full name" [(ngModel)]="newEnquiry.guestName" name="guestName" required>
+                  </div>
+                  <div class="input-group">
+                    <label>Phone Number <span class="required-star">*</span></label>
+                    <input type="tel" placeholder="Enter phone" [(ngModel)]="newEnquiry.phone" name="phone" required>
+                  </div>
+                </div>
+
+                <div class="grid-3 mt-3">
+                  <div class="input-group">
+                    <label>Alt Phone Number</label>
+                    <input type="tel" placeholder="Alt phone code" [(ngModel)]="newEnquiry.altPhone" name="altPhone">
+                  </div>
+                  <div class="input-group span-2">
+                    <label>Email Address</label>
+                    <input type="email" placeholder="guest@example.com" [(ngModel)]="newEnquiry.email" name="email">
+                  </div>
+                </div>
+
+                <div class="grid-3 mt-3">
+                  <div class="input-group span-2">
+                    <label>Company Name</label>
+                    <input type="text" placeholder="Type to search companies..." [(ngModel)]="newEnquiry.companyName" name="companyName">
+                  </div>
+                  <div class="input-group">
+                    <label>GST Number</label>
+                    <input type="text" placeholder="Enter GST details" [(ngModel)]="newEnquiry.gstNumber" name="gstNumber">
+                  </div>
+                </div>
+
+                <div class="grid-3 mt-3">
+                  <div class="input-group span-2">
+                    <label>Street Address</label>
+                    <input type="text" placeholder="House/Street/Locality" [(ngModel)]="newEnquiry.address" name="address">
+                  </div>
+                  <div class="input-group">
+                    <label>City</label>
+                    <input type="text" placeholder="City" [(ngModel)]="newEnquiry.city" name="city">
+                  </div>
+                </div>
+
+                <div class="grid-3 mt-3">
+                  <div class="input-group">
+                    <label>State</label>
+                    <input type="text" placeholder="State" [(ngModel)]="newEnquiry.state" name="state">
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN: Enquiry details inside modern card -->
+          <div class="form-column">
+            <div class="modern-card">
+              <div class="card-header">
+                <div class="header-title">
+                  <span class="material-icons-round">edit_calendar</span>
+                  <h2>Enquiry Details</h2>
+                </div>
+              </div>
+              <div class="card-body">
+                
+                <div class="grid-3">
+                  <div class="input-group">
+                    <label>Enquiry Type</label>
+                    <select [(ngModel)]="newEnquiry.enquiryType" name="enquiryType">
+                      <option>Room</option>
+                      <option>Event</option>
+                      <option>Banquet</option>
+                      <option>Corporate</option>
+                      <option>Other</option>
+                    </select>
+                  </div>
+                  <div class="input-group">
+                    <label>Source Type</label>
+                    <select [(ngModel)]="newEnquiry.source" name="source">
+                      <option value="">Select Source</option>
+                      <option>Walk-in</option>
+                      <option>Direct</option>
+                      <option>Website</option>
+                      <option>Booking.com</option>
+                      <option>OTA</option>
+                      <option>Phone call</option>
+                      <option>Agent</option>
+                    </select>
+                  </div>
+                  <div class="input-group">
+                    <label>Priority</label>
+                    <select [(ngModel)]="newEnquiry.priority" name="priority">
+                      <option>Low</option>
+                      <option>Medium</option>
+                      <option>High</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="grid-3 mt-3">
+                  <div class="input-group">
+                    <label>Check In Date</label>
+                    <input type="date" [(ngModel)]="newEnquiry.checkIn" name="checkIn">
+                  </div>
+                  <div class="input-group">
+                    <label>Check Out Date</label>
+                    <input type="date" [(ngModel)]="newEnquiry.checkOut" name="checkOut">
+                  </div>
+                  <div class="input-group">
+                    <label>Next Follow Up</label>
+                    <input type="date" [(ngModel)]="newEnquiry.nextFollowUp" name="nextFollowUp">
+                  </div>
+                </div>
+
+                <div class="grid-3 mt-3">
+                  <div class="input-group">
+                    <label>No. of Rooms</label>
+                    <input type="number" min="0" placeholder="0" [(ngModel)]="newEnquiry.rooms" name="rooms">
+                  </div>
+                  <div class="input-group">
+                    <label>Adults</label>
+                    <input type="number" min="1" placeholder="2" [(ngModel)]="newEnquiry.adults" name="adults">
+                  </div>
+                  <div class="input-group">
+                    <label>Children</label>
+                    <input type="number" min="0" placeholder="0" [(ngModel)]="newEnquiry.children" name="children">
+                  </div>
+                </div>
+
+                <div class="grid-3 mt-3">
+                  <div class="input-group">
+                    <label>Meal Plan</label>
+                    <input type="text" placeholder="e.g. CP" [(ngModel)]="newEnquiry.mealPlan" name="mealPlan">
+                  </div>
+                  <div class="input-group">
+                    <label>Budget (INR)</label>
+                    <input type="number" placeholder="Budget" [(ngModel)]="newEnquiry.budget" name="budget">
+                  </div>
+                  <div class="input-group">
+                    <label>Expected Revenue</label>
+                    <input type="number" placeholder="Exp Revenue" [(ngModel)]="newEnquiry.expectedRevenue" name="expectedRevenue">
+                  </div>
+                </div>
+
+                <div class="grid-3 mt-3">
+                  <div class="input-group span-2">
+                    <label>Owner / Sales Person</label>
+                    <select [(ngModel)]="newEnquiry.salesPerson" name="salesPerson">
+                      <option value="">Select Representative</option>
+                      <option *ngFor="let member of salesTeam()" [value]="member.name">{{ member.name }}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="input-group full mt-3">
+                  <label>Special Requirements / Message</label>
+                  <textarea placeholder="Enter custom message / requirements details here..." [(ngModel)]="newEnquiry.message" name="message" rows="3"></textarea>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Sticky foot buttons aligning with HMS style guidelines -->
+        <div class="form-action-footer mt-3">
+          <button type="button" class="btn btn-secondary font-semibold" (click)="setTab('dashboard')">Cancel</button>
+          <button type="submit" class="btn btn-primary font-semibold green-btn-alt">
+            <span class="material-icons-round font-icon">save</span>
+            Create Enquiry Record
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Tab View: Enquiries List screen -->
+    <div class="tab-content-container animate-fade-in" *ngIf="currentTab() === 'list'">
+      
+      <!-- Filter panel -->
+      <div class="modern-card mb-3">
+        <div class="card-body filter-bar-panel">
+          <div class="filter-search-input">
+            <span class="material-icons-round">search</span>
+            <input type="text" placeholder="Search by Guest name / Company / Phone..." [ngModel]="searchText()" (ngModelChange)="searchText.set($event)">
+          </div>
+
+          <div class="filter-actions-row">
+            <div class="filter-dropdown">
+              <label>Status</label>
+              <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+                <option value="ALL">All Statuses</option>
+                <option value="NEW">New</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="QUOTATION_SENT">Quotation Sent</option>
+                <option value="NEGOTIATION">Negotiation</option>
+                <option value="HOLD">On Hold</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="BOOKED">Booked</option>
+                <option value="LOST">Lost</option>
+              </select>
+            </div>
+
+            <div class="filter-dropdown">
+              <label>Representative</label>
+              <select [ngModel]="salesPersonFilter()" (ngModelChange)="salesPersonFilter.set($event)">
+                <option value="ALL">All Sales Persons</option>
+                <option *ngFor="let member of salesTeam()" [value]="member.name">{{ member.name }}</option>
+              </select>
+            </div>
+
+            <button type="button" class="btn btn-primary btn-sm flex-center">
+              <span class="material-icons-round">filter_alt</span>
+              Filter
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" (click)="searchText.set(''); statusFilter.set('ALL'); salesPersonFilter.set('ALL');">
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- list results count -->
+      <div class="list-summary-bar mb-2">
+        <span>Found {{ filteredEnquiries().length }} enquiries</span>
+      </div>
+
+      <!-- Enquiries list rows -->
+      <div class="list-rows-wrapper">
+        <div class="enquiry-row-item" *ngFor="let item of filteredEnquiries()">
+          <div class="main-summary-row" (click)="toggleDetails(item)">
+            
+            <div class="guest-identity">
+              <div class="avatar-letter" [ngClass]="item.status.toLowerCase().replace(' ', '-')">
+                {{ getInitials(item.guestName) }}
+              </div>
+              <div class="guest-description">
+                <h3>{{ item.guestName }}</h3>
+                <span class="guest-sub-meta font-mono">
+                  <span class="material-icons-round">phone</span> {{ item.phone }}
+                </span>
+              </div>
+            </div>
+
+            <div class="stat-column">
+              <span class="col-lbl">Rooms</span>
+              <strong class="col-val">{{ item.rooms > 0 ? item.rooms : '-' }}</strong>
+            </div>
+
+            <div class="stat-column">
+              <span class="col-lbl">Quoted</span>
+              <strong class="col-val" [class.txt-success]="item.quoted === 'Yes'">{{ item.quoted }}</strong>
+            </div>
+
+            <div class="stat-column">
+              <span class="col-lbl">Priority</span>
+              <span class="priority-tag font-semibold" [ngClass]="item.priority.toLowerCase()">{{ item.priority }}</span>
+            </div>
+
+            <div class="stat-column flex-grow-cell">
+              <span class="col-lbl">Last Contact / Remark</span>
+              <div class="remark-snippet">
+                <span class="material-icons-round">forum</span>
+                <span>{{ item.latestRemark }}</span>
+              </div>
+            </div>
+
+            <div class="stat-column owner-right">
+              <span class="col-lbl">Representative</span>
+              <strong class="col-val">{{ item.salesPerson }}</strong>
+            </div>
+
+            <div class="chevron-action">
+              <button class="icon-toggle-btn">
+                <span class="material-icons-round">{{ item.showDetails ? 'expand_less' : 'expand_more' }}</span>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Drawer details -->
+          <div class="row-drawer-details animate-slide-down" *ngIf="item.showDetails">
+            <div class="drawer-grid-layout">
+              <div class="drawer-group">
+                <h3>Corporate Detail</h3>
+                <p><span>Company Name:</span> <strong>{{ item.companyName || 'Individual / Walk-in' }}</strong></p>
+                <p><span>Email:</span> <strong>{{ item.email || '-' }}</strong></p>
+                <p><span>GST Number:</span> <strong>{{ item.gstNumber || '-' }}</strong></p>
+              </div>
+
+              <div class="drawer-group">
+                <h3>Tentative Stay</h3>
+                <p><span>Check In:</span> <strong>{{ item.checkIn || '-' }}</strong></p>
+                <p><span>Check Out:</span> <strong>{{ item.checkOut || '-' }}</strong></p>
+                <p><span>Guest Occupancy:</span> <strong>{{ item.adults }} Adults, {{ item.children }} Children</strong></p>
+              </div>
+
+              <div class="drawer-group">
+                <h3>Commercials</h3>
+                <p><span>Meal Plan:</span> <strong>{{ item.mealPlan || '-' }}</strong></p>
+                <p><span>Estimated Revenue:</span> <strong>{{ formatCurrency(item.expectedRevenue) }}</strong></p>
+                <p><span>Source Channel:</span> <strong>{{ item.source }}</strong></p>
+              </div>
+            </div>
+            
+            <div class="message-footer-block mt-2" *ngIf="item.message">
+              <strong>Requirement:</strong>
+              <p>{{ item.message }}</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Tab View: Quotations screen -->
+    <div class="tab-content-container animate-fade-in" *ngIf="currentTab() === 'quotations'">
+      <div class="dashboard-action-header mb-3">
+        <h2 class="section-main-title">Sales Quotations Proposals</h2>
+        <button type="button" class="btn btn-primary" (click)="isQuotationModalOpen.set(true)">
+          <span class="material-icons-round font-icon">add</span>
+          New Quotation
+        </button>
+      </div>
+
+      <div class="modern-card">
+        <div class="card-body">
+          <table class="native-hms-table">
+            <thead>
+              <tr>
+                <th>Quotation No</th>
+                <th>Enquiry Reference</th>
+                <th>Guest Details</th>
+                <th>Quotation Value</th>
+                <th>Validity</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let q of quotations()">
+                <td><strong>{{ q.quotationNo }}</strong> <span class="tag-rev">Rev {{ q.revision }}</span></td>
+                <td>{{ q.enquiryId }}</td>
+                <td>
+                  <strong>{{ q.guestName }}</strong>
+                  <span class="sub-line" *ngIf="q.companyName">{{ q.companyName }}</span>
+                </td>
+                <td><strong>{{ formatCurrency(q.total) }}</strong></td>
+                <td>{{ q.validTill }}</td>
+                <td><span class="status-pill font-semibold inline-tag" [ngClass]="q.status.toLowerCase()">{{ q.status }}</span></td>
+                <td>
+                  <div class="btn-group-row">
+                    <button class="btn btn-secondary btn-xs font-semibold">Open</button>
+                    <button class="btn btn-secondary btn-xs font-semibold">Print</button>
+                    <button class="btn btn-secondary btn-xs text-danger font-semibold" (click)="deleteQuotation(q.quotationNo)">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab View: Sales Team screen -->
+    <div class="tab-content-container animate-fade-in" *ngIf="currentTab() === 'sales'">
+      <div class="dashboard-action-header mb-3">
+        <h2 class="section-main-title">CRM Sales Representatives</h2>
+        <button type="button" class="btn btn-primary" (click)="isSalesModalOpen.set(true)">
+          <span class="material-icons-round font-icon">add</span>
+          Create Sales Person
+        </button>
+      </div>
+
+      <div class="modern-card">
+        <div class="card-body">
+          <table class="native-hms-table">
+            <thead>
+              <tr>
+                <th>Rep Name</th>
+                <th>Designation</th>
+                <th>Phone No</th>
+                <th>Email Address</th>
+                <th>Assigned Monthly Target</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let s of salesTeam()">
+                <td><strong>{{ s.name }}</strong></td>
+                <td>{{ s.designation }}</td>
+                <td>{{ s.phone }}</td>
+                <td>{{ s.email || '-' }}</td>
+                <td><strong>{{ formatCurrency(s.monthlyTarget) }}</strong></td>
+                <td>
+                  <div class="btn-group-row">
+                    <button class="btn btn-secondary btn-xs text-primary font-semibold">Edit</button>
+                    <button class="btn btn-secondary btn-xs text-danger font-semibold" (click)="deleteSalesMember(s.name)">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- New Quotation Dialog Overlay -->
+  <div class="modal-overlay animate-fade-in" *ngIf="isQuotationModalOpen()">
+    <div class="modal-card-box animate-slide-down">
+      <div class="modal-header-nav">
+        <div class="modal-title">
+          <span class="material-icons-round">description</span>
+          <h2>Generate Proposal Quotation</h2>
+        </div>
+        <button type="button" class="close-ico-btn" (click)="isQuotationModalOpen.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <form (submit)="onSubmitQuotation(); $event.preventDefault()">
+        <div class="modal-body-content">
+          <div class="grid-2 gap-3">
+            <div class="input-group">
+              <label>Select Active Enquiry</label>
+              <select [(ngModel)]="newQuotation.enquiryId" name="enquiryId" (ngModelChange)="onSelectEnquiryForQuotation($event)">
+                <option value="">-- Select Enquiry --</option>
+                <option *ngFor="let eq of enquiries()" [value]="eq.id">
+                  {{ eq.id }} - {{ eq.guestName }}
+                </option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Guest Name *</label>
+              <input type="text" placeholder="Guest name" [(ngModel)]="newQuotation.guestName" name="guestName" required>
+            </div>
+          </div>
+
+          <div class="grid-2 gap-3 mt-3">
+            <div class="input-group">
+              <label>Company Name</label>
+              <input type="text" placeholder="Company affiliation" [(ngModel)]="newQuotation.companyName" name="companyName">
+            </div>
+            <div class="input-group">
+              <label>Proposed Total (INR) *</label>
+              <input type="number" placeholder="0" [(ngModel)]="newQuotation.total" name="total" required>
+            </div>
+          </div>
+
+          <div class="grid-2 gap-3 mt-3">
+            <div class="input-group">
+              <label>Valid Till Date</label>
+              <input type="date" [(ngModel)]="newQuotation.validTill" name="validTill">
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer-nav mt-3">
+          <button type="button" class="btn btn-secondary" (click)="isQuotationModalOpen.set(false)">Cancel</button>
+          <button type="submit" class="btn btn-primary green-btn-alt">Generate Quotation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- New Sales Representative Dialog Overlay -->
+  <div class="modal-overlay animate-fade-in" *ngIf="isSalesModalOpen()">
+    <div class="modal-card-box animate-slide-down">
+      <div class="modal-header-nav">
+        <div class="modal-title">
+          <span class="material-icons-round">badge</span>
+          <h2>Register Sales Representative</h2>
+        </div>
+        <button type="button" class="close-ico-btn" (click)="isSalesModalOpen.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <form (submit)="onSubmitSalesMember(); $event.preventDefault()">
+        <div class="modal-body-content">
+          <div class="grid-2 gap-3">
+            <div class="input-group">
+              <label>Rep Full Name *</label>
+              <input type="text" placeholder="Enter representative name" [(ngModel)]="newSalesMemberObj.name" name="repName" required>
+            </div>
+            <div class="input-group">
+              <label>Designation</label>
+              <select [(ngModel)]="newSalesMemberObj.designation" name="designation">
+                <option>Front Office Executive</option>
+                <option>Front office</option>
+                <option>Sales Manager</option>
+                <option>CRM Specialist</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid-2 gap-3 mt-3">
+            <div class="input-group">
+              <label>Phone Number *</label>
+              <input type="tel" placeholder="Enter contact number" [(ngModel)]="newSalesMemberObj.phone" name="repPhone" required>
+            </div>
+            <div class="input-group">
+              <label>Email Address</label>
+              <input type="email" placeholder="rep@example.com" [(ngModel)]="newSalesMemberObj.email" name="repEmail">
+            </div>
+          </div>
+
+          <div class="grid-2 gap-3 mt-3">
+            <div class="input-group">
+              <label>Monthly Target (INR)</label>
+              <input type="number" placeholder="500000" [(ngModel)]="newSalesMemberObj.monthlyTarget" name="repTarget">
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer-nav mt-3">
+          <button type="button" class="btn btn-secondary" (click)="isSalesModalOpen.set(false)">Cancel</button>
+          <button type="submit" class="btn btn-primary">Register Representative</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>

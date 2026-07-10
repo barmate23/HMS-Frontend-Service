@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, forkJoin, throwError } from 'rxjs';
+import { Observable, forkJoin, throwError, of } from 'rxjs';
 import { tap, catchError, map } from 'rxjs/operators';
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
@@ -76,6 +76,19 @@ export interface RatePlan {
   isActive?: boolean;
 }
 
+export interface GstConfig {
+  id: number;
+  serviceCategory: string;
+  hsnSacCode: string;
+  cgstRate: number;
+  sgstRate: number;
+  igstRate: number;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  isActive: boolean;
+}
+
 export interface HotelRequest {
   name: string;
   email: string;
@@ -130,6 +143,16 @@ interface StandardResponse<T = any> {
 
 // ─── Service ───────────────────────────────────────────────────────────────────
 
+const defaultGstConfigs: GstConfig[] = [
+  { id: 1, serviceCategory: 'Room', hsnSacCode: '9963', cgstRate: 6, sgstRate: 6, igstRate: 12, description: 'GST rate for Room accommodation Services.', isActive: true },
+  { id: 2, serviceCategory: 'Food', hsnSacCode: '9963', cgstRate: 2.5, sgstRate: 2.5, igstRate: 5, description: 'GST rate for Restaurant and Food service supply.', isActive: true },
+  { id: 3, serviceCategory: 'Beverages', hsnSacCode: '2202', cgstRate: 9, sgstRate: 9, igstRate: 18, description: 'GST rate for Aerated / carbonated and other beverages.', isActive: true },
+  { id: 4, serviceCategory: 'Laundry', hsnSacCode: '9987', cgstRate: 9, sgstRate: 9, igstRate: 18, description: 'GST rate for laundry, dry cleaning, and cleaning services.', isActive: true },
+  { id: 5, serviceCategory: 'Spa', hsnSacCode: '9997', cgstRate: 9, sgstRate: 9, igstRate: 18, description: 'GST rate for beauty parlour and spa treatments.', isActive: true },
+  { id: 6, serviceCategory: 'Gym', hsnSacCode: '9997', cgstRate: 9, sgstRate: 9, igstRate: 18, description: 'GST rate for gym membership and fitness services.', isActive: true },
+  { id: 7, serviceCategory: 'Other Service', hsnSacCode: '9999', cgstRate: 9, sgstRate: 9, igstRate: 18, description: 'Standard rate for other miscellaneous service charges.', isActive: true }
+];
+
 @Injectable({ providedIn: 'root' })
 export class HotelMastersService {
   private readonly http = inject(HttpClient);
@@ -141,6 +164,7 @@ export class HotelMastersService {
   private _roomTypes = signal<RoomType[]>([]);
   private _rooms = signal<Room[]>([]);
   private _ratePlans = signal<RatePlan[]>([]);
+  private _gstConfigs = signal<GstConfig[]>([]);
 
   // Loading / error signals
   isLoading = signal(false);
@@ -152,6 +176,7 @@ export class HotelMastersService {
   public readonly roomTypes = this._roomTypes.asReadonly();
   public readonly rooms = this._rooms.asReadonly();
   public readonly ratePlans = this._ratePlans.asReadonly();
+  public readonly gstConfigs = this._gstConfigs.asReadonly();
 
   // ── Computed Maps ──
   public readonly hotelsMap = computed(() => new Map(this.hotels().map(h => [h.id, h])));
@@ -172,13 +197,22 @@ export class HotelMastersService {
       floors: this.http.get<StandardResponse<Floor[]>>(`${this.baseUrl}/floors/getAllFloors`),
       roomTypes: this.http.get<StandardResponse<RoomType[]>>(`${this.baseUrl}/roomTypes/getAllRoomTypes`),
       rooms: this.http.get<StandardResponse<Room[]>>(`${this.baseUrl}/rooms/getAllRooms`),
-      ratePlans: this.http.get<StandardResponse<RatePlan[]>>(`${this.baseUrl}/ratePlans/getAllRatePlans`)
+      ratePlans: this.http.get<StandardResponse<RatePlan[]>>(`${this.baseUrl}/ratePlans/getAllRatePlans`),
+      gstConfigs: this.http.get<StandardResponse<GstConfig[]>>(`${this.baseUrl}/gstConfigs/getAll`).pipe(
+        catchError(() => {
+          const local = localStorage.getItem('hms-gst-config');
+          const data = local ? JSON.parse(local) : defaultGstConfigs;
+          localStorage.setItem('hms-gst-config', JSON.stringify(data));
+          return of({ success: true, message: 'Local storage fallback', data } as StandardResponse<GstConfig[]>);
+        })
+      )
     }).subscribe({
       next: (results) => {
         if (results.hotels.success) this._hotels.set(results.hotels.data ?? []);
         if (results.floors.success) this._floors.set(results.floors.data ?? []);
         if (results.roomTypes.success) this._roomTypes.set(results.roomTypes.data ?? []);
         if (results.ratePlans.success) this._ratePlans.set(results.ratePlans.data ?? []);
+        if (results.gstConfigs.success) this._gstConfigs.set(results.gstConfigs.data ?? []);
         if (results.rooms.success) {
           // Normalise: backend uses roomTypeId, UI also needs typeId alias, map status correctly to stop UI break
           const rooms = (results.rooms.data ?? []).map((r: any) => ({ 
@@ -379,6 +413,68 @@ export class HotelMastersService {
       tap(() => this._ratePlans.update(list => list.filter(rp => rp.id !== id))),
       map(() => void 0),
       catchError(err => { console.error('deleteRatePlan error', err); return throwError(() => err); })
+    );
+  }
+
+  saveGst(gst: Partial<GstConfig>): Observable<GstConfig> {
+    const payload = {
+      serviceCategory: gst.serviceCategory!,
+      hsnSacCode: gst.hsnSacCode!,
+      cgstRate: gst.cgstRate!,
+      sgstRate: gst.sgstRate!,
+      igstRate: gst.igstRate!,
+      description: gst.description,
+      isActive: gst.isActive
+    };
+
+    const endpoint = gst.id
+      ? `${this.baseUrl}/gstConfigs/updateGstConfig/${gst.id}`
+      : `${this.baseUrl}/gstConfigs/createGstConfig`;
+
+    const req$ = gst.id
+      ? this.http.put<StandardResponse<GstConfig>>(endpoint, payload)
+      : this.http.post<StandardResponse<GstConfig>>(endpoint, payload);
+
+    return req$.pipe(
+      map(res => res.data),
+      tap(saved => {
+        if (gst.id) {
+          this._gstConfigs.update(list => list.map(g => g.id === saved.id ? { ...g, ...saved } : g));
+        } else {
+          this._gstConfigs.update(list => [saved, ...list]);
+        }
+        localStorage.setItem('hms-gst-config', JSON.stringify(this._gstConfigs()));
+      }),
+      catchError(err => {
+        console.warn('Backend saveGst failed, performing local storage save fallback:', err);
+        let saved: GstConfig;
+        if (gst.id) {
+          saved = { ...gst } as GstConfig;
+          this._gstConfigs.update(list => list.map(g => g.id === gst.id ? { ...g, ...saved } : g));
+        } else {
+          const newId = this._gstConfigs().reduce((max, item) => item.id > max ? item.id : max, 0) + 1;
+          saved = { ...gst, id: newId } as GstConfig;
+          this._gstConfigs.update(list => [saved, ...list]);
+        }
+        localStorage.setItem('hms-gst-config', JSON.stringify(this._gstConfigs()));
+        return of(saved);
+      })
+    );
+  }
+
+  deleteGst(id: number): Observable<void> {
+    return this.http.delete<StandardResponse<void>>(`${this.baseUrl}/gstConfigs/deleteGstConfig/${id}`).pipe(
+      tap(() => {
+        this._gstConfigs.update(list => list.filter(g => g.id !== id));
+        localStorage.setItem('hms-gst-config', JSON.stringify(this._gstConfigs()));
+      }),
+      map(() => void 0),
+      catchError(err => {
+        console.warn('Backend deleteGst failed, performing local storage delete fallback:', err);
+        this._gstConfigs.update(list => list.filter(g => g.id !== id));
+        localStorage.setItem('hms-gst-config', JSON.stringify(this._gstConfigs()));
+        return of(void 0);
+      })
     );
   }
 }

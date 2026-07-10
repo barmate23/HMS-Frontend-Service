@@ -38,6 +38,10 @@
           <span class="material-icons-round">sell</span>
           Rate Plans
         </button>
+        <button class="tab-btn" [class.active]="activeTab() === 'gst-config'" (click)="switchTab('gst-config')">
+          <span class="material-icons-round">receipt_long</span>
+          GST Configuration
+        </button>
       </div>
     </div>
     
@@ -51,6 +55,7 @@
             activeTab() === 'floors' ? 'Search by floor, hotel...' :
             activeTab() === 'room-types' ? 'Search by type, description...' :
             activeTab() === 'rate-plans' ? 'Search by rate plan, adjustment...' :
+            activeTab() === 'gst-config' ? 'Search by category, HSN/SAC...' :
             'Search by room, status, floor...'
           " 
           [ngModel]="searchQuery()"
@@ -66,6 +71,7 @@
             activeTab() === 'floors' ? 'Floor' :
             activeTab() === 'room-types' ? 'Room Type' :
             activeTab() === 'rate-plans' ? 'Rate Plan' :
+            activeTab() === 'gst-config' ? 'GST Rule' :
             'Room'
           }}
         </span>
@@ -520,6 +526,95 @@
       </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- GST CONFIGURATION TAB VIEW                 -->
+    <!-- ========================================== -->
+    <div class="modern-card" *ngIf="activeTab() === 'gst-config'">
+      <div class="card-header">
+        <h2 class="card-title">Centralized GST Rates</h2>
+        <div class="header-actions">
+          <span class="total-badge">{{ filteredGstConfigs().length }} Configurations</span>
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <table class="premium-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>SERVICE CATEGORY & HSN/SAC</th>
+              <th>CGST RATE</th>
+              <th>SGST RATE</th>
+              <th style="text-align: center;">TOTAL GST (IGST)</th>
+              <th>DESCRIPTION</th>
+              <th style="text-align: center;">STATUS</th>
+              <th style="text-align: center;">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let gst of filteredGstConfigs()" [class.inactive-row]="!gst.isActive">
+              <td><span class="mono-text">GST-{{ gst.id }}</span></td>
+              <td>
+                <div class="room-type-info">
+                  <div class="avatar-box">
+                    <span class="material-icons-round">receipt_long</span>
+                  </div>
+                  <div class="name-block">
+                    <span class="entity-name">{{ gst.serviceCategory }}</span>
+                    <span class="entity-sub">
+                      <span class="material-icons-round">tag</span>
+                      HSN/SAC: {{ gst.hsnSacCode }}
+                    </span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="numeric-badge">{{ gst.cgstRate }}%</span>
+              </td>
+              <td>
+                <span class="numeric-badge">{{ gst.sgstRate }}%</span>
+              </td>
+              <td style="text-align: center;">
+                <span class="adjustment-pill" style="min-width: 60px;">
+                  {{ gst.igstRate }}%
+                </span>
+              </td>
+              <td>
+                <span class="entity-desc" [title]="gst.description || ''">{{ gst.description || 'No description added' }}</span>
+              </td>
+              <td style="text-align: center;">
+                <span 
+                  class="status-pill" 
+                  [class.active]="gst.isActive" 
+                  [class.inactive]="!gst.isActive"
+                  (click)="toggleGstActive(gst, $event)"
+                  title="Click to toggle status"
+                >
+                  {{ gst.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td style="text-align: center;">
+                <div class="action-buttons">
+                  <button class="btn-icon edit" title="Edit GST Config" (click)="openEditModal(gst)">
+                    <span class="material-icons-round">edit</span>
+                  </button>
+                  <button class="btn-icon delete" title="Delete GST Config" (click)="deleteGst(gst.id, gst.serviceCategory, $event)">
+                    <span class="material-icons-round">delete_outline</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredGstConfigs().length === 0">
+              <td colspan="8" class="empty-state">
+                <span class="material-icons-round">receipt_long</span>
+                <p>No GST configurations defined.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -965,6 +1060,104 @@
         <span class="material-icons-round spin" *ngIf="isSaving()">sync</span>
         <span class="material-icons-round" *ngIf="!isSaving()">save</span>
         {{ isSaving() ? 'Saving...' : (modalMode() === 'create' ? 'Create Room' : 'Save Changes') }}
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================
+     GST CONFIGURATION MODAL
+     ================================================================ -->
+<div class="modal-overlay" *ngIf="isGstModalOpen()" (click)="closeModal('gst-config')">
+  <div class="ci-modal" (click)="$event.stopPropagation()">
+    
+    <div class="ci-header">
+      <div class="ci-title">
+        <span class="material-icons-round">receipt_long</span>
+        <div>
+          <h2>{{ modalMode() === 'create' ? 'Create GST Rule' : 'Edit GST Rule' }}</h2>
+          <p>{{ modalMode() === 'create' ? 'Define a new service tax percentage' : 'Update tax settings for GST-' + currentGst().id }}</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="closeModal('gst-config')">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="ci-body">
+      <div class="form-section-title">GST Formula Details</div>
+
+      <div class="ci-form-grid">
+        <div class="ci-input-group">
+          <label>Service Category *</label>
+          <select [(ngModel)]="currentGst().serviceCategory" (blur)="markFieldTouched('serviceCategory')" [class.invalid]="shouldShowError('serviceCategory')">
+            <option value="Room">Room (Lodging/Accommodation)</option>
+            <option value="Food">Food (Restaurant/Dining/Room Service)</option>
+            <option value="Beverages">Beverages (Minibar/Drinks)</option>
+            <option value="Laundry">Laundry (Dry Cleaning/Ironing)</option>
+            <option value="Spa">Spa (Health/Beauty Wellness)</option>
+            <option value="Gym">Gym (Fitness Center)</option>
+            <option value="Other Service">Other Custom Service</option>
+          </select>
+          <span class="field-error" *ngIf="shouldShowError('serviceCategory')">{{ validationMessage('serviceCategory') }}</span>
+        </div>
+
+        <div class="ci-input-group" *ngIf="currentGst().serviceCategory === 'Other Service'">
+          <label>Specify Category Name *</label>
+          <input type="text" [(ngModel)]="currentGst().serviceCategory" (blur)="markFieldTouched('serviceCategory')" [class.invalid]="shouldShowError('serviceCategory')" placeholder="e.g. Banquet, Valet, Airport Transfer">
+        </div>
+      </div>
+
+      <div class="ci-input-group mt-3">
+        <label>HSN / SAC Code *</label>
+        <input type="text" [(ngModel)]="currentGst().hsnSacCode" (blur)="markFieldTouched('hsnSacCode')" [class.invalid]="shouldShowError('hsnSacCode')" placeholder="e.g. 9963 or 9987">
+        <span class="field-error" *ngIf="shouldShowError('hsnSacCode')">{{ validationMessage('hsnSacCode') }}</span>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>CGST Rate (%) *</label>
+          <input type="number" [(ngModel)]="currentGst().cgstRate" (ngModelChange)="onGstRateChange()" (blur)="markFieldTouched('cgstRate')" [class.invalid]="shouldShowError('cgstRate')" placeholder="9" min="0" max="100" step="0.1">
+          <span class="field-error" *ngIf="shouldShowError('cgstRate')">{{ validationMessage('cgstRate') }}</span>
+        </div>
+        
+        <div class="ci-input-group">
+          <label>SGST Rate (%) *</label>
+          <input type="number" [(ngModel)]="currentGst().sgstRate" (ngModelChange)="onGstRateChange()" (blur)="markFieldTouched('sgstRate')" [class.invalid]="shouldShowError('sgstRate')" placeholder="9" min="0" max="100" step="0.1">
+          <span class="field-error" *ngIf="shouldShowError('sgstRate')">{{ validationMessage('sgstRate') }}</span>
+        </div>
+      </div>
+
+      <div class="ci-input-group mt-3">
+        <label>Calculated IGST Rate (%)</label>
+        <input type="number" [ngModel]="currentGst().igstRate" [disabled]="true" style="background-color: var(--surface-100); opacity: 0.8; font-weight: bold; color: var(--primary-color);">
+        <span class="input-tip">Automatically sum of CGST and SGST</span>
+      </div>
+
+      <div class="ci-input-group mt-3">
+        <label>Tax Description</label>
+        <textarea [(ngModel)]="currentGst().description" (blur)="markFieldTouched('description')" [class.invalid]="shouldShowError('description')" placeholder="State details about applicability, exemption thresholds, rules..." rows="2"></textarea>
+        <span class="field-error" *ngIf="shouldShowError('description')">{{ validationMessage('description') }}</span>
+      </div>
+
+      <div class="ci-input-group mt-3">
+        <div class="toggle-group">
+          <label class="toggle-option">
+            <input type="checkbox" [(ngModel)]="currentGst().isActive">
+            Active GST Rule
+          </label>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" (click)="closeModal('gst-config')" [disabled]="isSaving()">Cancel</button>
+      <button class="ci-btn-confirm" (click)="saveGst()" [disabled]="isSaving()">
+        <span class="material-icons-round spin" *ngIf="isSaving()">sync</span>
+        <span class="material-icons-round" *ngIf="!isSaving()">save</span>
+        {{ isSaving() ? 'Saving...' : (modalMode() === 'create' ? 'Create Rule' : 'Save Changes') }}
       </button>
     </div>
 

@@ -57,6 +57,7 @@ export const routes: Routes = [
       { path: 'masters/room-types', loadComponent: () => import('./masters/hotel-masters.component').then(m => m.HotelMastersComponent) },
       { path: 'masters/rooms', loadComponent: () => import('./masters/hotel-masters.component').then(m => m.HotelMastersComponent) },
       { path: 'masters/rate-plans', loadComponent: () => import('./masters/hotel-masters.component').then(m => m.HotelMastersComponent) },
+      { path: 'masters/gst-config', loadComponent: () => import('./masters/hotel-masters.component').then(m => m.HotelMastersComponent) },
       { path: 'user-management', redirectTo: 'user-management/users', pathMatch: 'full' },
       { path: 'user-management/users', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) },
       { path: 'user-management/roles', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) },

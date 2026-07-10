@@ -219,7 +219,8 @@ export class Layout implements OnInit {
         { label: 'Floors', icon: 'layers', route: '/masters/floors' },
         { label: 'Room Types', icon: 'bed', route: '/masters/room-types' },
         { label: 'Rooms', icon: 'meeting_room', route: '/masters/rooms' },
-        { label: 'Rate Plans', icon: 'sell', route: '/masters/rate-plans' }
+        { label: 'Rate Plans', icon: 'sell', route: '/masters/rate-plans' },
+        { label: 'GST Configuration', icon: 'receipt_long', route: '/masters/gst-config' }
       ]
     },
     {

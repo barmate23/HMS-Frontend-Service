@@ -5,9 +5,9 @@ import { Router, NavigationEnd, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
-import { HotelMastersService, Hotel, Floor, RoomType, Room, RatePlan } from './hotel-masters.service';
+import { HotelMastersService, Hotel, Floor, RoomType, Room, RatePlan, GstConfig } from './hotel-masters.service';
 
-type MasterTab = 'hotels' | 'floors' | 'room-types' | 'rooms' | 'rate-plans';
+type MasterTab = 'hotels' | 'floors' | 'room-types' | 'rooms' | 'rate-plans' | 'gst-config';
 type ValidationErrors = Partial<Record<string, string>>;
 
 @Component({
@@ -34,6 +34,7 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   isRoomTypeModalOpen = signal(false);
   isRoomModalOpen = signal(false);
   isRatePlanModalOpen = signal(false);
+  isGstModalOpen = signal(false);
 
   modalMode = signal<'create' | 'edit'>('create');
 
@@ -43,6 +44,7 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   currentRoomType = signal<Partial<RoomType>>({});
   currentRoom = signal<Partial<Room>>({});
   currentRatePlan = signal<Partial<RatePlan>>({});
+  currentGst = signal<Partial<GstConfig>>({});
 
   // Saving / deleting state
   isSaving = signal(false);
@@ -80,6 +82,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       this.activeTab.set('rooms');
     } else if (url.includes('/masters/rate-plans')) {
       this.activeTab.set('rate-plans');
+    } else if (url.includes('/masters/gst-config')) {
+      this.activeTab.set('gst-config');
     }
     // Clear search query when changing tabs
     this.searchQuery.set('');
@@ -171,6 +175,20 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       (rp.description || '').toLowerCase().includes(query) ||
       String(rp.priceAdjustment ?? '').includes(query) ||
       String(rp.displayOrder ?? '').includes(query)
+    );
+  });
+
+  filteredGstConfigs = computed(() => {
+    const list = this.mastersService.gstConfigs();
+    const query = this.searchQuery().toLowerCase().trim();
+    if (!query) return list;
+    return list.filter(g =>
+      g.serviceCategory.toLowerCase().includes(query) ||
+      (g.hsnSacCode || '').toLowerCase().includes(query) ||
+      (g.description || '').toLowerCase().includes(query) ||
+      String(g.cgstRate).includes(query) ||
+      String(g.sgstRate).includes(query) ||
+      String(g.igstRate).includes(query)
     );
   });
 
@@ -300,6 +318,17 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
         isActive: true
       });
       this.isRatePlanModalOpen.set(true);
+    } else if (tab === 'gst-config') {
+      this.currentGst.set({
+        serviceCategory: 'Room',
+        hsnSacCode: '',
+        cgstRate: 9,
+        sgstRate: 9,
+        igstRate: 18,
+        description: '',
+        isActive: true
+      });
+      this.isGstModalOpen.set(true);
     }
     document.body.style.overflow = 'hidden';
   }
@@ -330,6 +359,9 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     } else if (tab === 'rate-plans') {
       this.currentRatePlan.set({ ...item });
       this.isRatePlanModalOpen.set(true);
+    } else if (tab === 'gst-config') {
+      this.currentGst.set({ ...item });
+      this.isGstModalOpen.set(true);
     }
     document.body.style.overflow = 'hidden';
   }
@@ -340,6 +372,7 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     if (tab === 'room-types') this.isRoomTypeModalOpen.set(false);
     if (tab === 'rooms') this.isRoomModalOpen.set(false);
     if (tab === 'rate-plans') this.isRatePlanModalOpen.set(false);
+    if (tab === 'gst-config') this.isGstModalOpen.set(false);
     this.resetValidation();
     document.body.style.overflow = '';
   }
@@ -370,10 +403,41 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       tab === 'floors' ? this.validateFloorForm() :
       tab === 'room-types' ? this.validateRoomTypeForm() :
       tab === 'rooms' ? this.validateRoomForm() :
+      tab === 'gst-config' ? this.validateGstForm() :
       this.validateRatePlanForm();
 
     this.formErrors.set(errors);
     return Object.keys(errors).length === 0;
+  }
+
+  private validateGstForm(): ValidationErrors {
+    const g = this.currentGst();
+    const errors: ValidationErrors = {};
+    const sac = (g.hsnSacCode || '').trim();
+
+    if (!(g.serviceCategory || '').trim()) {
+      errors['serviceCategory'] = 'Service category is required.';
+    }
+
+    if (!sac) {
+      errors['hsnSacCode'] = 'HSN/SAC code is required.';
+    } else if (!/^[0-9A-Za-z-]{2,12}$/.test(sac)) {
+      errors['hsnSacCode'] = 'Enter a valid HSN/SAC code (alphanumeric, 2-12 chars).';
+    }
+
+    if (g.cgstRate === undefined || g.cgstRate === null || isNaN(g.cgstRate)) {
+      errors['cgstRate'] = 'CGST rate is required.';
+    } else if (g.cgstRate < 0 || g.cgstRate > 100) {
+      errors['cgstRate'] = 'CGST rate must be between 0 and 100.';
+    }
+
+    if (g.sgstRate === undefined || g.sgstRate === null || isNaN(g.sgstRate)) {
+      errors['sgstRate'] = 'SGST rate is required.';
+    } else if (g.sgstRate < 0 || g.sgstRate > 100) {
+      errors['sgstRate'] = 'SGST rate must be between 0 and 100.';
+    }
+
+    return errors;
   }
 
   private validateHotelForm(): ValidationErrors {
@@ -673,5 +737,37 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
         error: (err) => { this.isDeleting.set(false); alert('Error deleting rate plan: ' + (err?.message || 'Unknown error')); }
       });
     }
+  }
+
+  saveGst() {
+    if (!this.validateForm('gst-config')) return;
+    const gst = this.currentGst();
+    this.isSaving.set(true);
+    this.mastersService.saveGst(gst).subscribe({
+      next: () => { this.isSaving.set(false); this.closeModal('gst-config'); },
+      error: (err) => { this.isSaving.set(false); alert('Error saving GST config: ' + (err?.message || 'Unknown error')); }
+    });
+  }
+
+  toggleGstActive(gst: GstConfig, event: Event) {
+    event.stopPropagation();
+    this.mastersService.saveGst({ ...gst, isActive: !gst.isActive }).subscribe();
+  }
+
+  deleteGst(id: number, serviceCategory: string, event: Event) {
+    event.stopPropagation();
+    if (confirm(`Are you sure you want to delete GST Configuration for "${serviceCategory}"?`)) {
+      this.isDeleting.set(true);
+      this.mastersService.deleteGst(id).subscribe({
+        next: () => this.isDeleting.set(false),
+        error: (err) => { this.isDeleting.set(false); alert('Error deleting GST config: ' + (err?.message || 'Unknown error')); }
+      });
+    }
+  }
+
+  onGstRateChange() {
+    const cgst = Number(this.currentGst().cgstRate || 0);
+    const sgst = Number(this.currentGst().sgstRate || 0);
+    this.currentGst.update((g: Partial<GstConfig>) => ({ ...g, igstRate: cgst + sgst }));
   }
 }

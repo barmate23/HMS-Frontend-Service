@@ -130,6 +130,81 @@
           </div>
         </div>
 
+        <!-- Accompanying Members Details (Optional) -->
+        <div class="modern-card">
+          <div class="card-header font-poppins">
+            <div class="header-title">
+              <span class="material-icons-round">groups</span>
+              <h2>Accompanying Members Details <small style="opacity: 0.7; font-weight: normal; font-size: 11px;">(Optional)</small></h2>
+            </div>
+            <button type="button" class="btn-text success" (click)="addAccompanyingMember()" style="display: flex; align-items: center; gap: 4px;">
+              <span class="material-icons-round" style="font-size: 15px;">add_circle_outline</span>
+              Add Member
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="empty-state" *ngIf="accompanyingMembers().length === 0" style="padding: 20px; text-align: center; color: var(--surface-400);">
+              <span class="material-icons-round" style="font-size: 32px; color: var(--surface-300); display: block; margin-bottom: 8px;">group_add</span>
+              <p style="margin: 0; font-size: 11px;">No accompanying members added yet. Click 'Add Member' to record companion details.</p>
+            </div>
+
+            <div class="member-list" *ngIf="accompanyingMembers().length > 0" style="display: flex; flex-direction: column; gap: 16px;">
+              <div class="member-item-container" *ngFor="let member of accompanyingMembers(); let idx = index" style="background: var(--surface-50); border: 1px solid var(--surface-200); border-radius: 6px; padding: 12px; position: relative;">
+                <div class="member-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--surface-200); padding-bottom: 6px; margin-bottom: 10px;">
+                  <span class="member-index" style="font-size: 11px; font-weight: 800; color: var(--primary-color);">Member #{{ idx + 1 }}</span>
+                  <button type="button" class="btn-text" (click)="removeAccompanyingMember(idx)" style="color: #DC2626; font-size: 11px; font-weight: 700; padding: 2px 6px; display: inline-flex; align-items: center; gap: 4px; background: transparent; border: none; cursor: pointer;">
+                    <span class="material-icons-round" style="font-size: 14px;">delete_outline</span>
+                    Remove
+                  </button>
+                </div>
+                
+                <div class="grid-3">
+                  <div class="input-group">
+                    <label>Title</label>
+                    <select [(ngModel)]="member.title">
+                      <option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option>
+                    </select>
+                  </div>
+                  <div class="input-group span-2">
+                    <label>Full Name</label>
+                    <input type="text" placeholder="Enter guest's full name" [(ngModel)]="member.fullName">
+                  </div>
+                </div>
+
+                <div class="grid-3 mt-3">
+                  <div class="input-group">
+                    <label>Gender</label>
+                    <select [(ngModel)]="member.gender">
+                      <option value="">Select</option><option>Male</option><option>Female</option><option>Other</option>
+                    </select>
+                  </div>
+                  <div class="input-group">
+                    <label>Date of Birth</label>
+                    <input type="date" [(ngModel)]="member.dob">
+                  </div>
+                  <div class="input-group">
+                    <label>Relationship</label>
+                    <input type="text" placeholder="e.g. Spouse, Child" [(ngModel)]="member.relationship">
+                  </div>
+                </div>
+
+                <div class="grid-2 mt-3">
+                  <div class="input-group">
+                    <label>Identity Proof</label>
+                    <select [(ngModel)]="member.idProof">
+                      <option>Aadhar Card</option><option>Passport</option><option>Driving License</option><option>PAN Card</option><option>Voter ID</option>
+                    </select>
+                  </div>
+                  <div class="input-group">
+                    <label>ID Number</label>
+                    <input type="text" placeholder="Enter ID Number" [(ngModel)]="member.idNumber">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Stay Information -->
         <div class="modern-card">
           <div class="card-header">

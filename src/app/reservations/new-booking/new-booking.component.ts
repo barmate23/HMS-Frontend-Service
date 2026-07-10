@@ -119,6 +119,16 @@ export interface GuestProfile {
   lastVisit?: string;
 }
 
+export interface AccompanyingMember {
+  title: string;
+  fullName: string;
+  gender: string;
+  dob: string;
+  relationship?: string;
+  idProof: string;
+  idNumber: string;
+}
+
 type BookingValidationField =
   'fullName' | 'phone' | 'email' | 'zip' | 'dob' | 'idNumber' |
   'checkIn' | 'checkOut' | 'adults' | 'children' | 'room' | 'plan';
@@ -174,6 +184,28 @@ export class NewBookingComponent implements OnInit {
     country: 'India', address1: '', address2: '', city: '', state: '', zip: '',
     vip: false, nationality: '', gender: '', dob: '', idProof: 'Aadhar Card', idNumber: '', notes: '', visits: 0
   });
+
+  // Companion State
+  accompanyingMembers = signal<AccompanyingMember[]>([]);
+
+  addAccompanyingMember() {
+    this.accompanyingMembers.update(members => [
+      ...members,
+      {
+        title: 'Mr.',
+        fullName: '',
+        gender: '',
+        dob: '',
+        relationship: '',
+        idProof: 'Aadhar Card',
+        idNumber: ''
+      }
+    ]);
+  }
+
+  removeAccompanyingMember(index: number) {
+    this.accompanyingMembers.update(members => members.filter((_, i) => i !== index));
+  }
 
   searchGuestModalOpen = signal(false);
   createGuestModalOpen = signal(false);
@@ -596,6 +628,51 @@ export class NewBookingComponent implements OnInit {
       this.selectedRoom.set(room);
       this.selectedFloor.set(room.floor);
       this.selectedRoomType.set(room.typeId);
+    }
+
+    const apiMembers = details.accompanyingGuests || [];
+    if (Array.isArray(apiMembers) && apiMembers.length > 0) {
+      this.accompanyingMembers.set(apiMembers.map((m: any) => ({
+        title: m.title === 'MRS' ? 'Mrs.' : m.title === 'MS' ? 'Ms.' : m.title === 'DR' ? 'Dr.' : 'Mr.',
+        fullName: m.fullName || `${m.firstName || ''} ${m.lastName || ''}`.trim(),
+        gender: m.gender === 'MALE' ? 'Male' : m.gender === 'FEMALE' ? 'Female' : m.gender ? 'Other' : '',
+        dob: m.dateOfBirth || '',
+        relationship: m.relationship || '',
+        idProof: m.idProofType === 'PASSPORT' ? 'Passport' : m.idProofType === 'DRIVING_LICENSE' ? 'Driving License' : m.idProofType === 'PAN' ? 'PAN Card' : m.idProofType === 'VOTER_ID' ? 'Voter ID' : 'Aadhar Card',
+        idNumber: m.idProofNumber || ''
+      })));
+    } else {
+      // Fallback: Check if notes contains the string "[Accompanying Guests: ...]" and parse it
+      const notesStr = details.notes || '';
+      const match = notesStr.match(/\[Accompanying Guests:\s*(.*?)\]/i);
+      if (match && match[1]) {
+        const parts = match[1].split(';').map((p: string) => p.trim());
+        const parsedMembers: AccompanyingMember[] = [];
+        parts.forEach((p: string) => {
+          const nameMatch = p.match(/Member\s*#\d+:\s*(Mr\.|Mrs\.|Ms\.|Dr\.)\s*(.*?)\s*\(/i);
+          const genderDobMatch = p.match(/\((.*?),?\s*DOB:\s*(.*?)\)/i);
+          const idMatch = p.match(/-\s*ID:\s*(.*?):\s*(.*)/i);
+          
+          if (nameMatch) {
+            parsedMembers.push({
+              title: nameMatch[1],
+              fullName: nameMatch[2],
+              gender: genderDobMatch && genderDobMatch[1] !== 'N/A' ? genderDobMatch[1] : '',
+              dob: genderDobMatch && genderDobMatch[2] !== 'N/A' ? genderDobMatch[2] : '',
+              relationship: '',
+              idProof: idMatch ? idMatch[1] : 'Aadhar Card',
+              idNumber: idMatch && idMatch[2] !== 'N/A' ? idMatch[2] : ''
+            });
+          }
+        });
+        if (parsedMembers.length > 0) {
+          this.accompanyingMembers.set(parsedMembers);
+        } else {
+          this.accompanyingMembers.set([]);
+        }
+      } else {
+        this.accompanyingMembers.set([]);
+      }
     }
 
     this.dataRevision.update(value => value + 1);
@@ -1223,7 +1300,22 @@ export class NewBookingComponent implements OnInit {
 
   private buildReservationPayload(status: ReservationRequest['reservationStatus']): ReservationRequest {
     const room = this.selectedRoom()!;
-    const payload: ReservationRequest = {
+    
+    // Format accompanying members text to append to notes
+    let baseNotes = this.guestData().notes || '';
+    // Strip any previous [Accompanying Guests: ...] text from baseNotes if editing
+    baseNotes = baseNotes.replace(/\n\n\[Accompanying Guests:.*?\]/gis, '').replace(/\[Accompanying Guests:.*?\]/gis, '').trim();
+
+    const members = this.accompanyingMembers().filter(m => m.fullName.trim() !== '');
+    let finalNotes = baseNotes;
+    if (members.length > 0) {
+      const membersText = members.map((m, index) => 
+        `Member #${index + 1}: ${m.title} ${m.fullName} (${m.gender || 'N/A'}, DOB: ${m.dob || 'N/A'}) - ID: ${m.idProof}: ${m.idNumber || 'N/A'}`
+      ).join('; ');
+      finalNotes = finalNotes ? `${finalNotes}\n\n[Accompanying Guests: ${membersText}]` : `[Accompanying Guests: ${membersText}]`;
+    }
+
+    const payload: any = {
       hotelId: room.hotelId ?? this.editHotelId() ?? 1,
       checkInDate: this.checkIn(),
       checkInTime: this.toApiTime(this.checkInTime()),
@@ -1238,8 +1330,17 @@ export class NewBookingComponent implements OnInit {
       billingAddress: [this.guestData().address1, this.guestData().address2, this.guestData().city, this.guestData().state, this.guestData().zip]
         .filter(Boolean)
         .join(', '),
-      notes: this.guestData().notes,
-      guestDetails: this.buildGuestDetailsPayload()
+      notes: finalNotes,
+      guestDetails: this.buildGuestDetailsPayload(),
+      accompanyingGuests: members.map(m => ({
+        title: this.mapGuestTitle(m.title),
+        firstName: m.fullName.trim().split(/\s+/)[0] || '',
+        lastName: m.fullName.trim().split(/\s+/).slice(1).join(' ') || '.',
+        gender: this.mapGender(m.gender) || 'MALE',
+        dateOfBirth: m.dob || null,
+        idProofType: this.mapIdProof(m.idProof),
+        idProofNumber: m.idNumber || ''
+      }))
     };
 
     return payload;
@@ -1355,6 +1456,8 @@ export class NewBookingComponent implements OnInit {
   private mapIdProof(value: string): GuestRequest['idProofType'] {
     if (value === 'Passport') return 'PASSPORT';
     if (value === 'Driving License') return 'DRIVING_LICENSE';
+    if (value === 'PAN Card' || value === 'PAN') return 'PAN';
+    if (value === 'Voter ID' || value === 'VOTER_ID') return 'VOTER_ID';
     return 'AADHAR';
   }
 

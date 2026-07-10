@@ -1908,3 +1908,14 @@ textarea {
 }
 .booking-toast-close:hover { background: var(--surface-50, #f8fafc); color: var(--primary-color, #0f172a); }
 .booking-toast-close .material-icons-round { font-size: 16px; }
+
+/* Accompanying Members */
+.member-item-container {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+.member-item-container:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  border-color: var(--accent-color) !important;
+}
+

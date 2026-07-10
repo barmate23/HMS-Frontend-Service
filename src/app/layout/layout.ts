@@ -151,6 +151,7 @@ export class Layout implements OnInit {
         { label: 'Guest Profiles', icon: 'person_search', route: '/guests' }
       ]
     },
+    { label: 'CRM', icon: 'groups', route: '/crm' },
     { 
       label: 'Housekeeping', 
       icon: 'cleaning_services', 

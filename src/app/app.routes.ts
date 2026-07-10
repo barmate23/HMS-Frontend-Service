@@ -15,6 +15,7 @@ export const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent) },
       { path: 'front-office/dashboard', loadComponent: () => import('./front-office-dashboard/front-office-dashboard.component').then(m => m.FrontOfficeDashboardComponent) },
+      { path: 'crm', loadComponent: () => import('./crm/crm.component').then(m => m.CrmComponent) },
       { path: 'reservations', component: ReservationCenter },
       { path: 'new-booking', component: NewBookingComponent },
       { path: 'arrivals', component: ArrivalsComponent },

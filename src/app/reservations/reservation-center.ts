@@ -546,6 +546,50 @@ export class ReservationCenter implements OnInit {
     return room?.roomNumber ? `Room ${room.roomNumber}` : 'No room assigned';
   }
 
+  getAccompanyingMembers(details: any): any[] {
+    if (!details) return [];
+    
+    // 1. Check if the response contains accompanyingGuests natively
+    if (details.accompanyingGuests && Array.isArray(details.accompanyingGuests) && details.accompanyingGuests.length > 0) {
+      return details.accompanyingGuests.map((m: any) => ({
+        fullName: m.fullName || `${m.title || ''} ${m.firstName || ''} ${m.lastName || ''}`.trim() || 'Companion',
+        gender: m.gender || '-',
+        dob: m.dateOfBirth || '-',
+        relationship: m.relationship || '-',
+        idProofType: m.idProofType || m.idProof || '-',
+        idProofNumber: m.idProofNumber || m.idNumber || '-'
+      }));
+    }
+    
+    // 2. Otherwise parse it from the notes field
+    const notesStr = details.notes || '';
+    const match = notesStr.match(/\[Accompanying Guests:\s*(.*?)\]/i);
+    if (match && match[1]) {
+      const parts = match[1].split(';').map((p: string) => p.trim());
+      const parsedMembers: any[] = [];
+      parts.forEach((p: string) => {
+        // e.g. "Member #1: Mr. John Doe (Male, DOB: 1990-01-01) - ID: Passport: P12345"
+        const nameMatch = p.match(/Member\s*#\d+:\s*(Mr\.|Mrs\.|Ms\.|Dr\.)?\s*(.*?)\s*\(/i);
+        const genderDobMatch = p.match(/\((.*?),?\s*DOB:\s*(.*?)\)/i);
+        const idMatch = p.match(/-\s*ID:\s*(.*?):\s*(.*)/i);
+        
+        if (nameMatch) {
+          parsedMembers.push({
+            fullName: `${nameMatch[1] || ''} ${nameMatch[2] || ''}`.trim(),
+            gender: genderDobMatch ? genderDobMatch[1] : '-',
+            dob: genderDobMatch && genderDobMatch[2] !== 'N/A' ? genderDobMatch[2] : '-',
+            relationship: '-',
+            idProofType: idMatch ? idMatch[1] : '-',
+            idProofNumber: idMatch && idMatch[2] !== 'N/A' ? idMatch[2] : '-'
+          });
+        }
+      });
+      return parsedMembers;
+    }
+    
+    return [];
+  }
+
   detailRoomMeta(room: any): string {
     return [
       room.roomTypeName,

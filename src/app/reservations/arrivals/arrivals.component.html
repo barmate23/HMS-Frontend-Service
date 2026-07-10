@@ -228,7 +228,7 @@
           </div>
           <div class="ci-input-group">
             <label>Amount to Settle</label>
-            <input type="number" [value]="selectedGuestForCheckIn.amountDue" disabled>
+            <input type="number" [(ngModel)]="amountToSettle" name="amountToSettle" placeholder="Enter advance amount">
           </div>
         </div>
       </div>

@@ -48,6 +48,7 @@ export class ArrivalsComponent implements OnInit {
   assignedRoomNumber = '';
   paymentMethod = 'Credit Card';
   idVerification = 'Passport Verified';
+  amountToSettle = 0;
 
   folioModalOpen = false;
   selectedGuestForFolio: ArrivalGuest | null = null;
@@ -86,6 +87,7 @@ export class ArrivalsComponent implements OnInit {
     this.assignedRoomNumber = guest.roomNumber || '';
     this.paymentMethod = 'Credit Card';
     this.idVerification = 'Passport Verified';
+    this.amountToSettle = guest.amountDue || 0;
     this.checkInModalOpen = true;
     document.body.style.overflow = 'hidden';
 
@@ -101,6 +103,7 @@ export class ArrivalsComponent implements OnInit {
         this.selectedGuestForCheckIn.amountDue = Number(details.balanceDue ?? this.selectedGuestForCheckIn.amountDue);
         this.selectedGuestForCheckIn.roomId = details.assignedRoomId;
         this.assignedRoomNumber = details.assignedRoomNumber || this.assignedRoomNumber;
+        this.amountToSettle = this.selectedGuestForCheckIn.amountDue;
       }
     });
   }
@@ -119,7 +122,7 @@ export class ArrivalsComponent implements OnInit {
       roomId: this.selectedGuestForCheckIn.roomId || Number(this.assignedRoomNumber),
       idVerification: this.idVerification,
       paymentMethod: this.paymentMethod,
-      amountToSettle: this.selectedGuestForCheckIn.amountDue
+      amountToSettle: Number(this.amountToSettle) || 0
     }).subscribe({
       next: () => {
         this.closeCheckInModal();

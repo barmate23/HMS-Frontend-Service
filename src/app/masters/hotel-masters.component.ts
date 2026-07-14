@@ -35,6 +35,10 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   isRoomModalOpen = signal(false);
   isRatePlanModalOpen = signal(false);
   isGstModalOpen = signal(false);
+  isDeleteConfirmOpen = signal(false);
+  deleteConfirmTitle = signal('Confirm Deletion');
+  deleteConfirmMessage = signal('');
+  pendingDeleteAction: (() => void) | null = null;
 
   modalMode = signal<'create' | 'edit'>('create');
 
@@ -683,60 +687,100 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     this.mastersService.saveRoom({ ...room, isActive: !room.isActive }).subscribe();
   }
 
+  // --- Custom Deletion Confirmation Dialog Helpers ---
+  triggerDeleteConfirm(title: string, message: string, action: () => void) {
+    this.deleteConfirmTitle.set(title);
+    this.deleteConfirmMessage.set(message);
+    this.pendingDeleteAction = action;
+    this.isDeleteConfirmOpen.set(true);
+  }
+
+  cancelDelete() {
+    this.isDeleteConfirmOpen.set(false);
+    this.pendingDeleteAction = null;
+  }
+
+  executeDelete() {
+    if (this.pendingDeleteAction) {
+      this.pendingDeleteAction();
+    }
+    this.cancelDelete();
+  }
+
   // --- Delete Operations ---
   deleteHotel(id: number, name: string, event: Event) {
     event.stopPropagation();
-    if (confirm(`Are you sure you want to delete Hotel "${name}"? This could leave associated floors and rooms orphaned.`)) {
-      this.isDeleting.set(true);
-      this.mastersService.deleteHotel(id).subscribe({
-        next: () => this.isDeleting.set(false),
-        error: (err) => { this.isDeleting.set(false); alert('Error deleting hotel: ' + (err?.message || 'Unknown error')); }
-      });
-    }
+    this.triggerDeleteConfirm(
+      'Delete Hotel',
+      `Are you sure you want to delete Hotel "${name}"? This could leave associated floors and rooms orphaned.`,
+      () => {
+        this.isDeleting.set(true);
+        this.mastersService.deleteHotel(id).subscribe({
+          next: () => this.isDeleting.set(false),
+          error: (err) => { this.isDeleting.set(false); alert('Error deleting hotel: ' + (err?.message || 'Unknown error')); }
+        });
+      }
+    );
   }
 
   deleteFloor(id: number, floorNumber: string, event: Event) {
     event.stopPropagation();
-    if (confirm(`Are you sure you want to delete "${floorNumber}"?`)) {
-      this.isDeleting.set(true);
-      this.mastersService.deleteFloor(id).subscribe({
-        next: () => this.isDeleting.set(false),
-        error: (err) => { this.isDeleting.set(false); alert('Error deleting floor: ' + (err?.message || 'Unknown error')); }
-      });
-    }
+    this.triggerDeleteConfirm(
+      'Delete Floor',
+      `Are you sure you want to delete Floor "${floorNumber}"?`,
+      () => {
+        this.isDeleting.set(true);
+        this.mastersService.deleteFloor(id).subscribe({
+          next: () => this.isDeleting.set(false),
+          error: (err) => { this.isDeleting.set(false); alert('Error deleting floor: ' + (err?.message || 'Unknown error')); }
+        });
+      }
+    );
   }
 
   deleteRoomType(id: number, name: string, event: Event) {
     event.stopPropagation();
-    if (confirm(`Are you sure you want to delete Room Type "${name}"?`)) {
-      this.isDeleting.set(true);
-      this.mastersService.deleteRoomType(id).subscribe({
-        next: () => this.isDeleting.set(false),
-        error: (err) => { this.isDeleting.set(false); alert('Error deleting room type: ' + (err?.message || 'Unknown error')); }
-      });
-    }
+    this.triggerDeleteConfirm(
+      'Delete Room Type',
+      `Are you sure you want to delete Room Type "${name}"?`,
+      () => {
+        this.isDeleting.set(true);
+        this.mastersService.deleteRoomType(id).subscribe({
+          next: () => this.isDeleting.set(false),
+          error: (err) => { this.isDeleting.set(false); alert('Error deleting room type: ' + (err?.message || 'Unknown error')); }
+        });
+      }
+    );
   }
 
   deleteRoom(id: number, roomNumber: string, event: Event) {
     event.stopPropagation();
-    if (confirm(`Are you sure you want to delete Room #${roomNumber}?`)) {
-      this.isDeleting.set(true);
-      this.mastersService.deleteRoom(id).subscribe({
-        next: () => this.isDeleting.set(false),
-        error: (err) => { this.isDeleting.set(false); alert('Error deleting room: ' + (err?.message || 'Unknown error')); }
-      });
-    }
+    this.triggerDeleteConfirm(
+      'Delete Room',
+      `Are you sure you want to delete Room #${roomNumber}?`,
+      () => {
+        this.isDeleting.set(true);
+        this.mastersService.deleteRoom(id).subscribe({
+          next: () => this.isDeleting.set(false),
+          error: (err) => { this.isDeleting.set(false); alert('Error deleting room: ' + (err?.message || 'Unknown error')); }
+        });
+      }
+    );
   }
 
   deleteRatePlan(id: number, name: string, event: Event) {
     event.stopPropagation();
-    if (confirm(`Are you sure you want to delete Rate Plan "${name}"?`)) {
-      this.isDeleting.set(true);
-      this.mastersService.deleteRatePlan(id).subscribe({
-        next: () => this.isDeleting.set(false),
-        error: (err) => { this.isDeleting.set(false); alert('Error deleting rate plan: ' + (err?.message || 'Unknown error')); }
-      });
-    }
+    this.triggerDeleteConfirm(
+      'Delete Rate Plan',
+      `Are you sure you want to delete Rate Plan "${name}"?`,
+      () => {
+        this.isDeleting.set(true);
+        this.mastersService.deleteRatePlan(id).subscribe({
+          next: () => this.isDeleting.set(false),
+          error: (err) => { this.isDeleting.set(false); alert('Error deleting rate plan: ' + (err?.message || 'Unknown error')); }
+        });
+      }
+    );
   }
 
   saveGst() {
@@ -756,13 +800,17 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
 
   deleteGst(id: number, serviceCategory: string, event: Event) {
     event.stopPropagation();
-    if (confirm(`Are you sure you want to delete GST Configuration for "${serviceCategory}"?`)) {
-      this.isDeleting.set(true);
-      this.mastersService.deleteGst(id).subscribe({
-        next: () => this.isDeleting.set(false),
-        error: (err) => { this.isDeleting.set(false); alert('Error deleting GST config: ' + (err?.message || 'Unknown error')); }
-      });
-    }
+    this.triggerDeleteConfirm(
+      'Delete GST Configuration',
+      `Are you sure you want to delete GST Configuration for "${serviceCategory}"?`,
+      () => {
+        this.isDeleting.set(true);
+        this.mastersService.deleteGst(id).subscribe({
+          next: () => this.isDeleting.set(false),
+          error: (err) => { this.isDeleting.set(false); alert('Error deleting GST config: ' + (err?.message || 'Unknown error')); }
+        });
+      }
+    );
   }
 
   onGstRateChange() {

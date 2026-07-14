@@ -419,7 +419,7 @@
               <span>{{ formatINR(selectedPlanDetails().extra * nights()) }}</span>
             </div>
             <div class="summary-line">
-              <span>Taxes &amp; Fees (12%)</span>
+              <span>Taxes &amp; Fees ({{ roomTaxRate() }}%)</span>
               <span>{{ formatINR(taxAmount()) }}</span>
             </div>
 

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ArrivalApiItem, FrontOfficeApiService } from '../../front-office-api.service';
 
 interface DepartureGuest {
@@ -59,7 +60,10 @@ export class DeparturesComponent implements OnInit {
   folioModalOpen = false;
   selectedGuestForFolio: DepartureGuest | null = null;
 
-  constructor(private readonly api: FrontOfficeApiService) {}
+  constructor(
+    private readonly api: FrontOfficeApiService,
+    private readonly router: Router
+  ) {}
 
   ngOnInit() {
     this.loadDepartures();
@@ -110,7 +114,7 @@ export class DeparturesComponent implements OnInit {
   }
 
   nextStep() {
-    if (this.checkoutStep < 3) this.checkoutStep++;
+    if (this.checkoutStep < 2) this.checkoutStep++;
   }
 
   prevStep() {
@@ -142,6 +146,7 @@ export class DeparturesComponent implements OnInit {
       next: () => {
         this.closeCheckOutModal();
         this.loadDepartures();
+        this.router.navigate(['/billing/folios']);
       },
       error: () => this.errorMessage = 'Unable to finalize check-out.'
     });

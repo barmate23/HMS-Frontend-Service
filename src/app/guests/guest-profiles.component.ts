@@ -33,6 +33,8 @@ export class GuestProfilesComponent implements OnInit {
   isModalOpen = false;
   modalMode: 'create' | 'edit' = 'create';
   currentGuest: Partial<GuestProfile> = {};
+  deleteModalOpen = false;
+  guestToDelete: GuestProfile | null = null;
 
   constructor(private readonly api: FrontOfficeApiService) {}
 
@@ -114,11 +116,35 @@ export class GuestProfilesComponent implements OnInit {
 
   deleteGuest(id: string) {
     const guest = this.guests.find(g => g.id === id);
-    if (!guest?.apiId || !confirm('Are you sure you want to delete this guest profile?')) return;
+    if (guest) {
+      this.confirmDeleteGuest(guest);
+    }
+  }
 
-    this.api.deleteGuest(guest.apiId).subscribe({
-      next: () => this.loadGuests(),
-      error: () => this.errorMessage = 'Unable to delete guest.'
+  confirmDeleteGuest(guest: GuestProfile) {
+    this.guestToDelete = guest;
+    this.deleteModalOpen = true;
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeDeleteModal() {
+    this.deleteModalOpen = false;
+    this.guestToDelete = null;
+    document.body.style.overflow = '';
+  }
+
+  executeDeleteGuest() {
+    if (!this.guestToDelete?.apiId) return;
+
+    this.api.deleteGuest(this.guestToDelete.apiId).subscribe({
+      next: () => {
+        this.closeDeleteModal();
+        this.loadGuests();
+      },
+      error: () => {
+        this.errorMessage = 'Unable to delete guest.';
+        this.closeDeleteModal();
+      }
     });
   }
 

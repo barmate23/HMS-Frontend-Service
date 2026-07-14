@@ -149,11 +149,6 @@
       <div class="step-line" [class.active]="checkoutStep >= 2"></div>
       <div class="step" [class.active]="checkoutStep >= 2">
         <div class="step-num">2</div>
-        <span>Settlement</span>
-      </div>
-      <div class="step-line" [class.active]="checkoutStep >= 3"></div>
-      <div class="step" [class.active]="checkoutStep >= 3">
-        <div class="step-num">3</div>
         <span>Departure</span>
       </div>
     </div>
@@ -177,11 +172,6 @@
             <label>Late Check-Out Fee (₹)</label>
             <input type="number" [(ngModel)]="lateCheckoutFee" placeholder="0">
           </div>
-        </div>
-        
-        <div class="ci-input-group mt-3">
-          <label>Mini-Bar Consumption Charges (₹)</label>
-          <input type="number" [(ngModel)]="minibarCharge" placeholder="0">
         </div>
 
         <div class="ci-form-grid mt-3">
@@ -212,61 +202,8 @@
         </div>
       </div>
 
-      <!-- STEP 2: SETTLEMENT -->
+      <!-- STEP 2: DEPARTURE SERVICES -->
       <div class="wizard-step" *ngIf="checkoutStep === 2">
-        <h3 class="step-title">Folio Settlement</h3>
-        <p class="step-desc">Review and settle the final outstanding balance.</p>
-
-        <!-- Billing Summary -->
-        <div class="billing-summary-box">
-          <div class="bs-row">
-            <span>Room & Tax</span>
-            <span>₹{{ selectedGuestForCheckOut.balance }}</span>
-          </div>
-          <div class="bs-row" *ngIf="lateCheckoutFee > 0">
-            <span>Late Check-Out Fee</span>
-            <span>₹{{ lateCheckoutFee }}</span>
-          </div>
-          <div class="bs-row" *ngIf="minibarCharge > 0">
-            <span>Mini-Bar Charges</span>
-            <span>₹{{ minibarCharge }}</span>
-          </div>
-          <div class="bs-row" *ngIf="damageCharge > 0" style="color: #e11d48; font-weight: 600;">
-            <span>Room Damage Penalty</span>
-            <span>₹{{ damageCharge }}</span>
-          </div>
-          <div class="bs-row total">
-            <span>Total Outstanding</span>
-            <span>₹{{ totalOutstanding }}</span>
-          </div>
-        </div>
-
-        <div class="ci-balance-section" *ngIf="totalOutstanding > 0">
-          <div class="ci-form-grid">
-            <div class="ci-input-group">
-              <label>Payment Method</label>
-              <select [(ngModel)]="paymentMethod">
-                <option>Credit Card</option>
-                <option>Cash</option>
-                <option>UPI</option>
-                <option>Bill to Company</option>
-              </select>
-            </div>
-            <div class="ci-input-group">
-              <label>Amount to Collect</label>
-              <input type="number" [value]="totalOutstanding" disabled>
-            </div>
-          </div>
-        </div>
-
-        <div class="ci-balance-section fully-paid" *ngIf="totalOutstanding === 0">
-          <span class="material-icons-round">check_circle</span>
-          <span>Guest Folio is Fully Settled</span>
-        </div>
-      </div>
-
-      <!-- STEP 3: DEPARTURE -->
-      <div class="wizard-step" *ngIf="checkoutStep === 3">
         <h3 class="step-title">Guest Departure Services</h3>
         <p class="step-desc">Finalize departure assistance and record guest feedback.</p>
 
@@ -300,10 +237,10 @@
       </div>
 
       <div>
-        <button class="ci-btn-confirm" style="background: var(--surface-800);" (click)="nextStep()" *ngIf="checkoutStep < 3">
+        <button class="ci-btn-confirm" style="background: var(--surface-800);" (click)="nextStep()" *ngIf="checkoutStep < 2">
           Next Step <span class="material-icons-round">chevron_right</span>
         </button>
-        <button class="ci-btn-confirm" style="background: linear-gradient(135deg, #e11d48, #be123c);" (click)="confirmCheckOut()" *ngIf="checkoutStep === 3">
+        <button class="ci-btn-confirm" style="background: linear-gradient(135deg, #e11d48, #be123c);" (click)="confirmCheckOut()" *ngIf="checkoutStep === 2">
           <span class="material-icons-round">exit_to_app</span> Finalize Check-Out
         </button>
       </div>

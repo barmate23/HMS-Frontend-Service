@@ -826,11 +826,89 @@
 
 /* View Content */
 .view-content {
-  flex: 1;
-  overflow-y: auto;
   border-radius: 12px;
   background: var(--surface-50);
   border: 1px solid var(--surface-200);
+}
+
+.list-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.table-viewport {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 0 8px;
+}
+
+/* Reservation Center Pagination */
+.reservation-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: white;
+  border-top: 1px solid var(--surface-200);
+  border-radius: 0 0 12px 12px;
+  flex-shrink: 0;
+}
+
+.reservation-pagination > span {
+  font-family: var(--font-poppins);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--surface-500);
+}
+
+.reservation-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reservation-pagination strong {
+  font-family: var(--font-poppins);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--primary-color);
+  padding: 0 8px;
+}
+
+.pagination-btn {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--surface-200);
+  background: white;
+  color: var(--surface-700);
+  border-radius: 6px;
+  font-family: var(--font-poppins);
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: var(--primary-light);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pagination-btn .material-icons-round {
+  font-size: 14px;
 }
 
 /* List View Table */
@@ -844,7 +922,7 @@
 .reservation-table th {
   text-align: left;
   padding: 4px 12px;
-  background-color: transparent;
+  background-color: var(--surface-50);
   color: var(--surface-500);
   font-family: var(--font-poppins);
   font-size: 9px;

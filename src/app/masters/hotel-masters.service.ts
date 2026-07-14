@@ -198,7 +198,7 @@ export class HotelMastersService {
       roomTypes: this.http.get<StandardResponse<RoomType[]>>(`${this.baseUrl}/roomTypes/getAllRoomTypes`),
       rooms: this.http.get<StandardResponse<Room[]>>(`${this.baseUrl}/rooms/getAllRooms`),
       ratePlans: this.http.get<StandardResponse<RatePlan[]>>(`${this.baseUrl}/ratePlans/getAllRatePlans`),
-      gstConfigs: this.http.get<StandardResponse<GstConfig[]>>(`${this.baseUrl}/gstConfigs/getAll`).pipe(
+      gstConfigs: this.http.get<StandardResponse<GstConfig[]>>(`${this.baseUrl}/gstRules/getAllGstRules`).pipe(
         catchError(() => {
           const local = localStorage.getItem('hms-gst-config');
           const data = local ? JSON.parse(local) : defaultGstConfigs;
@@ -212,7 +212,13 @@ export class HotelMastersService {
         if (results.floors.success) this._floors.set(results.floors.data ?? []);
         if (results.roomTypes.success) this._roomTypes.set(results.roomTypes.data ?? []);
         if (results.ratePlans.success) this._ratePlans.set(results.ratePlans.data ?? []);
-        if (results.gstConfigs.success) this._gstConfigs.set(results.gstConfigs.data ?? []);
+        if (results.gstConfigs.success) {
+          const configs = (results.gstConfigs.data ?? []).map(g => ({
+            ...g,
+            igstRate: g.igstRate !== undefined ? g.igstRate : ((g.cgstRate || 0) + (g.sgstRate || 0))
+          }));
+          this._gstConfigs.set(configs);
+        }
         if (results.rooms.success) {
           // Normalise: backend uses roomTypeId, UI also needs typeId alias, map status correctly to stop UI break
           const rooms = (results.rooms.data ?? []).map((r: any) => ({ 
@@ -428,8 +434,8 @@ export class HotelMastersService {
     };
 
     const endpoint = gst.id
-      ? `${this.baseUrl}/gstConfigs/updateGstConfig/${gst.id}`
-      : `${this.baseUrl}/gstConfigs/createGstConfig`;
+      ? `${this.baseUrl}/gstRules/updateGstRule/${gst.id}`
+      : `${this.baseUrl}/gstRules/createGstRule`;
 
     const req$ = gst.id
       ? this.http.put<StandardResponse<GstConfig>>(endpoint, payload)
@@ -463,7 +469,7 @@ export class HotelMastersService {
   }
 
   deleteGst(id: number): Observable<void> {
-    return this.http.delete<StandardResponse<void>>(`${this.baseUrl}/gstConfigs/deleteGstConfig/${id}`).pipe(
+    return this.http.delete<StandardResponse<void>>(`${this.baseUrl}/gstRules/deleteGstRule/${id}`).pipe(
       tap(() => {
         this._gstConfigs.update(list => list.filter(g => g.id !== id));
         localStorage.setItem('hms-gst-config', JSON.stringify(this._gstConfigs()));

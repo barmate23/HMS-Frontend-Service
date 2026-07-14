@@ -84,14 +84,58 @@ export class ReservationCenter implements OnInit {
   viewMode = signal<'LIST' | 'STAY' | 'MAP'>('LIST');
   selectedFloor = signal('Floor 1');
   searchText = signal('');
-  statusFilter = signal<'ALL' | 'PENDING' | 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED' | 'NO_SHOW'>('ALL');
+  statusFilter = signal<string>('ALL');
+  statuses = signal<{code: string; value: string}[]>([
+    { code: 'ALL', value: 'All Status' },
+    { code: 'PENDING', value: 'Pending' },
+    { code: 'CONFIRMED', value: 'Confirmed' },
+    { code: 'CHECKED_IN', value: 'Checked In' },
+    { code: 'CHECKED_OUT', value: 'Checked Out' },
+    { code: 'CANCELLED', value: 'Cancelled' },
+    { code: 'NO_SHOW', value: 'No Show' }
+  ]);
   isLoadingReservations = signal(false);
   reservationError = signal<string | null>(null);
   reservationMessage = signal<string | null>(null);
   totalReservationRecords = signal(0);
+  currentPage = signal(0);
+  pageSize = signal(10);
   selectedReservationDetails = signal<any | null>(null);
   isReservationDetailsOpen = signal(false);
   isLoadingReservationDetails = signal(false);
+
+  get totalPages(): number {
+    return Math.ceil(this.totalReservationRecords() / this.pageSize());
+  }
+
+  nextPage() {
+    if (this.currentPage() + 1 < this.totalPages) {
+      this.currentPage.update(p => p + 1);
+      this.loadReservations();
+    }
+  }
+
+  prevPage() {
+    if (this.currentPage() > 0) {
+      this.currentPage.update(p => p - 1);
+      this.loadReservations();
+    }
+  }
+
+  goToPage(page: number) {
+    if (page >= 0 && page < this.totalPages) {
+      this.currentPage.set(page);
+      this.loadReservations();
+    }
+  }
+
+  get paginationRangeLabel(): string {
+    const total = this.totalReservationRecords();
+    if (total === 0) return '0 - 0 of 0';
+    const start = this.currentPage() * this.pageSize() + 1;
+    const end = Math.min(start + this.pageSize() - 1, total);
+    return `${start} - ${end} of ${total}`;
+  }
 
   // Date Range Picker State
   showCalendar = signal(false);
@@ -110,6 +154,7 @@ export class ReservationCenter implements OnInit {
   mapError = signal<string | null>(null);
 
   ngOnInit() {
+    this.loadStatuses();
     this.loadReservations();
     this.loadRoomWiseStatus();
   }
@@ -250,11 +295,13 @@ export class ReservationCenter implements OnInit {
 
   updateStart(val: string) {
     this.rangeStart.set(val ? this.parseDateInput(val) : null);
+    this.currentPage.set(0);
     this.loadReservations();
   }
   
   updateEnd(val: string) {
     this.rangeEnd.set(val ? this.parseDateInput(val) : null);
+    this.currentPage.set(0);
     this.loadReservations();
   }
 
@@ -262,11 +309,13 @@ export class ReservationCenter implements OnInit {
     this.rangeStart.set(null); 
     this.rangeEnd.set(null); 
     this.selectingMode.set('START');
+    this.currentPage.set(0);
     this.loadReservations();
   }
   
   applyDates() { 
     this.showCalendar.set(false); 
+    this.currentPage.set(0);
     this.loadReservations();
   }
 
@@ -284,18 +333,58 @@ export class ReservationCenter implements OnInit {
 
   reservations = signal<Reservation[]>([]);
 
+  loadStatuses() {
+    this.http.get<any>('/api/hmsService/v1/common/getCommonMaster/RESERVATION_STATUS').subscribe({
+      next: (res) => {
+        let rawList: any[] = [];
+        if (res && res.data && Array.isArray(res.data)) {
+          rawList = res.data;
+        } else if (Array.isArray(res)) {
+          rawList = res;
+        }
+        
+        if (rawList && rawList.length > 0) {
+          const mapped = rawList
+            .filter(item => item.isActive !== false && item.is_active !== false)
+            .map(item => ({
+              code: item.id ? item.id.toString() : (item.code || item.value),
+              value: item.value || item.code
+            }));
+          
+          if (mapped.length > 0) {
+            this.statuses.set([
+              { code: 'ALL', value: 'All Status' },
+              ...mapped
+            ]);
+          }
+        }
+      },
+      error: (err) => {
+        console.error('Failed to load reservation statuses', err);
+      }
+    });
+  }
+
   loadReservations() {
     this.isLoadingReservations.set(true);
     this.reservationError.set(null);
     this.reservationMessage.set(null);
 
     let params = new HttpParams()
-      .set('page', '0')
-      .set('size', '10');
+      .set('page', this.currentPage().toString())
+      .set('size', this.pageSize().toString());
 
     const search = this.searchText().trim();
     if (search) params = params.set('searchText', search);
-    if (this.statusFilter() !== 'ALL') params = params.set('status', this.statusFilter());
+    
+    if (this.statusFilter() !== 'ALL') {
+      const matchedStatus = this.statuses().find(s => 
+        s.code === this.statusFilter() || 
+        (s.value && s.value.toUpperCase() === this.statusFilter().toUpperCase())
+      );
+      const statusValue = matchedStatus ? matchedStatus.code : this.statusFilter();
+      params = params.set('statusId', statusValue);
+    }
     if (this.rangeStart()) params = params.set('fromDate', this.toApiDate(this.rangeStart()!));
     if (this.rangeEnd()) params = params.set('toDate', this.toApiDate(this.rangeEnd()!));
 
@@ -315,11 +404,13 @@ export class ReservationCenter implements OnInit {
 
   onSearchChange(value: string) {
     this.searchText.set(value);
+    this.currentPage.set(0);
     this.loadReservations();
   }
 
   onStatusChange(value: string) {
     this.statusFilter.set(value as any);
+    this.currentPage.set(0);
     this.loadReservations();
   }
 

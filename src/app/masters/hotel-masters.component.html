@@ -1088,25 +1088,23 @@
     <div class="ci-body">
       <div class="form-section-title">GST Formula Details</div>
 
-      <div class="ci-form-grid">
-        <div class="ci-input-group">
-          <label>Service Category *</label>
-          <select [(ngModel)]="currentGst().serviceCategory" (blur)="markFieldTouched('serviceCategory')" [class.invalid]="shouldShowError('serviceCategory')">
-            <option value="Room">Room (Lodging/Accommodation)</option>
-            <option value="Food">Food (Restaurant/Dining/Room Service)</option>
-            <option value="Beverages">Beverages (Minibar/Drinks)</option>
-            <option value="Laundry">Laundry (Dry Cleaning/Ironing)</option>
-            <option value="Spa">Spa (Health/Beauty Wellness)</option>
-            <option value="Gym">Gym (Fitness Center)</option>
-            <option value="Other Service">Other Custom Service</option>
-          </select>
-          <span class="field-error" *ngIf="shouldShowError('serviceCategory')">{{ validationMessage('serviceCategory') }}</span>
-        </div>
+      <div class="ci-input-group">
+        <label>Service Category *</label>
+        <select [(ngModel)]="currentGst().serviceCategory" (blur)="markFieldTouched('serviceCategory')" [class.invalid]="shouldShowError('serviceCategory')">
+          <option value="Room">Room (Lodging/Accommodation)</option>
+          <option value="Food">Food (Restaurant/Dining/Room Service)</option>
+          <option value="Beverages">Beverages (Minibar/Drinks)</option>
+          <option value="Laundry">Laundry (Dry Cleaning/Ironing)</option>
+          <option value="Spa">Spa (Health/Beauty Wellness)</option>
+          <option value="Gym">Gym (Fitness Center)</option>
+          <option value="Other Service">Other Custom Service</option>
+        </select>
+        <span class="field-error" *ngIf="shouldShowError('serviceCategory')">{{ validationMessage('serviceCategory') }}</span>
+      </div>
 
-        <div class="ci-input-group" *ngIf="currentGst().serviceCategory === 'Other Service'">
-          <label>Specify Category Name *</label>
-          <input type="text" [(ngModel)]="currentGst().serviceCategory" (blur)="markFieldTouched('serviceCategory')" [class.invalid]="shouldShowError('serviceCategory')" placeholder="e.g. Banquet, Valet, Airport Transfer">
-        </div>
+      <div class="ci-input-group mt-3" *ngIf="currentGst().serviceCategory === 'Other Service'">
+        <label>Specify Category Name *</label>
+        <input type="text" [(ngModel)]="currentGst().serviceCategory" (blur)="markFieldTouched('serviceCategory')" [class.invalid]="shouldShowError('serviceCategory')" placeholder="e.g. Banquet, Valet, Airport Transfer">
       </div>
 
       <div class="ci-input-group mt-3">
@@ -1163,3 +1161,24 @@
 
   </div>
 </div>
+
+<!-- ================================================================
+     DELETE CONFIRMATION DIALOG MODAL
+     ================================================================ -->
+<div class="modal-overlay delete-confirm-overlay" *ngIf="isDeleteConfirmOpen()" (click)="cancelDelete()">
+  <div class="ci-delete-modal" (click)="$event.stopPropagation()">
+    <div class="delete-icon-wrapper">
+      <span class="material-icons-round">delete_outline</span>
+    </div>
+    <h3 class="delete-title">{{ deleteConfirmTitle() }}</h3>
+    <p class="delete-message">{{ deleteConfirmMessage() }}</p>
+    <p class="delete-warning-subtext">This action cannot be undone and will permanently remove this master setup record.</p>
+    <div class="delete-actions">
+      <button class="btn-cancel" (click)="cancelDelete()">Cancel</button>
+      <button class="btn-confirm-delete" (click)="executeDelete()">
+        Yes, Delete
+      </button>
+    </div>
+  </div>
+</div>
+

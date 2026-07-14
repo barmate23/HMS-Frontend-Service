@@ -172,3 +172,42 @@
 
   </div>
 </div>
+
+<!-- ================================================================
+     DELETE GUEST CONFIRMATION MODAL
+     ================================================================ -->
+<div class="modal-overlay" *ngIf="deleteModalOpen" (click)="closeDeleteModal()">
+  <div class="ci-modal delete-modal" (click)="$event.stopPropagation()" style="max-width: 440px;">
+    
+    <div class="ci-header" style="background: linear-gradient(135deg, #f43f5e, #e11d48); color: white;">
+      <div class="ci-title">
+        <span class="material-icons-round" style="color: white;">warning_amber</span>
+        <div>
+          <h2 style="color: white; margin: 0; font-size: 18px; font-weight: 700;">Delete Guest Profile</h2>
+          <p style="color: rgba(255,255,255,0.8); margin: 2px 0 0 0; font-size: 11px;">Confirm Deletion</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="closeDeleteModal()" style="color: white;">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="ci-body" *ngIf="guestToDelete" style="padding: 24px; text-align: center;">
+      <div class="delete-warning-icon" style="margin: 0 auto 16px auto; width: 64px; height: 64px; border-radius: 50%; background: #fef2f2; display: flex; align-items: center; justify-content: center;">
+        <span class="material-icons-round" style="font-size: 36px; color: #ef4444;">delete_forever</span>
+      </div>
+      <h3 style="font-size: 16px; font-weight: 700; color: var(--surface-800); margin-bottom: 8px;">Are you sure?</h3>
+      <p style="font-size: 13px; color: var(--surface-500); line-height: 1.5; margin: 0;">
+        You are about to permanently delete the profile of <strong style="color: var(--surface-900);">{{ guestToDelete.firstName }} {{ guestToDelete.lastName }}</strong> (ID: {{ guestToDelete.id }}). This action cannot be undone.
+      </p>
+    </div>
+
+    <div class="ci-footer" style="background: var(--surface-5); border-top: 1px solid var(--surface-100); padding: 16px 24px; display: flex; justify-content: flex-end; gap: 12px;">
+      <button class="ci-btn-cancel" (click)="closeDeleteModal()" style="font-weight: 600; padding: 10px 18px; background: white; border: 1px solid var(--surface-200); border-radius: 8px; color: var(--surface-700); cursor: pointer; transition: all 0.2s;">Cancel</button>
+      <button class="ci-btn-confirm" (click)="executeDeleteGuest()" style="font-weight: 600; padding: 10px 18px; background: linear-gradient(135deg, #f43f5e, #e11d48); border: none; border-radius: 8px; color: white; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s;">
+        <span class="material-icons-round" style="font-size: 18px;">delete</span> Delete Profile
+      </button>
+    </div>
+
+  </div>
+</div>

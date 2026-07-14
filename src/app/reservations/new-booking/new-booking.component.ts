@@ -47,6 +47,17 @@ interface ApiRatePlan {
   isActive?: boolean;
 }
 
+interface ApiGstRule {
+  id?: number;
+  serviceCategory: string;
+  hsnSacCode?: string;
+  cgstRate: number;
+  sgstRate: number;
+  igstRate: number;
+  description?: string;
+  isActive?: boolean;
+}
+
 interface StandardResponse<T> {
   success: boolean;
   message: string;
@@ -292,6 +303,7 @@ export class NewBookingComponent implements OnInit {
     { id:'408', number:'408', type:'Penthouse',  typeShort:'PNT', typeId:'PNT', floor:4, status:'Available',  rate:25000,view:'Panoramic', beds:'King' },
   ];
   private availableRoomIds = new Set<string>();
+  gstRules = signal<ApiGstRule[]>([]);
 
   isEditMode = computed(() => !!this.editReservationId());
 
@@ -304,6 +316,20 @@ export class NewBookingComponent implements OnInit {
 
     this.loadRoomInventory();
     this.loadRatePlans();
+    this.loadGstRules();
+  }
+
+  loadGstRules() {
+    this.http.get<StandardResponse<ApiGstRule[]>>(`${this.masterBaseUrl}/gstRules/getAllGstRules`).subscribe({
+      next: (response) => {
+        if (response.success && Array.isArray(response.data)) {
+          this.gstRules.set(response.data);
+        }
+      },
+      error: (err) => {
+        console.error('[NewBookingComponent] failed to load gst rules:', err);
+      }
+    });
   }
 
   loadRoomInventory() {
@@ -798,8 +824,17 @@ export class NewBookingComponent implements OnInit {
     };
   });
 
-  taxAmount  = computed(() => math.round(this.totalPrice() * 0.12));
-  grandTotal = computed(() => math.round(this.totalPrice() * 1.12));
+  roomTaxRate = computed(() => {
+    const rules = this.gstRules();
+    const roomGst = rules.find(r => r.serviceCategory === 'Room' && r.isActive !== false);
+    if (roomGst) {
+      return Number(roomGst.igstRate !== undefined ? roomGst.igstRate : (roomGst.cgstRate + roomGst.sgstRate));
+    }
+    return 12; // Fallback tax rate
+  });
+
+  taxAmount  = computed(() => math.round(this.totalPrice() * (this.roomTaxRate() / 100)));
+  grandTotal = computed(() => math.round(this.totalPrice() + this.taxAmount()));
   hasStayDates = computed(() => !!this.checkIn() && !!this.checkOut());
   minCheckOutDate = computed(() => this.checkIn() ? this.addDaysIso(this.checkIn(), 1) : this.todayIso);
 
@@ -1233,13 +1268,22 @@ export class NewBookingComponent implements OnInit {
     request$.subscribe({
       next: (response) => {
         this.isCreatingReservation.set(false);
+        if (response && response.success === false) {
+          const errMsg = response.message || 'Unable to save reservation.';
+          this.reservationError.set(errMsg);
+          this.showToast('error', 'Error', errMsg);
+          return;
+        }
         this.reservationSuccess.set(response.message || (reservationId ? 'Reservation updated successfully.' : 'Reservation created successfully.'));
+        this.showToast('success', 'Success', response.message || (reservationId ? 'Reservation updated successfully.' : 'Reservation created successfully.'));
         this.router.navigate(['/reservations']);
       },
       error: (err) => {
         console.error('[NewBookingComponent] save reservation error:', err);
         this.isCreatingReservation.set(false);
-        this.reservationError.set(err?.error?.message || err?.error?.error?.message || (reservationId ? 'Unable to update reservation.' : 'Unable to create reservation.'));
+        const errMsg = err?.error?.message || err?.error?.error?.message || (reservationId ? 'Unable to update reservation.' : 'Unable to create reservation.');
+        this.reservationError.set(errMsg);
+        this.showToast('error', 'Error', errMsg);
       }
     });
   }
@@ -1260,13 +1304,22 @@ export class NewBookingComponent implements OnInit {
     this.http.post<StandardResponse<any>>(`${this.frontOfficeBaseUrl}/frontOffice/createReservation`, payload).subscribe({
       next: (response) => {
         this.isCreatingReservation.set(false);
+        if (response && response.success === false) {
+          const errMsg = response.message || 'Unable to save reservation draft.';
+          this.reservationError.set(errMsg);
+          this.showToast('error', 'Error', errMsg);
+          return;
+        }
         this.reservationSuccess.set(response.message || 'Reservation draft saved.');
+        this.showToast('success', 'Success', response.message || 'Reservation draft saved.');
         this.router.navigate(['/reservations']);
       },
       error: (err) => {
         console.error('[NewBookingComponent] saveDraft reservation error:', err);
         this.isCreatingReservation.set(false);
-        this.reservationError.set(err?.error?.message || err?.error?.error?.message || 'Unable to save reservation draft.');
+        const errMsg = err?.error?.message || err?.error?.error?.message || 'Unable to save reservation draft.';
+        this.reservationError.set(errMsg);
+        this.showToast('error', 'Error', errMsg);
       }
     });
   }
@@ -1333,13 +1386,13 @@ export class NewBookingComponent implements OnInit {
       notes: finalNotes,
       guestDetails: this.buildGuestDetailsPayload(),
       accompanyingGuests: members.map(m => ({
-        title: this.mapGuestTitle(m.title),
-        firstName: m.fullName.trim().split(/\s+/)[0] || '',
-        lastName: m.fullName.trim().split(/\s+/).slice(1).join(' ') || '.',
+        title: this.mapGuestTitle(m.title) || 'MR',
+        fullName: m.fullName.trim(),
         gender: this.mapGender(m.gender) || 'MALE',
         dateOfBirth: m.dob || null,
-        idProofType: this.mapIdProof(m.idProof),
-        idProofNumber: m.idNumber || ''
+        relationship: m.relationship || '',
+        idProofType: this.mapIdProof(m.idProof) || 'AADHAR',
+        idNumber: m.idNumber || ''
       }))
     };
 

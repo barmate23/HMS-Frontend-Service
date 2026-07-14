@@ -1837,17 +1837,17 @@ textarea {
 /* Toast Notification Styles */
 .booking-toast-wrapper {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  top: 24px;
+  left: 50%;
+  transform: translate(-50%, -20px);
   z-index: 9999;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(20px);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .booking-toast-wrapper.visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translate(-50%, 0);
   pointer-events: auto;
 }
 .booking-toast {

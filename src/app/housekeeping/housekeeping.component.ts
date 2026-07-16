@@ -1,56 +1,19 @@
-import { Component, signal, computed, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import {
   HousekeepingService,
   HKRoom, HKTask, HKStaff, LostFoundItem, MaintenanceRequest,
   HKStatus, TaskType, TaskStatus, Priority, LFStatus, MaintStatus, MaintPriority,
-  AuditFrequency, SopCheckpoint, HousekeepingAttentionItem, HousekeepingRoomBoard
+  AuditFrequency, SopCheckpoint, HousekeepingAttentionItem, HousekeepingRoomBoard,
+  RoomAuditItem, AuditResult, AuditSeverity, RoomSopCheck, SopStatus
 } from './housekeeping.service';
 import { SystemUser, UserManagementService } from '../user-management/user-management.service';
 
 type TabType = 'board' | 'tasks' | 'audit' | 'staff' | 'lost-found' | 'maintenance';
-type AuditResult = 'PASS' | 'RECHECK' | 'FAIL' | 'EXCEPTION';
-type AuditSeverity = 'LOW' | 'MEDIUM' | 'HIGH';
-type SopStatus = 'DONE' | 'PENDING' | 'ISSUE' | 'BLOCKED';
-
-interface RoomSopCheck extends SopCheckpoint {
-  status: SopStatus;
-  evidence: string;
-  finding?: string;
-}
-
-interface RoomAuditItem {
-  id: number;
-  roomNumber: string;
-  floor: string;
-  roomType: string;
-  pmsStatus: string;
-  hkStatus: HKStatus;
-  occupancy: 'Vacant' | 'Occupied';
-  guestName?: string;
-  assignedToId?: number;
-  inspector: string;
-  auditedAt: string;
-  score: number;
-  result: AuditResult;
-  severity: AuditSeverity;
-  discrepancy: string;
-  checklist: {
-    cleanliness: number;
-    linen: number;
-    amenities: number;
-    minibar: number;
-    maintenance: number;
-    safety: number;
-  };
-  defects: string[];
-  followUp: string;
-  releaseReady: boolean;
-  statusLog: string[];
-}
 
 @Component({
   selector: 'app-housekeeping',
@@ -70,9 +33,22 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   activeTab = signal<TabType>('board');
 
   constructor() {
-    this.routerSub = this.router.events.subscribe(() => {
+    this.routerSub = this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe(() => {
       this.updateTabFromUrl(this.router.url);
     });
+
+    effect(() => {
+      const tab = this.activeTab();
+      if (tab === 'audit') {
+        const floorName = this.auditFloor();
+        const frequency = this.auditFrequency();
+        const floorObj = this.hk.floorsMaster().find(f => f.floorNumber === floorName || `Floor ${f.id}` === floorName);
+        const floorId = floorObj?.id ?? 1;
+        this.hk.loadRoomAudits(floorId, frequency);
+      }
+    }, { allowSignalWrites: true });
   }
 
   ngOnInit() {
@@ -92,14 +68,45 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
     this.isAuditSopExpanded.update(value => !value);
   }
 
+  private loadTabSpecificData(tab: TabType) {
+    switch (tab) {
+      case 'board':
+        this.hk.loadRooms();
+        this.hk.loadDashboard();
+        break;
+      case 'tasks':
+        this.hk.loadTasks();
+        this.hk.loadRooms();
+        this.hk.loadStaff();
+        break;
+      case 'audit':
+        this.hk.loadSopCheckpoints();
+        this.hk.loadRooms();
+        break;
+      case 'staff':
+        this.hk.loadStaff();
+        this.hk.loadRooms();
+        break;
+      case 'lost-found':
+        this.hk.loadLostFound();
+        this.hk.loadRooms();
+        break;
+      case 'maintenance':
+        this.hk.loadMaintenance();
+        this.hk.loadRooms();
+        break;
+    }
+  }
+
   private updateTabFromUrl(url: string) {
     const segments = url.split('/');
     const lastSegment = segments[segments.length - 1]?.split('?')[0]; // strip query params
+    let tab: TabType = 'board';
     if (['board', 'tasks', 'audit', 'staff', 'lost-found', 'maintenance'].includes(lastSegment)) {
-      this.activeTab.set(lastSegment as TabType);
-    } else {
-      this.activeTab.set('board');
+      tab = lastSegment as TabType;
     }
+    this.activeTab.set(tab);
+    this.loadTabSpecificData(tab);
   }
 
   // --- Search & Filters ---
@@ -174,139 +181,14 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
     return this.hk.maintenance().filter(m => !q || m.roomNumber.includes(q) || m.issue.toLowerCase().includes(q) || m.category.toLowerCase().includes(q));
   });
 
-  roomAudits = signal<RoomAuditItem[]>([
-    {
-      id: 1,
-      roomNumber: '101',
-      floor: 'Floor 1',
-      roomType: 'Single Room',
-      pmsStatus: 'Vacant',
-      hkStatus: 'VACANT_DIRTY',
-      occupancy: 'Vacant',
-      assignedToId: 1,
-      inspector: 'Lalitha Nair',
-      auditedAt: '2026-05-19T10:45:00Z',
-      score: 68,
-      result: 'FAIL',
-      severity: 'HIGH',
-      discrepancy: 'PMS vacant but HK still dirty after late checkout',
-      checklist: { cleanliness: 12, linen: 10, amenities: 8, minibar: 8, maintenance: 15, safety: 15 },
-      defects: ['Bathroom floor wet', 'Used towels pending pickup', 'Minibar not posted'],
-      followUp: 'Reassign checkout clean and supervisor recheck before release.',
-      releaseReady: false,
-      statusLog: ['09:00 Vacant Dirty by Meena Pillai', '10:20 Cleaning started', '10:45 Audit failed by Lalitha Nair']
-    },
-    {
-      id: 2,
-      roomNumber: '102',
-      floor: 'Floor 1',
-      roomType: 'Double Room',
-      pmsStatus: 'Occupied',
-      hkStatus: 'OCCUPIED_DIRTY',
-      occupancy: 'Occupied',
-      guestName: 'Rajan Mehta',
-      assignedToId: 1,
-      inspector: 'Arjun Menon',
-      auditedAt: '2026-05-19T11:10:00Z',
-      score: 82,
-      result: 'RECHECK',
-      severity: 'MEDIUM',
-      discrepancy: 'Stayover service pending guest-requested 11 AM slot',
-      checklist: { cleanliness: 16, linen: 14, amenities: 12, minibar: 12, maintenance: 14, safety: 14 },
-      defects: ['Extra towels requested', 'Coffee amenity low'],
-      followUp: 'Complete stayover service and update occupied clean.',
-      releaseReady: false,
-      statusLog: ['08:00 Occupied Dirty', '10:30 Guest requested delayed service', '11:10 Recheck scheduled']
-    },
-    {
-      id: 3,
-      roomNumber: '103',
-      floor: 'Floor 1',
-      roomType: 'Luxury Suite',
-      pmsStatus: 'Occupied',
-      hkStatus: 'DO_NOT_DISTURB',
-      occupancy: 'Occupied',
-      guestName: 'Priya Sharma',
-      inspector: 'Lalitha Nair',
-      auditedAt: '2026-05-19T11:30:00Z',
-      score: 90,
-      result: 'EXCEPTION',
-      severity: 'LOW',
-      discrepancy: 'DND active, physical room audit deferred',
-      checklist: { cleanliness: 18, linen: 15, amenities: 15, minibar: 14, maintenance: 14, safety: 14 },
-      defects: ['DND card active since morning round'],
-      followUp: 'Call guest after 14:00 for service permission.',
-      releaseReady: false,
-      statusLog: ['09:30 DND noted', '11:30 Audit exception logged']
-    },
-    {
-      id: 4,
-      roomNumber: '104',
-      floor: 'Floor 1',
-      roomType: 'Double Room',
-      pmsStatus: 'Vacant',
-      hkStatus: 'INSPECTED',
-      occupancy: 'Vacant',
-      assignedToId: 4,
-      inspector: 'Arjun Menon',
-      auditedAt: '2026-05-19T09:50:00Z',
-      score: 98,
-      result: 'PASS',
-      severity: 'LOW',
-      discrepancy: 'No discrepancy',
-      checklist: { cleanliness: 20, linen: 16, amenities: 16, minibar: 16, maintenance: 15, safety: 15 },
-      defects: [],
-      followUp: 'Ready for front office allocation.',
-      releaseReady: true,
-      statusLog: ['09:30 Cleaned by Meena Pillai', '09:45 Inspection completed', '09:50 Released']
-    },
-    {
-      id: 5,
-      roomNumber: '204',
-      floor: 'Floor 2',
-      roomType: 'Double Room',
-      pmsStatus: 'Blocked',
-      hkStatus: 'UNDER_MAINTENANCE',
-      occupancy: 'Vacant',
-      inspector: 'Lalitha Nair',
-      auditedAt: '2026-05-19T10:05:00Z',
-      score: 55,
-      result: 'FAIL',
-      severity: 'HIGH',
-      discrepancy: 'Maintenance block open for bathroom tap leak',
-      checklist: { cleanliness: 14, linen: 12, amenities: 10, minibar: 10, maintenance: 4, safety: 5 },
-      defects: ['Bathroom tap dripping', 'Floor slip risk', 'Room blocked in PMS'],
-      followUp: 'Keep room blocked until plumbing closes request.',
-      releaseReady: false,
-      statusLog: ['09:15 Maintenance request opened', '10:05 Audit failed', '10:10 Engineering notified']
-    },
-    {
-      id: 6,
-      roomNumber: '301',
-      floor: 'Floor 3',
-      roomType: 'Luxury Suite',
-      pmsStatus: 'Vacant',
-      hkStatus: 'INSPECTED',
-      occupancy: 'Vacant',
-      assignedToId: 4,
-      inspector: 'Arjun Menon',
-      auditedAt: '2026-05-19T08:55:00Z',
-      score: 96,
-      result: 'PASS',
-      severity: 'LOW',
-      discrepancy: 'No discrepancy',
-      checklist: { cleanliness: 19, linen: 16, amenities: 16, minibar: 15, maintenance: 15, safety: 15 },
-      defects: ['Lost laptop bag already claimed and closed'],
-      followUp: 'Ready for arrival allocation.',
-      releaseReady: true,
-      statusLog: ['08:45 Cleaned', '08:50 Inspected', '08:55 Audit passed']
-    }
-  ]);
-
   filteredAudits = computed(() => {
     const q = this.auditSearch().toLowerCase().trim();
     const floor = this.auditFloor();
-    return this.hk.rooms().map(room => this.auditFromRoom(room)).filter(a => {
+    const audits = this.hk.roomAudits().length > 0
+      ? this.hk.roomAudits()
+      : this.hk.rooms().map(room => this.auditFromRoom(room));
+
+    return audits.filter(a => {
       const matchFloor = a.floor === floor;
       const matchQuery = !q || a.roomNumber.toLowerCase().includes(q) || a.floor.toLowerCase().includes(q) || a.discrepancy.toLowerCase().includes(q) || (a.guestName?.toLowerCase().includes(q) ?? false);
       return matchFloor && matchQuery;
@@ -638,8 +520,9 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
       OUT_OF_ORDER:      'Out of Order',
       DO_NOT_DISTURB:    'Do Not Disturb',
       UNDER_MAINTENANCE: 'Under Maintenance',
+      UNCLEANED:         'Uncleaned',
     };
-    return map[status];
+    return map[status] || 'Uncleaned';
   }
 
   hkStatusIcon(status: HKStatus): string {
@@ -652,8 +535,9 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
       OUT_OF_ORDER:      'cancel',
       DO_NOT_DISTURB:    'do_not_disturb',
       UNDER_MAINTENANCE: 'build',
+      UNCLEANED:         'do_not_disturb_on',
     };
-    return map[status];
+    return map[status] || 'do_not_disturb_on';
   }
 
   private auditFromRoom(room: HKRoom): RoomAuditItem {
@@ -811,7 +695,7 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
 
   roomBoardClass(room: HKRoom): string {
     if (room.hkStatus === 'DO_NOT_DISTURB' || room.hkStatus === 'OUT_OF_ORDER' || room.hkStatus === 'UNDER_MAINTENANCE') return 'blocked';
-    if (room.hkStatus === 'VACANT_DIRTY' || room.hkStatus === 'OCCUPIED_DIRTY') return 'needs-work';
+    if (room.hkStatus === 'VACANT_DIRTY' || room.hkStatus === 'OCCUPIED_DIRTY' || room.hkStatus === 'UNCLEANED') return 'needs-work';
     if (room.hkStatus === 'INSPECTED' || room.hkStatus === 'VACANT_CLEAN' || room.hkStatus === 'OCCUPIED_CLEAN') return 'ready';
     return '';
   }
@@ -897,6 +781,9 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   }
 
   roomSopChecks(audit: RoomAuditItem): RoomSopCheck[] {
+    if (audit.checkpoints && audit.checkpoints.length > 0) {
+      return audit.checkpoints;
+    }
     return this.activeSopCheckpoints().map(check => {
       let status: SopStatus = 'DONE';
       let evidence = 'Verified during current room audit.';
@@ -1271,7 +1158,7 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   }
 
   // --- Misc ---
-  allStatuses: HKStatus[] = ['VACANT_CLEAN','VACANT_DIRTY','OCCUPIED_CLEAN','OCCUPIED_DIRTY','INSPECTED','OUT_OF_ORDER','DO_NOT_DISTURB','UNDER_MAINTENANCE'];
+  allStatuses: HKStatus[] = ['VACANT_CLEAN','VACANT_DIRTY','OCCUPIED_CLEAN','OCCUPIED_DIRTY','INSPECTED','OUT_OF_ORDER','DO_NOT_DISTURB','UNDER_MAINTENANCE','UNCLEANED'];
 
   taskTypes: TaskType[] = ['CHECKOUT_CLEAN','STAYOVER_CLEAN','DEEP_CLEAN','INSPECTION','TURNDOWN'];
 }

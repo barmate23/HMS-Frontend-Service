@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import { ArrivalApiItem, FrontOfficeApiService } from '../../front-office-api.service';
 
 interface DepartureGuest {
@@ -33,7 +35,7 @@ interface DepartureGuest {
   templateUrl: './departures.component.html',
   styleUrls: ['./departures.component.css']
 })
-export class DeparturesComponent implements OnInit {
+export class DeparturesComponent implements OnInit, OnDestroy {
   currentDate = new Date();
   searchQuery = '';
   departures: DepartureGuest[] = [];
@@ -60,6 +62,12 @@ export class DeparturesComponent implements OnInit {
   folioModalOpen = false;
   selectedGuestForFolio: DepartureGuest | null = null;
 
+  checkoutToastVisible = false;
+  checkoutToastSuccess = false;
+  checkoutToastMessage = '';
+
+  private routerSub?: Subscription;
+
   constructor(
     private readonly api: FrontOfficeApiService,
     private readonly router: Router
@@ -67,6 +75,17 @@ export class DeparturesComponent implements OnInit {
 
   ngOnInit() {
     this.loadDepartures();
+
+    this.routerSub = this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd),
+      filter(() => this.router.url.includes('/departures'))
+    ).subscribe(() => {
+      this.loadDepartures();
+    });
+  }
+
+  ngOnDestroy() {
+    this.routerSub?.unsubscribe();
   }
 
   get pendingDepartures() { return this.pendingCount; }
@@ -75,7 +94,7 @@ export class DeparturesComponent implements OnInit {
 
   get totalOutstanding(): number {
     if (!this.selectedGuestForCheckOut) return 0;
-    return this.selectedGuestForCheckOut.balance + Number(this.minibarCharge || 0) + Number(this.lateCheckoutFee || 0) + Number(this.damageCharge || 0);
+    return this.selectedGuestForCheckOut.balance + Number(this.minibarCharge || 0) + Number(this.damageCharge || 0);
   }
 
   loadDepartures() {
@@ -133,7 +152,7 @@ export class DeparturesComponent implements OnInit {
     this.api.checkOut({
       bookingId: this.selectedGuestForCheckOut.bookingId,
       keysReturned: this.keysReturned,
-      lateCheckOutFee: Number(this.lateCheckoutFee || 0),
+      lateCheckOutFee: 0,
       minibarCharges: Number(this.minibarCharge || 0),
       roomDamageReported: this.roomDamageReported,
       damagePenaltyCharge: Number(this.damageCharge || 0),
@@ -143,12 +162,25 @@ export class DeparturesComponent implements OnInit {
       transportationRequested: this.transportRequested,
       guestFeedback: this.guestFeedback
     }).subscribe({
-      next: () => {
-        this.closeCheckOutModal();
-        this.loadDepartures();
-        this.router.navigate(['/billing/folios']);
+      next: (res) => {
+        const msg = res.message || 'Guest checked out successfully.';
+        this.checkoutToastSuccess = true;
+        this.checkoutToastMessage = msg;
+        this.checkoutToastVisible = true;
+        setTimeout(() => {
+          this.checkoutToastVisible = false;
+          this.closeCheckOutModal();
+          this.loadDepartures();
+          this.router.navigate(['/billing/folios']);
+        }, 2000);
       },
-      error: () => this.errorMessage = 'Unable to finalize check-out.'
+      error: (err) => {
+        const apiMsg = err?.error?.message || err?.error?.error?.message || 'Unable to finalize check-out.';
+        this.checkoutToastSuccess = false;
+        this.checkoutToastMessage = apiMsg;
+        this.checkoutToastVisible = true;
+        setTimeout(() => { this.checkoutToastVisible = false; }, 5000);
+      }
     });
   }
 

@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { Component, computed, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import {
   FrontOfficeApiService,
   FrontOfficeDashboardData,
@@ -15,8 +17,10 @@ import {
   templateUrl: './front-office-dashboard.component.html',
   styleUrls: ['./front-office-dashboard.component.css']
 })
-export class FrontOfficeDashboardComponent {
+export class FrontOfficeDashboardComponent implements OnInit, OnDestroy {
   private readonly frontOfficeApi = inject(FrontOfficeApiService);
+  private readonly router = inject(Router);
+  private routerSub?: Subscription;
 
   dashboard = signal<FrontOfficeDashboardData | null>(null);
   isLoading = signal(false);
@@ -45,12 +49,27 @@ export class FrontOfficeDashboardComponent {
 
   readonly roomCards = computed(() => this.activeFloor()?.rooms ?? []);
 
-  constructor() {
+  constructor() {}
+
+  ngOnInit(): void {
     this.loadDashboard();
+
+    this.routerSub = this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd),
+      filter(() => this.router.url === '/front-office/dashboard')
+    ).subscribe(() => {
+      this.loadDashboard(true);
+    });
   }
 
-  loadDashboard(): void {
-    this.isLoading.set(true);
+  ngOnDestroy(): void {
+    this.routerSub?.unsubscribe();
+  }
+
+  loadDashboard(background = false): void {
+    if (!background) {
+      this.isLoading.set(true);
+    }
     this.error.set(null);
     this.frontOfficeApi.getFrontOfficeDashboard().subscribe({
       next: response => {
@@ -72,6 +91,7 @@ export class FrontOfficeDashboardComponent {
 
   selectFloor(floor: FrontOfficeFloorBoard): void {
     this.selectedFloorId.set(floor.floorId ?? null);
+    this.loadDashboard(true);
   }
 
   viewRoom(room: FrontOfficeRoomCard): void {

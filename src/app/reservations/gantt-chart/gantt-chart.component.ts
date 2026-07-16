@@ -1,6 +1,9 @@
-import { AfterViewInit, Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, OnInit, OnDestroy, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import { FrontOfficeApiService, GanttChartItem } from '../../front-office-api.service';
 import { HotelMastersService, Floor, Room } from '../../masters/hotel-masters.service';
 
@@ -25,7 +28,7 @@ interface RoomLane {
   templateUrl: './gantt-chart.component.html',
   styleUrls: ['./gantt-chart.component.css']
 })
-export class GanttChartComponent implements OnInit, AfterViewInit {
+export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly dayColWidthPx = 110;
   startDate = '';
   endDate = '';
@@ -44,6 +47,9 @@ export class GanttChartComponent implements OnInit, AfterViewInit {
   @ViewChild('timelineHeaderEl') timelineHeaderEl?: ElementRef<HTMLDivElement>;
   @ViewChild('timelineBodyEl') timelineBodyEl?: ElementRef<HTMLDivElement>;
 
+  private readonly router = inject(Router);
+  private routerSub?: Subscription;
+
   constructor(
     private readonly api: FrontOfficeApiService,
     private readonly masters: HotelMastersService
@@ -61,6 +67,17 @@ export class GanttChartComponent implements OnInit, AfterViewInit {
       this.ensureFloorSelected();
       this.rebuildLanes();
     }, 1200);
+
+    this.routerSub = this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd),
+      filter(() => this.router.url.includes('/gantt-chart'))
+    ).subscribe(() => {
+      this.loadGanttData();
+    });
+  }
+
+  ngOnDestroy() {
+    this.routerSub?.unsubscribe();
   }
 
   ngAfterViewInit() {

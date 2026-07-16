@@ -1,6 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import { FrontOfficeApiService, GuestApiItem, GuestRequest } from '../front-office-api.service';
 
 export interface GuestProfile {
@@ -25,7 +28,7 @@ export interface GuestProfile {
   templateUrl: './guest-profiles.component.html',
   styleUrls: ['./guest-profiles.component.css']
 })
-export class GuestProfilesComponent implements OnInit {
+export class GuestProfilesComponent implements OnInit, OnDestroy {
   searchQuery = '';
   guests: GuestProfile[] = [];
   isLoading = false;
@@ -36,10 +39,24 @@ export class GuestProfilesComponent implements OnInit {
   deleteModalOpen = false;
   guestToDelete: GuestProfile | null = null;
 
+  private readonly router = inject(Router);
+  private routerSub?: Subscription;
+
   constructor(private readonly api: FrontOfficeApiService) {}
 
   ngOnInit() {
     this.loadGuests();
+
+    this.routerSub = this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd),
+      filter(() => this.router.url.includes('/guests'))
+    ).subscribe(() => {
+      this.loadGuests();
+    });
+  }
+
+  ngOnDestroy() {
+    this.routerSub?.unsubscribe();
   }
 
   get filteredGuests() {
@@ -158,8 +175,8 @@ export class GuestProfilesComponent implements OnInit {
       phone: `${guest.countryCode || ''} ${guest.phone || ''}`.trim(),
       nationality: guest.nationality || guest.country || '',
       vipStatus: !!guest.isVip,
-      totalStays: 0,
-      totalSpent: 0,
+      totalStays: guest.numberOfStays ?? 0,
+      totalSpent: guest.totalSpent ?? 0,
       lastVisit: '-',
       notes: guest.guestNotes || guest.preference || ''
     };

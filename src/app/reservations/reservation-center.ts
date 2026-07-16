@@ -1,9 +1,11 @@
-import { Component, signal, computed, HostListener, inject, OnInit } from '@angular/core';
+import { Component, signal, computed, HostListener, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 interface Reservation {
   id: string;
@@ -76,10 +78,11 @@ interface ApiRoomStatus {
   templateUrl: './reservation-center.html',
   styleUrls: ['./reservation-center.css']
 })
-export class ReservationCenter implements OnInit {
+export class ReservationCenter implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly frontOfficeBaseUrl = '/api/frontOfficeService/v1';
+  private routerSub?: Subscription;
 
   viewMode = signal<'LIST' | 'STAY' | 'MAP'>('LIST');
   selectedFloor = signal('Floor 1');
@@ -157,6 +160,18 @@ export class ReservationCenter implements OnInit {
     this.loadStatuses();
     this.loadReservations();
     this.loadRoomWiseStatus();
+
+    this.routerSub = this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd),
+      filter(() => this.router.url.includes('/reservations'))
+    ).subscribe(() => {
+      this.loadReservations();
+      this.loadRoomWiseStatus();
+    });
+  }
+
+  ngOnDestroy() {
+    this.routerSub?.unsubscribe();
   }
 
   get dateRangeLabel(): string {
@@ -532,8 +547,10 @@ export class ReservationCenter implements OnInit {
 
   setView(mode: 'LIST' | 'STAY' | 'MAP') {
     this.viewMode.set(mode);
-    if (mode === 'MAP' && this.rooms().length === 0 && !this.mapIsLoading()) {
+    if (mode === 'MAP') {
       this.loadRoomWiseStatus();
+    } else if (mode === 'LIST') {
+      this.loadReservations();
     }
   }
 

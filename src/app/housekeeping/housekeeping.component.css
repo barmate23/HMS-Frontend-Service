@@ -971,6 +971,7 @@
 .hk-status-badge.do_not_disturb { background: #FFEBEE; color: #C62828; }
 .hk-status-badge.out_of_order { background: #ECEFF1; color: #37474F; }
 .hk-status-badge.under_maintenance { background: #EFEBE9; color: #4E342E; }
+.hk-status-badge.uncleaned { background: #FFF3E0; color: #E65100; }
 
 .rc-body .guest-info,
 .rc-body .checkout-info,
@@ -1545,12 +1546,23 @@
   box-sizing: border-box;
   width: 142px;
   min-width: 142px;
-  padding: 6px 8px;
+  padding: 6px 22px 6px 12px;
   font-size: 10px;
   text-align: center;
   text-align-last: center;
   white-space: nowrap;
-  letter-spacing: 0;
+  letter-spacing: 0.02em;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23475569'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd' /%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 13px;
+  border: 1px dashed transparent;
+  transition: all 0.2s ease;
+}
+
+.maintenance-grid .inline-status-select:hover {
+  border-color: currentColor;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 .none-text {

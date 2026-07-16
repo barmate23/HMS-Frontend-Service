@@ -47,7 +47,9 @@ export interface GuestApiItem {
   nationality?: string;
   guestNotes?: string;
   preference?: string;
-  isVip?: boolean;
+  isVip?: boolean | null;
+  numberOfStays?: number;
+  totalSpent?: number;
 }
 
 export interface GuestRequest {

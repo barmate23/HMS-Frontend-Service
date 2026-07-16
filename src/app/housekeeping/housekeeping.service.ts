@@ -11,7 +11,8 @@ export type HKStatus =
   | 'INSPECTED'
   | 'OUT_OF_ORDER'
   | 'DO_NOT_DISTURB'
-  | 'UNDER_MAINTENANCE';
+  | 'UNDER_MAINTENANCE'
+  | 'UNCLEANED';
 
 export type TaskType = 'CHECKOUT_CLEAN' | 'STAYOVER_CLEAN' | 'DEEP_CLEAN' | 'INSPECTION' | 'TURNDOWN';
 export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'SKIPPED';
@@ -23,6 +24,48 @@ export type LFStatus = 'STORED' | 'CLAIMED' | 'DONATED' | 'DISPOSED';
 export type MaintStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'ON_HOLD' | 'RESOLVED' | 'COMPLETED' | 'CANCELLED';
 export type MaintPriority = 'URGENT' | 'HIGH' | 'MEDIUM' | 'NORMAL' | 'LOW';
 export type AuditFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY';
+
+export type SopStatus = 'DONE' | 'PENDING' | 'ISSUE' | 'BLOCKED';
+
+export interface RoomSopCheck extends SopCheckpoint {
+  status: SopStatus;
+  evidence: string;
+  finding?: string;
+}
+
+export type AuditResult = 'PASS' | 'RECHECK' | 'FAIL' | 'EXCEPTION';
+export type AuditSeverity = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export interface RoomAuditItem {
+  id: number;
+  roomNumber: string;
+  floor: string;
+  roomType: string;
+  pmsStatus: string;
+  hkStatus: HKStatus;
+  occupancy: 'Vacant' | 'Occupied';
+  guestName?: string;
+  assignedToId?: number;
+  inspector: string;
+  auditedAt: string;
+  score: number;
+  result: AuditResult;
+  severity: AuditSeverity;
+  discrepancy: string;
+  checklist: {
+    cleanliness: number;
+    linen: number;
+    amenities: number;
+    minibar: number;
+    maintenance: number;
+    safety: number;
+  };
+  defects: string[];
+  followUp: string;
+  releaseReady: boolean;
+  statusLog: string[];
+  checkpoints?: RoomSopCheck[];
+}
 
 export interface HKRoom {
   id: number;
@@ -195,6 +238,8 @@ interface ApiMaintenanceDTO {
   assignedToId?: number;
   assignedToName?: string;
   repairNotes?: string;
+  statusId?: number;
+  statusName?: string;
   status?: MaintStatus;
   reportedAt?: string;
 }
@@ -234,10 +279,49 @@ interface ApiStaffDTO {
   assignedRoomDetails?: ApiRoomAssignmentDTO[];
 }
 
-interface ApiFloorDTO {
+export interface ApiFloorDTO {
   id?: number;
   floorNumber?: string;
   isActive?: boolean;
+}
+
+export interface ApiRoomAuditDTO {
+  id?: number;
+  roomId?: number;
+  roomNumber?: string;
+  roomType?: string;
+  pmsStatus?: string;
+  hkStatus?: string;
+  occupancy?: string;
+  guestName?: string;
+  assignedToId?: number;
+  inspectorName?: string;
+  inspectorCode?: string;
+  auditedAt?: string;
+  score?: number;
+  result?: string;
+  severity?: string;
+  discrepancy?: string;
+  checklist?: {
+    cleanliness?: number;
+    linen?: number;
+    amenities?: number;
+    minibar?: number;
+    maintenance?: number;
+    safety?: number;
+  } | string;
+  defects?: string[] | string;
+  statusLog?: string[] | string;
+  followUp?: string;
+  releaseReady?: boolean;
+  overallScore?: number;
+  lastAuditDate?: string;
+  checkpoints?: {
+    checkpointId?: string;
+    auditArea?: string;
+    description?: string;
+    status?: string;
+  }[];
 }
 
 interface ApiRoomTypeDTO {
@@ -337,11 +421,14 @@ export class HousekeepingService {
     OUT_OF_ORDER: 'OOO',
     DO_NOT_DISTURB: 'DND',
     UNDER_MAINTENANCE: 'UM',
+    UNCLEANED: 'UC',
   };
   private hkStatusIdByStatus?: Map<HKStatus, number>;
 
   private _rooms = signal<HKRoom[]>([]);
   private _roomFloors = signal<string[]>([]);
+  private _floorsMaster = signal<ApiFloorDTO[]>([]);
+  private _roomAudits = signal<RoomAuditItem[]>([]);
   private _dashboard = signal<HousekeepingDashboardData | null>(null);
 
   private _tasks = signal<HKTask[]>([]);
@@ -370,6 +457,8 @@ export class HousekeepingService {
   // Public read-only signals
   readonly rooms      = this._rooms.asReadonly();
   readonly roomFloors = this._roomFloors.asReadonly();
+  readonly floorsMaster = this._floorsMaster.asReadonly();
+  readonly roomAudits = this._roomAudits.asReadonly();
   readonly dashboard  = this._dashboard.asReadonly();
   readonly tasks      = this._tasks.asReadonly();
   readonly staff      = this._staff.asReadonly();
@@ -443,6 +532,7 @@ export class HousekeepingService {
     }).subscribe({
       next: response => {
         const floorItems = (response.floors.data ?? []).filter(floor => floor.id && floor.floorNumber && floor.isActive !== false);
+        this._floorsMaster.set(floorItems);
         const floors = new Map(floorItems.map(floor => [Number(floor.id), floor.floorNumber || `Floor ${floor.id}`]));
         const roomTypes = new Map((response.roomTypes.data ?? []).map(type => [Number(type.id), type.name || 'Room']));
         const rooms = (response.rooms.data ?? [])
@@ -610,7 +700,7 @@ export class HousekeepingService {
     };
   }
 
-  private asHKStatus(value?: string): HKStatus {
+  private asHKStatus(value?: string, pmsStatus?: string): HKStatus {
     const normalized = String(value || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
     if (normalized === 'OCCUPIED') return 'OCCUPIED_CLEAN';
     if (normalized === 'CLEANING') return 'VACANT_DIRTY';
@@ -620,6 +710,7 @@ export class HousekeepingService {
     if (normalized === 'OCCUPIED_DIRTY') return 'OCCUPIED_DIRTY';
     if (normalized === 'VACANT_DIRTY') return 'VACANT_DIRTY';
     if (normalized === 'INSPECTED') return 'INSPECTED';
+    if (normalized === 'UNCLEANED') return 'UNCLEANED';
     return 'VACANT_CLEAN';
   }
 
@@ -914,7 +1005,13 @@ export class HousekeepingService {
   }
 
   updateMaintStatus(id: number, status: MaintStatus) {
-    const params = new HttpParams().set('status', status);
+    const statusObj = this._maintenanceStatuses().find(
+      item => item.code?.toUpperCase() === status.toUpperCase() ||
+              item.value?.toUpperCase().replace(/[\s-]+/g, '_') === status.toUpperCase()
+    );
+    const statusParamValue = statusObj ? String(statusObj.id) : status;
+
+    const params = new HttpParams().set('status', statusParamValue);
     this.http.patch<ApiResponse<ApiMaintenanceDTO>>(`${this.maintenanceApiBase}/updateMaintenanceStatus/${id}`, null, { params }).subscribe({
       next: response => {
         const updated = response.data ? this.fromApiMaintenance(response.data) : undefined;
@@ -948,6 +1045,12 @@ export class HousekeepingService {
 
   private fromApiMaintenance(item: ApiMaintenanceDTO): MaintenanceRequest {
     const room = this._rooms().find(r => r.id === item.roomId || r.roomNumber === item.roomNumber);
+    const resolved = (
+      item.status === 'RESOLVED' ||
+      item.status === 'COMPLETED' ||
+      item.statusName?.toUpperCase() === 'RESOLVED' ||
+      item.statusName?.toUpperCase() === 'COMPLETED'
+    );
     return {
       id: Number(item.id ?? 0),
       roomId: this.numberOrUndefined(item.roomId),
@@ -958,19 +1061,23 @@ export class HousekeepingService {
       category: item.categoryValue ?? '',
       priorityId: this.numberOrUndefined(item.priorityId),
       priority: this.asMaintPriority(item.priorityValue),
-      status: this.asMaintStatus(item.status),
+      status: this.asMaintStatus(item.statusName || item.status),
       reportedById: this.numberOrUndefined(item.reportedById),
       reportedBy: item.reportedByName ?? '',
       assignedToId: this.numberOrUndefined(item.assignedToId),
       assignedTo: item.assignedToName ?? '',
       reportedAt: item.reportedAt ?? new Date().toISOString(),
-      resolvedAt: (item.status === 'RESOLVED' || item.status === 'COMPLETED') ? new Date().toISOString() : undefined,
+      resolvedAt: resolved ? new Date().toISOString() : undefined,
       notes: item.repairNotes ?? '',
     };
   }
 
   private toApiMaintenance(item: Partial<MaintenanceRequest>): ApiMaintenanceDTO {
     const room = this._rooms().find(r => r.id === item.roomId || r.roomNumber === item.roomNumber);
+    const statusObj = this._maintenanceStatuses().find(
+      st => st.code?.toUpperCase() === item.status?.toUpperCase() ||
+            st.value?.toUpperCase().replace(/[\s-]+/g, '_') === item.status?.toUpperCase()
+    );
     return {
       id: this.numberOrUndefined(item.id),
       roomId: this.numberOrUndefined(item.roomId ?? room?.id),
@@ -985,6 +1092,8 @@ export class HousekeepingService {
       assignedToId: this.numberOrUndefined(item.assignedToId),
       assignedToName: item.assignedTo ?? '',
       repairNotes: item.notes ?? '',
+      statusId: statusObj?.id,
+      statusName: item.status ?? 'OPEN',
       status: item.status ?? 'OPEN',
       reportedAt: item.reportedAt ?? new Date().toISOString(),
     };
@@ -1084,5 +1193,143 @@ export class HousekeepingService {
   private asMaintStatus(value?: string): MaintStatus {
     const normalized = (value ?? '').toUpperCase().replace(/[\s-]+/g, '_');
     return normalized === 'ASSIGNED' || normalized === 'IN_PROGRESS' || normalized === 'ON_HOLD' || normalized === 'RESOLVED' || normalized === 'COMPLETED' || normalized === 'CANCELLED' || normalized === 'OPEN' ? normalized : 'OPEN';
+  }
+
+  loadRoomAudits(floorId: number, frequency: AuditFrequency) {
+    this.http.get<ApiResponse<ApiRoomAuditDTO[]>>(`${this.auditApiBase}/getRoomAuditStatus`, {
+      params: new HttpParams()
+        .set('floorId', String(floorId))
+        .set('frequency', frequency)
+    }).subscribe({
+      next: response => {
+        const audits = (response.data ?? []).map(item => this.fromApiRoomAudit(item));
+        this._roomAudits.set(audits);
+      },
+      error: error => {
+        console.error('Failed to load room audits', error);
+        this._roomAudits.set([]);
+      }
+    });
+  }
+
+  private fromApiRoomAudit(item: ApiRoomAuditDTO): RoomAuditItem {
+    let checklistObj = { cleanliness: 0, linen: 0, amenities: 0, minibar: 0, maintenance: 0, safety: 0 };
+    if (item.checklist) {
+      if (typeof item.checklist === 'string') {
+        try {
+          checklistObj = JSON.parse(item.checklist);
+        } catch {}
+      } else {
+        checklistObj = {
+          cleanliness: item.checklist.cleanliness ?? 0,
+          linen: item.checklist.linen ?? 0,
+          amenities: item.checklist.amenities ?? 0,
+          minibar: item.checklist.minibar ?? 0,
+          maintenance: item.checklist.maintenance ?? 0,
+          safety: item.checklist.safety ?? 0,
+        };
+      }
+    }
+
+    let defectsList: string[] = [];
+    if (item.defects) {
+      if (Array.isArray(item.defects)) {
+        defectsList = item.defects;
+      } else if (typeof item.defects === 'string') {
+        try {
+          defectsList = JSON.parse(item.defects);
+        } catch {
+          defectsList = item.defects.split(',').map(s => s.trim()).filter(Boolean);
+        }
+      }
+    }
+
+    let statusLogList: string[] = [];
+    if (item.statusLog) {
+      if (Array.isArray(item.statusLog)) {
+        statusLogList = item.statusLog;
+      } else if (typeof item.statusLog === 'string') {
+        try {
+          statusLogList = JSON.parse(item.statusLog);
+        } catch {
+          statusLogList = [item.statusLog];
+        }
+      }
+    }
+
+    const pmsStr = item.pmsStatus ?? 'Vacant';
+    const isOccupied = pmsStr.toUpperCase() === 'OCCUPIED' || item.occupancy === 'Occupied' || !!item.guestName;
+    const hkStatusVal = (item.hkStatus ?? 'UNCLEANED') as HKStatus;
+
+    const apiCheckpoints = item.checkpoints ?? [];
+    const mappedCheckpoints: RoomSopCheck[] = apiCheckpoints.map(cp => {
+      const statusStr = cp.status?.toUpperCase() ?? 'PENDING';
+      const status: SopStatus = (statusStr === 'DONE' || statusStr === 'COMPLETED')
+        ? 'DONE'
+        : (statusStr === 'ISSUE' || statusStr === 'FAILED')
+          ? 'ISSUE'
+          : (statusStr === 'BLOCKED' || statusStr === 'EXCEPTION')
+            ? 'BLOCKED'
+            : 'PENDING';
+
+      return {
+        id: cp.checkpointId ?? '',
+        frequency: 'DAILY',
+        area: cp.auditArea ?? '',
+        label: cp.description ?? '',
+        owner: 'Staff',
+        status,
+        evidence: status === 'DONE' ? 'Verified clean' : 'Requirement pending check',
+        finding: status === 'ISSUE' ? cp.description : undefined
+      };
+    });
+
+    const isBlocked = hkStatusVal === 'DO_NOT_DISTURB' || hkStatusVal === 'OUT_OF_ORDER' || hkStatusVal === 'UNDER_MAINTENANCE';
+    const isDirty = hkStatusVal === 'VACANT_DIRTY' || hkStatusVal === 'OCCUPIED_DIRTY' || hkStatusVal === 'UNCLEANED';
+    const anyNonDoneCheckpoints = mappedCheckpoints.length > 0 && mappedCheckpoints.some(cp => cp.status !== 'DONE');
+    const scoreVal = Number(item.overallScore ?? item.score ?? (anyNonDoneCheckpoints ? 0 : 100));
+
+    const resultVal: AuditResult = isBlocked ? 'EXCEPTION' : anyNonDoneCheckpoints ? 'FAIL' : 'PASS';
+    const severityVal: AuditSeverity = (isBlocked || anyNonDoneCheckpoints) ? 'HIGH' : 'LOW';
+
+    return {
+      id: Number(item.roomId ?? item.id ?? 0),
+      roomNumber: item.roomNumber ?? '',
+      floor: this._rooms().find(r => r.id === item.roomId || r.roomNumber === item.roomNumber)?.floor ?? 'Floor 1',
+      roomType: item.roomType ?? 'Double Room',
+      pmsStatus: pmsStr,
+      hkStatus: hkStatusVal,
+      occupancy: isOccupied ? 'Occupied' : 'Vacant',
+      guestName: item.guestName,
+      assignedToId: item.assignedToId,
+      inspector: item.inspectorName ?? 'Unassigned',
+      auditedAt: item.lastAuditDate ?? item.auditedAt ?? new Date().toISOString(),
+      score: scoreVal,
+      result: this.asAuditResult(item.result ?? resultVal),
+      severity: this.asAuditSeverity(item.severity ?? severityVal),
+      discrepancy: item.discrepancy ?? (isDirty ? 'Room is uncleaned' : ''),
+      checklist: checklistObj,
+      defects: defectsList.length ? defectsList : (isDirty ? ['Room needs cleaning'] : []),
+      followUp: item.followUp ?? (isDirty ? 'Reassign checkout clean' : 'Ready'),
+      releaseReady: (item.releaseReady !== undefined) ? item.releaseReady : (resultVal === 'PASS'),
+      statusLog: statusLogList.length ? statusLogList : [item.discrepancy ?? (isDirty ? 'Status: Uncleaned' : 'Status: Clean')],
+      checkpoints: mappedCheckpoints
+    };
+  }
+
+  private asAuditResult(value?: string): AuditResult {
+    const normalized = (value ?? '').trim().toUpperCase();
+    if (normalized === 'PASS') return 'PASS';
+    if (normalized === 'RECHECK') return 'RECHECK';
+    if (normalized === 'FAIL') return 'FAIL';
+    if (normalized === 'EXCEPTION') return 'EXCEPTION';
+    return 'PASS';
+  }
+
+  private asAuditSeverity(value?: string): AuditSeverity {
+    const normalized = (value ?? '').trim().toUpperCase();
+    if (normalized === 'HIGH') return 'HIGH';
+    if (normalized === 'MEDIUM') return 'MEDIUM';
+    return 'LOW';
   }
 }

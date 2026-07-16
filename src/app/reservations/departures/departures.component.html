@@ -168,10 +168,6 @@
               <label class="toggle-option"><input type="radio" name="keys" [value]="false" [(ngModel)]="keysReturned"> No</label>
             </div>
           </div>
-          <div class="ci-input-group">
-            <label>Late Check-Out Fee (₹)</label>
-            <input type="number" [(ngModel)]="lateCheckoutFee" placeholder="0">
-          </div>
         </div>
 
         <div class="ci-form-grid mt-3">
@@ -229,6 +225,12 @@
 
     </div>
 
+    <!-- Checkout API Toast -->
+    <div class="checkout-toast" *ngIf="checkoutToastVisible" [class.success]="checkoutToastSuccess" [class.error]="!checkoutToastSuccess">
+      <span class="material-icons-round">{{ checkoutToastSuccess ? 'check_circle' : 'error' }}</span>
+      <span>{{ checkoutToastMessage }}</span>
+    </div>
+
     <!-- Wizard Footer Controls -->
     <div class="ci-footer" style="justify-content: space-between;">
       <div>
@@ -240,7 +242,7 @@
         <button class="ci-btn-confirm" style="background: var(--surface-800);" (click)="nextStep()" *ngIf="checkoutStep < 2">
           Next Step <span class="material-icons-round">chevron_right</span>
         </button>
-        <button class="ci-btn-confirm" style="background: linear-gradient(135deg, #e11d48, #be123c);" (click)="confirmCheckOut()" *ngIf="checkoutStep === 2">
+        <button class="ci-btn-confirm" style="background: linear-gradient(135deg, #e11d48, #be123c);" (click)="confirmCheckOut()" *ngIf="checkoutStep === 2" [disabled]="checkoutToastVisible && checkoutToastSuccess">
           <span class="material-icons-round">exit_to_app</span> Finalize Check-Out
         </button>
       </div>

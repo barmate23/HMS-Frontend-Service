@@ -1,6 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import { ArrivalApiItem, FrontOfficeApiService } from '../../front-office-api.service';
 
 interface ArrivalGuest {
@@ -33,7 +36,7 @@ interface ArrivalGuest {
   templateUrl: './arrivals.component.html',
   styleUrls: ['./arrivals.component.css']
 })
-export class ArrivalsComponent implements OnInit {
+export class ArrivalsComponent implements OnInit, OnDestroy {
   currentDate = new Date();
   searchQuery = '';
   arrivals: ArrivalGuest[] = [];
@@ -53,10 +56,24 @@ export class ArrivalsComponent implements OnInit {
   folioModalOpen = false;
   selectedGuestForFolio: ArrivalGuest | null = null;
 
+  private readonly router = inject(Router);
+  private routerSub?: Subscription;
+
   constructor(private readonly api: FrontOfficeApiService) {}
 
   ngOnInit() {
     this.loadArrivals();
+
+    this.routerSub = this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd),
+      filter(() => this.router.url.includes('/arrivals'))
+    ).subscribe(() => {
+      this.loadArrivals();
+    });
+  }
+
+  ngOnDestroy() {
+    this.routerSub?.unsubscribe();
   }
 
   get pendingArrivals() { return this.pendingCount; }

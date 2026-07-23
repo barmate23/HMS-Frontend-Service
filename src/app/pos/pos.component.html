@@ -15,10 +15,11 @@
         <input type="text" [placeholder]="activeTab() === 'orders' ? 'Search order, table, room...' : activeTab() === 'dining' ? 'Search table, server, section...' : activeTab() === 'billing' ? 'Search bill, room, guest...' : 'Search outlet, item, category...'" [ngModel]="search()" (ngModelChange)="search.set($event)">
       </div>
 
-      <select class="filter-select" *ngIf="activeTab() !== 'outlets' && activeTab() !== 'billing'" [ngModel]="outletFilter()" (ngModelChange)="outletFilter.set($event === 'ALL' ? 'ALL' : +$event)">
+      <select class="filter-select" *ngIf="activeTab() !== 'outlets' && activeTab() !== 'billing'" [ngModel]="outletFilter()" (ngModelChange)="onOutletFilterChange($event)">
         <option value="ALL">All Outlets</option>
         <option *ngFor="let outlet of pos.outlets()" [value]="outlet.id">{{ outlet.name }}</option>
       </select>
+
 
       <select class="filter-select" *ngIf="activeTab() === 'outlets'" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
         <option value="ALL">All Outlets</option>
@@ -241,9 +242,13 @@
             <span class="material-icons-round">{{ tableStatusIcon(table.status) }}</span>
             <strong>{{ table.number }}</strong>
             <small>{{ table.section }} • {{ table.covers }} Covers</small>
-            <em>{{ table.guestName || table.server }}</em>
+            <em *ngIf="table.guestName">{{ table.guestName }}</em>
+            <em *ngIf="!table.guestName && table.server && table.server !== 'Unassigned'">{{ table.server }}</em>
+            <small *ngIf="table.activeOrderNo">Order #{{ table.activeOrderNo }}<span *ngIf="table.numberOfItems"> • {{ table.numberOfItems }} Items</span></small>
+
             <small *ngIf="table.bookingTime">{{ table.bookingTime }}</small>
             <small *ngIf="table.mergedWith">Linked: {{ table.mergedWith }}</small>
+
           </div>
         </div>
       </div>
@@ -314,7 +319,8 @@
           <tbody>
             <tr *ngFor="let bill of filteredBills()">
               <td><strong>{{ bill.billNo }}</strong></td>
-              <td>ORD-{{ 1000 + bill.orderId }}</td>
+              <td>{{ billOrderRef(bill) }}</td>
+
               <td>{{ bill.guestName || 'Walk-in' }}<span class="subline">{{ bill.roomNo ? 'Room ' + bill.roomNo : 'No room posting' }}</span></td>
               <td>₹{{ billTotal(bill) | number:'1.0-0' }}<span class="subline">Paid ₹{{ bill.paid | number:'1.0-0' }}</span></td>
               <td>₹{{ bill.discount | number:'1.0-0' }}<span class="subline" *ngIf="bill.compReason">Comp: {{ bill.compReason }}</span></td>
@@ -451,14 +457,14 @@
       </ng-template>
 
       <div class="ci-form-grid" *ngIf="diningAction() === 'START' || diningAction() === 'BOOK'">
-        <div class="ci-input-group"><label>Server / Waiter</label><select [(ngModel)]="diningForm().server"><option *ngFor="let user of pos.users()" [value]="user">{{ user }}</option></select></div>
         <div class="ci-input-group"><label>Covers</label><input type="number" min="1" [(ngModel)]="diningForm().covers"></div>
+        <div class="ci-input-group"><label>Guest Name</label><input [(ngModel)]="diningForm().guestName" placeholder="Guest name"></div>
       </div>
 
-      <div class="ci-form-grid" *ngIf="diningAction() === 'START' || diningAction() === 'BOOK'">
-        <div class="ci-input-group"><label>Guest Name</label><input [(ngModel)]="diningForm().guestName" placeholder="Guest name"></div>
-        <div class="ci-input-group" *ngIf="diningAction() === 'BOOK'"><label>Booking Time</label><input [(ngModel)]="diningForm().bookingTime" placeholder="Today, 08:00 PM"></div>
+      <div class="ci-form-grid" *ngIf="diningAction() === 'BOOK'">
+        <div class="ci-input-group"><label>Booking Time</label><input [(ngModel)]="diningForm().bookingTime" placeholder="Today, 08:00 PM"></div>
       </div>
+
 
       <div class="ci-form-grid" *ngIf="diningAction() === 'ROOM'">
         <div class="ci-input-group">
@@ -540,7 +546,8 @@
 </div>
 
 <div class="modal-overlay" *ngIf="isModalOpen()" (click)="closeModal()">
-  <div class="ci-modal pos-modal" (click)="$event.stopPropagation()">
+  <div class="ci-modal pos-modal" [class.wide-modal]="modalKind() === 'bill'" (click)="$event.stopPropagation()">
+
     <div class="ci-header">
       <div class="ci-title"><span class="material-icons-round">point_of_sale</span><div><h2>{{ modalMode() === 'create' ? 'Create' : 'Edit' }} {{ modalKind() | titlecase }}</h2><p>Manage POS setup, table master, orders and billing details.</p></div></div>
       <button class="ci-close" (click)="closeModal()"><span class="material-icons-round">close</span></button>
@@ -628,46 +635,160 @@
       </ng-container>
 
       <ng-container *ngSwitchCase="'bill'">
-        <div class="ci-form-grid"><div class="ci-input-group"><label>Order</label><select [ngModel]="currentBill().orderId" (ngModelChange)="updateBillOrder($event)"><option [ngValue]="null" disabled>Select order</option><option *ngFor="let order of billOrders()" [value]="order.id">{{ order.orderNo }}</option></select></div><div class="ci-input-group"><label>Order From</label><select [ngModel]="currentBill().orderType" (ngModelChange)="updateBillOrderType($event)"><option value="TABLE">Table</option><option value="TAKEAWAY">Takeaway</option><option value="ROOM">Room</option></select></div></div>
-        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Status</label><select [(ngModel)]="currentBill().status"><option *ngFor="let status of pos.billStatuses()" [value]="status">{{ status }}</option></select></div><div class="ci-input-group" *ngIf="currentBill().orderType === 'TABLE'"><label>Table</label><select [ngModel]="currentBill().tableNo" (ngModelChange)="updateBillTable($event)"><option value="" disabled>Select table</option><option *ngFor="let table of billTables()" [value]="table.number">{{ table.number }} - {{ table.section }}</option></select></div></div>
-        <div class="ci-form-grid mt-3" *ngIf="currentBill().orderType === 'ROOM'"><div class="ci-input-group"><label>Floor</label><select [ngModel]="currentBill().floorId" (ngModelChange)="updateBillFloor($event)"><option [ngValue]="null" disabled>Select floor</option><option *ngFor="let floor of billRoomFloors()" [ngValue]="floor.id">{{ floor.floorNumber }}</option></select></div><div class="ci-input-group"><label>Room</label><select [ngModel]="currentBill().roomId" (ngModelChange)="updateBillRoom($event)"><option [ngValue]="null" disabled>Select room</option><option *ngFor="let room of billRooms()" [ngValue]="room.id">{{ room.roomNumber }} - {{ room.status }}</option></select></div></div>
-        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Guest Name</label><input [(ngModel)]="currentBill().guestName"></div><div class="ci-input-group" *ngIf="currentBill().orderType === 'ROOM'"><label>Room No.</label><input [(ngModel)]="currentBill().roomNo"></div></div>
-        <div class="bill-preview" *ngIf="currentBillBreakdown() as bill">
-          <div class="bill-preview-head">
-            <div><strong>{{ bill.order?.orderNo || 'Select an order' }}</strong><span>{{ billingSetup().enableInclusiveTax ? 'Inclusive tax pricing' : 'Exclusive tax pricing' }} • Item-level GST</span></div>
-            <em>₹{{ bill.total | number:'1.0-0' }}</em>
-          </div>
-          <div class="bill-line-table" *ngIf="bill.lines.length; else noBillLines">
-            <div class="bill-line-row head"><span>Item</span><span>Qty</span><span>Rate</span><span>Tax</span><span>Total</span></div>
-            <div class="bill-line-row" *ngFor="let line of bill.lines">
-              <span><strong>{{ line.name }}</strong><small>{{ line.course }}</small></span>
-              <span>{{ line.qty }}</span>
-              <span>₹{{ line.price | number:'1.0-0' }}</span>
-              <span>{{ line.taxRate }}%<small>₹{{ line.taxAmount | number:'1.2-2' }}</small></span>
-              <span>₹{{ line.totalAmount | number:'1.0-0' }}</span>
+        <div class="bill-create-split-container">
+          <!-- Left Column: Form Configuration -->
+          <div class="bill-form-column">
+            <h3 class="section-subtitle"><span class="material-icons-round">receipt</span>Order & Guest Details</h3>
+
+            <div class="ci-form-grid">
+              <div class="ci-input-group">
+                <label>Outlet *</label>
+                <select [ngModel]="selectedBillOutletId()" (ngModelChange)="onBillOutletChange($event)">
+                  <option *ngFor="let outlet of pos.outlets()" [value]="outlet.id">{{ outlet.name }}</option>
+                </select>
+              </div>
+              <div class="ci-input-group">
+                <label>Order *</label>
+                <select [ngModel]="currentBill().orderId" (ngModelChange)="updateBillOrder($event)">
+                  <option [ngValue]="0" disabled>Select order</option>
+                  <option *ngFor="let order of openOrdersForBill()" [value]="order.id">
+                    {{ order.orderNo }} {{ order.tableNo ? '• Table ' + order.tableNo : order.roomNo ? '• Room ' + order.roomNo : '' }} {{ order.guestName ? '• ' + order.guestName : '' }}
+                  </option>
+                </select>
+              </div>
             </div>
-          </div>
-          <ng-template #noBillLines><div class="empty-order-builder">Select an order with menu items to generate bill lines.</div></ng-template>
-          <div class="tax-bucket-list" *ngIf="bill.taxBuckets.length">
-            <div class="tax-bucket" *ngFor="let bucket of bill.taxBuckets">
-              <strong>GST {{ bucket.rate }}%</strong>
-              <span>Taxable ₹{{ bucket.taxableAmount | number:'1.2-2' }}</span>
-              <span>CGST ₹{{ bucket.cgst | number:'1.2-2' }}</span>
-              <span>SGST ₹{{ bucket.sgst | number:'1.2-2' }}</span>
+
+            <div class="ci-form-grid mt-3">
+              <div class="ci-input-group">
+                <label>Order From</label>
+                <select [ngModel]="currentBill().orderType" (ngModelChange)="updateBillOrderType($event)">
+                  <option value="TABLE">Table</option>
+                  <option value="TAKEAWAY">Takeaway</option>
+                  <option value="ROOM">Room</option>
+                </select>
+              </div>
+              <div class="ci-input-group">
+                <label>Bill Status</label>
+                <select [(ngModel)]="currentBill().status">
+                  <option *ngFor="let status of pos.billStatuses()" [value]="status">{{ status }}</option>
+                </select>
+              </div>
             </div>
+
+            <div class="ci-form-grid mt-3" *ngIf="currentBill().orderType === 'TABLE'">
+              <div class="ci-input-group">
+                <label>Table</label>
+                <select [ngModel]="currentBill().tableNo" (ngModelChange)="updateBillTable($event)">
+                  <option value="" disabled>Select table</option>
+                  <option *ngFor="let table of billTables()" [value]="table.number">{{ table.number }} - {{ table.section }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="ci-form-grid mt-3" *ngIf="currentBill().orderType === 'ROOM'">
+              <div class="ci-input-group"><label>Floor</label><select [ngModel]="currentBill().floorId" (ngModelChange)="updateBillFloor($event)"><option [ngValue]="null" disabled>Select floor</option><option *ngFor="let floor of billRoomFloors()" [ngValue]="floor.id">{{ floor.floorNumber }}</option></select></div>
+              <div class="ci-input-group"><label>Room</label><select [ngModel]="currentBill().roomId" (ngModelChange)="updateBillRoom($event)"><option [ngValue]="null" disabled>Select room</option><option *ngFor="let room of billRooms()" [ngValue]="room.id">{{ room.roomNumber }} - {{ room.status }}</option></select></div>
+            </div>
+
+            <div class="ci-form-grid mt-3">
+              <div class="ci-input-group"><label>Guest Name</label><input [(ngModel)]="currentBill().guestName" placeholder="Guest Name"></div>
+              <div class="ci-input-group" *ngIf="currentBill().orderType === 'ROOM'"><label>Room No.</label><input [(ngModel)]="currentBill().roomNo" placeholder="Room Number"></div>
+            </div>
+
+            <h3 class="section-subtitle mt-4"><span class="material-icons-round">payments</span>Payment & Settlement</h3>
+
+            <div class="ci-form-grid">
+              <div class="ci-input-group"><label>Discount (₹)</label><input type="number" min="0" [ngModel]="currentBill().discount" (ngModelChange)="updateBillDiscount($event)" placeholder="0"></div>
+              <div class="ci-input-group"><label>Paid Amount (₹)</label><input type="number" min="0" [ngModel]="currentBill().paid" (ngModelChange)="updateBillPaid($event)" placeholder="0"></div>
+            </div>
+
+            <div class="ci-form-grid mt-3">
+              <div class="ci-input-group"><label>Payment Mode</label><select [ngModel]="currentBill().paymentModes?.[0]" (ngModelChange)="updatePaymentMode($event)"><option *ngFor="let mode of pos.paymentModes()" [value]="mode">{{ mode }}</option></select></div>
+              <div class="ci-input-group"><label>Comp / Void Reason</label><select [(ngModel)]="currentBill().compReason"><option value="">Select reason</option><option *ngFor="let reason of pos.voidReasons()" [value]="reason">{{ reason }}</option></select></div>
+            </div>
+
+            <label class="toggle-option mt-3">
+              <input type="checkbox" [(ngModel)]="currentBill().postedToFolio"> Post to guest room folio
+            </label>
           </div>
-          <div class="bill-total-stack">
-            <span><small>Gross</small><strong>₹{{ bill.grossAmount | number:'1.0-0' }}</strong></span>
-            <span><small>Discount</small><strong>₹{{ bill.discount | number:'1.0-0' }}</strong></span>
-            <span><small>Taxable</small><strong>₹{{ bill.taxableSubtotal | number:'1.0-0' }}</strong></span>
-            <span><small>Tax</small><strong>₹{{ bill.taxTotal | number:'1.0-0' }}</strong></span>
-            <span><small>Due</small><strong>₹{{ bill.due | number:'1.0-0' }}</strong></span>
+
+          <!-- Right Column: Itemized Order & GST Live Preview -->
+          <div class="bill-summary-column">
+            <h3 class="section-subtitle"><span class="material-icons-round">receipt_long</span>Order Items & GST Calculation</h3>
+
+            <div class="bill-preview-card" *ngIf="currentBillBreakdown() as bill">
+              <div class="bill-preview-header">
+                <div>
+                  <h4>{{ bill.order?.orderNo || 'Select an Order' }}</h4>
+                  <p>{{ bill.order?.type || 'TABLE' }} • {{ bill.order?.tableNo ? 'Table ' + bill.order?.tableNo : bill.order?.roomNo ? 'Room ' + bill.order?.roomNo : 'Dine-In' }}</p>
+                </div>
+                <div class="net-total-badge">
+                  <small>Net Payable</small>
+                  <strong>₹{{ bill.total | number:'1.0-0' }}</strong>
+                </div>
+              </div>
+
+              <!-- Ordered Items Table -->
+              <div class="classic-bill-table-wrapper" *ngIf="bill.lines.length; else noItemsTemplate">
+                <table class="classic-bill-table">
+                  <thead>
+                    <tr>
+                      <th>Item Name</th>
+                      <th class="text-center">Qty</th>
+                      <th class="text-right">Price</th>
+                      <th class="text-center">GST %</th>
+                      <th class="text-right">Tax</th>
+                      <th class="text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let line of bill.lines">
+                      <td>
+                        <strong>{{ line.name }}</strong>
+                        <span class="course-label" *ngIf="line.course">{{ line.course }}</span>
+                      </td>
+                      <td class="text-center"><strong>{{ line.qty }}</strong></td>
+                      <td class="text-right">₹{{ line.price | number:'1.0-0' }}</td>
+                      <td class="text-center"><span class="tax-rate-pill">{{ line.taxRate }}%</span></td>
+                      <td class="text-right"><span class="tax-amt-text">₹{{ line.taxAmount | number:'1.2-2' }}</span></td>
+                      <td class="text-right"><strong>₹{{ line.totalAmount | number:'1.0-0' }}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <ng-template #noItemsTemplate>
+                <div class="empty-bill-notice">
+                  <span class="material-icons-round">add_shopping_cart</span>
+                  <p>Select an open order to view ordered items and GST breakdown.</p>
+                </div>
+              </ng-template>
+
+              <!-- GST Tax Breakdown Cards -->
+              <div class="tax-breakdown-panel mt-3" *ngIf="bill.taxBuckets.length">
+                <div class="tax-bucket-card" *ngFor="let bucket of bill.taxBuckets">
+                  <h4>GST {{ bucket.rate }}% Breakdown</h4>
+                  <div class="tax-detail-row"><span>Taxable Value:</span><strong>₹{{ bucket.taxableAmount | number:'1.2-2' }}</strong></div>
+                  <div class="tax-detail-row"><span>CGST ({{ bucket.cgstRate || (bucket.rate / 2) }}%):</span><span>₹{{ bucket.cgst | number:'1.2-2' }}</span></div>
+                  <div class="tax-detail-row"><span>SGST ({{ bucket.sgstRate || (bucket.rate / 2) }}%):</span><span>₹{{ bucket.sgst | number:'1.2-2' }}</span></div>
+                  <div class="tax-detail-row total"><span>Total Tax:</span><strong>₹{{ bucket.taxAmount | number:'1.2-2' }}</strong></div>
+                </div>
+              </div>
+
+
+              <!-- Grand Total Summary -->
+              <div class="bill-totals-summary-card mt-3">
+                <div class="total-summary-row"><span>Gross Items Total</span><strong>₹{{ bill.grossAmount | number:'1.0-0' }}</strong></div>
+                <div class="total-summary-row" *ngIf="bill.discount"><span>Discount Offered</span><strong style="color: #dc2626;">-₹{{ bill.discount | number:'1.0-0' }}</strong></div>
+                <div class="total-summary-row"><span>Taxable Amount</span><strong>₹{{ bill.taxableSubtotal | number:'1.0-0' }}</strong></div>
+                <div class="total-summary-row"><span>Total GST Tax</span><strong>₹{{ bill.taxTotal | number:'1.2-2' }}</strong></div>
+                <div class="total-summary-row final"><span>Net Total</span><strong>₹{{ bill.total | number:'1.0-0' }}</strong></div>
+                <div class="total-summary-row due" *ngIf="bill.due > 0"><span>Balance Due</span><strong>₹{{ bill.due | number:'1.0-0' }}</strong></div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Discount</label><input type="number" [ngModel]="currentBill().discount" (ngModelChange)="updateBillDiscount($event)"></div><div class="ci-input-group"><label>Paid Amount</label><input type="number" [ngModel]="currentBill().paid" (ngModelChange)="updateBillPaid($event)"></div></div>
-        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Payment Modes</label><select [ngModel]="currentBill().paymentModes?.[0]" (ngModelChange)="updatePaymentMode($event)"><option *ngFor="let mode of pos.paymentModes()" [value]="mode">{{ mode }}</option></select></div><div class="ci-input-group"><label>Comp / Void Reason</label><select [(ngModel)]="currentBill().compReason"><option value="">Select reason</option><option *ngFor="let reason of pos.voidReasons()" [value]="reason">{{ reason }}</option></select></div></div>
-        <label class="toggle-option mt-3"><input type="checkbox" [(ngModel)]="currentBill().postedToFolio"> Posted to guest folio</label>
       </ng-container>
+
 
       <ng-container *ngSwitchCase="'table'">
         <div class="ci-form-grid">

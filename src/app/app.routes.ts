@@ -74,7 +74,9 @@ export const routes: Routes = [
       { path: 'pos/orders', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) },
       { path: 'pos/billing', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) },
       { path: 'pos/menu', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) },
-      { path: 'pos/billing-setup', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) }
+      { path: 'pos/billing-setup', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) },
+      { path: 'channel-manager/agoda', loadComponent: () => import('./channel-manager/agoda-channel.component').then(m => m.AgodaChannelComponent) }
     ]
   }
 ];
+

@@ -134,13 +134,13 @@ export class Layout implements OnInit {
   constructor(
     readonly auth: AuthService,
     private readonly router: Router
-  ) {}
+  ) { }
 
   navItems = [
     { label: 'Dashboard', icon: 'grid_view', route: '/dashboard' },
-    { 
-      label: 'Front Office', 
-      icon: 'business_center', 
+    {
+      label: 'Front Office',
+      icon: 'business_center',
       expanded: false,
       children: [
         { label: 'Dashboard', icon: 'dashboard', route: '/front-office/dashboard' },
@@ -152,9 +152,9 @@ export class Layout implements OnInit {
       ]
     },
     { label: 'CRM', icon: 'groups', route: '/crm' },
-    { 
-      label: 'Housekeeping', 
-      icon: 'cleaning_services', 
+    {
+      label: 'Housekeeping',
+      icon: 'cleaning_services',
       expanded: false,
       children: [
         { label: 'Room Board', icon: 'dashboard', route: '/housekeeping/board' },
@@ -257,8 +257,17 @@ export class Layout implements OnInit {
         { label: 'Menu Management', icon: 'menu_book', route: '/pos/menu' },
         { label: 'Billing Setup', icon: 'settings', route: '/pos/billing-setup' }
       ]
+    },
+    {
+      label: 'Channel Manager',
+      icon: 'hub',
+      expanded: true,
+      children: [
+        { label: 'Agoda YCS API', icon: 'sync_alt', route: '/channel-manager/agoda' }
+      ]
     }
   ];
+
 
   toggleSidebar() {
     this.isCollapsed.update(v => !v);

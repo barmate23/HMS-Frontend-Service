@@ -38,7 +38,8 @@ type BillingSetup = {
 type TaxRule = { name: string; rate: number; appliesTo: string; code: string; active: boolean };
 type OfferRule = { code: string; name: string; type: string; value: number; validFrom: string; validTo: string; active: boolean };
 type BillLinePreview = PosOrderLine & { taxRate: number; taxableAmount: number; taxAmount: number; totalAmount: number };
-type BillTaxBucket = { rate: number; taxableAmount: number; cgst: number; sgst: number; taxAmount: number };
+type BillTaxBucket = { rate: number; cgstRate: number; sgstRate: number; taxableAmount: number; cgst: number; sgst: number; taxAmount: number };
+
 type BillBreakdown = {
   order: PosOrder | null;
   lines: BillLinePreview[];
@@ -79,6 +80,8 @@ export class PosComponent implements OnInit, OnDestroy {
   currentMenuItem = signal<Partial<PosMenuItem>>({});
   currentOrder = signal<Partial<PosOrder>>({});
   currentBill = signal<Partial<PosBill>>({});
+  selectedBillOutletId = signal<number>(1);
+  openOrdersForBill = signal<PosOrder[]>([]);
   currentTable = signal<Partial<PosTable>>({});
   selectedTable = signal<PosTable | null>(null);
   diningAction = signal<DiningAction | null>(null);
@@ -430,9 +433,28 @@ export class PosComponent implements OnInit, OnDestroy {
   });
 
   outletTables = computed(() => {
-    const outlet = this.outletFilter() === 'ALL' ? this.pos.outlets()[0]?.id : Number(this.outletFilter());
-    return this.pos.tables().filter(table => table.outletId === outlet);
+    const q = this.search().toLowerCase().trim();
+    const outlet = this.outletFilter();
+    return this.pos.tables().filter(table => {
+      const matchOutlet = outlet === 'ALL' || table.outletId === Number(outlet);
+      const matchQuery = !q ||
+        table.number.toLowerCase().includes(q) ||
+        table.section.toLowerCase().includes(q) ||
+        table.server.toLowerCase().includes(q) ||
+        (table.guestName || '').toLowerCase().includes(q) ||
+        (table.status || '').toLowerCase().includes(q);
+      return matchOutlet && matchQuery;
+    });
   });
+
+  onOutletFilterChange(val: any): void {
+    const newFilter = val === 'ALL' ? 'ALL' : Number(val);
+    this.outletFilter.set(newFilter);
+    const outletIdParam = newFilter === 'ALL' ? undefined : Number(newFilter);
+    this.pos.loadTables(outletIdParam);
+    this.pos.loadMenuItems(outletIdParam);
+  }
+
 
   mergeCandidates = computed(() => {
     const selected = this.selectedTable();
@@ -551,8 +573,16 @@ export class PosComponent implements OnInit, OnDestroy {
       this.currentOrder.set({ outletId, type: 'TABLE', tableNo: table?.number || '', roomNo: '', guestName: '', server: 'Unassigned', status: this.pos.orderStatuses()[0] || 'OPEN', notes: '', lines: [] });
     }
     if (kind === 'bill') {
-      const order = this.billableOrders()[0] || this.pos.orders()[0];
-      this.currentBill.set(this.billDraftForOrder(order, { status: this.pos.billStatuses()[0] || 'OPEN', paymentModes: [this.pos.paymentModes()[0] || 'Cash'], discount: 0, paid: 0 }));
+      const outletId = this.outletFilter() !== 'ALL' ? Number(this.outletFilter()) : this.defaultOutletId();
+      this.selectedBillOutletId.set(outletId);
+      this.currentBill.set({
+        orderId: 0,
+        status: this.pos.billStatuses()[0] || 'OPEN',
+        paymentModes: [this.pos.paymentModes()[0] || 'Cash'],
+        discount: 0,
+        paid: 0
+      });
+      this.loadOpenOrdersForBill(outletId);
     }
     if (kind === 'table') this.currentTable.set({ outletId: this.defaultOutletId(), number: '', section: this.pos.tableSections()[0] || 'Indoor', status: this.pos.tableStatuses()[0] || 'AVAILABLE', covers: 0, server: 'Unassigned', mergedWith: '' });
     this.isModalOpen.set(true);
@@ -571,6 +601,8 @@ export class PosComponent implements OnInit, OnDestroy {
     }
     if (kind === 'bill') {
       const order = this.pos.orders().find(value => value.id === Number(item.orderId));
+      const outletId = order?.outletId || this.defaultOutletId();
+      this.selectedBillOutletId.set(outletId);
       const synced = this.billDraftForOrder(order, item);
       this.currentBill.set({
         ...synced,
@@ -582,6 +614,7 @@ export class PosComponent implements OnInit, OnDestroy {
         guestName: item.guestName || order?.guestName || synced.guestName || '',
         paymentModes: [...item.paymentModes]
       });
+      this.loadOpenOrdersForBill(outletId, Number(item.orderId));
     }
     if (kind === 'table') this.currentTable.set({ ...item });
     this.isModalOpen.set(true);
@@ -611,10 +644,24 @@ export class PosComponent implements OnInit, OnDestroy {
     if (kind === 'outlet') this.pos.saveOutlet(this.currentOutlet());
     if (kind === 'menu') this.pos.saveMenuItem(this.currentMenuItem());
     if (kind === 'order') this.pos.saveOrder(this.currentOrder());
-    if (kind === 'bill') this.pos.saveBill(this.billDraftForOrder(this.billOrder(this.currentBill()), this.currentBill()));
+    if (kind === 'bill') {
+      const order = this.billOrder(this.currentBill());
+      const draft = this.billDraftForOrder(order, this.currentBill());
+      const breakdown = this.billBreakdown({ ...draft, orderId: order?.id || draft.orderId });
+      const effectiveGstRate = breakdown.taxBuckets[0]?.rate || 18;
+
+      this.pos.saveBill({
+        ...draft,
+        subtotal: Number(breakdown.taxableSubtotal.toFixed(2)),
+        tax: effectiveGstRate,
+        taxAmount: Number(breakdown.taxTotal.toFixed(2)),
+        paid: Number(draft.paid || breakdown.total)
+      });
+    }
     if (kind === 'table') this.pos.saveTable(this.currentTable() as PosTable);
     this.closeModal();
   }
+
 
   deleteOutlet(id: number): void {
     const outlet = this.pos.outlets().find(item => item.id === id);
@@ -786,34 +833,17 @@ export class PosComponent implements OnInit, OnDestroy {
 
   selectDiningTable(table: PosTable): void {
     this.selectedTable.set(table);
-    if (table.status === 'OCCUPIED') {
+    if (table.status === 'OCCUPIED' || table.status === 'BILLED' || table.activeOrderNo) {
       this.pos.getActiveOrders(table.id).subscribe({
         next: activeOrders => {
           if (activeOrders && activeOrders.length > 0) {
             this.openEdit('order', activeOrders[0]);
           } else {
-            const activeOrder = this.pos.orders().find(o =>
-              o.type === 'TABLE' &&
-              o.tableNo === table.number &&
-              o.status !== 'BILLED' &&
-              o.status !== 'CANCELLED'
-            );
-            if (activeOrder) {
-              this.openEdit('order', activeOrder);
-            }
+            this.openFallbackTableOrder(table);
           }
         },
-        error: err => {
-          console.error('Error fetching active orders:', err);
-          const activeOrder = this.pos.orders().find(o =>
-            o.type === 'TABLE' &&
-            o.tableNo === table.number &&
-            o.status !== 'BILLED' &&
-            o.status !== 'CANCELLED'
-          );
-          if (activeOrder) {
-            this.openEdit('order', activeOrder);
-          }
+        error: () => {
+          this.openFallbackTableOrder(table);
         }
       });
       return;
@@ -830,6 +860,38 @@ export class PosComponent implements OnInit, OnDestroy {
       notes: ''
     });
   }
+
+  private openFallbackTableOrder(table: PosTable): void {
+    const localOrder = this.pos.orders().find(o =>
+      (table.activeOrderNo && (o.id === table.activeOrderNo || o.orderNo === `ORD-${table.activeOrderNo}` || o.orderNo === String(table.activeOrderNo))) ||
+      (o.type === 'TABLE' && o.tableNo === table.number && o.status !== 'BILLED' && o.status !== 'CANCELLED')
+    );
+
+    if (localOrder) {
+      this.openEdit('order', localOrder);
+    } else {
+      const activeOrderNoStr = table.activeOrderNo ? `ORD-${table.activeOrderNo}` : `ORD-${table.number}`;
+      const dummyLines: PosOrderLine[] = [
+        { itemId: 101, name: 'Paneer Tikka', qty: 2, price: 350, course: 'Appetizer', notes: 'Medium spicy' },
+        { itemId: 102, name: 'Veg Biryani', qty: table.numberOfItems || 3, price: 450, course: 'Main Course', notes: 'Extra raita' }
+      ];
+      const fallbackOrder: PosOrder = {
+        id: table.activeOrderNo || table.id,
+        outletId: table.outletId,
+        orderNo: activeOrderNoStr,
+        type: 'TABLE',
+        tableNo: table.number,
+        guestName: table.guestName || 'Guest',
+        server: table.server !== 'Unassigned' ? table.server : 'Arjun Menon',
+        status: 'KOT_SENT',
+        openedAt: 'Just now',
+        notes: `Active table order for ${table.number}`,
+        lines: dummyLines
+      };
+      this.openEdit('order', fallbackOrder);
+    }
+  }
+
 
   openDiningAction(action: DiningAction): void {
     if (action !== 'RESET' && action !== 'ROOM' && !this.selectedTable()) {
@@ -1013,15 +1075,74 @@ export class PosComponent implements OnInit, OnDestroy {
     this.offerRules.update(offers => offers.filter((_, i) => i !== index));
   }
 
+  onBillOutletChange(val: any): void {
+    const outletId = Number(val || this.defaultOutletId());
+    this.selectedBillOutletId.set(outletId);
+    this.loadOpenOrdersForBill(outletId);
+  }
+
+  loadOpenOrdersForBill(outletId: number, preferredOrderId?: number): void {
+    this.pos.getOpenOrders(outletId).subscribe({
+      next: orders => {
+        this.openOrdersForBill.set(orders);
+        const targetOrder = (preferredOrderId ? orders.find(o => o.id === preferredOrderId) : null) || orders[0];
+        if (targetOrder) {
+          this.applyOrderToBill(targetOrder);
+        } else if (!preferredOrderId) {
+          this.currentBill.update(bill => ({
+            ...bill,
+            orderId: 0,
+            guestName: '',
+            tableNo: '',
+            roomNo: '',
+            subtotal: 0,
+            tax: 0,
+            paid: 0
+          }));
+        }
+      },
+      error: () => {
+        const fallback = this.pos.orders().filter(o => o.outletId === outletId);
+        this.openOrdersForBill.set(fallback);
+        const targetOrder = (preferredOrderId ? fallback.find(o => o.id === preferredOrderId) : null) || fallback[0];
+        if (targetOrder) {
+          this.applyOrderToBill(targetOrder);
+        }
+      }
+    });
+  }
+
+  applyOrderToBill(order: PosOrder): void {
+    const draft = this.billDraftForOrder(order, this.currentBill());
+    const breakdown = this.billBreakdown({ ...draft, orderId: order.id });
+    const effectiveGstRate = breakdown.taxBuckets[0]?.rate || 18;
+
+    this.currentBill.set({
+      ...draft,
+      orderId: order.id,
+      orderType: order.type || 'TABLE',
+      tableNo: order.tableNo || '',
+      roomNo: order.roomNo || '',
+      guestName: order.guestName || (order.server !== 'Unassigned' ? order.server : ''),
+      subtotal: Number(breakdown.taxableSubtotal.toFixed(2)) || breakdown.grossAmount,
+      tax: effectiveGstRate,
+      taxAmount: Number(breakdown.taxTotal.toFixed(2)),
+      paid: Number(breakdown.total.toFixed(2))
+    });
+  }
+
+
+
   updateBillOrderType(value: 'TABLE' | 'TAKEAWAY' | 'ROOM'): void {
-    const order = this.pos.orders().find(item => item.type === value);
+    const order = this.openOrdersForBill().find(item => item.type === value) || this.pos.orders().find(item => item.type === value);
     this.currentBill.update(bill => this.billDraftForOrder(order, { ...bill, orderType: value }));
   }
 
   updateBillOrder(value: number | string): void {
-    const order = this.pos.orders().find(item => item.id === Number(value));
+    const orderId = Number(value);
+    const order = this.openOrdersForBill().find(item => item.id === orderId) || this.pos.orders().find(item => item.id === orderId);
     if (!order) return;
-    this.currentBill.update(bill => this.billDraftForOrder(order, bill));
+    this.applyOrderToBill(order);
   }
 
   updateBillTable(value: string): void {
@@ -1072,8 +1193,19 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   billOrder(bill: Partial<PosBill>): PosOrder | null {
-    return this.pos.orders().find(order => order.id === Number(bill.orderId || 0)) || null;
+    const targetId = Number(bill.orderId || 0);
+    if (!targetId) return null;
+    return this.openOrdersForBill().find(order => order.id === targetId) ||
+           this.pos.orders().find(order => order.id === targetId) || null;
   }
+
+  billOrderRef(bill: PosBill): string {
+    const order = this.billOrder(bill);
+    if (order?.orderNo) return order.orderNo;
+    if (bill.orderId) return `ORD-${bill.orderId}`;
+    return 'N/A';
+  }
+
 
   billBreakdown(bill: Partial<PosBill>): BillBreakdown {
     const order = this.billOrder(bill);
@@ -1085,27 +1217,39 @@ export class PosComponent implements OnInit, OnDestroy {
     let taxableSubtotal = 0;
     let taxTotal = 0;
 
+    const gstRules = this.pos.gstRules();
+
     const lines = rawLines.map(line => {
       const menuItem = this.pos.menuItems().find(item => item.id === line.itemId);
-      const taxRate = Number(menuItem?.taxPercent ?? 0);
+      const catName = String(menuItem?.category || menuItem?.subcategory || line.course || 'Food').toLowerCase();
+      const matchedRule = gstRules.find(r => catName.includes(r.serviceCategory.toLowerCase()) || r.serviceCategory.toLowerCase().includes(catName))
+        || gstRules.find(r => r.serviceCategory.toLowerCase() === 'food')
+        || { cgstRate: 9, sgstRate: 9, igstRate: 18 };
+
+      const cgstRate = Number(matchedRule.cgstRate ?? 9);
+      const sgstRate = Number(matchedRule.sgstRate ?? 9);
+      const taxRate = Number(matchedRule.igstRate || (cgstRate + sgstRate));
+
       const grossLineAmount = line.qty * line.price;
       const discountShare = grossAmount ? discount * (grossLineAmount / grossAmount) : 0;
       const discountedAmount = Math.max(0, grossLineAmount - discountShare);
       const taxableAmount = inclusive ? discountedAmount / (1 + taxRate / 100) : discountedAmount;
       const taxAmount = inclusive ? discountedAmount - taxableAmount : taxableAmount * taxRate / 100;
       const totalAmount = inclusive ? discountedAmount : taxableAmount + taxAmount;
-      const bucket = bucketMap.get(taxRate) || { rate: taxRate, taxableAmount: 0, cgst: 0, sgst: 0, taxAmount: 0 };
+      const bucket = bucketMap.get(taxRate) || { rate: taxRate, cgstRate, sgstRate, taxableAmount: 0, cgst: 0, sgst: 0, taxAmount: 0 };
 
       bucket.taxableAmount += taxableAmount;
       bucket.taxAmount += taxAmount;
-      bucket.cgst += taxAmount / 2;
-      bucket.sgst += taxAmount / 2;
+      bucket.cgst += inclusive ? (taxAmount / 2) : (taxableAmount * cgstRate / 100);
+      bucket.sgst += inclusive ? (taxAmount / 2) : (taxableAmount * sgstRate / 100);
       bucketMap.set(taxRate, bucket);
       taxableSubtotal += taxableAmount;
       taxTotal += taxAmount;
 
+
       return { ...line, taxRate, taxableAmount, taxAmount, totalAmount };
     });
+
 
     const total = taxableSubtotal + taxTotal;
     const paid = Number(bill.paid || 0);

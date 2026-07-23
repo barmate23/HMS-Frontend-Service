@@ -1322,6 +1322,10 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     });
   }
 
+  trackByIndex(index: number): number {
+    return index;
+  }
+
   updatePoLineItem(index: number, field: keyof PurchaseOrderItem, value: any): void {
     this.poDraft.update(draft => {
       const lineItems = draft.lineItems.map((item, i) => {

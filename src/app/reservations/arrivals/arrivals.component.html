@@ -65,6 +65,8 @@
               <th>ROOM TYPE</th>
               <th>ETA</th>
               <th>BALANCE</th>
+              <th>TAX (GST)</th>
+              <th>TOTAL AMOUNT</th>
               <th>STATUS</th>
               <th>ACTION</th>
             </tr>
@@ -92,9 +94,20 @@
                 </div>
               </td>
               <td>
-                <span class="amount-due" [class.paid]="guest.amountDue === 0">
-                  {{ guest.amountDue === 0 ? 'Fully Paid' : '₹' + guest.amountDue }}
+                <span class="amount-due">
+                  ₹{{ guest.amountDue }}
                 </span>
+              </td>
+              <td>
+                <div class="tax-cell">
+                  <span class="tax-badge">{{ guest.gstPercent }}% GST</span>
+                  <span class="tax-amount">₹{{ guest.taxAmount }}</span>
+                </div>
+              </td>
+              <td>
+                <strong class="total-payable-val" [class.paid]="guest.totalWithTax === 0">
+                  {{ guest.totalWithTax === 0 ? 'Fully Paid' : ('₹' + guest.totalWithTax) }}
+                </strong>
               </td>
               <td>
                 <span class="status-badge" [ngClass]="guest.status === 'Pending' ? 'pending' : 'checked-in'">
@@ -111,7 +124,7 @@
               </td>
             </tr>
             <tr *ngIf="arrivals.length === 0">
-              <td colspan="7" style="text-align: center; padding: 40px; color: var(--surface-500);">No arrivals found.</td>
+              <td colspan="9" style="text-align: center; padding: 40px; color: var(--surface-500);">No arrivals found.</td>
             </tr>
           </tbody>
         </table>
@@ -296,26 +309,26 @@
           <div class="ledger-row">
             <span>{{ selectedGuestForFolio.checkInDate }}</span>
             <span>Room Charge ({{ selectedGuestForFolio.roomType }})</span>
-            <span style="text-align:right">₹{{ selectedGuestForFolio.totalAmount }}</span>
+            <span style="text-align:right">₹{{ selectedGuestForFolio.amountDue }}</span>
             <span style="text-align:right">-</span>
           </div>
           <div class="ledger-row">
             <span>{{ selectedGuestForFolio.checkInDate }}</span>
-            <span>GST (18%)</span>
-            <span style="text-align:right">₹{{ (selectedGuestForFolio.totalAmount * 0.18).toFixed(0) }}</span>
+            <span>GST ({{ selectedGuestForFolio.gstPercent }}%)</span>
+            <span style="text-align:right">₹{{ selectedGuestForFolio.taxAmount }}</span>
             <span style="text-align:right">-</span>
           </div>
           <div class="ledger-row payment">
             <span>{{ selectedGuestForFolio.checkInDate }}</span>
             <span>Advance Payment (Credit Card)</span>
             <span style="text-align:right">-</span>
-            <span style="text-align:right">₹{{ selectedGuestForFolio.totalAmount + (selectedGuestForFolio.totalAmount * 0.18) }}</span>
+            <span style="text-align:right">₹{{ selectedGuestForFolio.totalWithTax }}</span>
           </div>
         </div>
         <div class="ledger-footer">
           <div class="ledger-total">
-            <span>Total Charges: <strong>₹{{ selectedGuestForFolio.totalAmount + (selectedGuestForFolio.totalAmount * 0.18) }}</strong></span>
-            <span>Total Payments: <strong>₹{{ selectedGuestForFolio.totalAmount + (selectedGuestForFolio.totalAmount * 0.18) }}</strong></span>
+            <span>Total Charges: <strong>₹{{ selectedGuestForFolio.totalWithTax }}</strong></span>
+            <span>Total Payments: <strong>₹{{ selectedGuestForFolio.totalWithTax }}</strong></span>
           </div>
           <div class="ledger-balance">
             <span>Current Balance</span>

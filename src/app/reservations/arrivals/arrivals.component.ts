@@ -24,6 +24,9 @@ interface ArrivalGuest {
   status: 'Pending' | 'Checked In';
   isVip: boolean;
   amountDue: number;
+  gstPercent: number;
+  taxAmount: number;
+  totalWithTax: number;
   totalAmount: number;
   roomNumber?: string;
   roomId?: number;
@@ -168,6 +171,10 @@ export class ArrivalsComponent implements OnInit, OnDestroy {
   private mapArrival(item: ArrivalApiItem): ArrivalGuest {
     const normalizedStatus = (item.bookingStatus || '').replace(/[^A-Za-z]/g, '').toUpperCase();
     const isCheckedIn = normalizedStatus === 'CHECKEDIN';
+    const balance = Number(item.balance || 0);
+    const gstPercent = Number(item.gstPercent ?? 0);
+    const taxAmount = Number(item.taxAmount ?? item.taxationAmount ?? ((balance * gstPercent) / 100));
+    const totalWithTax = balance + taxAmount;
 
     return {
       id: String(item.bookingId),
@@ -186,8 +193,11 @@ export class ArrivalsComponent implements OnInit, OnDestroy {
       source: '-',
       status: isCheckedIn ? 'Checked In' : 'Pending',
       isVip: !!item.guestIsVip,
-      amountDue: Number(item.balance || 0),
-      totalAmount: Number(item.balance || 0),
+      amountDue: balance,
+      gstPercent: gstPercent,
+      taxAmount: taxAmount,
+      totalWithTax: totalWithTax,
+      totalAmount: totalWithTax,
       roomNumber: item.roomNumber
     };
   }

@@ -59,20 +59,28 @@
             'Search by room, status, floor...'
           " 
           [ngModel]="searchQuery()"
-          (ngModelChange)="searchQuery.set($event)"
+          (ngModelChange)="onSearchChange($event)"
         >
       </div>
       
-      <button class="btn-primary" (click)="openCreateModal()">
+      <button 
+        class="btn-primary" 
+        (click)="openCreateModal()"
+        [disabled]="activeTab() === 'hotels' && mastersService.hotels().length >= 1"
+        [title]="activeTab() === 'hotels' && mastersService.hotels().length >= 1 ? 'Limit Reached: Only one hotel property can be created' : ''"
+      >
         <span class="material-icons-round">add</span>
         <span>
-          Add {{ 
-            activeTab() === 'hotels' ? 'Hotel' :
-            activeTab() === 'floors' ? 'Floor' :
-            activeTab() === 'room-types' ? 'Room Type' :
-            activeTab() === 'rate-plans' ? 'Rate Plan' :
-            activeTab() === 'gst-config' ? 'GST Rule' :
-            'Room'
+          {{ 
+            activeTab() === 'hotels' && mastersService.hotels().length >= 1 ? 'Limit Reached' :
+            'Add ' + (
+              activeTab() === 'hotels' ? 'Hotel' :
+              activeTab() === 'floors' ? 'Floor' :
+              activeTab() === 'room-types' ? 'Room Type' :
+              activeTab() === 'rate-plans' ? 'Rate Plan' :
+              activeTab() === 'gst-config' ? 'GST Rule' :
+              'Room'
+            )
           }}
         </span>
       </button>

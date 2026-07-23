@@ -1,38 +1,49 @@
 <div class="booking-page font-poppins">
   
-  <!-- Sticky Nav matching HMS layout -->
-  <div class="sticky-nav">
+  <!-- Compact Navigation (Matching Housekeeping / Tasks Header exactly) -->
+  <div class="compact-nav">
     <div class="nav-left">
-      <div class="title-group">
-        <h1 class="nav-title">Enquiry & Sales CRM</h1>
-        <span class="nav-subtitle">Enquiry, Quotations & Sales Pipeline Management</span>
+      <div class="tabs-container">
+        <button class="tab-btn" [class.active]="currentTab() === 'dashboard'" (click)="setTab('dashboard')">
+          <span class="material-icons-round">space_dashboard</span>
+          Board
+        </button>
+        <button class="tab-btn" [class.active]="currentTab() === 'list'" (click)="setTab('list')">
+          <span class="material-icons-round">assignment</span>
+          Tasks
+          <span class="badge" *ngIf="filteredEnquiries().length > 0">{{ filteredEnquiries().length }}</span>
+        </button>
+        <button class="tab-btn" [class.active]="currentTab() === 'new'" (click)="setTab('new')">
+          <span class="material-icons-round">add_box</span>
+          New Enquiry
+        </button>
+        <button class="tab-btn" [class.active]="currentTab() === 'quotations'" (click)="setTab('quotations')">
+          <span class="material-icons-round">description</span>
+          Quotations
+        </button>
+        <button class="tab-btn" [class.active]="currentTab() === 'sales'" (click)="setTab('sales')">
+          <span class="material-icons-round">badge</span>
+          Staff
+        </button>
       </div>
     </div>
 
-    <div class="ribbon-tabs">
-      <button type="button" class="ribbon-tab-btn" [class.active]="currentTab() === 'dashboard'" (click)="setTab('dashboard')">
-        <span class="material-icons-round">space_dashboard</span>
-        <span>Dashboard</span>
-      </button>
-
-      <button type="button" class="ribbon-tab-btn" [class.active]="currentTab() === 'new'" (click)="setTab('new')">
-        <span class="material-icons-round">add_box</span>
-        <span>New Enquiry</span>
-      </button>
-
-      <button type="button" class="ribbon-tab-btn" [class.active]="currentTab() === 'list'" (click)="setTab('list')">
-        <span class="material-icons-round">groups</span>
-        <span>Enquiries List</span>
-      </button>
-
-      <button type="button" class="ribbon-tab-btn" [class.active]="currentTab() === 'quotations'" (click)="setTab('quotations')">
-        <span class="material-icons-round">description</span>
-        <span>Quotations</span>
-      </button>
-
-      <button type="button" class="ribbon-tab-btn" [class.active]="currentTab() === 'sales'" (click)="setTab('sales')">
-        <span class="material-icons-round">badge</span>
-        <span>Sales Team</span>
+    <div class="nav-right">
+      <div class="search-box">
+        <span class="material-icons-round">search</span>
+        <input type="text" placeholder="Search Room, Staff..." [ngModel]="searchText()" (ngModelChange)="searchText.set($event)">
+      </div>
+      <select class="filter-select" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+        <option value="ALL">All Tasks</option>
+        <option value="NEW">New</option>
+        <option value="IN_PROGRESS">In Progress</option>
+        <option value="QUOTATION_SENT">Quotation Sent</option>
+        <option value="BOOKED">Booked</option>
+        <option value="LOST">Lost</option>
+      </select>
+      <button class="btn-primary" (click)="setTab('new')">
+        <span class="material-icons-round">add</span>
+        <span>Add Task</span>
       </button>
     </div>
   </div>
@@ -41,17 +52,14 @@
   <div class="crm-content-viewport">
     
     <!-- Tab View: CRM Dashboard -->
-    <div class="tab-content-container animate-fade-in" *ngIf="currentTab() === 'dashboard'">
-      <div class="dashboard-action-header mb-3">
+    <div class="tab-content-container dashboard-layout animate-fade-in" *ngIf="currentTab() === 'dashboard'">
+      <div class="dashboard-action-header">
         <h2 class="section-main-title">CRM Executive Summary</h2>
-        <button type="button" class="btn btn-primary" (click)="setTab('new')">
-          <span class="material-icons-round font-icon">add</span>
-          Create Enquiry
-        </button>
+        <span class="total-badge">{{ totalEnquiriesCount() }} Active Tasks</span>
       </div>
 
       <!-- Count Stats Cards -->
-      <div class="grid-6 gap-3 mb-3">
+      <div class="grid-6 gap-3">
         <div class="dash-stat-card border-left-new">
           <div class="stat-meta">
             <span class="stat-indicator-val">{{ newEnquiriesCount() }}</span>
@@ -102,7 +110,7 @@
       </div>
 
       <!-- Financial Metrics & Status Grid -->
-      <div class="grid-2 gap-3 mb-3">
+      <div class="flex-grid-row gap-3">
         <!-- Financial cards -->
         <div class="financial-val-stack gap-3">
           <div class="modern-card finance-accent-green">
@@ -181,7 +189,7 @@
       </div>
 
       <!-- Follow Ups and Recent Enquiries Split Row -->
-      <div class="grid-2 gap-3">
+      <div class="flex-grid-row gap-3">
         <!-- Follow ups -->
         <div class="modern-card">
           <div class="card-header pb-2">
@@ -228,6 +236,81 @@
       </div>
     </div>
 
+    <!-- Tab View: Enquiries List screen (Matching Housekeeping Tasks table layout) -->
+    <div class="tab-content-container animate-fade-in" *ngIf="currentTab() === 'list'">
+      
+      <div class="modern-card">
+        <div class="card-header">
+          <h2 class="card-title">Housekeeping Assignments & Tasks</h2>
+          <div class="header-actions">
+            <span class="total-badge">{{ filteredEnquiries().length }} Active Tasks</span>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="premium-table hk-grid-table hk-hover-table task-grid">
+            <thead>
+              <tr>
+                <th style="width: 7%;">ROOM NO.</th>
+                <th style="width: 8%;">FLOOR</th>
+                <th style="width: 31%;">TASK TYPE</th>
+                <th style="width: 10%;">PRIORITY</th>
+                <th style="width: 17%;">ASSIGNED TO</th>
+                <th style="width: 8%; text-align: center;">EST. MINS</th>
+                <th style="width: 11%;">STATUS</th>
+                <th style="width: 8%; text-align: center;">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of filteredEnquiries()">
+                <td><span class="room-pill">{{ item.id }}</span></td>
+                <td>{{ item.source || 'Floor 1' }}</td>
+                <td>
+                  <div class="task-type-container">
+                    <strong class="task-label">{{ item.guestName }}</strong>
+                    <small class="task-notes">— {{ item.phone }} • {{ item.enquiryType || 'Stayover Clean' }}</small>
+                  </div>
+                </td>
+                <td>
+                  <span class="priority-pill" [class]="item.priority.toLowerCase()">
+                    <span class="material-icons-round" *ngIf="item.priority === 'High'">north</span>
+                    <span class="material-icons-round" *ngIf="item.priority === 'Medium'">drag_handle</span>
+                    <span class="material-icons-round" *ngIf="item.priority === 'Low'">south</span>
+                    {{ item.priority }}
+                  </span>
+                </td>
+                <td>
+                  <div class="staff-cell">
+                    <span class="avatar-sm">{{ getInitials(item.salesPerson) }}</span>
+                    <span class="staff-name">{{ item.salesPerson || 'Unassigned' }}</span>
+                  </div>
+                </td>
+                <td style="text-align: center;">
+                  <span>0m</span>
+                </td>
+                <td>
+                  <span class="status-badge" [class]="item.status.toLowerCase().replace(' ', '_')">
+                    {{ item.status }}
+                  </span>
+                </td>
+                <td style="text-align: center;">
+                  <div class="quick-actions">
+                    <button type="button" class="quick-btn" title="Toggle Details" (click)="toggleDetails(item)">
+                      <span class="material-icons-round">edit</span>
+                    </button>
+                    <button type="button" class="quick-btn" title="Delete Enquiry" (click)="deleteEnquiry(item.id)">
+                      <span class="material-icons-round text-danger">delete_outline</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
     <!-- Tab View: New Enquiry Form -->
     <div class="tab-content-container animate-fade-in" *ngIf="currentTab() === 'new'">
       <form (submit)="onSubmitEnquiry(); $event.preventDefault()">
@@ -248,23 +331,28 @@
                   </button>
                 </div>
               </div>
-              <div class="card-body pr-3">
+              <div class="card-body">
                 
                 <div class="grid-3">
                   <div class="input-group span-2">
                     <label>Guest Full Name <span class="required-star">*</span></label>
-                    <input type="text" placeholder="Enter guest's full name" [(ngModel)]="newEnquiry.guestName" name="guestName" required>
+                    <input type="text" placeholder="Enter guest name" [(ngModel)]="newEnquiry.guestName" name="guestName" required>
                   </div>
                   <div class="input-group">
-                    <label>Phone Number <span class="required-star">*</span></label>
-                    <input type="tel" placeholder="Enter phone" [(ngModel)]="newEnquiry.phone" name="phone" required>
+                    <label>Salutation</label>
+                    <select [(ngModel)]="newEnquiry.salutation" name="salutation">
+                      <option>Mr.</option>
+                      <option>Mrs.</option>
+                      <option>Ms.</option>
+                      <option>Dr.</option>
+                    </select>
                   </div>
                 </div>
 
                 <div class="grid-3 mt-3">
                   <div class="input-group">
-                    <label>Alt Phone Number</label>
-                    <input type="tel" placeholder="Alt phone code" [(ngModel)]="newEnquiry.altPhone" name="altPhone">
+                    <label>Phone Number <span class="required-star">*</span></label>
+                    <input type="tel" placeholder="Mobile number" [(ngModel)]="newEnquiry.phone" name="phone" required>
                   </div>
                   <div class="input-group span-2">
                     <label>Email Address</label>
@@ -352,62 +440,40 @@
 
                 <div class="grid-3 mt-3">
                   <div class="input-group">
-                    <label>Check In Date</label>
+                    <label>Check In</label>
                     <input type="date" [(ngModel)]="newEnquiry.checkIn" name="checkIn">
                   </div>
                   <div class="input-group">
-                    <label>Check Out Date</label>
+                    <label>Check Out</label>
                     <input type="date" [(ngModel)]="newEnquiry.checkOut" name="checkOut">
                   </div>
                   <div class="input-group">
-                    <label>Next Follow Up</label>
-                    <input type="date" [(ngModel)]="newEnquiry.nextFollowUp" name="nextFollowUp">
+                    <label>Rooms Count</label>
+                    <input type="number" min="1" [(ngModel)]="newEnquiry.rooms" name="rooms">
                   </div>
                 </div>
 
                 <div class="grid-3 mt-3">
                   <div class="input-group">
-                    <label>No. of Rooms</label>
-                    <input type="number" min="0" placeholder="0" [(ngModel)]="newEnquiry.rooms" name="rooms">
-                  </div>
-                  <div class="input-group">
                     <label>Adults</label>
-                    <input type="number" min="1" placeholder="2" [(ngModel)]="newEnquiry.adults" name="adults">
+                    <input type="number" min="1" [(ngModel)]="newEnquiry.adults" name="adults">
                   </div>
                   <div class="input-group">
                     <label>Children</label>
-                    <input type="number" min="0" placeholder="0" [(ngModel)]="newEnquiry.children" name="children">
-                  </div>
-                </div>
-
-                <div class="grid-3 mt-3">
-                  <div class="input-group">
-                    <label>Meal Plan</label>
-                    <input type="text" placeholder="e.g. CP" [(ngModel)]="newEnquiry.mealPlan" name="mealPlan">
+                    <input type="number" min="0" [(ngModel)]="newEnquiry.children" name="children">
                   </div>
                   <div class="input-group">
-                    <label>Budget (INR)</label>
-                    <input type="number" placeholder="Budget" [(ngModel)]="newEnquiry.budget" name="budget">
-                  </div>
-                  <div class="input-group">
-                    <label>Expected Revenue</label>
-                    <input type="number" placeholder="Exp Revenue" [(ngModel)]="newEnquiry.expectedRevenue" name="expectedRevenue">
-                  </div>
-                </div>
-
-                <div class="grid-3 mt-3">
-                  <div class="input-group span-2">
-                    <label>Owner / Sales Person</label>
+                    <label>Assigned Sales Person</label>
                     <select [(ngModel)]="newEnquiry.salesPerson" name="salesPerson">
-                      <option value="">Select Representative</option>
-                      <option *ngFor="let member of salesTeam()" [value]="member.name">{{ member.name }}</option>
+                      <option value="">Select Sales Person</option>
+                      <option *ngFor="let m of salesTeam()" [value]="m.name">{{ m.name }}</option>
                     </select>
                   </div>
                 </div>
 
                 <div class="input-group full mt-3">
-                  <label>Special Requirements / Message</label>
-                  <textarea placeholder="Enter custom message / requirements details here..." [(ngModel)]="newEnquiry.message" name="message" rows="3"></textarea>
+                  <label>Special Instructions / Message</label>
+                  <textarea placeholder="Enter guest notes or requirement details..." [(ngModel)]="newEnquiry.message" name="message"></textarea>
                 </div>
 
               </div>
@@ -416,7 +482,7 @@
 
         </div>
 
-        <!-- Sticky foot buttons aligning with HMS style guidelines -->
+        <!-- Submit Footer Button Row -->
         <div class="form-action-footer mt-3">
           <button type="button" class="btn btn-secondary font-semibold" (click)="setTab('dashboard')">Cancel</button>
           <button type="submit" class="btn btn-primary font-semibold green-btn-alt">
@@ -427,186 +493,54 @@
       </form>
     </div>
 
-    <!-- Tab View: Enquiries List screen -->
-    <div class="tab-content-container animate-fade-in" *ngIf="currentTab() === 'list'">
-      
-      <!-- Filter panel -->
-      <div class="modern-card mb-3">
-        <div class="card-body filter-bar-panel">
-          <div class="filter-search-input">
-            <span class="material-icons-round">search</span>
-            <input type="text" placeholder="Search by Guest name / Company / Phone..." [ngModel]="searchText()" (ngModelChange)="searchText.set($event)">
-          </div>
-
-          <div class="filter-actions-row">
-            <div class="filter-dropdown">
-              <label>Status</label>
-              <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
-                <option value="ALL">All Statuses</option>
-                <option value="NEW">New</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="QUOTATION_SENT">Quotation Sent</option>
-                <option value="NEGOTIATION">Negotiation</option>
-                <option value="HOLD">On Hold</option>
-                <option value="CONFIRMED">Confirmed</option>
-                <option value="BOOKED">Booked</option>
-                <option value="LOST">Lost</option>
-              </select>
-            </div>
-
-            <div class="filter-dropdown">
-              <label>Representative</label>
-              <select [ngModel]="salesPersonFilter()" (ngModelChange)="salesPersonFilter.set($event)">
-                <option value="ALL">All Sales Persons</option>
-                <option *ngFor="let member of salesTeam()" [value]="member.name">{{ member.name }}</option>
-              </select>
-            </div>
-
-            <button type="button" class="btn btn-primary btn-sm flex-center">
-              <span class="material-icons-round">filter_alt</span>
-              Filter
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" (click)="searchText.set(''); statusFilter.set('ALL'); salesPersonFilter.set('ALL');">
-              Reset
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- list results count -->
-      <div class="list-summary-bar mb-2">
-        <span>Found {{ filteredEnquiries().length }} enquiries</span>
-      </div>
-
-      <!-- Enquiries list rows -->
-      <div class="list-rows-wrapper">
-        <div class="enquiry-row-item" *ngFor="let item of filteredEnquiries()">
-          <div class="main-summary-row" (click)="toggleDetails(item)">
-            
-            <div class="guest-identity">
-              <div class="avatar-letter" [ngClass]="item.status.toLowerCase().replace(' ', '-')">
-                {{ getInitials(item.guestName) }}
-              </div>
-              <div class="guest-description">
-                <h3>{{ item.guestName }}</h3>
-                <span class="guest-sub-meta font-mono">
-                  <span class="material-icons-round">phone</span> {{ item.phone }}
-                </span>
-              </div>
-            </div>
-
-            <div class="stat-column">
-              <span class="col-lbl">Rooms</span>
-              <strong class="col-val">{{ item.rooms > 0 ? item.rooms : '-' }}</strong>
-            </div>
-
-            <div class="stat-column">
-              <span class="col-lbl">Quoted</span>
-              <strong class="col-val" [class.txt-success]="item.quoted === 'Yes'">{{ item.quoted }}</strong>
-            </div>
-
-            <div class="stat-column">
-              <span class="col-lbl">Priority</span>
-              <span class="priority-tag font-semibold" [ngClass]="item.priority.toLowerCase()">{{ item.priority }}</span>
-            </div>
-
-            <div class="stat-column flex-grow-cell">
-              <span class="col-lbl">Last Contact / Remark</span>
-              <div class="remark-snippet">
-                <span class="material-icons-round">forum</span>
-                <span>{{ item.latestRemark }}</span>
-              </div>
-            </div>
-
-            <div class="stat-column owner-right">
-              <span class="col-lbl">Representative</span>
-              <strong class="col-val">{{ item.salesPerson }}</strong>
-            </div>
-
-            <div class="chevron-action">
-              <button class="icon-toggle-btn">
-                <span class="material-icons-round">{{ item.showDetails ? 'expand_less' : 'expand_more' }}</span>
-              </button>
-            </div>
-
-          </div>
-
-          <!-- Drawer details -->
-          <div class="row-drawer-details animate-slide-down" *ngIf="item.showDetails">
-            <div class="drawer-grid-layout">
-              <div class="drawer-group">
-                <h3>Corporate Detail</h3>
-                <p><span>Company Name:</span> <strong>{{ item.companyName || 'Individual / Walk-in' }}</strong></p>
-                <p><span>Email:</span> <strong>{{ item.email || '-' }}</strong></p>
-                <p><span>GST Number:</span> <strong>{{ item.gstNumber || '-' }}</strong></p>
-              </div>
-
-              <div class="drawer-group">
-                <h3>Tentative Stay</h3>
-                <p><span>Check In:</span> <strong>{{ item.checkIn || '-' }}</strong></p>
-                <p><span>Check Out:</span> <strong>{{ item.checkOut || '-' }}</strong></p>
-                <p><span>Guest Occupancy:</span> <strong>{{ item.adults }} Adults, {{ item.children }} Children</strong></p>
-              </div>
-
-              <div class="drawer-group">
-                <h3>Commercials</h3>
-                <p><span>Meal Plan:</span> <strong>{{ item.mealPlan || '-' }}</strong></p>
-                <p><span>Estimated Revenue:</span> <strong>{{ formatCurrency(item.expectedRevenue) }}</strong></p>
-                <p><span>Source Channel:</span> <strong>{{ item.source }}</strong></p>
-              </div>
-            </div>
-            
-            <div class="message-footer-block mt-2" *ngIf="item.message">
-              <strong>Requirement:</strong>
-              <p>{{ item.message }}</p>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-    </div>
-
     <!-- Tab View: Quotations screen -->
     <div class="tab-content-container animate-fade-in" *ngIf="currentTab() === 'quotations'">
-      <div class="dashboard-action-header mb-3">
-        <h2 class="section-main-title">Sales Quotations Proposals</h2>
-        <button type="button" class="btn btn-primary" (click)="isQuotationModalOpen.set(true)">
-          <span class="material-icons-round font-icon">add</span>
-          New Quotation
-        </button>
-      </div>
-
       <div class="modern-card">
-        <div class="card-body">
-          <table class="native-hms-table">
+        <div class="card-header">
+          <h2 class="card-title">Sales Quotations Proposals</h2>
+          <div class="header-actions">
+            <button type="button" class="btn-primary" (click)="isQuotationModalOpen.set(true)">
+              <span class="material-icons-round">add</span>
+              <span>Add Proposal</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="premium-table hk-grid-table hk-hover-table task-grid">
             <thead>
               <tr>
-                <th>Quotation No</th>
-                <th>Enquiry Reference</th>
-                <th>Guest Details</th>
-                <th>Quotation Value</th>
-                <th>Validity</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th style="width: 14%;">QUOTATION NO.</th>
+                <th style="width: 12%;">ENQUIRY REF</th>
+                <th style="width: 30%;">GUEST & COMPANY</th>
+                <th style="width: 14%; text-align: center;">VALUATION</th>
+                <th style="width: 12%;">VALIDITY</th>
+                <th style="width: 10%;">STATUS</th>
+                <th style="width: 8%; text-align: center;">ACTIONS</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let q of quotations()">
-                <td><strong>{{ q.quotationNo }}</strong> <span class="tag-rev">Rev {{ q.revision }}</span></td>
+                <td><span class="room-pill">{{ q.quotationNo }}</span></td>
                 <td>{{ q.enquiryId }}</td>
                 <td>
-                  <strong>{{ q.guestName }}</strong>
-                  <span class="sub-line" *ngIf="q.companyName">{{ q.companyName }}</span>
+                  <div class="task-type-container">
+                    <strong class="task-label">{{ q.guestName }}</strong>
+                    <small class="task-notes" *ngIf="q.companyName">{{ q.companyName }}</small>
+                  </div>
                 </td>
-                <td><strong>{{ formatCurrency(q.total) }}</strong></td>
+                <td style="text-align: center;">
+                  <strong>{{ formatCurrency(q.total) }}</strong>
+                </td>
                 <td>{{ q.validTill }}</td>
-                <td><span class="status-pill font-semibold inline-tag" [ngClass]="q.status.toLowerCase()">{{ q.status }}</span></td>
                 <td>
-                  <div class="btn-group-row">
-                    <button class="btn btn-secondary btn-xs font-semibold">Open</button>
-                    <button class="btn btn-secondary btn-xs font-semibold">Print</button>
-                    <button class="btn btn-secondary btn-xs text-danger font-semibold" (click)="deleteQuotation(q.quotationNo)">Delete</button>
+                  <span class="status-badge" [class]="q.status.toLowerCase()">{{ q.status }}</span>
+                </td>
+                <td style="text-align: center;">
+                  <div class="quick-actions">
+                    <button type="button" class="quick-btn" title="Delete Proposal" (click)="deleteQuotation(q.quotationNo)">
+                      <span class="material-icons-round text-danger">delete_outline</span>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -618,39 +552,41 @@
 
     <!-- Tab View: Sales Team screen -->
     <div class="tab-content-container animate-fade-in" *ngIf="currentTab() === 'sales'">
-      <div class="dashboard-action-header mb-3">
-        <h2 class="section-main-title">CRM Sales Representatives</h2>
-        <button type="button" class="btn btn-primary" (click)="isSalesModalOpen.set(true)">
-          <span class="material-icons-round font-icon">add</span>
-          Create Sales Person
-        </button>
-      </div>
-
       <div class="modern-card">
-        <div class="card-body">
-          <table class="native-hms-table">
+        <div class="card-header">
+          <h2 class="card-title">CRM Sales Representatives</h2>
+          <div class="header-actions">
+            <button type="button" class="btn-primary" (click)="isSalesModalOpen.set(true)">
+              <span class="material-icons-round">add</span>
+              <span>Add Staff</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="premium-table hk-grid-table hk-hover-table task-grid">
             <thead>
               <tr>
-                <th>Rep Name</th>
-                <th>Designation</th>
-                <th>Phone No</th>
-                <th>Email Address</th>
-                <th>Assigned Monthly Target</th>
-                <th>Action</th>
+                <th style="width: 25%;">REP NAME</th>
+                <th style="width: 20%;">DESIGNATION</th>
+                <th style="width: 15%;">PHONE NO.</th>
+                <th style="width: 20%;">EMAIL ADDRESS</th>
+                <th style="width: 20%; text-align: center;">MONTHLY TARGET</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let s of salesTeam()">
-                <td><strong>{{ s.name }}</strong></td>
+                <td>
+                  <div class="staff-cell">
+                    <span class="avatar-sm">{{ getInitials(s.name) }}</span>
+                    <strong class="staff-name">{{ s.name }}</strong>
+                  </div>
+                </td>
                 <td>{{ s.designation }}</td>
                 <td>{{ s.phone }}</td>
                 <td>{{ s.email || '-' }}</td>
-                <td><strong>{{ formatCurrency(s.monthlyTarget) }}</strong></td>
-                <td>
-                  <div class="btn-group-row">
-                    <button class="btn btn-secondary btn-xs text-primary font-semibold">Edit</button>
-                    <button class="btn btn-secondary btn-xs text-danger font-semibold" (click)="deleteSalesMember(s.name)">Delete</button>
-                  </div>
+                <td style="text-align: center;">
+                  <strong>{{ formatCurrency(s.monthlyTarget) }}</strong>
                 </td>
               </tr>
             </tbody>
@@ -660,119 +596,4 @@
     </div>
 
   </div>
-
-  <!-- New Quotation Dialog Overlay -->
-  <div class="modal-overlay animate-fade-in" *ngIf="isQuotationModalOpen()">
-    <div class="modal-card-box animate-slide-down">
-      <div class="modal-header-nav">
-        <div class="modal-title">
-          <span class="material-icons-round">description</span>
-          <h2>Generate Proposal Quotation</h2>
-        </div>
-        <button type="button" class="close-ico-btn" (click)="isQuotationModalOpen.set(false)">
-          <span class="material-icons-round">close</span>
-        </button>
-      </div>
-      <form (submit)="onSubmitQuotation(); $event.preventDefault()">
-        <div class="modal-body-content">
-          <div class="grid-2 gap-3">
-            <div class="input-group">
-              <label>Select Active Enquiry</label>
-              <select [(ngModel)]="newQuotation.enquiryId" name="enquiryId" (ngModelChange)="onSelectEnquiryForQuotation($event)">
-                <option value="">-- Select Enquiry --</option>
-                <option *ngFor="let eq of enquiries()" [value]="eq.id">
-                  {{ eq.id }} - {{ eq.guestName }}
-                </option>
-              </select>
-            </div>
-            <div class="input-group">
-              <label>Guest Name *</label>
-              <input type="text" placeholder="Guest name" [(ngModel)]="newQuotation.guestName" name="guestName" required>
-            </div>
-          </div>
-
-          <div class="grid-2 gap-3 mt-3">
-            <div class="input-group">
-              <label>Company Name</label>
-              <input type="text" placeholder="Company affiliation" [(ngModel)]="newQuotation.companyName" name="companyName">
-            </div>
-            <div class="input-group">
-              <label>Proposed Total (INR) *</label>
-              <input type="number" placeholder="0" [(ngModel)]="newQuotation.total" name="total" required>
-            </div>
-          </div>
-
-          <div class="grid-2 gap-3 mt-3">
-            <div class="input-group">
-              <label>Valid Till Date</label>
-              <input type="date" [(ngModel)]="newQuotation.validTill" name="validTill">
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer-nav mt-3">
-          <button type="button" class="btn btn-secondary" (click)="isQuotationModalOpen.set(false)">Cancel</button>
-          <button type="submit" class="btn btn-primary green-btn-alt">Generate Quotation</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- New Sales Representative Dialog Overlay -->
-  <div class="modal-overlay animate-fade-in" *ngIf="isSalesModalOpen()">
-    <div class="modal-card-box animate-slide-down">
-      <div class="modal-header-nav">
-        <div class="modal-title">
-          <span class="material-icons-round">badge</span>
-          <h2>Register Sales Representative</h2>
-        </div>
-        <button type="button" class="close-ico-btn" (click)="isSalesModalOpen.set(false)">
-          <span class="material-icons-round">close</span>
-        </button>
-      </div>
-      <form (submit)="onSubmitSalesMember(); $event.preventDefault()">
-        <div class="modal-body-content">
-          <div class="grid-2 gap-3">
-            <div class="input-group">
-              <label>Rep Full Name *</label>
-              <input type="text" placeholder="Enter representative name" [(ngModel)]="newSalesMemberObj.name" name="repName" required>
-            </div>
-            <div class="input-group">
-              <label>Designation</label>
-              <select [(ngModel)]="newSalesMemberObj.designation" name="designation">
-                <option>Front Office Executive</option>
-                <option>Front office</option>
-                <option>Sales Manager</option>
-                <option>CRM Specialist</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid-2 gap-3 mt-3">
-            <div class="input-group">
-              <label>Phone Number *</label>
-              <input type="tel" placeholder="Enter contact number" [(ngModel)]="newSalesMemberObj.phone" name="repPhone" required>
-            </div>
-            <div class="input-group">
-              <label>Email Address</label>
-              <input type="email" placeholder="rep@example.com" [(ngModel)]="newSalesMemberObj.email" name="repEmail">
-            </div>
-          </div>
-
-          <div class="grid-2 gap-3 mt-3">
-            <div class="input-group">
-              <label>Monthly Target (INR)</label>
-              <input type="number" placeholder="500000" [(ngModel)]="newSalesMemberObj.monthlyTarget" name="repTarget">
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer-nav mt-3">
-          <button type="button" class="btn btn-secondary" (click)="isSalesModalOpen.set(false)">Cancel</button>
-          <button type="submit" class="btn btn-primary">Register Representative</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
 </div>

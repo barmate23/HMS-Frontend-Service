@@ -1063,6 +1063,35 @@
 .amount { font-weight: 800; font-size: 11px; color: var(--surface-900); display: block; }
 .paid { font-size: 8.5px; color: var(--success-color); font-weight: 700; }
 
+.tax-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.tax-badge {
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #6B21A8;
+  background: #F3E8FF;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+}
+
+.tax-amount {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--surface-700);
+}
+
+.total-payable-val {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--primary-color);
+  display: block;
+}
+
 .action-buttons {
   display: flex;
   gap: 3px;

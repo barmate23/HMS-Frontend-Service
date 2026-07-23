@@ -96,6 +96,7 @@ interface ReservationRequest {
   checkOutDate: string;
   checkOutTime: string;
   numberOfAdults: number;
+  gstPercent: number;
   numberOfChildren: number;
   reservationStatus: 'PENDING' | 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED' | 'NO_SHOW';
   roomIds: number[];
@@ -766,11 +767,16 @@ export class NewBookingComponent implements OnInit {
     };
   }
 
-  private mapReservationStatus(value: string): ReservationRequest['reservationStatus'] {
-    const allowed: ReservationRequest['reservationStatus'][] = ['PENDING', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'CANCELLED', 'NO_SHOW'];
-    return allowed.includes(value as ReservationRequest['reservationStatus'])
-      ? value as ReservationRequest['reservationStatus']
-      : 'CONFIRMED';
+  private mapReservationStatus(value: string | undefined | null): ReservationRequest['reservationStatus'] {
+    if (!value) return 'CONFIRMED';
+    const s = String(value).trim().toUpperCase().replace(/[\s-]+/g, '_');
+    if (s === 'CHECKED_IN' || s === 'CHECKEDIN' || s === 'CHECKIN') return 'CHECKED_IN';
+    if (s === 'CHECKED_OUT' || s === 'CHECKEDOUT' || s === 'CHECKOUT') return 'CHECKED_OUT';
+    if (s === 'CANCELLED' || s === 'CANCELED') return 'CANCELLED';
+    if (s === 'NO_SHOW' || s === 'NOSHOW') return 'NO_SHOW';
+    if (s === 'PENDING') return 'PENDING';
+    if (s === 'CONFIRMED') return 'CONFIRMED';
+    return 'CONFIRMED';
   }
 
   availableCountFor(typeId: string): number {
@@ -1375,6 +1381,7 @@ export class NewBookingComponent implements OnInit {
       checkOutDate: this.checkOut(),
       checkOutTime: this.toApiTime(this.checkOutTime()),
       numberOfAdults: this.numberOfAdults(),
+      gstPercent: Number(this.roomTaxRate() || 0),
       numberOfChildren: this.numberOfChildren(),
       reservationStatus: status,
       roomIds: [Number(room.id)],

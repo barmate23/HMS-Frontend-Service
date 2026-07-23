@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 
 export interface Enquiry {
   id: string;
+  salutation?: string;
   guestName: string;
   companyName?: string;
   phone: string;
@@ -91,6 +92,7 @@ export class CrmComponent {
 
   // Form Model
   newEnquiry = {
+    salutation: 'Mr.',
     guestName: '',
     companyName: '',
     phone: '',
@@ -291,6 +293,13 @@ export class CrmComponent {
     enquiry.showDetails = !enquiry.showDetails;
   }
 
+  // Delete Enquiry
+  deleteEnquiry(id: string) {
+    if (confirm(`Are you sure you want to delete enquiry ${id}?`)) {
+      this.enquiries.update(list => list.filter(e => e.id !== id));
+    }
+  }
+
   // Add new Enquiry
   onSubmitEnquiry() {
     if (!this.newEnquiry.guestName || !this.newEnquiry.phone) {
@@ -336,6 +345,7 @@ export class CrmComponent {
     
     // Reset form
     this.newEnquiry = {
+      salutation: 'Mr.',
       guestName: '',
       companyName: '',
       phone: '',

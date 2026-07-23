@@ -25,6 +25,9 @@ interface DepartureGuest {
   status: 'Pending' | 'Checked Out';
   isVip: boolean;
   balance: number;
+  gstPercent: number;
+  taxAmount: number;
+  totalWithTax: number;
   totalAmount: number;
 }
 
@@ -94,7 +97,7 @@ export class DeparturesComponent implements OnInit, OnDestroy {
 
   get totalOutstanding(): number {
     if (!this.selectedGuestForCheckOut) return 0;
-    return this.selectedGuestForCheckOut.balance + Number(this.minibarCharge || 0) + Number(this.damageCharge || 0);
+    return this.selectedGuestForCheckOut.totalWithTax + Number(this.minibarCharge || 0) + Number(this.damageCharge || 0);
   }
 
   loadDepartures() {
@@ -203,6 +206,11 @@ export class DeparturesComponent implements OnInit, OnDestroy {
   private mapDeparture(item: ArrivalApiItem): DepartureGuest {
     const normalizedStatus = (item.bookingStatus || '').replace(/[^A-Za-z]/g, '').toUpperCase();
     const checkedOut = normalizedStatus === 'CHECKEDOUT';
+    const balance = Number(item.balance || 0);
+    const gstPercent = Number(item.gstPercent ?? 0);
+    const taxAmount = Number(item.taxAmount ?? item.taxationAmount ?? ((balance * gstPercent) / 100));
+    const totalWithTax = balance + taxAmount;
+
     return {
       id: String(item.bookingId),
       bookingId: item.bookingId,
@@ -221,8 +229,11 @@ export class DeparturesComponent implements OnInit, OnDestroy {
       source: '-',
       status: checkedOut ? 'Checked Out' : 'Pending',
       isVip: !!item.guestIsVip,
-      balance: Number(item.balance || 0),
-      totalAmount: Number(item.balance || 0)
+      balance: balance,
+      gstPercent: gstPercent,
+      taxAmount: taxAmount,
+      totalWithTax: totalWithTax,
+      totalAmount: totalWithTax
     };
   }
 }

@@ -38,6 +38,12 @@ export class SetupService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/hmsService/v1/common';
 
+  getAllCommonMasters(): Observable<CommonMaster[]> {
+    return this.http
+      .get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.baseUrl}/getAllCommonMaster`)
+      .pipe(map(response => this.listData(response).map(item => this.mapCommonMaster(item, item.category || ''))));
+  }
+
   getCommonMasters(category: string): Observable<CommonMaster[]> {
     return this.http
       .get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.baseUrl}/getCommonMaster/${category}`)

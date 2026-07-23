@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, catchError, map, switchMap, tap, throwError } from 'rxjs';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Observable, map } from 'rxjs';
 import { UserManagementService } from '../user-management/user-management.service';
 
 export type PosTab = 'dashboard' | 'outlets' | 'dining' | 'orders' | 'billing' | 'menu' | 'billing-setup';
@@ -58,12 +59,10 @@ export interface PosTable {
 }
 
 export interface PosOrderLine {
-  id?: number;
   itemId: number;
   name: string;
   qty: number;
   price: number;
-  subtotal?: number;
   course: string;
   notes: string;
 }
@@ -71,25 +70,20 @@ export interface PosOrderLine {
 export interface PosOrder {
   id: number;
   outletId: number;
-  outletName?: string;
   orderNo: string;
   type: OrderType;
   floorId?: number | null;
   roomId?: number | null;
-  tableId?: number | null;
   tableNo?: string;
   roomNo?: string;
   guestName?: string;
-  serverId?: number;
   server: string;
-  statusId?: number;
   status: OrderStatus;
   kotNo?: string;
+  kotStatusId?: number;
+  kotStatusName?: string;
   openedAt: string;
   notes: string;
-  totalAmount?: number;
-  createdAt?: string;
-  updatedAt?: string;
   lines: PosOrderLine[];
 }
 
@@ -253,7 +247,6 @@ interface ApiMenuItem {
 }
 
 interface ApiOrderLine {
-  id?: number;
   itemId?: number;
   menuId?: number;
   menuItemId?: number;
@@ -262,7 +255,6 @@ interface ApiOrderLine {
   qty?: number;
   price?: number;
   rate?: number;
-  subtotal?: number;
   course?: string;
   notes?: string;
 }
@@ -271,8 +263,6 @@ interface ApiOrder {
   id: number;
   outletId?: number;
   outletName?: string;
-  orderTypeId?: number | null;
-  orderTypeName?: string | null;
   orderNo?: string;
   orderNumber?: string;
   orderType?: OrderType;
@@ -289,61 +279,17 @@ interface ApiOrder {
   serverName?: string;
   orderTakerId?: number;
   orderTakerName?: string;
-  covers?: number | null;
-  statusId?: number;
   status?: OrderStatus;
   statusName?: OrderStatus;
   kotNo?: string;
   kotNumber?: string;
+  kotStatusId?: number;
+  kotStatusName?: string;
   openedAt?: string;
   notes?: string;
-  totalAmount?: number;
   orderLines?: ApiOrderLine[];
   lines?: ApiOrderLine[];
   items?: ApiOrderLine[];
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-interface ApiBill {
-  id: number;
-  orderId?: number;
-  billNo?: string;
-  billNumber?: string;
-  orderType?: OrderType;
-  tableNo?: string;
-  tableNumber?: string;
-  floorId?: number | null;
-  roomId?: number | null;
-  guestName?: string;
-  roomNo?: string;
-  roomNumber?: string;
-  subtotal?: number;
-  discount?: number;
-  tax?: number;
-  compReason?: string;
-  paid?: number;
-  statusId?: number;
-  statusName?: BillStatus;
-  status?: BillStatus;
-  paymentModes?: string;
-  postedToFolio?: boolean;
-  isPostedToFolio?: boolean;
-
-  // Authorities matching backend PosBillDTO
-  orderRef?: string;
-  orderFrom?: string;
-  tableId?: number;
-  grossAmount?: number;
-  netAmount?: number;
-  paidAmount?: number;
-  paymentMethodId?: number;
-  paymentMethodName?: string;
-  compVoidReasonId?: number;
-  compVoidReasonName?: string;
-  postToFolio?: boolean;
-  folioPostingId?: number;
-  notes?: string;
 }
 
 interface StandardResponse<T = any> {
@@ -370,9 +316,9 @@ interface ApiCommonMaster {
 export class PosService {
   private readonly http = inject(HttpClient);
   private readonly userManagement = inject(UserManagementService);
+  private readonly snackBar = inject(MatSnackBar);
   private readonly posBaseUrl = '/api/hmsService/v1/pos';
   private readonly hmsBaseUrl = '/api/hmsService/v1';
-  private tablesOutletId?: number;
   private readonly defaultOutletTypes: OutletType[] = ['Restaurant', 'Bar', 'Cafe', 'Spa', 'Gift Shop', 'Room Service', 'Mini Bar'];
   private readonly defaultShiftSchedules: string[] = ['09:00 AM - 09:00 PM', '07:00 AM - 11:00 PM', '05:00 PM - 01:00 AM', '24 Hours'];
   private readonly defaultTableStatuses: TableStatus[] = ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'BILLED', 'MOPPING', 'DIRTY'];
@@ -397,8 +343,9 @@ export class PosService {
   readonly menuSubcategories = signal<string[]>(this.defaultMenuSubcategories);
   readonly menuSubcategoryMasters = signal<ApiCommonMaster[]>([]);
   readonly orderStatuses = signal<OrderStatus[]>(this.defaultOrderStatuses);
+  readonly orderStatusMasters = signal<ApiCommonMaster[]>([]);
+  readonly kotStatusMasters = signal<ApiCommonMaster[]>([]);
   readonly billStatuses = signal<BillStatus[]>(this.defaultBillStatuses);
-  readonly billStatusMasters = signal<ApiCommonMaster[]>([]);
   readonly paymentModes = signal<PaymentMode[]>(this.defaultPaymentModes);
   readonly voidReasons = signal<string[]>(this.defaultVoidReasons);
   readonly users = computed(() => {
@@ -432,6 +379,7 @@ export class PosService {
     this.loadMenuCategories();
     this.loadMenuSubcategories();
     this.loadOrderStatuses();
+    this.loadKotStatusMasters();
     this.loadBillStatuses();
     this.loadPaymentModes();
     this.loadVoidReasons();
@@ -439,7 +387,6 @@ export class PosService {
     this.loadTables();
     this.loadMenuItems();
     this.loadOrders();
-    this.loadBills();
     this.loadPosDashboard();
   }
 
@@ -531,7 +478,9 @@ export class PosService {
   loadOrderStatuses(): void {
     this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/ORDER_STATUS`).subscribe({
       next: response => {
-        const orderStatuses = this.commonMastersData(response)
+        const masters = this.commonMastersData(response);
+        this.orderStatusMasters.set(masters);
+        const orderStatuses = masters
           .map(item => item.value || item.code || '')
           .map(value => value.trim())
           .filter(Boolean);
@@ -541,12 +490,24 @@ export class PosService {
     });
   }
 
+  loadKotStatusMasters(): void {
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/KOT_STATUS`).subscribe({
+      next: response => {
+        const masters = this.commonMastersData(response);
+        console.log('KOT_STATUS masters loaded:', masters);
+        this.kotStatusMasters.set(masters);
+      },
+      error: error => {
+        console.error('Failed to load KOT_STATUS masters:', error);
+        this.addAudit('Unable to load KOT statuses from API', 'Orders', error?.error?.message || error?.message || 'API error');
+      }
+    });
+  }
+
   loadBillStatuses(): void {
     this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/BILL_STATUS`).subscribe({
       next: response => {
-        const masters = this.commonMastersData(response);
-        this.billStatusMasters.set(masters);
-        const billStatuses = masters
+        const billStatuses = this.commonMastersData(response)
           .map(item => item.value || item.code || '')
           .map(value => value.trim())
           .filter(Boolean);
@@ -590,38 +551,13 @@ export class PosService {
   }
 
   loadTables(outletId?: number): void {
-    this.tablesOutletId = outletId;
     const url = outletId
       ? `${this.posBaseUrl}/tables/getAllTables?outletId=${outletId}`
       : `${this.posBaseUrl}/tables/getAllTables`;
-    this.tables.set([]);
     this.http.get<ApiDiningTable[] | ApiListResponse<ApiDiningTable> | StandardResponse<ApiDiningTable[]>>(url).subscribe({
-      next: response => this.tables.set(this.listData(response).map(item => this.mapTable(item, outletId))),
-      error: error => {
-        this.tables.set([]);
-        this.addAudit('Unable to load dining tables from API', 'Table Dining', error?.error?.message || error?.message || 'API error');
-      }
+      next: response => this.tables.set(this.listData(response).map(item => this.mapTable(item))),
+      error: error => this.addAudit('Unable to load dining tables from API', 'Table Dining', error?.error?.message || error?.message || 'API error')
     });
-  }
-
-  getTableById(id: number) {
-    return this.http
-      .get<ApiDiningTable | StandardResponse<ApiDiningTable>>(`${this.posBaseUrl}/tables/getTableById/${id}`)
-      .pipe(map(response => {
-        const table = this.itemData(response);
-        if (!table) throw new Error(`Table #${id} was not found`);
-        return this.mapTable(table, this.tablesOutletId);
-      }));
-  }
-
-  getOrderById(id: number): Observable<PosOrder> {
-    return this.http
-      .get<ApiOrder | StandardResponse<ApiOrder>>(`${this.posBaseUrl}/orders/getOrderById/${id}`)
-      .pipe(map(response => {
-        const order = this.itemData(response);
-        if (!order) throw new Error(`Order #${id} was not found`);
-        return this.mapOrder(order);
-      }));
   }
 
   loadMenuItems(outletId?: number): void {
@@ -644,24 +580,11 @@ export class PosService {
     });
   }
 
-  loadBills(): void {
-    this.http.get<ApiBill[] | ApiListResponse<ApiBill> | StandardResponse<ApiBill[]>>(`${this.posBaseUrl}/billing/getAllBills`).subscribe({
-      next: response => this.bills.set(this.listData(response).map(item => this.mapBill(item))),
-      error: error => this.addAudit('Unable to load bills from API', 'Billing', error?.error?.message || error?.message || 'API error')
-    });
-  }
-
-  getActiveOrders(tableId: number) {
-    return this.http.get<ApiOrder[] | ApiListResponse<ApiOrder> | StandardResponse<ApiOrder[]>>(`${this.posBaseUrl}/orders/getActiveOrders?tableId=${tableId}`).pipe(
-      map(response => this.listData(response).map(item => this.mapOrder(item))),
-      tap(activeOrders => {
-        this.orders.update(items => {
-          const activeIds = new Set(activeOrders.map(order => order.id));
-          return [
-            ...activeOrders,
-            ...items.filter(order => !activeIds.has(order.id))
-          ];
-        });
+  getActiveOrders(tableId: number): Observable<PosOrder[]> {
+    return this.http.get<ApiOrder[] | StandardResponse<ApiOrder[]>>(`${this.posBaseUrl}/orders/getActiveOrders?tableId=${tableId}`).pipe(
+      map(response => {
+        const data = this.listData(response);
+        return data.map(item => this.mapOrder(item));
       })
     );
   }
@@ -775,6 +698,8 @@ export class PosService {
       server: input.server || 'Unassigned',
       status: input.status || 'OPEN',
       kotNo: input.kotNo || '',
+      kotStatusId: input.kotStatusId,
+      kotStatusName: input.kotStatusName,
       openedAt: input.openedAt || 'Just now',
       notes: input.notes || '',
       lines: input.lines?.length ? input.lines : []
@@ -791,55 +716,66 @@ export class PosService {
         this.loadOrders();
         this.addAudit(isUpdate ? 'Order updated' : 'Order created', 'Orders', saved.orderNo);
       },
-      error: error => this.addAudit(isUpdate ? 'Order update failed' : 'Order create failed', 'Orders', error?.error?.message || error?.message || order.orderNo)
+      error: error => {
+        const errMsg = error?.error?.message || error?.message || (isUpdate ? 'Order update failed' : 'Order create failed');
+        this.snackBar.open(errMsg, 'Close', {
+          duration: 5000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top',
+          panelClass: ['snackbar-error']
+        });
+        this.addAudit(isUpdate ? 'Order update failed' : 'Order create failed', 'Orders', errMsg);
+      }
     });
   }
 
-  sendKOT(id: number): Observable<ApiOrder | StandardResponse<ApiOrder>> {
-    return this.http.post<ApiOrder | StandardResponse<ApiOrder>>(`${this.posBaseUrl}/orders/sendKot/${id}`, null);
-  }
-
   updateOrderStatus(id: number, status: OrderStatus): void {
-    const normalizedStatus = status.replace(/[_-]+/g, ' ').trim().toUpperCase();
-
-    this.http
-      .get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/ORDER_STATUS`)
-      .pipe(
-        map(response => {
-          const statusMaster = this.commonMastersData(response).find(item => {
-            const masterStatus = String(item.value || item.code || '')
-              .replace(/[_-]+/g, ' ')
-              .trim()
-              .toUpperCase();
-            return masterStatus === normalizedStatus;
+    console.log('updateOrderStatus called with id:', id, 'status:', status);
+    if (status === 'KOT_SENT') {
+      console.log('Fetching KOT_STATUS master from API...');
+      this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/KOT_STATUS`).subscribe({
+        next: response => {
+          const masters = this.commonMastersData(response);
+          console.log('Fetched KOT_STATUS masters:', masters);
+          const kotStatus = masters.find(m => {
+            const code = (m.code || '').toLowerCase();
+            const value = (m.value || '').toLowerCase();
+            return code === 'kot_send' || code === 'kot_sent' || code === 'sent' ||
+                   value === 'kot send' || value === 'kot sent' || value === 'sent';
           });
-          const statusId = Number(statusMaster?.id);
-
-          if (!statusMaster || !Number.isFinite(statusId) || statusId <= 0) {
-            throw new Error(`${normalizedStatus} was not found in ORDER_STATUS`);
+          console.log('Matched kotStatus:', kotStatus);
+          if (kotStatus && kotStatus.id) {
+            console.log('Sending PATCH request to update KOT status for order:', id, 'with kotStatusId:', kotStatus.id);
+            this.http.patch<any>(`${this.posBaseUrl}/orders/updateKotStatus/${id}`, null, {
+              params: { kotStatusId: kotStatus.id.toString() }
+            }).subscribe({
+              next: () => {
+                console.log('PATCH updateKotStatus success for order:', id);
+                this.orders.update(items => items.map(item => item.id === id ? { ...item, status, kotNo: item.kotNo || `KOT-${500 + id}` } : item));
+                this.loadOrders();
+                this.loadPosDashboard();
+                this.addAudit('KOT status updated on backend', 'Orders', `ORD-${1000 + id}`);
+              },
+              error: error => {
+                console.error('Failed to update KOT status on backend:', error);
+                this.addAudit('KOT status update failed on backend', 'Orders', error?.error?.message || error?.message || `ORD-${1000 + id}`);
+                this.orders.update(items => items.map(item => item.id === id ? { ...item, status, kotNo: item.kotNo || `KOT-${500 + id}` } : item));
+              }
+            });
+          } else {
+            console.warn('KOT_STATUS common master not found for KOT_SENT, falling back to local update');
+            this.orders.update(items => items.map(item => item.id === id ? { ...item, status, kotNo: item.kotNo || `KOT-${500 + id}` } : item));
           }
-
-          return statusId;
-        }),
-        switchMap(statusId => this.http.patch<ApiOrder | StandardResponse<ApiOrder>>(
-          `${this.posBaseUrl}/orders/updateOrderStatus/${id}?statusId=${statusId}`,
-          null
-        ))
-      )
-      .subscribe({
-        next: () => {
-          this.orders.update(items => items.map(item => item.id === id
-            ? { ...item, status, kotNo: status === 'KOT_SENT' ? item.kotNo || `KOT-${500 + id}` : item.kotNo }
-            : item));
-          this.loadOrders();
-          this.addAudit(`Order marked ${normalizedStatus}`, 'Orders', `ORD-${1000 + id}`);
         },
-        error: error => this.addAudit(
-          `Order status update failed`,
-          'Orders',
-          error?.error?.message || error?.message || `ORD-${1000 + id}`
-        )
+        error: error => {
+          console.error('Failed to fetch KOT_STATUS common master:', error);
+          this.orders.update(items => items.map(item => item.id === id ? { ...item, status, kotNo: item.kotNo || `KOT-${500 + id}` } : item));
+        }
       });
+    } else {
+      this.orders.update(items => items.map(item => item.id === id ? { ...item, status, kotNo: status === 'KOT_SENT' ? item.kotNo || `KOT-${500 + id}` : item.kotNo } : item));
+    }
+    this.addAudit(`Order marked ${status}`, 'Orders', `ORD-${1000 + id}`);
   }
 
   saveTable(input: PosTable): void {
@@ -863,8 +799,8 @@ export class PosService {
     request$.subscribe({
       next: response => {
         const responseTable = this.itemData(response);
-        const saved = responseTable ? this.mapTable(responseTable, table.outletId) : table;
-        this.loadTables(this.tablesOutletId);
+        const saved = responseTable ? this.mapTable(responseTable) : table;
+        this.loadTables();
         this.addAudit(input.id ? 'Dining table updated' : 'Dining table created', 'Table Dining', saved.number);
       },
       error: error => this.addAudit(input.id ? 'Dining table update failed' : 'Dining table create failed', 'Table Dining', error?.error?.message || error?.message || table.number)
@@ -876,7 +812,7 @@ export class PosService {
     this.http.delete<void>(`${this.posBaseUrl}/tables/deleteTable/${id}`).subscribe({
       next: () => {
         this.tables.update(items => items.filter(item => item.id !== id));
-        this.loadTables(this.tablesOutletId);
+        this.loadTables();
         if (table) this.addAudit('Dining table deleted', 'Table Dining', table.number);
       },
       error: error => this.addAudit('Dining table delete failed', 'Table Dining', error?.error?.message || error?.message || `Table #${id}`)
@@ -969,8 +905,7 @@ export class PosService {
     this.addAudit('Reset paid table layout', 'Table Dining', released.length ? released.join(', ') : 'No paid tables');
   }
 
-  saveBill(input: Partial<PosBill>): Observable<PosBill> {
-    const isUpdate = !!input.id && this.bills().some(item => item.id === input.id);
+  saveBill(input: Partial<PosBill>): void {
     const nextId = Math.max(0, ...this.bills().map(item => item.id)) + 1;
     const bill: PosBill = {
       id: input.id ?? nextId,
@@ -991,71 +926,13 @@ export class PosService {
       paymentModes: input.paymentModes?.length ? input.paymentModes : ['Cash'],
       postedToFolio: !!input.postedToFolio
     };
-
-    const request$ = isUpdate
-      ? this.http.put<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/updateBill/${input.id}`, this.toApiBill(bill))
-      : this.http.post<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/createBill`, this.toApiBill(bill));
-
-    return request$.pipe(
-      map(response => {
-        const responseBill = this.itemData(response);
-        const saved = responseBill ? this.mapBill(responseBill) : bill;
-        this.loadBills();
-        this.loadTables(this.tablesOutletId);
-        this.addAudit(isUpdate ? 'Bill updated' : 'Bill generated', 'Billing', saved.billNo);
-        return saved;
-      }),
-      catchError(error => {
-        this.addAudit(isUpdate ? 'Bill update failed' : 'Bill generation failed', 'Billing', error?.error?.message || error?.message || bill.billNo);
-        return throwError(() => error);
-      })
-    );
-  }
-
-  voidBill(id: number, compReason: string): void {
-    const url = `${this.posBaseUrl}/billing/voidBill/${id}?reason=${encodeURIComponent(compReason)}`;
-    this.http.patch<ApiBill | StandardResponse<ApiBill>>(url, null).subscribe({
-      next: response => {
-        this.loadBills();
-        const responseBill = this.itemData(response);
-        const billNo = responseBill?.billNo || responseBill?.billNumber || `Bill #${id}`;
-        this.addAudit('Bill marked VOID', 'Billing', billNo);
-      },
-      error: error => {
-        const existingBill = this.bills().find(b => b.id === id);
-        if (existingBill) {
-          this.saveBill({ ...existingBill, status: 'VOID', compReason }).subscribe();
-        } else {
-          this.addAudit('Void bill failed', 'Billing', `Bill #${id}`);
-        }
-      }
-    });
+    this.bills.update(items => input.id ? items.map(existing => existing.id === input.id ? bill : existing) : [bill, ...items]);
+    this.addAudit(input.id ? 'Bill updated' : 'Bill generated', 'Billing', bill.billNo);
   }
 
   postBillToRoom(id: number): void {
-    const bill = this.bills().find(item => item.id === id);
-    if (!bill) return;
-    const updated = { ...bill, postedToFolio: true, status: bill.status === 'OPEN' ? 'PARTIAL' : bill.status };
-    this.http.put<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/updateBill/${id}`, this.toApiBill(updated)).subscribe({
-      next: () => {
-        this.loadBills();
-        this.addAudit('Posted POS charge to room folio', 'Room Posting', bill.billNo);
-      },
-      error: error => {
-        this.addAudit('Room posting update failed', 'Room Posting', error?.error?.message || error?.message || bill.billNo);
-      }
-    });
-  }
-
-  deleteBill(id: number): void {
-    const bill = this.bills().find(item => item.id === id);
-    this.http.delete<void>(`${this.posBaseUrl}/billing/deleteBill/${id}`).subscribe({
-      next: () => {
-        this.loadBills();
-        if (bill) this.addAudit('Bill deleted', 'Billing', bill.billNo);
-      },
-      error: error => this.addAudit('Bill delete failed', 'Billing', error?.error?.message || error?.message || `Bill #${id}`)
-    });
+    this.bills.update(items => items.map(item => item.id === id ? { ...item, postedToFolio: true, status: item.status === 'OPEN' ? 'PARTIAL' : item.status } : item));
+    this.addAudit('Posted POS charge to room folio', 'Room Posting', `Bill #${id}`);
   }
 
   saveShift(input: Partial<PosShift>): void {
@@ -1121,10 +998,10 @@ export class PosService {
     };
   }
 
-  private mapTable(item: ApiDiningTable, fallbackOutletId?: number): PosTable {
+  private mapTable(item: ApiDiningTable): PosTable {
     return {
       id: Number(item.id),
-      outletId: Number(item.outletId || fallbackOutletId || this.outlets()[0]?.id || 1),
+      outletId: Number(item.outletId || this.outlets()[0]?.id || 1),
       number: item.tableNumber || `T${item.id}`,
       section: item.sectionName || '',
       status: this.asTableStatus(item.statusName),
@@ -1217,25 +1094,20 @@ export class PosService {
     return {
       id: Number(item.id),
       outletId: Number(item.outletId || this.outlets()[0]?.id || 1),
-      outletName: item.outletName || '',
       orderNo: item.orderNo || item.orderNumber || `ORD-${item.id}`,
       type,
       floorId: item.floorId || null,
       roomId: item.roomId || null,
-      tableId: item.tableId || null,
       tableNo: item.tableNo || item.tableNumber || '',
       roomNo: item.roomNo || item.roomNumber || '',
       guestName: item.guestName || '',
-      serverId: item.serverId,
       server: item.serverName || item.orderTakerName || 'Unassigned',
-      statusId: item.statusId,
       status: item.statusName || item.status || 'OPEN',
       kotNo: item.kotNo || item.kotNumber || '',
-      openedAt: item.openedAt || item.createdAt || 'Just now',
+      kotStatusId: item.kotStatusId,
+      kotStatusName: item.kotStatusName,
+      openedAt: item.openedAt || 'Just now',
       notes: item.notes || '',
-      totalAmount: item.totalAmount,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
       lines: lines.map(line => this.mapOrderLine(line))
     };
   }
@@ -1245,12 +1117,10 @@ export class PosService {
     const menuItem = this.menuItems().find(item => item.id === itemId);
 
     return {
-      id: line.id ? Number(line.id) : undefined,
       itemId,
       name: line.itemName || menuItem?.name || 'Menu Item',
       qty: Number(line.quantity || line.qty || 1),
       price: Number(line.price || line.rate || menuItem?.price || 0),
-      subtotal: line.subtotal ? Number(line.subtotal) : undefined,
       course: line.course || menuItem?.subcategory || 'Main',
       notes: line.notes || ''
     };
@@ -1270,26 +1140,24 @@ export class PosService {
       type: item.type,
       floorId: item.floorId || null,
       roomId: item.roomId || null,
-      tableId: item.tableId || table?.id,
+      tableId: table?.id,
       tableNo: item.tableNo || '',
       tableNumber: item.tableNo || '',
       roomNo: item.roomNo || '',
       roomNumber: item.roomNo || '',
       guestName: item.guestName || '',
-      serverId: item.serverId || server?.id,
+      serverId: server?.id,
       serverName: item.server,
       orderTakerId: server?.id,
       orderTakerName: item.server,
-      statusId: item.statusId,
       status: item.status,
       statusName: item.status,
       kotNo: item.kotNo || '',
       kotNumber: item.kotNo || '',
+      kotStatusId: item.kotStatusId,
+      kotStatusName: item.kotStatusName,
       openedAt: item.openedAt,
       notes: item.notes,
-      totalAmount: item.totalAmount,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
       orderLines: lines,
       lines,
       items: lines
@@ -1298,7 +1166,6 @@ export class PosService {
 
   private toApiOrderLine(line: PosOrderLine): ApiOrderLine {
     return {
-      id: line.id,
       itemId: line.itemId,
       menuId: line.itemId,
       menuItemId: line.itemId,
@@ -1307,83 +1174,9 @@ export class PosService {
       qty: Number(line.qty || 1),
       price: Number(line.price || 0),
       rate: Number(line.price || 0),
-      subtotal: Number(line.subtotal || (line.qty || 1) * (line.price || 0)),
       course: line.course,
       notes: line.notes
     };
-  }
-
-  private mapBill(item: ApiBill): PosBill {
-    return {
-      id: Number(item.id),
-      orderId: Number(item.orderId || 0),
-      billNo: item.billNumber || item.billNo || item.orderRef || `BILL-${item.id}`,
-      orderType: item.orderType || (item.orderFrom as OrderType) || 'TABLE',
-      tableNo: item.tableNumber || item.tableNo || '',
-      floorId: item.floorId ? Number(item.floorId) : null,
-      roomId: item.roomId ? Number(item.roomId) : null,
-      guestName: item.guestName || '',
-      roomNo: item.roomNumber || item.roomNo || '',
-      subtotal: Number(item.grossAmount ?? item.subtotal ?? 0),
-      discount: Number(item.discount || 0),
-      tax: Number(item.tax || 0),
-      compReason: item.compVoidReasonName || item.compReason || '',
-      paid: Number(item.paidAmount ?? item.paid ?? 0),
-      status: this.asBillStatus(item.statusName || item.status),
-      paymentModes: this.toTokens(item.paymentMethodName || item.paymentModes || 'Cash'),
-      postedToFolio: item.postToFolio === true || item.postedToFolio === true || item.isPostedToFolio === true
-    };
-  }
-
-  private toApiBill(item: PosBill): ApiBill {
-    const statusMaster = this.billStatusMasters().find(master =>
-      [master.value, master.code].some(value => String(value || '').toLowerCase() === String(item.status).toLowerCase())
-    );
-    const order = this.orders().find(o => o.id === item.orderId);
-
-    return {
-      // Old structure support
-      id: item.id,
-      orderId: item.orderId,
-      billNo: item.billNo,
-      billNumber: item.billNo,
-      orderType: item.orderType,
-      tableNo: item.tableNo,
-      tableNumber: item.tableNo,
-      floorId: item.floorId,
-      roomId: item.roomId || order?.roomId || undefined,
-      guestName: item.guestName,
-      roomNo: item.roomNo,
-      roomNumber: item.roomNo,
-      subtotal: item.subtotal,
-      discount: item.discount,
-      tax: item.tax,
-      compReason: item.compReason,
-      paid: item.paid,
-      statusId: statusMaster?.id ? Number(statusMaster.id) : undefined,
-      statusName: item.status,
-      status: item.status,
-      paymentModes: item.paymentModes.join(', '),
-      postedToFolio: item.postedToFolio,
-      isPostedToFolio: item.postedToFolio,
-
-      // Authoritative backend PosBillDTO fields
-      orderRef: order?.orderNo || String(item.orderId),
-      orderFrom: item.orderType,
-      tableId: order?.tableId || undefined,
-      grossAmount: item.subtotal,
-      netAmount: (item.subtotal || 0) + (item.tax || 0) - (item.discount || 0),
-      paidAmount: item.paid,
-      paymentMethodName: item.paymentModes.join(', '),
-      compVoidReasonName: item.compReason,
-      postToFolio: item.postedToFolio,
-      notes: order?.notes || ''
-    };
-  }
-
-  private asBillStatus(value?: string): BillStatus {
-    const normalized = String(value || 'OPEN').toUpperCase();
-    return this.billStatuses().find(status => status.toUpperCase() === normalized) || value || this.billStatuses()[0] || 'OPEN';
   }
 
   private asOutletType(value?: string): OutletType {

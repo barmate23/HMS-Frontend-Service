@@ -37,6 +37,10 @@ yarn-error.log
 testem.log
 /typings
 
-# System files
+# System and temp files
 .DS_Store
 Thumbs.db
+.codex/
+.codex-logs/
+*.log
+

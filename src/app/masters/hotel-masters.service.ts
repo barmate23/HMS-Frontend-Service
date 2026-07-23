@@ -188,17 +188,19 @@ export class HotelMastersService {
   }
 
   /** Load all entities concurrently from the backend */
-  loadAll() {
+  loadAll(searchText: string = '') {
     this.isLoading.set(true);
     this.loadError.set(null);
 
+    const searchStr = searchText ? `&searchText=${encodeURIComponent(searchText)}` : '';
+
     forkJoin({
-      hotels: this.http.get<StandardResponse<Hotel[]>>(`${this.baseUrl}/hotels/getAllHotels`),
-      floors: this.http.get<StandardResponse<Floor[]>>(`${this.baseUrl}/floors/getAllFloors`),
-      roomTypes: this.http.get<StandardResponse<RoomType[]>>(`${this.baseUrl}/roomTypes/getAllRoomTypes`),
-      rooms: this.http.get<StandardResponse<Room[]>>(`${this.baseUrl}/rooms/getAllRooms`),
-      ratePlans: this.http.get<StandardResponse<RatePlan[]>>(`${this.baseUrl}/ratePlans/getAllRatePlans`),
-      gstConfigs: this.http.get<StandardResponse<GstConfig[]>>(`${this.baseUrl}/gstRules/getAllGstRules`).pipe(
+      hotels: this.http.get<StandardResponse<Hotel[]>>(`${this.baseUrl}/hotels/getAllHotels?page=0&size=500${searchStr}`),
+      floors: this.http.get<StandardResponse<Floor[]>>(`${this.baseUrl}/floors/getAllFloors?page=0&size=500${searchStr}`),
+      roomTypes: this.http.get<StandardResponse<RoomType[]>>(`${this.baseUrl}/roomTypes/getAllRoomTypes?page=0&size=500${searchStr}`),
+      rooms: this.http.get<StandardResponse<Room[]>>(`${this.baseUrl}/rooms/getAllRooms?page=0&size=500${searchStr}`),
+      ratePlans: this.http.get<StandardResponse<RatePlan[]>>(`${this.baseUrl}/ratePlans/getAllRatePlans?page=0&size=500${searchStr}`),
+      gstConfigs: this.http.get<StandardResponse<GstConfig[]>>(`${this.baseUrl}/gstRules/getAllGstRules?page=0&size=500`).pipe(
         catchError(() => {
           const local = localStorage.getItem('hms-gst-config');
           const data = local ? JSON.parse(local) : defaultGstConfigs;

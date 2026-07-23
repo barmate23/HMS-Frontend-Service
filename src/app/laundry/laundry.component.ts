@@ -521,10 +521,25 @@ export class LaundryComponent implements OnInit, OnDestroy {
     this.updateDraftDateTime(field, time ? `${date}T${time}` : '');
   }
 
+  isSubmittingOrder = signal(false);
+
   saveDraft(): void {
-    const saved = this.laundry.saveOrder({ ...this.orderDraft(), status: 'Pickup Pending' });
-    this.selectedOrderId.set(saved.id);
-    this.switchTab('orders');
+    if (this.isSubmittingOrder()) return;
+    this.isSubmittingOrder.set(true);
+
+    this.laundry.saveOrder({ ...this.orderDraft(), status: 'Pickup Pending' }).subscribe({
+      next: res => {
+        this.isSubmittingOrder.set(false);
+        if (res.success && res.data) {
+          this.selectedOrderId.set(res.data.id);
+          this.switchTab('orders');
+          this.laundry.showSnackBar('Order Saved', 'Draft laundry order saved successfully.', 'success', 4000);
+        }
+      },
+      error: () => {
+        this.isSubmittingOrder.set(false);
+      }
+    });
   }
 
   reviewOrder(): void {
@@ -537,10 +552,23 @@ export class LaundryComponent implements OnInit, OnDestroy {
   }
 
   confirmOrderFromSummary(): void {
-    const saved = this.laundry.saveOrder({ ...this.orderDraft(), status: 'Pickup Pending' });
-    this.isOrderSummaryOpen.set(false);
-    this.selectedOrderId.set(saved.id);
-    this.switchTab('detail');
+    if (this.isSubmittingOrder()) return;
+    this.isSubmittingOrder.set(true);
+
+    this.laundry.saveOrder({ ...this.orderDraft(), status: 'Pickup Pending' }).subscribe({
+      next: res => {
+        this.isSubmittingOrder.set(false);
+        if (res.success && res.data) {
+          this.isOrderSummaryOpen.set(false);
+          this.selectedOrderId.set(res.data.id);
+          this.switchTab('detail');
+          this.laundry.showSnackBar('Order Confirmed', 'Laundry order created successfully.', 'success', 4000);
+        }
+      },
+      error: () => {
+        this.isSubmittingOrder.set(false);
+      }
+    });
   }
 
   canConfirmOrder(): boolean {
@@ -865,8 +893,16 @@ export class LaundryComponent implements OnInit, OnDestroy {
     return this.laundry.catalogue().some(item => item.active && this.priceForService(item, service) > 0);
   }
 
-  currentLineTotal(line: LaundryOrderLine): number {
-    return Number(line.quantity || 0) * Number(line.unitPrice || 0);
+  currentLineTax(line: LaundryOrderLine, orderGstRate?: number): number {
+    const subtotal = Number(line.quantity || 0) * Number(line.unitPrice || 0);
+    const rate = orderGstRate !== undefined && orderGstRate !== null ? orderGstRate : this.laundry.laundryGstRate();
+    return subtotal * (rate / 100);
+  }
+
+  currentLineTotal(line: LaundryOrderLine, orderGstRate?: number): number {
+    const subtotal = Number(line.quantity || 0) * Number(line.unitPrice || 0);
+    const tax = this.currentLineTax(line, orderGstRate);
+    return subtotal + tax;
   }
 
   formatOrderDateTime(value?: string): string {

@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 
 export type LaundryTab = 'dashboard' | 'create' | 'orders' | 'detail' | 'linen' | 'catalogue' | 'services';
 export type LaundryServiceType = string;
@@ -62,8 +63,15 @@ export interface LaundryOrder {
   postedToFolio: boolean;
   status: LaundryStatus;
   notes: string;
+  gstPercent?: number;
   createdAt: string;
   lines: LaundryOrderLine[];
+}
+
+export interface SnackBarNotification {
+  type: 'error' | 'success' | 'warning' | 'info';
+  title: string;
+  message: string;
 }
 
 export interface LaundryDashboardSummary {
@@ -196,6 +204,7 @@ interface ApiLaundryOrder {
   specialInstructions?: string;
   status?: string;
   totalAmount?: number;
+  gstPercent?: number;
   items?: ApiLaundryOrderItem[];
   createdAt?: string;
   updatedAt?: string;
@@ -289,15 +298,49 @@ export class LaundryService {
   readonly linenItems = signal<LinenItemMaster[]>([]);
   readonly linenDispatches = signal<LinenDispatch[]>([]);
 
+  readonly laundryGstRate = signal<number>(18);
+  readonly snackBar = signal<SnackBarNotification | null>(null);
+  private snackBarTimeout: any = null;
+
+  showSnackBar(title: string, message: string, type: 'error' | 'success' | 'warning' | 'info' = 'error', durationMs = 6000): void {
+    if (this.snackBarTimeout) clearTimeout(this.snackBarTimeout);
+    this.snackBar.set({ title, message, type });
+    this.snackBarTimeout = setTimeout(() => {
+      this.closeSnackBar();
+    }, durationMs);
+  }
+
+  closeSnackBar(): void {
+    if (this.snackBarTimeout) clearTimeout(this.snackBarTimeout);
+    this.snackBar.set(null);
+  }
+
   readonly catalogueMap = computed(() => new Map(this.catalogue().map(item => [item.id, item])));
   readonly linenItemMap = computed(() => new Map(this.linenItems().map(item => [item.id, item])));
 
   constructor() {
     this.loadDropdownMasters();
+    this.loadGstRules();
     this.loadHotelRooms();
     this.loadPriceMasters();
     this.loadOrders();
     this.loadDashboardData();
+  }
+
+  loadGstRules(): void {
+    this.http.get<StandardResponse<any[]>>(`${this.masterBase}/gstRules/getAllGstRules?page=0&size=500`).subscribe({
+      next: response => {
+        const rules = response.data || [];
+        const laundryRule = rules.find(r => r.serviceCategory && r.serviceCategory.toLowerCase() === 'laundry' && r.isActive !== false);
+        if (laundryRule) {
+          const rate = laundryRule.igstRate !== undefined && laundryRule.igstRate !== null 
+            ? Number(laundryRule.igstRate) 
+            : (Number(laundryRule.cgstRate || 0) + Number(laundryRule.sgstRate || 0));
+          this.laundryGstRate.set(rate);
+        }
+      },
+      error: error => console.error('[Laundry] Failed to load GST rules, using default 18%', error)
+    });
   }
 
   loadDropdownMasters(): void {
@@ -386,8 +429,34 @@ export class LaundryService {
     return this.dashboardData()?.activityFeed || this.buildLocalDashboardData().activityFeed;
   }
 
-  orderAmount(order: Pick<LaundryOrder, 'lines'>): number {
-    return order.lines.reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0), 0);
+  orderBaseAmount(order: Pick<LaundryOrder, 'lines'> & { totalAmount?: number }): number {
+    if (order.lines && order.lines.length > 0) {
+      return order.lines.reduce((sum, line) => {
+        return sum + Number(line.quantity || 0) * Number(line.unitPrice || 0);
+      }, 0);
+    }
+    return Number((order as any).totalAmount || 0);
+  }
+
+  orderGstPercent(order: Partial<LaundryOrder>): number {
+    if (order.gstPercent !== null && order.gstPercent !== undefined) {
+      return Number(order.gstPercent);
+    }
+    return 0;
+  }
+
+  orderTaxAmount(order: Pick<LaundryOrder, 'lines' | 'gstPercent'>): number {
+    const base = this.orderBaseAmount(order);
+    const rate = this.orderGstPercent(order);
+    return (base * rate) / 100;
+  }
+
+  orderTotalWithTax(order: Pick<LaundryOrder, 'lines' | 'gstPercent'>): number {
+    return this.orderBaseAmount(order) + this.orderTaxAmount(order);
+  }
+
+  orderAmount(order: Pick<LaundryOrder, 'lines' | 'gstPercent'>): number {
+    return this.orderTotalWithTax(order);
   }
 
   orderItemCount(order: Pick<LaundryOrder, 'lines'>): number {
@@ -469,7 +538,7 @@ export class LaundryService {
     });
   }
 
-  saveOrder(input: Partial<LaundryOrder>): LaundryOrder {
+  saveOrder(input: Partial<LaundryOrder>): Observable<{ success: boolean; data?: LaundryOrder; message?: string }> {
     const booking = this.activeBookings().find(item => item.bookingId === Number(input.bookingId)) || this.emptyBooking(input);
     const nextId = Math.max(0, ...this.orders().map(item => item.id)) + 1;
     const selectedServices = this.normalizedServiceSelection(input.serviceTypes || (input.serviceType ? this.splitServiceDisplay(input.serviceType) : [this.serviceTypes[0] || '']));
@@ -489,23 +558,43 @@ export class LaundryService {
       postedToFolio: input.postedToFolio ?? false,
       status: input.status || 'Pickup Pending',
       notes: input.notes || '',
+      gstPercent: input.gstPercent ?? Number(this.laundryGstRate() ?? 18),
       createdAt: input.createdAt || '',
       lines: input.lines?.length ? input.lines.map(line => this.patchOrderLinePrice(line, selectedServices)) : []
     };
-    this.orders.update(items => input.id ? items.map(existing => existing.id === order.id ? order : existing) : [order, ...items]);
-    this.dashboardData.set(this.buildLocalDashboardData());
+
+    const payload = this.toOrderPayload(order);
     const request$ = input.id
-      ? this.http.put<ApiLaundryOrder | StandardResponse<ApiLaundryOrder>>(`${this.apiBase}/updateOrder/${input.id}`, this.toOrderPayload(order))
-      : this.http.post<ApiLaundryOrder | StandardResponse<ApiLaundryOrder>>(`${this.apiBase}/createOrder`, this.toOrderPayload(order));
-    request$.subscribe({
-      next: response => {
-        this.upsertOrder(this.mapOrder(this.itemData(response) || this.toOrderPayload(order)));
+      ? this.http.put<ApiLaundryOrder | StandardResponse<ApiLaundryOrder>>(`${this.apiBase}/updateOrder/${input.id}`, payload)
+      : this.http.post<ApiLaundryOrder | StandardResponse<ApiLaundryOrder>>(`${this.apiBase}/createOrder`, payload);
+
+    return request$.pipe(
+      map(response => {
+        const stdResp = response as StandardResponse<ApiLaundryOrder>;
+        if (stdResp && stdResp.success === false) {
+          const errMsg = stdResp.message || (stdResp as any)?.error?.message || 'Failed to create laundry order.';
+          this.showSnackBar('Order Failed', errMsg, 'error', 7000);
+          return { success: false, message: errMsg };
+        }
+
+        const apiItem = this.itemData(response) || payload;
+        const savedOrder = this.mapOrder(apiItem);
+        this.upsertOrder(savedOrder);
         this.loadDashboardData();
-      },
-      error: error => console.error('[Laundry] Failed to save order', error)
-    });
-    if (order.billingMode === 'Room Account') this.postOrderToFolio(order.id);
-    return order;
+
+        if (savedOrder.billingMode === 'Room Account') {
+          this.postOrderToFolio(savedOrder.id);
+        }
+
+        return { success: true, data: savedOrder };
+      }),
+      catchError(err => {
+        const errMsg = err?.error?.message || err?.error?.error?.message || 'Unable to create laundry order.';
+        console.error('[Laundry] Failed to save order:', err);
+        this.showSnackBar('Order Failed', errMsg, 'error', 7000);
+        return of({ success: false, message: errMsg });
+      })
+    );
   }
 
   updateOrderStatus(id: number, status: LaundryStatus): void {
@@ -581,18 +670,47 @@ export class LaundryService {
   postOrderToFolio(id: number): void {
     const order = this.orders().find(item => item.id === id);
     if (!order || order.postedToFolio || order.billingMode !== 'Room Account') return;
-    const booking = this.activeBookings().find(item => item.bookingId === order.bookingId);
-    const posting: FolioPosting = {
-      id: Math.max(0, ...this.folioPostings().map(item => item.id)) + 1,
-      orderId: order.orderId,
-      folioId: booking?.folioId || `FOL-${order.room}`,
-      room: order.room,
-      guest: order.guest,
-      amount: this.orderAmount(order),
-      postedAt: this.nowDisplayDateTime()
+    const booking = this.activeBookings().find(item => item.bookingId === order.bookingId || item.room === order.room);
+    const roomId = Number(booking?.bookingId || order.bookingId || order.room || 0);
+    const totalAmount = this.orderAmount(order);
+    const taxTypeStr = `GST ${this.laundryGstRate()}%`;
+    const descStr = `Laundry Order ${order.orderId} - ${order.serviceType || 'Service'} (${this.orderItemCount(order)} items)`;
+
+    const payload = {
+      roomId: roomId,
+      source: 'Laundry',
+      amount: totalAmount,
+      taxType: taxTypeStr,
+      description: descStr
     };
-    this.folioPostings.update(items => [posting, ...items]);
-    this.orders.update(items => items.map(item => item.id === id ? { ...item, postedToFolio: true } : item));
+
+    this.http.post<StandardResponse<any>>(`${this.hmsBase}/billing/folios/postToFolio`, payload).subscribe({
+      next: (response: any) => {
+        if (response && response.success === false) {
+          const errorMsg = response.error?.details || response.error?.message || response.message || 'Failed to post order to folio';
+          this.showSnackBar('Failed to Post to Folio', errorMsg, 'error');
+          return;
+        }
+
+        const posting: FolioPosting = {
+          id: Math.max(0, ...this.folioPostings().map(item => item.id)) + 1,
+          orderId: order.orderId,
+          folioId: booking?.folioId || `FOL-${order.room}`,
+          room: order.room,
+          guest: order.guest,
+          amount: totalAmount,
+          postedAt: this.nowDisplayDateTime()
+        };
+        this.folioPostings.update(items => [posting, ...items]);
+        this.orders.update(items => items.map(item => item.id === id ? { ...item, postedToFolio: true } : item));
+        this.showSnackBar('Posted to Folio', `Laundry charge of ₹${totalAmount} posted to Room ${order.room}.`, 'success', 4000);
+      },
+      error: (error: any) => {
+        console.error('[Laundry] Failed to post to folio API:', error);
+        const errorMsg = error?.error?.error?.details || error?.error?.error?.message || error?.error?.details || error?.error?.message || error?.message || 'Failed to post order to folio';
+        this.showSnackBar('Failed to Post to Folio', errorMsg, 'error');
+      }
+    });
   }
 
   saveLinenDispatch(input: Partial<LinenDispatch>): LinenDispatch {
@@ -800,6 +918,7 @@ export class LaundryService {
       postedToFolio: false,
       status: this.asLaundryStatus(order.status),
       notes: order.specialInstructions || '',
+      gstPercent: order.gstPercent !== null && order.gstPercent !== undefined ? Number(order.gstPercent) : undefined,
       createdAt: this.displayDateTime(order.createdAt) || '',
       lines: (order.items || []).map(item => this.mapOrderLine(item, order.serviceType))
     };
@@ -854,6 +973,7 @@ export class LaundryService {
       specialInstructions: order.notes,
       status: order.status,
       totalAmount: this.orderAmount(order),
+      gstPercent: order.gstPercent !== null && order.gstPercent !== undefined ? Number(order.gstPercent) : Number(this.laundryGstRate() ?? 18),
       items: order.lines.map(line => ({
         priceMasterId: Number(line.catalogueId) > 0 ? Number(line.catalogueId) : undefined,
         itemName: line.itemName,

@@ -83,59 +83,62 @@
           <span class="total-badge">{{ money(draftTotal()) }}</span>
         </div>
 
-        <div class="form-grid">
-          <label class="field">
-            <span>Floor</span>
-            <select [ngModel]="selectedFloor()" (ngModelChange)="setDraftFloor($event)">
-              <option *ngFor="let floor of floors()" [value]="floor">{{ floor }}</option>
-            </select>
-          </label>
-          <label class="field wide">
-            <span>Room / Guest</span>
-            <select [ngModel]="orderDraft().bookingId" (ngModelChange)="setDraftBooking($event)">
-              <option *ngFor="let booking of roomsForSelectedFloor()" [value]="booking.bookingId">Room {{ booking.room }} - {{ booking.plan || 'Room' }}</option>
-            </select>
-          </label>
-          <label class="field">
-            <span>Billing Option</span>
-            <select [(ngModel)]="orderDraft().billingMode">
-              <option value="" disabled>Select billing option</option>
-              <option *ngFor="let option of laundry.billingOptions" [value]="option">{{ option }}</option>
-            </select>
-          </label>
-          <label class="field service-multi-field">
-            <span>Service Type</span>
+        <div class="create-order-layout">
+          <div class="main-form-fields">
+            <label class="field">
+              <span>Floor</span>
+              <select [ngModel]="selectedFloor()" (ngModelChange)="setDraftFloor($event)">
+                <option *ngFor="let floor of floors()" [value]="floor">{{ floor }}</option>
+              </select>
+            </label>
+            <label class="field wide">
+              <span>Room / Guest</span>
+              <select [ngModel]="orderDraft().bookingId" (ngModelChange)="setDraftBooking($event)">
+                <option *ngFor="let booking of roomsForSelectedFloor()" [value]="booking.bookingId">Room {{ booking.room }} - {{ booking.plan || 'Room' }}</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Billing Option</span>
+              <select [(ngModel)]="orderDraft().billingMode">
+                <option value="" disabled>Select billing option</option>
+                <option *ngFor="let option of laundry.billingOptions" [value]="option">{{ option }}</option>
+              </select>
+            </label>
+            <label class="field datetime-field">
+              <span>Pickup Datetime</span>
+              <div class="datetime-control">
+                <span class="material-icons-round">event</span>
+                <input type="date" [ngModel]="dateInputValue(orderDraft().pickupAt)" (ngModelChange)="updateDraftDatePart('pickupAt', $event)" aria-label="Pickup date">
+                <span class="divider"></span>
+                <span class="material-icons-round">schedule</span>
+                <input type="time" [ngModel]="timeInputValue(orderDraft().pickupAt)" (ngModelChange)="updateDraftTimePart('pickupAt', $event)" aria-label="Pickup time">
+              </div>
+            </label>
+            <label class="field datetime-field">
+              <span>Expected Delivery</span>
+              <div class="datetime-control">
+                <span class="material-icons-round">event_available</span>
+                <input type="date" [ngModel]="dateInputValue(orderDraft().expectedDeliveryAt)" (ngModelChange)="updateDraftDatePart('expectedDeliveryAt', $event)" aria-label="Expected delivery date">
+                <span class="divider"></span>
+                <span class="material-icons-round">schedule</span>
+                <input type="time" [ngModel]="timeInputValue(orderDraft().expectedDeliveryAt)" (ngModelChange)="updateDraftTimePart('expectedDeliveryAt', $event)" aria-label="Expected delivery time">
+              </div>
+            </label>
+            <label class="field full">
+              <span>Special Instructions</span>
+              <textarea rows="3" [(ngModel)]="orderDraft().notes" placeholder="Guest preferences, stain notes, delivery instructions..."></textarea>
+            </label>
+          </div>
+
+          <div class="service-type-side-panel">
+            <span class="panel-label">Service Type</span>
             <div class="service-multi-select">
               <button type="button" *ngFor="let service of laundry.serviceTypes" [class.active]="isDraftServiceSelected(service)" (click)="toggleDraftService(service)">
                 <span class="material-icons-round">{{ isDraftServiceSelected(service) ? 'check_circle' : 'add_circle' }}</span>
                 {{ service }}
               </button>
             </div>
-          </label>
-          <label class="field datetime-field">
-            <span>Pickup Datetime</span>
-            <div class="datetime-control">
-              <span class="material-icons-round">event</span>
-              <input type="date" [ngModel]="dateInputValue(orderDraft().pickupAt)" (ngModelChange)="updateDraftDatePart('pickupAt', $event)" aria-label="Pickup date">
-              <span class="divider"></span>
-              <span class="material-icons-round">schedule</span>
-              <input type="time" [ngModel]="timeInputValue(orderDraft().pickupAt)" (ngModelChange)="updateDraftTimePart('pickupAt', $event)" aria-label="Pickup time">
-            </div>
-          </label>
-          <label class="field datetime-field">
-            <span>Expected Delivery</span>
-            <div class="datetime-control">
-              <span class="material-icons-round">event_available</span>
-              <input type="date" [ngModel]="dateInputValue(orderDraft().expectedDeliveryAt)" (ngModelChange)="updateDraftDatePart('expectedDeliveryAt', $event)" aria-label="Expected delivery date">
-              <span class="divider"></span>
-              <span class="material-icons-round">schedule</span>
-              <input type="time" [ngModel]="timeInputValue(orderDraft().expectedDeliveryAt)" (ngModelChange)="updateDraftTimePart('expectedDeliveryAt', $event)" aria-label="Expected delivery time">
-            </div>
-          </label>
-          <label class="field full">
-            <span>Special Instructions</span>
-            <textarea rows="3" [(ngModel)]="orderDraft().notes" placeholder="Guest preferences, stain notes, delivery instructions..."></textarea>
-          </label>
+          </div>
         </div>
 
         <div class="line-toolbar">
@@ -145,26 +148,29 @@
 
         <div class="table-container">
           <table class="hms-table line-table">
-            <thead><tr><th>ITEM NAME</th><th>QUANTITY</th><th>UNIT PRICE</th><th>TOTAL</th><th>NOTES</th><th>ACTIONS</th></tr></thead>
+            <thead><tr><th>ITEM NAME</th><th>QUANTITY</th><th>UNIT PRICE</th><th>TAX (%)</th><th>TAX AMOUNT</th><th>TOTAL</th><th>NOTES</th><th>ACTIONS</th></tr></thead>
             <tbody>
               <tr *ngFor="let line of orderDraft().lines || []; let i = index; trackBy: trackByIndex">
                 <td>
                   <select [ngModel]="line.catalogueId" (ngModelChange)="updateLineItem(i, $event)">
                     <option *ngFor="let item of laundry.catalogue()" [value]="item.id" [disabled]="!item.active || laundry.priceForServices(item, orderDraft().serviceTypes || [orderDraft().serviceType || laundry.serviceTypes[0] || '']) === 0">{{ item.itemName }} · {{ item.category }}</option>
-                    <option [value]="0">Other / Manual Item</option>
                   </select>
-                  <input *ngIf="line.catalogueId === 0" class="manual-item-input" [ngModel]="line.itemName" (ngModelChange)="updateLineCustomName(i, $event)" placeholder="Type item name">
                 </td>
                 <td><input class="qty-input" type="number" min="1" [ngModel]="line.quantity" (ngModelChange)="updateLineQty(i, $event)"></td>
                 <td>
-                  <span *ngIf="line.catalogueId !== 0">{{ money(line.unitPrice) }}</span>
-                  <input *ngIf="line.catalogueId === 0" class="price-input" type="number" min="0" [ngModel]="line.unitPrice" (ngModelChange)="updateLineUnitPrice(i, $event)" placeholder="Rate">
+                  <span>{{ money(line.unitPrice) }}</span>
+                </td>
+                <td>
+                  <span class="tax-rate-badge">{{ laundry.laundryGstRate() }}%</span>
+                </td>
+                <td>
+                  <span>{{ money(currentLineTax(line)) }}</span>
                 </td>
                 <td><strong>{{ money(currentLineTotal(line)) }}</strong></td>
                 <td><input class="line-note-input" [ngModel]="line.notes" (ngModelChange)="updateLineNotes(i, $event)" placeholder="Per-item note"></td>
                 <td><button class="btn-icon delete" type="button" (click)="removeLine(i)"><span class="material-icons-round">delete_outline</span></button></td>
               </tr>
-              <tr *ngIf="!(orderDraft().lines || []).length"><td colspan="6" class="empty-state">Add laundry items to calculate the order total.</td></tr>
+              <tr *ngIf="!(orderDraft().lines || []).length"><td colspan="8" class="empty-state">Add laundry items to calculate the order total.</td></tr>
             </tbody>
           </table>
         </div>
@@ -184,7 +190,7 @@
         </div>
         <div class="table-container">
           <table class="hms-table order-table">
-            <thead><tr><th>ORDER ID</th><th>ROOM · GUEST</th><th>NO. OF ITEMS</th><th>SERVICE TYPE</th><th>EXPECTED DELIVERY</th><th>STATUS</th><th>AMOUNT</th><th>ACTIONS</th></tr></thead>
+            <thead><tr><th>ORDER ID</th><th>ROOM · GUEST</th><th>NO. OF ITEMS</th><th>SERVICE TYPE</th><th>EXPECTED DELIVERY</th><th>STATUS</th><th>TAX (GST)</th><th>TOTAL AMOUNT</th><th>ACTIONS</th></tr></thead>
             <tbody>
               <tr *ngFor="let order of filteredOrders()">
                 <td><strong>{{ order.orderId }}</strong><span class="subline">{{ formatOrderDateTime(order.createdAt) }}</span></td>
@@ -193,7 +199,13 @@
                 <td>{{ order.serviceType }}</td>
                 <td>{{ formatOrderDateTime(order.expectedDeliveryAt) }}</td>
                 <td><span class="status-chip" [class]="statusClass(order.status)">{{ order.status }}</span></td>
-                <td><strong>{{ money(laundry.orderAmount(order)) }}</strong><span class="subline">{{ order.billingMode }}</span></td>
+                <td>
+                  <div class="tax-cell">
+                    <span class="tax-badge">{{ laundry.orderGstPercent(order) }}% GST</span>
+                    <span class="tax-amount">{{ money(laundry.orderTaxAmount(order)) }}</span>
+                  </div>
+                </td>
+                <td><strong>{{ money(laundry.orderTotalWithTax(order)) }}</strong><span class="subline">{{ order.billingMode }}</span></td>
                 <td>
                   <div class="action-buttons">
                     <button class="btn-icon view" title="View" (click)="viewOrder(order)"><span class="material-icons-round">visibility</span></button>
@@ -202,7 +214,7 @@
                   </div>
                 </td>
               </tr>
-              <tr *ngIf="!filteredOrders().length"><td colspan="8" class="empty-state">No laundry orders match the selected tracking filters.</td></tr>
+              <tr *ngIf="!filteredOrders().length"><td colspan="9" class="empty-state">No laundry orders match the selected tracking filters.</td></tr>
             </tbody>
           </table>
         </div>
@@ -244,6 +256,7 @@
             <div><span>Service</span><strong>{{ order.serviceType }}</strong><small>{{ laundry.orderItemCount(order) }} items</small></div>
             <div><span>Pickup Time</span><strong>{{ formatOrderDateTime(order.pickupAt) }}</strong></div>
             <div><span>Delivery Time</span><strong>{{ formatOrderDateTime(order.expectedDeliveryAt) }}</strong></div>
+            <div><span>GST Tax</span><strong>{{ laundry.orderGstPercent(order) }}% GST</strong><small>{{ money(laundry.orderTaxAmount(order)) }}</small></div>
             <div><span>Billing Mode</span><strong>{{ order.billingMode }}</strong><small>{{ order.postedToFolio ? 'Posted to folio' : 'Not posted' }}</small></div>
             <div class="wide"><span>Notes</span><strong>{{ order.notes || 'No special instructions' }}</strong></div>
           </div>
@@ -258,12 +271,11 @@
             </div>
             <div class="table-container compact-item-table">
               <table class="hms-table">
-                <thead><tr><th>ITEM</th><th>QTY</th><th>UNIT PRICE</th><th>TOTAL</th><th>PER-ITEM NOTES</th></tr></thead>
-                <tbody><tr *ngFor="let line of order.lines"><td>{{ line.itemName }}</td><td>{{ line.quantity }}</td><td>{{ money(line.unitPrice) }}</td><td>{{ money(currentLineTotal(line)) }}</td><td>{{ line.notes || '-' }}</td></tr></tbody>
+                <thead><tr><th>ITEM</th><th>QTY</th><th>UNIT PRICE</th><th>TAX (%)</th><th>TAX AMOUNT</th><th>TOTAL</th><th>PER-ITEM NOTES</th></tr></thead>
+                <tbody><tr *ngFor="let line of order.lines"><td>{{ line.itemName }}</td><td>{{ line.quantity }}</td><td>{{ money(line.unitPrice) }}</td><td><span class="tax-rate-badge">{{ laundry.orderGstPercent(order) }}%</span></td><td>{{ money(currentLineTax(line, laundry.orderGstPercent(order))) }}</td><td><strong>{{ money(currentLineTotal(line, laundry.orderGstPercent(order))) }}</strong></td><td>{{ line.notes || '-' }}</td></tr></tbody>
               </table>
             </div>
             <div class="detail-footer">
-              <button class="secondary-btn"><span class="material-icons-round">print</span>Print Slip</button>
               <button class="secondary-btn" *ngIf="order.billingMode === 'Room Account' && !order.postedToFolio" (click)="laundry.postOrderToFolio(order.id)"><span class="material-icons-round">receipt_long</span>Post to Folio</button>
               <button class="confirm-btn" [disabled]="!nextStatus(order)" (click)="applyNextStatus(order)"><span class="material-icons-round">arrow_forward</span>{{ nextActionLabel(order) }}</button>
             </div>
@@ -774,11 +786,12 @@
       </div>
 
       <div class="summary-lines">
-        <div class="summary-line header"><span>Item</span><span>Qty</span><span>Rate</span><span>Total</span></div>
+        <div class="summary-line header"><span>Item</span><span>Qty</span><span>Rate</span><span>Tax ({{ laundry.laundryGstRate() }}%)</span><span>Total</span></div>
         <div class="summary-line" *ngFor="let line of draft.lines || []">
           <span><strong>{{ line.itemName || 'Laundry item' }}</strong><small>{{ line.notes || 'No item note' }}</small></span>
           <span>{{ line.quantity || 0 }}</span>
           <span>{{ money(line.unitPrice || 0) }}</span>
+          <span>{{ money(currentLineTax(line)) }}</span>
           <span>{{ money(currentLineTotal(line)) }}</span>
         </div>
       </div>
@@ -811,13 +824,15 @@
 
       <div class="item-modal-table">
         <table class="hms-table">
-          <thead><tr><th>ITEM</th><th>QTY</th><th>UNIT PRICE</th><th>TOTAL</th><th>PER-ITEM NOTES</th></tr></thead>
+          <thead><tr><th>ITEM</th><th>QTY</th><th>UNIT PRICE</th><th>TAX (%)</th><th>TAX AMOUNT</th><th>TOTAL</th><th>PER-ITEM NOTES</th></tr></thead>
           <tbody>
             <tr *ngFor="let line of order.lines">
               <td><strong>{{ line.itemName }}</strong></td>
               <td>{{ line.quantity }}</td>
               <td>{{ money(line.unitPrice) }}</td>
-              <td><strong>{{ money(currentLineTotal(line)) }}</strong></td>
+              <td><span class="tax-rate-badge">{{ laundry.orderGstPercent(order) }}%</span></td>
+              <td>{{ money(currentLineTax(line, laundry.orderGstPercent(order))) }}</td>
+              <td><strong>{{ money(currentLineTotal(line, laundry.orderGstPercent(order))) }}</strong></td>
               <td>{{ line.notes || '-' }}</td>
             </tr>
           </tbody>
@@ -826,7 +841,6 @@
 
       <div class="item-modal-actions">
         <button class="secondary-btn" type="button" (click)="closeItemDetails()">Close</button>
-        <button class="secondary-btn" type="button"><span class="material-icons-round">print</span>Print Slip</button>
       </div>
     </section>
   </div>
@@ -850,5 +864,22 @@
         <button class="danger-btn" type="button" (click)="confirmDelete()"><span class="material-icons-round">delete_outline</span>Delete</button>
       </div>
     </section>
+  </div>
+
+  <!-- Floating User-Appealing SnackBar Notification -->
+  <div class="hms-snackbar-container" *ngIf="laundry.snackBar() as snack" [class]="snack.type">
+    <div class="snackbar-content">
+      <span class="material-icons-round snackbar-icon" *ngIf="snack.type === 'error'">error_outline</span>
+      <span class="material-icons-round snackbar-icon" *ngIf="snack.type === 'success'">check_circle_outline</span>
+      <span class="material-icons-round snackbar-icon" *ngIf="snack.type === 'warning'">warning_amber</span>
+      <span class="material-icons-round snackbar-icon" *ngIf="snack.type === 'info'">info</span>
+      <div class="snackbar-text">
+        <strong class="snackbar-title">{{ snack.title }}</strong>
+        <p class="snackbar-message">{{ snack.message }}</p>
+      </div>
+    </div>
+    <button class="snackbar-close-btn" type="button" (click)="laundry.closeSnackBar()">
+      <span class="material-icons-round">close</span>
+    </button>
   </div>
 </div>

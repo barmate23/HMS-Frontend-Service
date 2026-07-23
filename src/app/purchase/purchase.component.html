@@ -365,7 +365,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let line of poDraft().lineItems; let i = index">
+                  <tr *ngFor="let line of poDraft().lineItems; let i = index; trackBy: trackByIndex">
                     <td class="row-num">{{ i + 1 }}</td>
                     <td>
                       <select class="line-input" [ngModel]="line.itemId || null" (ngModelChange)="onPoItemSelect(i, $event)">

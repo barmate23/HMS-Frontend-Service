@@ -22,6 +22,9 @@ export interface ArrivalApiItem {
   roomTypeName: string;
   eta: string;
   balance: number;
+  gstPercent?: number;
+  taxAmount?: number;
+  taxationAmount?: number;
   bookingStatus: string;
   checkInDate: string;
   checkOutDate: string;

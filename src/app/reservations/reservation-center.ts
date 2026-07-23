@@ -20,6 +20,9 @@ interface Reservation {
   status: 'CHECKED_IN' | 'CHECKED_OUT' | 'CONFIRMED' | 'PENDING' | 'CANCELLED' | 'NO_SHOW';
   billingAmount: number;
   paidAmount: number;
+  gstPercent: number;
+  taxAmount: number;
+  totalWithTax: number;
   nights?: number;
   adults?: number;
   children?: number;
@@ -487,6 +490,10 @@ export class ReservationCenter implements OnInit, OnDestroy {
     const guestName = item.guestFullName || item.guestName || `${firstName} ${lastName}`.trim() || item.billingName || 'Guest';
     const checkIn = item.checkInDate || item.arrivalDate || item.checkIn || '';
     const checkOut = item.checkOutDate || item.departureDate || item.checkOut || '';
+    const billingAmount = Number(item.billingAmount ?? item.totalAmount ?? item.grandTotal ?? 0);
+    const gstPercent = Number(item.gstPercent ?? 0);
+    const taxAmount = Number(item.taxAmount ?? item.taxationAmount ?? ((billingAmount * gstPercent) / 100));
+    const totalWithTax = billingAmount + taxAmount;
 
     return {
       id: String(item.id ?? item.bookingId ?? item.reservationId ?? ''),
@@ -499,8 +506,11 @@ export class ReservationCenter implements OnInit, OnDestroy {
       checkIn: this.formatDateLabel(checkIn),
       checkOut: this.formatDateLabel(checkOut),
       status: this.normalizeStatus(item.reservationStatus || item.status),
-      billingAmount: Number(item.billingAmount ?? item.totalAmount ?? item.grandTotal ?? 0),
+      billingAmount,
       paidAmount: Number(item.paidAmount ?? item.amountPaid ?? 0),
+      gstPercent,
+      taxAmount,
+      totalWithTax,
       nights: Number(item.numberOfNights ?? item.nights ?? 0),
       adults: Number(item.numberOfAdults ?? item.adults ?? 0),
       children: Number(item.numberOfChildren ?? item.children ?? 0),
@@ -509,12 +519,15 @@ export class ReservationCenter implements OnInit, OnDestroy {
     };
   }
 
-  private normalizeStatus(status: string): Reservation['status'] {
-    if (status === 'CHECKEDIN') return 'CHECKED_IN';
-    if (status === 'CHECKED_OUT') return 'CHECKED_OUT';
-    if (status === 'CANCELLED') return 'CANCELLED';
-    if (status === 'NO_SHOW') return 'NO_SHOW';
-    if (status === 'PENDING') return 'PENDING';
+  private normalizeStatus(status: string | undefined | null): Reservation['status'] {
+    if (!status) return 'CONFIRMED';
+    const s = String(status).trim().toUpperCase().replace(/[\s-]+/g, '_');
+    if (s === 'CHECKED_IN' || s === 'CHECKEDIN' || s === 'CHECKIN') return 'CHECKED_IN';
+    if (s === 'CHECKED_OUT' || s === 'CHECKEDOUT' || s === 'CHECKOUT') return 'CHECKED_OUT';
+    if (s === 'CANCELLED' || s === 'CANCELED') return 'CANCELLED';
+    if (s === 'NO_SHOW' || s === 'NOSHOW') return 'NO_SHOW';
+    if (s === 'PENDING') return 'PENDING';
+    if (s === 'CONFIRMED') return 'CONFIRMED';
     return 'CONFIRMED';
   }
 
@@ -645,8 +658,8 @@ export class ReservationCenter implements OnInit, OnDestroy {
     return [];
   }
 
-  detailStatus(details: any): string {
-    return details?.reservationStatus || details?.status || '-';
+  detailStatus(details: any): Reservation['status'] {
+    return this.normalizeStatus(details?.reservationStatus || details?.status);
   }
 
   detailPrimaryRoom(details: any): string {

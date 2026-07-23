@@ -21,6 +21,8 @@ interface CategoryOption {
 export class MasterDataConfigurationComponent {
   private readonly setup = inject(SetupService);
 
+  readonly allMasterRecords = signal<CommonMaster[]>([]);
+
   readonly categories = signal<CategoryOption[]>([
     { label: 'Departments', code: 'DEPARTMENT', description: 'Operational departments used across users and workflows.' },
     { label: 'Outlet Types', code: 'OUTLET_TYPE', description: 'Restaurant, cafe, room service and other POS outlet types.' },
@@ -32,7 +34,11 @@ export class MasterDataConfigurationComponent {
     { label: 'Order Statuses', code: 'ORDER_STATUS', description: 'POS order workflow statuses.' },
     { label: 'Bill Statuses', code: 'BILL_STATUS', description: 'Billing lifecycle statuses.' },
     { label: 'Payment Modes', code: 'PAYMENT_MODE', description: 'Allowed bill settlement methods.' },
-    { label: 'Void Reasons', code: 'VOID_REASON', description: 'Standard reasons for voids and reversals.' }
+    { label: 'Void Reasons', code: 'VOID_REASON', description: 'Standard reasons for voids and reversals.' },
+    { label: 'SOP Frequencies', code: 'SOP_FREQUENCY', description: 'Standard operating procedure frequencies.' },
+    { label: 'Responsible Roles', code: 'RESPONSIBLE_ROLE', description: 'Staff and operational responsible roles.' },
+    { label: 'Priorities', code: 'PRIORITY', description: 'Task and ticket priority levels.' },
+    { label: 'Lost & Found Categories', code: 'LOST_FOUND_CAT', description: 'Lost and found item classifications.' }
   ]);
 
   readonly activeCategory = signal('DEPARTMENT');
@@ -80,26 +86,73 @@ export class MasterDataConfigurationComponent {
     this.activeCategory.set(code);
     this.search.set('');
     this.statusFilter.set('ALL');
-    this.loadRecords();
+    if (this.allMasterRecords().length > 0) {
+      this.filterRecordsForActiveCategory();
+    } else {
+      this.loadRecords();
+    }
   }
 
   loadRecords(): void {
-    const category = this.activeCategory();
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    this.setup.getCommonMasters(category).subscribe({
-      next: records => {
-        this.records.set(records);
+    this.setup.getAllCommonMasters().subscribe({
+      next: allData => {
+        this.allMasterRecords.set(allData);
+
+        const existingCodes = new Set(this.categories().map(c => c.code));
+        const newCatOptions: CategoryOption[] = [];
+
+        allData.forEach(item => {
+          if (item.category && !existingCodes.has(item.category)) {
+            existingCodes.add(item.category);
+            newCatOptions.push({
+              label: this.formatCategoryLabel(item.category),
+              code: item.category,
+              description: `${this.formatCategoryLabel(item.category)} master data entries.`
+            });
+          }
+        });
+
+        if (newCatOptions.length > 0) {
+          this.categories.update(cats => [...cats, ...newCatOptions]);
+        }
+
+        this.filterRecordsForActiveCategory();
         this.isLoading.set(false);
       },
       error: error => {
-        console.error('[Setup] Unable to load common masters', error);
-        this.records.set([]);
-        this.errorMessage.set(error?.error?.message || 'Unable to load master data records.');
-        this.isLoading.set(false);
+        console.warn('[Setup] getAllCommonMaster failed, falling back to getCommonMaster by category', error);
+        this.setup.getCommonMasters(this.activeCategory()).subscribe({
+          next: records => {
+            this.records.set(records);
+            this.isLoading.set(false);
+          },
+          error: err => {
+            console.error('[Setup] Unable to load common masters', err);
+            this.records.set([]);
+            this.errorMessage.set(err?.error?.message || 'Unable to load master data records.');
+            this.isLoading.set(false);
+          }
+        });
       }
     });
+  }
+
+  private filterRecordsForActiveCategory(): void {
+    const category = this.activeCategory();
+    const all = this.allMasterRecords();
+    if (all.length > 0) {
+      this.records.set(all.filter(r => r.category === category));
+    }
+  }
+
+  private formatCategoryLabel(code: string): string {
+    return code
+      .split('_')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
   }
 
   openCreate(): void {

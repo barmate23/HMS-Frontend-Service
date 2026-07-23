@@ -21,6 +21,7 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   public readonly mastersService = inject(HotelMastersService);
   private readonly router = inject(Router);
   private routerSub?: Subscription;
+  private searchDebounceTimer: any;
 
   // Active tab state: 'hotels' | 'floors' | 'room-types' | 'rooms' | 'rate-plans'
   activeTab = signal<MasterTab>('hotels');
@@ -73,6 +74,19 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     if (this.routerSub) {
       this.routerSub.unsubscribe();
     }
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+    }
+  }
+
+  onSearchChange(value: string): void {
+    this.searchQuery.set(value);
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+    }
+    this.searchDebounceTimer = setTimeout(() => {
+      this.mastersService.loadAll(value);
+    }, 400);
   }
 
   private updateTabFromUrl(url: string) {
@@ -103,10 +117,10 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     const query = this.searchQuery().toLowerCase().trim();
     if (!query) return list;
     return list.filter(h => 
-      h.name.toLowerCase().includes(query) ||
-      h.city.toLowerCase().includes(query) ||
-      h.email.toLowerCase().includes(query) ||
-      h.phone.includes(query)
+      (h.name || '').toLowerCase().includes(query) ||
+      (h.city || '').toLowerCase().includes(query) ||
+      (h.email || '').toLowerCase().includes(query) ||
+      (h.phone || '').includes(query)
     );
   });
 
@@ -116,10 +130,10 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     const hotels = this.mastersService.hotelsMap();
     return list.filter(f => {
       const hotel = hotels.get(f.hotelId);
-      const hotelName = hotel ? hotel.name.toLowerCase() : '';
+      const hotelName = hotel ? (hotel.name || '').toLowerCase() : '';
       const matchesQuery = !query || 
-        f.floorNumber.toLowerCase().includes(query) ||
-        f.telephone.includes(query) ||
+        (f.floorNumber || '').toLowerCase().includes(query) ||
+        (f.telephone || '').includes(query) ||
         hotelName.includes(query);
       return matchesQuery;
     });
@@ -131,10 +145,10 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     const hotels = this.mastersService.hotelsMap();
     return list.filter(rt => {
       const hotel = hotels.get(rt.hotelId);
-      const hotelName = hotel ? hotel.name.toLowerCase() : '';
+      const hotelName = hotel ? (hotel.name || '').toLowerCase() : '';
       const matchesQuery = !query || 
-        rt.name.toLowerCase().includes(query) ||
-        rt.description.toLowerCase().includes(query) ||
+        (rt.name || '').toLowerCase().includes(query) ||
+        (rt.description || '').toLowerCase().includes(query) ||
         hotelName.includes(query);
       return matchesQuery;
     });
@@ -150,19 +164,19 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     return list.filter(r => {
       const floor = floors.get(r.floorId);
       const roomType = roomTypes.get(r.typeId);
-      const floorNum = floor ? floor.floorNumber.toLowerCase() : '';
-      const typeName = roomType ? roomType.name.toLowerCase() : '';
+      const floorNum = floor ? (floor.floorNumber || '').toLowerCase() : '';
+      const typeName = roomType ? (roomType.name || '').toLowerCase() : '';
       
       let hotelName = '';
       if (floor) {
         const hotel = hotels.get(floor.hotelId);
-        if (hotel) hotelName = hotel.name.toLowerCase();
+        if (hotel) hotelName = (hotel.name || '').toLowerCase();
       }
 
       const matchesQuery = !query || 
-        r.roomNumber.toLowerCase().includes(query) ||
-        r.status.toLowerCase().includes(query) ||
-        r.telephone.includes(query) ||
+        (r.roomNumber || '').toLowerCase().includes(query) ||
+        (r.status || '').toLowerCase().includes(query) ||
+        (r.telephone || '').includes(query) ||
         floorNum.includes(query) ||
         typeName.includes(query) ||
         hotelName.includes(query);

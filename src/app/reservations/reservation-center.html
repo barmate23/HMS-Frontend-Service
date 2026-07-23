@@ -114,7 +114,19 @@
             <th>
               <div class="header-content">
                 <span class="material-icons-round billing-icon">payments</span>
-                BILLING
+                BASE RATE
+              </div>
+            </th>
+            <th>
+              <div class="header-content">
+                <span class="material-icons-round tax-icon">percent</span>
+                TAX (GST)
+              </div>
+            </th>
+            <th>
+              <div class="header-content">
+                <span class="material-icons-round total-icon">receipt</span>
+                TOTAL AMOUNT
               </div>
             </th>
             <th>
@@ -162,9 +174,18 @@
               </span>
             </td>
             <td>
+              <span class="amount">₹{{ res.billingAmount }}</span>
+            </td>
+            <td>
+              <div class="tax-cell">
+                <span class="tax-badge">{{ res.gstPercent }}% GST</span>
+                <span class="tax-amount">₹{{ res.taxAmount }}</span>
+              </div>
+            </td>
+            <td>
               <div class="billing-cell">
-                <span class="amount">₹{{res.billingAmount}}</span>
-                <span class="paid" *ngIf="res.paidAmount > 0">PAID: ₹{{res.paidAmount}}</span>
+                <strong class="total-payable-val">₹{{ res.totalWithTax }}</strong>
+                <span class="paid" *ngIf="res.paidAmount > 0">PAID: ₹{{ res.paidAmount }}</span>
               </div>
             </td>
             <td>
@@ -394,6 +415,7 @@
         </div>
         <div class="detail-grid billing">
           <div><span>Billing Name</span><strong>{{ details.billingName || '-' }}</strong></div>
+          <div><span>GST Tax Rate</span><strong>{{ details.gstPercent || 0 }}% (₹{{ ((details.grandTotal || 0) * (details.gstPercent || 0) / 100).toFixed(2) }})</strong></div>
           <div><span>Paid Amount</span><strong>{{ detailMoney(details.paidAmount) }}</strong></div>
           <div class="wide"><span>Billing Address</span><strong>{{ details.billingAddress || '-' }}</strong></div>
           <div class="wide"><span>Notes</span><strong>{{ details.notes || '-' }}</strong></div>

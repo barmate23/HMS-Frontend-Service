@@ -21,10 +21,6 @@
           <span class="material-icons-round">description</span>
           Quotations
         </button>
-        <button class="tab-btn" [class.active]="currentTab() === 'sales'" (click)="setTab('sales')">
-          <span class="material-icons-round">badge</span>
-          Staff
-        </button>
       </div>
     </div>
 
@@ -582,50 +578,7 @@
       </div>
     </div>
 
-    <!-- Tab View: Sales Team screen -->
-    <div class="tab-content-container animate-fade-in" *ngIf="currentTab() === 'sales'">
-      <div class="modern-card">
-        <div class="card-header">
-          <h2 class="card-title">CRM Sales Representatives</h2>
-          <div class="header-actions">
-            <button type="button" class="btn-primary" (click)="isSalesModalOpen.set(true)">
-              <span class="material-icons-round">add</span>
-              <span>Add Staff</span>
-            </button>
-          </div>
-        </div>
 
-        <div class="table-container">
-          <table class="premium-table hk-grid-table hk-hover-table task-grid">
-            <thead>
-              <tr>
-                <th style="width: 25%;">REP NAME</th>
-                <th style="width: 20%;">DESIGNATION</th>
-                <th style="width: 15%;">PHONE NO.</th>
-                <th style="width: 20%;">EMAIL ADDRESS</th>
-                <th style="width: 20%; text-align: center;">MONTHLY TARGET</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let s of salesTeam()">
-                <td>
-                  <div class="staff-cell">
-                    <span class="avatar-sm">{{ getInitials(s.name) }}</span>
-                    <strong class="staff-name">{{ s.name }}</strong>
-                  </div>
-                </td>
-                <td>{{ s.designation }}</td>
-                <td>{{ s.phone }}</td>
-                <td>{{ s.email || '-' }}</td>
-                <td style="text-align: center;">
-                  <strong>{{ formatCurrency(s.monthlyTarget) }}</strong>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
 
   </div>
 
@@ -709,62 +662,7 @@
     </div>
   </div>
 
-  <!-- Modal: Add Sales Staff -->
-  <div class="crm-modal-overlay" *ngIf="isSalesModalOpen()" (click)="isSalesModalOpen.set(false)">
-    <div class="crm-modal-card animate-slide-down" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <div class="modal-title">
-          <span class="material-icons-round text-primary">badge</span>
-          <h3>Add Sales Representative</h3>
-        </div>
-        <button type="button" class="close-btn" (click)="isSalesModalOpen.set(false)">
-          <span class="material-icons-round">close</span>
-        </button>
-      </div>
 
-      <form (submit)="onSubmitSalesMember(); $event.preventDefault()" class="modal-body-form">
-        <div class="form-grid-modal">
-          <div class="input-group full">
-            <label>Staff Full Name <span class="required-star">*</span></label>
-            <input type="text" placeholder="Enter staff name" [(ngModel)]="newSalesMemberObj.name" name="salesName" required>
-          </div>
-
-          <div class="input-group">
-            <label>Designation</label>
-            <select [(ngModel)]="newSalesMemberObj.designation" name="salesDesignation">
-              <option>Front Office Executive</option>
-              <option>Sales Manager</option>
-              <option>Reservation Executive</option>
-              <option>General Manager</option>
-            </select>
-          </div>
-
-          <div class="input-group">
-            <label>Phone Number <span class="required-star">*</span></label>
-            <input type="tel" placeholder="Mobile number" [(ngModel)]="newSalesMemberObj.phone" name="salesPhone" required>
-          </div>
-
-          <div class="input-group">
-            <label>Email Address</label>
-            <input type="email" placeholder="staff@hotel.com" [(ngModel)]="newSalesMemberObj.email" name="salesEmail">
-          </div>
-
-          <div class="input-group">
-            <label>Monthly Target (₹)</label>
-            <input type="number" min="0" placeholder="500000" [(ngModel)]="newSalesMemberObj.monthlyTarget" name="salesTarget">
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="isSalesModalOpen.set(false)">Cancel</button>
-          <button type="submit" class="btn btn-primary green-btn-alt">
-            <span class="material-icons-round inline-icon">check_circle</span>
-            Save Representative
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
 
 
   <!-- Modal: View Proposal Details Preview -->

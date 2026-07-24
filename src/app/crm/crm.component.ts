@@ -311,18 +311,16 @@ export class CrmComponent implements OnInit {
     if (url.includes('/crm/tasks')) this.currentTab.set('list');
     else if (url.includes('/crm/new')) this.currentTab.set('new');
     else if (url.includes('/crm/quotations')) this.currentTab.set('quotations');
-    else if (url.includes('/crm/staff')) this.currentTab.set('sales');
     else if (url.includes('/crm/dashboard')) this.currentTab.set('dashboard');
   }
 
-  setTab(tab: 'dashboard' | 'new' | 'list' | 'quotations' | 'sales') {
+  setTab(tab: 'dashboard' | 'new' | 'list' | 'quotations') {
     this.currentTab.set(tab);
     const routeMap = {
       dashboard: '/crm/dashboard',
       list: '/crm/tasks',
       new: '/crm/new',
-      quotations: '/crm/quotations',
-      sales: '/crm/staff'
+      quotations: '/crm/quotations'
     };
     this.router.navigateByUrl(routeMap[tab]);
   }
@@ -335,7 +333,6 @@ export class CrmComponent implements OnInit {
 
   // Modal forms trigger
   isQuotationModalOpen = signal(false);
-  isSalesModalOpen = signal(false);
   isQuotationViewModalOpen = signal(false);
   selectedQuotation = signal<Quotation | null>(null);
   linkedEnquiry = signal<Enquiry | null>(null);
@@ -959,42 +956,7 @@ export class CrmComponent implements OnInit {
     }
   }
 
-  // Create Sales Person
-  onSubmitSalesMember() {
-    if (!this.newSalesMemberObj.name || !this.newSalesMemberObj.phone) {
-      alert('Please enter Name and Phone number');
-      return;
-    }
 
-    const newRecord: SalesMember = {
-      name: this.newSalesMemberObj.name,
-      designation: this.newSalesMemberObj.designation,
-      phone: this.newSalesMemberObj.phone,
-      email: this.newSalesMemberObj.email,
-      monthlyTarget: Number(this.newSalesMemberObj.monthlyTarget) || 0
-    };
-
-    this.salesTeam.update(list => [...list, newRecord]);
-    alert(`Sales Representative ${newRecord.name} successfully registered!`);
-
-    this.isSalesModalOpen.set(false);
-
-    // Reset Form
-    this.newSalesMemberObj = {
-      name: '',
-      designation: 'Front Office Executive',
-      phone: '',
-      email: '',
-      monthlyTarget: 500000
-    };
-  }
-
-  // Delete Sales Representative
-  deleteSalesMember(name: string) {
-    if (confirm(`Are you sure you want to delete representative ${name}?`)) {
-      this.salesTeam.update(list => list.filter(s => s.name !== name));
-    }
-  }
 
   // View Proposal / Quotation details preview modal
   viewQuotationDetails(q: Quotation) {

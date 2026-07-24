@@ -1,7 +1,7 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, NavigationEnd } from '@angular/router';
+import { Router, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CrmApiService, EnquiryApiItem } from './crm-api.service';
@@ -71,6 +71,7 @@ export class CrmComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly crmApi = inject(CrmApiService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly route = inject(ActivatedRoute);
 
   currentTab = signal<'dashboard' | 'new' | 'list' | 'quotations' | 'sales'>('dashboard');
   isLoading = signal(false);
@@ -84,8 +85,63 @@ export class CrmComponent implements OnInit {
       this.syncTabFromUrl(event.urlAfterRedirects || event.url);
     });
 
+    // Check for query parameters for editing (handles route-switching state recreation)
+    this.route.queryParams.subscribe(params => {
+      const editId = params['edit'];
+      if (editId) {
+        this.loadEnquiryForEdit(Number(editId));
+      } else {
+        this.editingEnquiryId.set(null);
+      }
+    });
+
     // Load enquiries from backend API
     this.loadEnquiries();
+  }
+
+  // Load a single enquiry to patch form fields during editing
+  loadEnquiryForEdit(id: number) {
+    this.isLoading.set(true);
+    this.crmApi.getEnquiryById(id).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.editingEnquiryId.set(id);
+          const item = res.data;
+          this.newEnquiry = {
+            salutation: item.salutation || 'Mr.',
+            guestName: item.guestName,
+            companyName: item.companyName || '',
+            phone: item.phone,
+            altPhone: item.altPhone || '',
+            email: item.email || '',
+            address: item.address || '',
+            city: item.city || '',
+            state: item.state || '',
+            gstNumber: item.gstNumber || '',
+            enquiryType: item.enquiryType || 'Room',
+            source: item.source || '',
+            checkIn: item.checkIn || '',
+            checkOut: item.checkOut || '',
+            rooms: item.rooms || 1,
+            adults: item.adults || 2,
+            children: item.children || 0,
+            mealPlan: item.mealPlan || 'CP',
+            budget: item.budget || 0,
+            expectedRevenue: item.expectedRevenue || 0,
+            salesPerson: item.salesPerson || '',
+            priority: item.priority || 'Medium',
+            nextFollowUp: item.nextFollowUp || '',
+            message: item.message || ''
+          };
+        }
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        console.error('Failed to load enquiry for edit:', err);
+        this.snackBar.open('Failed to load enquiry details', 'Close', { duration: 3000 });
+        this.isLoading.set(false);
+      }
+    });
   }
 
   loadEnquiries(search?: string) {
@@ -277,40 +333,13 @@ export class CrmComponent implements OnInit {
     });
   }
 
-  // Set form to edit mode with existing record data
+  // Navigate to edit route with query parameters (triggers OnInit loading on the active tab instance)
   editEnquiry(item: Enquiry) {
     if (!item.dbId) {
       this.snackBar.open('Cannot edit enquiry: missing database ID', 'Close', { duration: 3000 });
       return;
     }
-    this.editingEnquiryId.set(item.dbId);
-    this.newEnquiry = {
-      salutation: item.salutation || 'Mr.',
-      guestName: item.guestName,
-      companyName: item.companyName || '',
-      phone: item.phone,
-      altPhone: item.altPhone || '',
-      email: item.email || '',
-      address: item.address || '',
-      city: item.city || '',
-      state: item.state || '',
-      gstNumber: item.gstNumber || '',
-      enquiryType: item.enquiryType || 'Room',
-      source: item.source || '',
-      checkIn: item.checkIn || '',
-      checkOut: item.checkOut || '',
-      rooms: item.rooms || 1,
-      adults: item.adults || 2,
-      children: item.children || 0,
-      mealPlan: item.mealPlan || 'CP',
-      budget: item.budget || 0,
-      expectedRevenue: item.expectedRevenue || 0,
-      salesPerson: item.salesPerson || '',
-      priority: item.priority || 'Medium',
-      nextFollowUp: item.nextFollowUp || '',
-      message: item.message || ''
-    };
-    this.setTab('new');
+    this.router.navigate(['/crm/new'], { queryParams: { edit: item.dbId } });
   }
 
   // Cancel form edit/creation and clear fields
@@ -342,7 +371,7 @@ export class CrmComponent implements OnInit {
       nextFollowUp: '',
       message: ''
     };
-    this.setTab('list');
+    this.router.navigate(['/crm/tasks']);
   }
 
   // Toggle detail rows (fallback or for display logic if needed)

@@ -404,15 +404,15 @@
               <div class="card-body">
                 
                 <div class="grid-3">
-                  <div class="input-group">
-                    <label>Enquiry Type</label>
-                    <select [(ngModel)]="newEnquiry.enquiryType" name="enquiryType">
-                      <option>Room</option>
-                      <option>Event</option>
-                      <option>Banquet</option>
-                      <option>Corporate</option>
-                      <option>Other</option>
-                    </select>
+                  <div class="input-group span-3">
+                    <label>Enquiry Type (Select one or more)</label>
+                    <div class="type-pills-container">
+                      <button type="button" class="type-pill" [class.selected]="isTypeSelected('Room')" (click)="toggleEnquiryType('Room')">Room</button>
+                      <button type="button" class="type-pill" [class.selected]="isTypeSelected('Event')" (click)="toggleEnquiryType('Event')">Event</button>
+                      <button type="button" class="type-pill" [class.selected]="isTypeSelected('Banquet')" (click)="toggleEnquiryType('Banquet')">Banquet</button>
+                      <button type="button" class="type-pill" [class.selected]="isTypeSelected('Corporate')" (click)="toggleEnquiryType('Corporate')">Corporate</button>
+                      <button type="button" class="type-pill" [class.selected]="isTypeSelected('Other')" (click)="toggleEnquiryType('Other')">Other</button>
+                    </div>
                   </div>
                   <div class="input-group">
                     <label>Source Type</label>

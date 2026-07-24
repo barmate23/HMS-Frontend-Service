@@ -537,6 +537,26 @@ export class CrmComponent implements OnInit {
     }
   }
 
+  isTypeSelected(type: string): boolean {
+    if (!this.newEnquiry.enquiryType) return false;
+    const types = this.newEnquiry.enquiryType.split(',').map(t => t.trim());
+    return types.includes(type);
+  }
+
+  toggleEnquiryType(type: string) {
+    if (!this.newEnquiry.enquiryType) {
+      this.newEnquiry.enquiryType = type;
+      return;
+    }
+    let types = this.newEnquiry.enquiryType.split(',').map(t => t.trim()).filter(Boolean);
+    if (types.includes(type)) {
+      types = types.filter(t => t !== type);
+    } else {
+      types.push(type);
+    }
+    this.newEnquiry.enquiryType = types.join(', ');
+  }
+
   // Toggle detail rows (fallback or for display logic if needed)
   toggleDetails(enquiry: Enquiry) {
     this.editEnquiry(enquiry);

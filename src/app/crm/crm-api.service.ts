@@ -147,7 +147,6 @@ export interface QuotationApiRequest {
   mealPlan?: string;
   roomRate?: number;
   taxAmount?: number;
-  taxRate?: number;
   discountAmount?: number;
   totalAmount: number;
   advanceAmount?: number;

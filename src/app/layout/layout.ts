@@ -159,8 +159,7 @@ export class Layout implements OnInit {
         { label: 'Board', icon: 'space_dashboard', route: '/crm/dashboard' },
         { label: 'Tasks', icon: 'assignment', route: '/crm/tasks' },
         { label: 'New Enquiry', icon: 'add_box', route: '/crm/new' },
-        { label: 'Quotations', icon: 'description', route: '/crm/quotations' },
-        { label: 'Staff', icon: 'badge', route: '/crm/staff' }
+        { label: 'Quotations', icon: 'description', route: '/crm/quotations' }
       ]
     },
 

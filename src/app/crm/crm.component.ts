@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CrmApiService, EnquiryApiItem } from './crm-api.service';
 
 export interface Enquiry {
@@ -62,16 +63,18 @@ export interface SalesMember {
 @Component({
   selector: 'app-crm',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatSnackBarModule],
   templateUrl: './crm.component.html',
   styleUrls: ['./crm.component.css']
 })
 export class CrmComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly crmApi = inject(CrmApiService);
+  private readonly snackBar = inject(MatSnackBar);
 
   currentTab = signal<'dashboard' | 'new' | 'list' | 'quotations' | 'sales'>('dashboard');
   isLoading = signal(false);
+  editingEnquiryId = signal<number | null>(null);
 
   ngOnInit() {
     this.syncTabFromUrl(this.router.url);
@@ -274,12 +277,80 @@ export class CrmComponent implements OnInit {
     });
   }
 
-  // Toggle detail rows
-  toggleDetails(enquiry: Enquiry) {
-    enquiry.showDetails = !enquiry.showDetails;
+  // Set form to edit mode with existing record data
+  editEnquiry(item: Enquiry) {
+    if (!item.dbId) {
+      this.snackBar.open('Cannot edit enquiry: missing database ID', 'Close', { duration: 3000 });
+      return;
+    }
+    this.editingEnquiryId.set(item.dbId);
+    this.newEnquiry = {
+      salutation: item.salutation || 'Mr.',
+      guestName: item.guestName,
+      companyName: item.companyName || '',
+      phone: item.phone,
+      altPhone: item.altPhone || '',
+      email: item.email || '',
+      address: item.address || '',
+      city: item.city || '',
+      state: item.state || '',
+      gstNumber: item.gstNumber || '',
+      enquiryType: item.enquiryType || 'Room',
+      source: item.source || '',
+      checkIn: item.checkIn || '',
+      checkOut: item.checkOut || '',
+      rooms: item.rooms || 1,
+      adults: item.adults || 2,
+      children: item.children || 0,
+      mealPlan: item.mealPlan || 'CP',
+      budget: item.budget || 0,
+      expectedRevenue: item.expectedRevenue || 0,
+      salesPerson: item.salesPerson || '',
+      priority: item.priority || 'Medium',
+      nextFollowUp: item.nextFollowUp || '',
+      message: item.message || ''
+    };
+    this.setTab('new');
   }
 
-  // Delete Enquiry (calls backend API)
+  // Cancel form edit/creation and clear fields
+  cancelEnquiryForm() {
+    this.editingEnquiryId.set(null);
+    this.newEnquiry = {
+      salutation: 'Mr.',
+      guestName: '',
+      companyName: '',
+      phone: '',
+      altPhone: '',
+      email: '',
+      address: '',
+      city: '',
+      state: '',
+      gstNumber: '',
+      enquiryType: 'Room',
+      source: '',
+      checkIn: '',
+      checkOut: '',
+      rooms: 1,
+      adults: 2,
+      children: 0,
+      mealPlan: 'CP',
+      budget: 0,
+      expectedRevenue: 0,
+      salesPerson: '',
+      priority: 'Medium',
+      nextFollowUp: '',
+      message: ''
+    };
+    this.setTab('list');
+  }
+
+  // Toggle detail rows (fallback or for display logic if needed)
+  toggleDetails(enquiry: Enquiry) {
+    this.editEnquiry(enquiry);
+  }
+
+  // Delete Enquiry (calls backend API and shows SnackBar)
   deleteEnquiry(id: string) {
     const enquiry = this.enquiries().find(e => e.id === id);
     if (!enquiry) return;
@@ -287,24 +358,30 @@ export class CrmComponent implements OnInit {
     if (confirm(`Are you sure you want to delete enquiry ${id}?`)) {
       if (enquiry.dbId) {
         this.crmApi.deleteEnquiry(enquiry.dbId).subscribe({
-          next: () => {
-            this.enquiries.update(list => list.filter(e => e.id !== id));
+          next: (res) => {
+            if (res.success) {
+              this.enquiries.update(list => list.filter(e => e.id !== id));
+              this.snackBar.open('Enquiry deleted successfully', 'Close', { duration: 3000 });
+            } else {
+              this.snackBar.open('Failed to delete enquiry: ' + (res.message || 'Unknown error'), 'Close', { duration: 4000 });
+            }
           },
           error: (err) => {
             console.error('Failed to delete enquiry:', err);
-            alert('Failed to delete enquiry. Please try again.');
+            this.snackBar.open('Failed to delete enquiry. Please try again.', 'Close', { duration: 4000 });
           }
         });
       } else {
         this.enquiries.update(list => list.filter(e => e.id !== id));
+        this.snackBar.open('Local enquiry deleted successfully', 'Close', { duration: 3000 });
       }
     }
   }
 
-  // Add new Enquiry (calls backend API)
+  // Add or update Enquiry (calls backend API and shows SnackBar)
   onSubmitEnquiry() {
     if (!this.newEnquiry.guestName || !this.newEnquiry.phone) {
-      alert('Please enter Guest Name and Phone Number');
+      this.snackBar.open('Please enter Guest Name and Phone Number', 'Close', { duration: 3000 });
       return;
     }
 
@@ -336,51 +413,47 @@ export class CrmComponent implements OnInit {
     };
 
     this.isLoading.set(true);
-    this.crmApi.createEnquiry(payload).subscribe({
-      next: (res) => {
-        this.isLoading.set(false);
-        if (res.success) {
-          alert(`Enquiry ${res.data?.enquiryRef || ''} successfully created!`);
-          // Reset form
-          this.newEnquiry = {
-            salutation: 'Mr.',
-            guestName: '',
-            companyName: '',
-            phone: '',
-            altPhone: '',
-            email: '',
-            address: '',
-            city: '',
-            state: '',
-            gstNumber: '',
-            enquiryType: 'Room',
-            source: '',
-            checkIn: '',
-            checkOut: '',
-            rooms: 1,
-            adults: 2,
-            children: 0,
-            mealPlan: 'CP',
-            budget: 0,
-            expectedRevenue: 0,
-            salesPerson: '',
-            priority: 'Medium',
-            nextFollowUp: '',
-            message: ''
-          };
-          // Reload from API and redirect to list
-          this.loadEnquiries();
-          this.setTab('list');
-        } else {
-          alert('Failed to create enquiry: ' + (res.message || 'Unknown error'));
+
+    const editId = this.editingEnquiryId();
+    if (editId) {
+      // Edit mode: update existing enquiry
+      this.crmApi.updateEnquiry(editId, payload).subscribe({
+        next: (res) => {
+          this.isLoading.set(false);
+          if (res.success) {
+            this.snackBar.open(`Enquiry ${res.data?.enquiryRef || ''} successfully updated!`, 'Close', { duration: 3000 });
+            this.cancelEnquiryForm(); // clears edit mode, resets form, and routes to list
+            this.loadEnquiries();
+          } else {
+            this.snackBar.open('Failed to update enquiry: ' + (res.message || 'Unknown error'), 'Close', { duration: 4000 });
+          }
+        },
+        error: (err) => {
+          this.isLoading.set(false);
+          console.error('Failed to update enquiry:', err);
+          this.snackBar.open('Failed to update enquiry. Please check your network and try again.', 'Close', { duration: 4000 });
         }
-      },
-      error: (err) => {
-        this.isLoading.set(false);
-        console.error('Failed to create enquiry:', err);
-        alert('Failed to create enquiry. Please check your network and try again.');
-      }
-    });
+      });
+    } else {
+      // Create mode: create a new enquiry
+      this.crmApi.createEnquiry(payload).subscribe({
+        next: (res) => {
+          this.isLoading.set(false);
+          if (res.success) {
+            this.snackBar.open(`Enquiry ${res.data?.enquiryRef || ''} successfully created!`, 'Close', { duration: 3000 });
+            this.cancelEnquiryForm(); // clears edit mode, resets form, and routes to list
+            this.loadEnquiries();
+          } else {
+            this.snackBar.open('Failed to create enquiry: ' + (res.message || 'Unknown error'), 'Close', { duration: 4000 });
+          }
+        },
+        error: (err) => {
+          this.isLoading.set(false);
+          console.error('Failed to create enquiry:', err);
+          this.snackBar.open('Failed to create enquiry. Please check your network and try again.', 'Close', { duration: 4000 });
+        }
+      });
+    }
   }
 
   // Helper formatting methods

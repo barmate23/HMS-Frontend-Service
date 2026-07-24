@@ -296,7 +296,7 @@
                 </td>
                 <td style="text-align: center;">
                   <div class="quick-actions">
-                    <button type="button" class="quick-btn" title="Toggle Details" (click)="toggleDetails(item)">
+                    <button type="button" class="quick-btn" title="Edit Enquiry" (click)="editEnquiry(item)">
                       <span class="material-icons-round">edit</span>
                     </button>
                     <button type="button" class="quick-btn" title="Delete Enquiry" (click)="deleteEnquiry(item.id)">
@@ -323,7 +323,7 @@
               <div class="card-header">
                 <div class="header-title">
                   <span class="material-icons-round">person</span>
-                  <h2>Guest Information</h2>
+                  <h2>{{ editingEnquiryId() ? 'Edit Guest Information' : 'Guest Information' }}</h2>
                 </div>
               </div>
               <div class="card-body">
@@ -394,7 +394,7 @@
               <div class="card-header">
                 <div class="header-title">
                   <span class="material-icons-round">edit_calendar</span>
-                  <h2>Enquiry Details</h2>
+                  <h2>{{ editingEnquiryId() ? 'Edit Enquiry Details' : 'Enquiry Details' }}</h2>
                 </div>
               </div>
               <div class="card-body">
@@ -479,10 +479,10 @@
 
         <!-- Submit Footer Button Row -->
         <div class="form-action-footer mt-3">
-          <button type="button" class="btn btn-secondary font-semibold" (click)="setTab('dashboard')">Cancel</button>
+          <button type="button" class="btn btn-secondary font-semibold" (click)="cancelEnquiryForm()">Cancel</button>
           <button type="submit" class="btn btn-primary font-semibold green-btn-alt">
             <span class="material-icons-round font-icon">save</span>
-            Create Enquiry Record
+            {{ editingEnquiryId() ? 'Update Enquiry Record' : 'Create Enquiry Record' }}
           </button>
         </div>
       </form>

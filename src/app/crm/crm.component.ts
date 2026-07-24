@@ -50,6 +50,7 @@ export interface Quotation {
   companyName?: string;
   roomRate?: number;
   taxAmount?: number;
+  taxRate?: number;
   discountAmount?: number;
   total: number;
   advanceAmount?: number;
@@ -187,6 +188,7 @@ export class CrmComponent implements OnInit {
             companyName: item.companyName || '',
             roomRate: item.roomRate || 0,
             taxAmount: item.taxAmount || 0,
+            taxRate: item.taxRate || 0,
             discountAmount: item.discountAmount || 0,
             total: item.totalAmount || 0,
             advanceAmount: item.advanceAmount || 0,
@@ -294,6 +296,7 @@ export class CrmComponent implements OnInit {
     companyName: '',
     roomRate: 0,
     taxAmount: 0,
+    taxRate: 18,
     discountAmount: 0,
     total: 0,
     advanceAmount: 0,
@@ -738,12 +741,14 @@ export class CrmComponent implements OnInit {
     }
   }
 
-  // Calculate total amount dynamically: Total = Room Rate + Tax - Discount
+  // Calculate total amount dynamically: Total = Room Rate + (Room Rate * Tax% / 100) - Discount
   updateQuotationTotal() {
     const rate = Number(this.newQuotation.roomRate) || 0;
-    const tax = Number(this.newQuotation.taxAmount) || 0;
+    const percent = Number(this.newQuotation.taxRate) || 0;
     const discount = Number(this.newQuotation.discountAmount) || 0;
-    this.newQuotation.total = rate + tax - discount;
+    
+    this.newQuotation.taxAmount = parseFloat((rate * (percent / 100)).toFixed(2));
+    this.newQuotation.total = rate + this.newQuotation.taxAmount - discount;
   }
 
   // Get dynamic Rate label based on selected enquiry type (e.g. Base Event Rate, Base Room/Banquet Rate)
@@ -804,6 +809,7 @@ export class CrmComponent implements OnInit {
       mealPlan: selectedEnq.mealPlan,
       roomRate: Number(this.newQuotation.roomRate) || 0,
       taxAmount: Number(this.newQuotation.taxAmount) || 0,
+      taxRate: Number(this.newQuotation.taxRate) || 0,
       discountAmount: Number(this.newQuotation.discountAmount) || 0,
       totalAmount: Number(this.newQuotation.total) || 0,
       advanceAmount: Number(this.newQuotation.advanceAmount) || 0,
@@ -826,6 +832,7 @@ export class CrmComponent implements OnInit {
             companyName: '',
             roomRate: 0,
             taxAmount: 0,
+            taxRate: 18,
             discountAmount: 0,
             total: 0,
             advanceAmount: 0,

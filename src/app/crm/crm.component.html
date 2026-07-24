@@ -643,8 +643,13 @@
           </div>
 
           <div class="input-group">
+            <label>Tax Rate (%)</label>
+            <input type="number" min="0" max="100" placeholder="18" [(ngModel)]="newQuotation.taxRate" name="modalTaxRate" (ngModelChange)="updateQuotationTotal()">
+          </div>
+
+          <div class="input-group">
             <label>Tax Amount (₹)</label>
-            <input type="number" min="0" placeholder="0.00" [(ngModel)]="newQuotation.taxAmount" name="modalTaxAmount" (ngModelChange)="updateQuotationTotal()">
+            <input type="number" min="0" placeholder="0.00" [(ngModel)]="newQuotation.taxAmount" name="modalTaxAmount" required readonly style="background-color: var(--surface-100); font-weight: 500; cursor: not-allowed;">
           </div>
 
           <div class="input-group">
@@ -849,7 +854,7 @@
                 <span class="val font-mono">{{ formatCurrency(q.roomRate || 0) }}</span>
               </div>
               <div class="detail-row" *ngIf="q.taxAmount">
-                <span class="lbl">Tax Amount:</span>
+                <span class="lbl">GST & Tax ({{ q.taxRate || 0 }}%):</span>
                 <span class="val font-mono">{{ formatCurrency(q.taxAmount) }}</span>
               </div>
               <div class="detail-row" *ngIf="q.discountAmount">

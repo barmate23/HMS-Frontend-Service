@@ -32,8 +32,8 @@ export class MasterDataConfigurationComponent {
     { label: 'Food Categories', code: 'FOOD_CATEGORY', description: 'Primary POS menu categories.' },
     { label: 'Food Subcategories', code: 'FOOD_SUBCATEGORY', description: 'Secondary POS menu grouping.' },
     { label: 'Order Statuses', code: 'ORDER_STATUS', description: 'POS order workflow statuses.' },
-    { label: 'Bill Statuses', code: 'BILL_STATUS', description: 'Billing lifecycle statuses.' },
     { label: 'Payment Modes', code: 'PAYMENT_MODE', description: 'Allowed bill settlement methods.' },
+
     { label: 'Void Reasons', code: 'VOID_REASON', description: 'Standard reasons for voids and reversals.' },
     { label: 'SOP Frequencies', code: 'SOP_FREQUENCY', description: 'Standard operating procedure frequencies.' },
     { label: 'Responsible Roles', code: 'RESPONSIBLE_ROLE', description: 'Staff and operational responsible roles.' },

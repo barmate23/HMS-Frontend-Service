@@ -1,9 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
-import { HotelMastersService } from '../masters/hotel-masters.service';
+
+import { HotelMastersService, Room } from '../masters/hotel-masters.service';
+
 import {
   OrderStatus,
   PosAuditLog,
@@ -53,7 +56,6 @@ type BillBreakdown = {
   taxBuckets: BillTaxBucket[];
 };
 
-import { MatSnackBarModule } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-pos',
@@ -66,7 +68,9 @@ export class PosComponent implements OnInit, OnDestroy {
   readonly pos = inject(PosService);
   readonly masters = inject(HotelMastersService);
   private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
   private routerSub?: Subscription;
+
 
   activeTab = signal<PosTab>('outlets');
   search = signal('');
@@ -87,6 +91,13 @@ export class PosComponent implements OnInit, OnDestroy {
   diningAction = signal<DiningAction | null>(null);
   isDiningActionOpen = signal(false);
   deleteTarget = signal<DeleteTarget | null>(null);
+
+  readonly pagedOrderRooms = signal<Room[]>([]);
+  readonly orderRoomPage = signal<number>(0);
+  readonly orderRoomSize = signal<number>(10);
+  readonly orderRoomTotalPages = signal<number>(1);
+  readonly isLoadingOrderRooms = signal<boolean>(false);
+  readonly hasMoreOrderRooms = signal<boolean>(false);
   diningForm = signal<{ server: string; covers: number; secondaryTableId: number | null; floorId: number | null; roomId: number | null; roomNo: string; guestName: string; bookingTime: string; notes: string }>({
     server: 'Arjun Menon',
     covers: 2,
@@ -499,6 +510,8 @@ export class PosComponent implements OnInit, OnDestroy {
   orderRoomFloors = computed(() => this.masters.floors().filter(floor => floor.isActive));
 
   orderRooms = computed(() => {
+    const paged = this.pagedOrderRooms();
+    if (paged.length > 0) return paged;
     const floorId = Number(this.currentOrder().floorId || 0);
     return this.masters.rooms()
       .filter(room => room.isActive)
@@ -544,6 +557,56 @@ export class PosComponent implements OnInit, OnDestroy {
 
   startOrderTotal = computed(() => this.startOrderLines().reduce((sum, line) => sum + line.qty * line.price, 0));
 
+  currentBillStatus = computed(() => {
+    const current = this.currentBill().status || '';
+    const available = this.availableBillStatuses();
+    if (!current) return available[0] || 'Open';
+    const matched = available.find(s => s.toLowerCase() === current.toLowerCase());
+    return matched || current;
+  });
+
+  availableBillStatuses = computed(() => {
+    const statuses = this.pos.billStatuses();
+    const bill = this.currentBill();
+    const isRoomOrder = bill.isRoomOrder ?? (bill.orderType === 'ROOM' || !!bill.roomId || !!bill.roomNo);
+
+    if (!isRoomOrder) {
+      return statuses.filter(s => s.toLowerCase() !== 'posted');
+    }
+    return statuses;
+  });
+
+  currentBillIsRoomOrder = computed(() => {
+    const bill = this.currentBill();
+    return !!(bill.isRoomOrder ?? (bill.orderType === 'ROOM' || !!bill.roomId || !!bill.roomNo));
+  });
+
+
+  billsPaginationRangeLabel = computed(() => {
+    const total = this.pos.billsTotalRecords();
+    if (total === 0) return 'Showing 0 of 0 bills';
+    const page = this.pos.billsPage();
+    const size = this.pos.billsPageSize();
+    const start = page * size + 1;
+    const end = Math.min((page + 1) * size, total);
+    return `Showing ${start} - ${end} of ${total} bills`;
+  });
+
+  prevBillsPage(): void {
+    const currentPage = this.pos.billsPage();
+    if (currentPage > 0) {
+      this.pos.loadBills(this.statusFilter(), currentPage - 1, this.pos.billsPageSize());
+    }
+  }
+
+  nextBillsPage(): void {
+    const currentPage = this.pos.billsPage();
+    const totalPages = this.pos.billsTotalPages();
+    if (currentPage + 1 < totalPages) {
+      this.pos.loadBills(this.statusFilter(), currentPage + 1, this.pos.billsPageSize());
+    }
+  }
+
   ngOnInit(): void {
     this.updateTabFromUrl(this.router.url);
     this.routerSub = this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe((event: any) => {
@@ -557,8 +620,11 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   switchTab(tab: PosTab): void {
+    this.activeTab.set(tab);
     this.router.navigate([`/pos/${tab}`]);
+    this.reloadTabApis(tab);
   }
+
 
   openCreate(kind: ModalKind): void {
     this.modalKind.set(kind);
@@ -598,6 +664,10 @@ export class PosComponent implements OnInit, OnDestroy {
       this.pos.loadMenuItems(item.outletId);
       this.pos.loadTables(item.outletId);
       this.currentOrder.set({ ...item, lines: item.lines.map((line: PosOrderLine) => ({ ...line })) });
+      if (item.type === 'ROOM') {
+        const floorId = item.floorId || null;
+        this.loadOrderRoomsPage(floorId, 0, this.orderRoomSize(), false);
+      }
     }
     if (kind === 'bill') {
       const order = this.pos.orders().find(value => value.id === Number(item.orderId));
@@ -784,20 +854,17 @@ export class PosComponent implements OnInit, OnDestroy {
 
     if (value === 'ROOM') {
       const firstFloor = this.orderRoomFloors()[0] || null;
-      const firstRoom = this.masters.rooms()
-        .filter(room => room.isActive)
-        .filter(room => !firstFloor || room.floorId === firstFloor.id)
-        .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }))[0];
       this.currentOrder.update(order => ({
         ...order,
         type: value,
         outletId: this.roomServiceOutletId(),
         tableNo: '',
         floorId: firstFloor?.id || null,
-        roomId: firstRoom?.id || null,
-        roomNo: firstRoom?.roomNumber || '',
+        roomId: null,
+        roomNo: '',
         guestName: order.guestName || ''
       }));
+      this.loadOrderRoomsPage(firstFloor?.id || null, 0, this.orderRoomSize(), true);
       return;
     }
 
@@ -808,26 +875,96 @@ export class PosComponent implements OnInit, OnDestroy {
     this.currentOrder.update(order => ({ ...order, tableNo: value }));
   }
 
+  loadOrderRoomsPage(floorId: number | null, page: number, size: number, resetFirstRoom: boolean = false): void {
+    if (this.isLoadingOrderRooms()) return;
+    this.isLoadingOrderRooms.set(true);
+
+    this.pos.fetchRoomsByFloor(floorId, page, size).subscribe({
+      next: response => {
+        this.isLoadingOrderRooms.set(false);
+        const dataList = response?.data || response || [];
+        const rooms: Room[] = (Array.isArray(dataList) ? dataList : []).map((r: any) => ({
+          id: Number(r.id),
+          roomNumber: String(r.roomNumber || r.number || r.id),
+          floorId: Number(r.floorId || floorId || 0),
+          roomTypeId: Number(r.roomTypeId || r.typeId || 0),
+          typeId: Number(r.typeId || r.roomTypeId || 0),
+          status: r.statusName || r.statusValue || r.status || 'VACANT',
+          maxOccupancy: Number(r.maxOccupancy || 2),
+          telephone: r.telephone || '',
+          createdAt: r.createdAt || '',
+          updatedAt: r.updatedAt || '',
+          isActive: r.isActive !== false
+        }));
+
+        const metadata = response?.metadata;
+        const totalPages = metadata?.totalPages ?? (rooms.length < size ? page + 1 : page + 2);
+        this.orderRoomTotalPages.set(totalPages);
+        this.orderRoomPage.set(page);
+
+        if (page === 0) {
+          this.pagedOrderRooms.set(rooms);
+        } else {
+          const existingIds = new Set(this.pagedOrderRooms().map(r => r.id));
+          const newUniqueRooms = rooms.filter(r => !existingIds.has(r.id));
+          this.pagedOrderRooms.update(current => [...current, ...newUniqueRooms]);
+        }
+
+        const hasMore = (page + 1) < totalPages && rooms.length >= size;
+        this.hasMoreOrderRooms.set(hasMore);
+
+        if (resetFirstRoom && rooms.length > 0) {
+          const firstRoom = rooms[0];
+          this.currentOrder.update(order => ({
+            ...order,
+            floorId,
+            roomId: firstRoom.id,
+            roomNo: firstRoom.roomNumber
+          }));
+        }
+      },
+      error: () => {
+        this.isLoadingOrderRooms.set(false);
+        const localRooms = this.masters.rooms()
+          .filter(room => room.isActive && (!floorId || room.floorId === floorId));
+        this.pagedOrderRooms.set(localRooms);
+        this.hasMoreOrderRooms.set(false);
+        if (resetFirstRoom && localRooms.length > 0) {
+          this.currentOrder.update(order => ({
+            ...order,
+            floorId,
+            roomId: localRooms[0].id,
+            roomNo: localRooms[0].roomNumber
+          }));
+        }
+      }
+    });
+  }
+
+  loadNextOrderRoomsPage(): void {
+    if (!this.hasMoreOrderRooms() || this.isLoadingOrderRooms()) return;
+    const nextPage = this.orderRoomPage() + 1;
+    const floorId = this.currentOrder().floorId || null;
+    this.loadOrderRoomsPage(floorId, nextPage, this.orderRoomSize(), false);
+  }
+
   updateOrderFloor(value: number | string): void {
     const floorId = Number(value) || null;
-    const firstRoom = this.masters.rooms()
-      .filter(room => room.isActive && (!floorId || room.floorId === floorId))
-      .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }))[0];
-    this.currentOrder.update(order => ({
-      ...order,
-      floorId,
-      roomId: firstRoom?.id || null,
-      roomNo: firstRoom?.roomNumber || ''
-    }));
+    this.orderRoomPage.set(0);
+    this.pagedOrderRooms.set([]);
+    this.hasMoreOrderRooms.set(true);
+
+    this.currentOrder.update(order => ({ ...order, floorId, roomId: null, roomNo: '' }));
+    this.loadOrderRoomsPage(floorId, 0, this.orderRoomSize(), true);
   }
 
   updateOrderRoom(value: number | string): void {
     const roomId = Number(value) || null;
-    const room = this.masters.rooms().find(item => item.id === roomId);
+    const room = this.pagedOrderRooms().find(item => item.id === roomId) || this.masters.rooms().find(item => item.id === roomId);
     this.currentOrder.update(order => ({
       ...order,
       roomId,
-      roomNo: room?.roomNumber || ''
+      roomNo: room?.roomNumber || order.roomNo || ''
     }));
   }
 
@@ -1020,6 +1157,70 @@ export class PosComponent implements OnInit, OnDestroy {
   updatePaymentMode(value: string): void {
     this.currentBill.update(bill => ({ ...bill, paymentModes: value ? [value] : [] }));
   }
+
+  onPostedToFolioChange(checked: boolean): void {
+    const isRoom = this.currentBillIsRoomOrder();
+
+    if (checked && !isRoom) {
+      this.snackBar.open('Post to guest room folio is only available for Room orders.', 'Close', { duration: 3000 });
+      this.currentBill.update(b => ({ ...b, postedToFolio: false }));
+      return;
+    }
+
+    if (checked) {
+      const postedMaster = this.pos.billStatusMasters().find(m =>
+        (m.value && m.value.toLowerCase() === 'posted') ||
+        (m.code && m.code.toLowerCase() === 'posted')
+      );
+      this.currentBill.update(b => ({
+        ...b,
+        postedToFolio: true,
+        status: 'Posted',
+        statusId: postedMaster?.id || b.statusId
+      }));
+    } else {
+      this.currentBill.update(b => ({
+        ...b,
+        postedToFolio: false,
+        status: String(b.status).toLowerCase() === 'posted' ? 'Open' : b.status
+      }));
+    }
+  }
+
+  updateBillStatus(value: string): void {
+    const bill = this.currentBill();
+    const isRoomOrder = bill.isRoomOrder ?? (bill.orderType === 'ROOM' || !!bill.roomId || !!bill.roomNo);
+
+    if (value && value.toLowerCase() === 'posted') {
+      if (!isRoomOrder) {
+        this.snackBar.open('Posted status is only allowed for Room orders.', 'Close', { duration: 3000 });
+        return;
+      }
+      const master = this.pos.billStatusMasters().find(m =>
+        (m.value && m.value.toLowerCase() === 'posted') ||
+        (m.code && m.code.toLowerCase() === 'posted')
+      );
+      this.currentBill.update(b => ({
+        ...b,
+        status: 'Posted',
+        statusId: master?.id || b.statusId,
+        postedToFolio: true
+      }));
+      return;
+    }
+
+    const master = this.pos.billStatusMasters().find(m =>
+      (m.value && m.value.toLowerCase() === value.toLowerCase()) ||
+      (m.code && m.code.toLowerCase() === value.toLowerCase())
+    );
+    this.currentBill.update(b => ({
+      ...b,
+      status: value,
+      statusId: master?.id || b.statusId,
+      postedToFolio: false
+    }));
+  }
+
 
   updateBillDiscount(value: number | string): void {
     this.currentBill.update(bill => this.billDraftForOrder(this.billOrder(bill), { ...bill, discount: Number(value || 0) }));
@@ -1548,10 +1749,64 @@ export class PosComponent implements OnInit, OnDestroy {
     ];
   }
 
+  private reloadTabApis(tab: PosTab): void {
+    const outletIdParam = this.outletFilter() === 'ALL' ? undefined : Number(this.outletFilter());
+
+    switch (tab) {
+      case 'dashboard':
+        this.pos.loadOutlets();
+        this.pos.loadOrders(outletIdParam);
+        this.pos.loadBills();
+        break;
+
+      case 'outlets':
+        this.pos.loadOutlets();
+        break;
+
+      case 'dining':
+        this.pos.loadTables(outletIdParam);
+        this.pos.loadOrders(outletIdParam);
+        break;
+
+      case 'orders':
+        this.pos.loadOrders(outletIdParam);
+        this.pos.loadMenuItems(outletIdParam);
+        this.pos.loadTables(outletIdParam);
+        break;
+
+      case 'billing':
+        this.pos.loadBills(this.statusFilter(), 0, this.pos.billsPageSize());
+        this.loadOpenOrdersForBill(outletIdParam || this.defaultOutletId());
+        break;
+
+      case 'menu':
+        this.pos.loadMenuItems(outletIdParam);
+        this.pos.loadMenuCategories();
+        this.pos.loadMenuSubcategories();
+        break;
+
+      case 'billing-setup':
+        this.pos.loadGstRules();
+        this.pos.loadPaymentModes();
+        this.pos.loadBillStatuses();
+        break;
+
+      default:
+        this.pos.loadOutlets();
+        this.pos.loadOrders(outletIdParam);
+        this.pos.loadBills();
+        break;
+    }
+  }
+
   private updateTabFromUrl(url: string): void {
     const last = url.split('/').pop()?.split('?')[0] as PosTab;
-    this.activeTab.set(['dashboard', 'outlets', 'dining', 'orders', 'billing', 'menu', 'billing-setup'].includes(last) ? last : 'dashboard');
+    const tab: PosTab = ['dashboard', 'outlets', 'dining', 'orders', 'billing', 'menu', 'billing-setup'].includes(last) ? last : 'dashboard';
+    this.activeTab.set(tab);
     this.search.set('');
     this.statusFilter.set('ALL');
+
+    this.reloadTabApis(tab);
   }
 }
+

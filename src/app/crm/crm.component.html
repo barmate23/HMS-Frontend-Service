@@ -329,10 +329,6 @@
               <div class="card-body">
                 
                 <div class="grid-3">
-                  <div class="input-group span-2">
-                    <label>Guest Full Name <span class="required-star">*</span></label>
-                    <input type="text" placeholder="Enter guest name" [(ngModel)]="newEnquiry.guestName" name="guestName" required>
-                  </div>
                   <div class="input-group">
                     <label>Salutation</label>
                     <select [(ngModel)]="newEnquiry.salutation" name="salutation">
@@ -342,16 +338,23 @@
                       <option>Dr.</option>
                     </select>
                   </div>
+                  <div class="input-group span-2">
+                    <label>Guest Full Name <span class="required-star">*</span></label>
+                    <input type="text" placeholder="Enter guest name" [(ngModel)]="newEnquiry.guestName" name="guestName" required (ngModelChange)="validateField('guestName')" (blur)="validateField('guestName')" [class.input-error]="errors['guestName']">
+                    <span class="error-text" *ngIf="errors['guestName']">{{ errors['guestName'] }}</span>
+                  </div>
                 </div>
 
                 <div class="grid-3 mt-3">
                   <div class="input-group">
                     <label>Phone Number <span class="required-star">*</span></label>
-                    <input type="tel" placeholder="Mobile number" [(ngModel)]="newEnquiry.phone" name="phone" required>
+                    <input type="tel" placeholder="Mobile number" [(ngModel)]="newEnquiry.phone" name="phone" required (ngModelChange)="validateField('phone')" (blur)="validateField('phone')" [class.input-error]="errors['phone']">
+                    <span class="error-text" *ngIf="errors['phone']">{{ errors['phone'] }}</span>
                   </div>
                   <div class="input-group span-2">
                     <label>Email Address</label>
-                    <input type="email" placeholder="guest@example.com" [(ngModel)]="newEnquiry.email" name="email">
+                    <input type="email" placeholder="guest@example.com" [(ngModel)]="newEnquiry.email" name="email" (ngModelChange)="validateField('email')" (blur)="validateField('email')" [class.input-error]="errors['email']">
+                    <span class="error-text" *ngIf="errors['email']">{{ errors['email'] }}</span>
                   </div>
                 </div>
 
@@ -362,7 +365,8 @@
                   </div>
                   <div class="input-group">
                     <label>GST Number</label>
-                    <input type="text" placeholder="Enter GST details" [(ngModel)]="newEnquiry.gstNumber" name="gstNumber">
+                    <input type="text" placeholder="Enter GST details" [(ngModel)]="newEnquiry.gstNumber" name="gstNumber" (ngModelChange)="validateField('gstNumber')" (blur)="validateField('gstNumber')" [class.input-error]="errors['gstNumber']">
+                    <span class="error-text" *ngIf="errors['gstNumber']">{{ errors['gstNumber'] }}</span>
                   </div>
                 </div>
 
@@ -436,26 +440,30 @@
                 <div class="grid-3 mt-3">
                   <div class="input-group">
                     <label>Check In</label>
-                    <input type="date" [(ngModel)]="newEnquiry.checkIn" name="checkIn">
+                    <input type="date" [(ngModel)]="newEnquiry.checkIn" name="checkIn" (ngModelChange)="validateField('checkIn')">
                   </div>
                   <div class="input-group">
                     <label>Check Out</label>
-                    <input type="date" [(ngModel)]="newEnquiry.checkOut" name="checkOut">
+                    <input type="date" [(ngModel)]="newEnquiry.checkOut" name="checkOut" (ngModelChange)="validateField('checkOut')" [class.input-error]="errors['checkOut']">
+                    <span class="error-text" *ngIf="errors['checkOut']">{{ errors['checkOut'] }}</span>
                   </div>
                   <div class="input-group">
                     <label>Rooms Count</label>
-                    <input type="number" min="1" [(ngModel)]="newEnquiry.rooms" name="rooms">
+                    <input type="number" min="1" [(ngModel)]="newEnquiry.rooms" name="rooms" (ngModelChange)="validateField('rooms')" (blur)="validateField('rooms')" [class.input-error]="errors['rooms']">
+                    <span class="error-text" *ngIf="errors['rooms']">{{ errors['rooms'] }}</span>
                   </div>
                 </div>
 
                 <div class="grid-3 mt-3">
                   <div class="input-group">
                     <label>Adults</label>
-                    <input type="number" min="1" [(ngModel)]="newEnquiry.adults" name="adults">
+                    <input type="number" min="1" [(ngModel)]="newEnquiry.adults" name="adults" (ngModelChange)="validateField('adults')" (blur)="validateField('adults')" [class.input-error]="errors['adults']">
+                    <span class="error-text" *ngIf="errors['adults']">{{ errors['adults'] }}</span>
                   </div>
                   <div class="input-group">
                     <label>Children</label>
-                    <input type="number" min="0" [(ngModel)]="newEnquiry.children" name="children">
+                    <input type="number" min="0" [(ngModel)]="newEnquiry.children" name="children" (ngModelChange)="validateField('children')" (blur)="validateField('children')" [class.input-error]="errors['children']">
+                    <span class="error-text" *ngIf="errors['children']">{{ errors['children'] }}</span>
                   </div>
                   <div class="input-group">
                     <label>Assigned Sales Person</label>
@@ -613,7 +621,7 @@
         <div class="form-grid-modal">
           <div class="input-group full">
             <label>Enquiry Reference</label>
-            <select [(ngModel)]="newQuotation.enquiryId" name="modalEnquiryId">
+            <select [(ngModel)]="newQuotation.enquiryId" name="modalEnquiryId" (change)="onSelectEnquiryForQuotation(newQuotation.enquiryId)">
               <option value="">Select Enquiry Ref (Optional)</option>
               <option *ngFor="let e of enquiries()" [value]="e.id">{{ e.id }} - {{ e.guestName }}</option>
             </select>
@@ -630,8 +638,28 @@
           </div>
 
           <div class="input-group">
-            <label>Valuation Amount (₹) <span class="required-star">*</span></label>
-            <input type="number" min="0" placeholder="0.00" [(ngModel)]="newQuotation.total" name="modalTotal" required>
+            <label>Base Room Rate (₹)</label>
+            <input type="number" min="0" placeholder="0.00" [(ngModel)]="newQuotation.roomRate" name="modalRoomRate" (ngModelChange)="updateQuotationTotal()">
+          </div>
+
+          <div class="input-group">
+            <label>Tax Amount (₹)</label>
+            <input type="number" min="0" placeholder="0.00" [(ngModel)]="newQuotation.taxAmount" name="modalTaxAmount" (ngModelChange)="updateQuotationTotal()">
+          </div>
+
+          <div class="input-group">
+            <label>Discount (₹)</label>
+            <input type="number" min="0" placeholder="0.00" [(ngModel)]="newQuotation.discountAmount" name="modalDiscountAmount" (ngModelChange)="updateQuotationTotal()">
+          </div>
+
+          <div class="input-group">
+            <label>Valuation Net Total (₹) <span class="required-star">*</span></label>
+            <input type="number" min="0" placeholder="0.00" [(ngModel)]="newQuotation.total" name="modalTotal" required readonly style="background-color: var(--surface-100); font-weight: bold; cursor: not-allowed;">
+          </div>
+
+          <div class="input-group">
+            <label>Advance Amount (₹)</label>
+            <input type="number" min="0" placeholder="0.00" [(ngModel)]="newQuotation.advanceAmount" name="modalAdvanceAmount">
           </div>
 
           <div class="input-group">

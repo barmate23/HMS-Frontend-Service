@@ -14,8 +14,13 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent) },
-      { path: 'front-office/dashboard', loadComponent: () => import('./front-office-dashboard/front-office-dashboard.component').then(m => m.FrontOfficeDashboardComponent) },
-      { path: 'crm', loadComponent: () => import('./crm/crm.component').then(m => m.CrmComponent) },
+      { path: 'crm', redirectTo: 'crm/dashboard', pathMatch: 'full' },
+      { path: 'crm/dashboard', loadComponent: () => import('./crm/crm.component').then(m => m.CrmComponent) },
+      { path: 'crm/tasks', loadComponent: () => import('./crm/crm.component').then(m => m.CrmComponent) },
+      { path: 'crm/new', loadComponent: () => import('./crm/crm.component').then(m => m.CrmComponent) },
+      { path: 'crm/quotations', loadComponent: () => import('./crm/crm.component').then(m => m.CrmComponent) },
+      { path: 'crm/staff', loadComponent: () => import('./crm/crm.component').then(m => m.CrmComponent) },
+
       { path: 'reservations', component: ReservationCenter },
       { path: 'new-booking', component: NewBookingComponent },
       { path: 'arrivals', component: ArrivalsComponent },

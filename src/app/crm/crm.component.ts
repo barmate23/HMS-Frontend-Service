@@ -41,6 +41,7 @@ export interface Enquiry {
 }
 
 export interface Quotation {
+  id?: number;
   quotationNo: string;
   revision: number;
   date: string;
@@ -49,7 +50,7 @@ export interface Quotation {
   companyName?: string;
   total: number;
   validTill: string;
-  status: 'Draft' | 'Sent' | 'Accepted' | 'Declined';
+  status: 'Draft' | 'Sent' | 'Accepted' | 'Declined' | 'Rejected' | 'Expired' | 'Revised';
 }
 
 export interface SalesMember {
@@ -95,8 +96,31 @@ export class CrmComponent implements OnInit {
       }
     });
 
-    // Load enquiries from backend API
+    // Load enquiries, quotations, and sales team from backend APIs
     this.loadEnquiries();
+    this.loadQuotations();
+    this.loadSalesTeam();
+  }
+
+  // Load active sales team members from user management module
+  loadSalesTeam() {
+    this.crmApi.getUsers().subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          const mappedTeam: SalesMember[] = res.data.map((user: any) => ({
+            name: user.fullName || user.username || 'Unknown',
+            designation: user.role?.name || user.department || 'Representative',
+            phone: user.phone || '',
+            email: user.email || '',
+            monthlyTarget: 1000000.00
+          }));
+          this.salesTeam.set(mappedTeam);
+        }
+      },
+      error: (err) => {
+        console.error('Failed to load sales team from users API:', err);
+      }
+    });
   }
 
   // Load a single enquiry to patch form fields during editing
@@ -139,6 +163,34 @@ export class CrmComponent implements OnInit {
       error: (err) => {
         console.error('Failed to load enquiry for edit:', err);
         this.snackBar.open('Failed to load enquiry details', 'Close', { duration: 3000 });
+        this.isLoading.set(false);
+      }
+    });
+  }
+
+  loadQuotations(search?: string) {
+    this.isLoading.set(true);
+    this.crmApi.getAllQuotations(search).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          const mapped: Quotation[] = res.data.map(item => ({
+            id: item.id,
+            quotationNo: item.quotationRef || '',
+            revision: item.revision || 0,
+            date: item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
+            enquiryId: item.enquiryRef || 'N/A',
+            guestName: item.guestName,
+            companyName: item.companyName || '',
+            total: item.totalAmount || 0,
+            validTill: item.validTill ? new Date(item.validTill).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
+            status: (item.status || 'Draft') as Quotation['status']
+          }));
+          this.quotations.set(mapped);
+        }
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        console.error('Failed to load quotations:', err);
         this.isLoading.set(false);
       }
     });
@@ -232,7 +284,11 @@ export class CrmComponent implements OnInit {
     enquiryId: '',
     guestName: '',
     companyName: '',
+    roomRate: 0,
+    taxAmount: 0,
+    discountAmount: 0,
     total: 0,
+    advanceAmount: 0,
     validTill: ''
   };
 
@@ -272,42 +328,23 @@ export class CrmComponent implements OnInit {
     message: ''
   };
 
+  // Validation Errors Model
+  errors: Record<string, string> = {
+    guestName: '',
+    phone: '',
+    altPhone: '',
+    email: '',
+    checkOut: '',
+    rooms: '',
+    adults: '',
+    children: '',
+    gstNumber: ''
+  };
+
   // Enquiries data (loaded from API)
   enquiries = signal<Enquiry[]>([]);
 
-  quotations = signal<Quotation[]>([
-    {
-      quotationNo: 'QTN-2026-0003',
-      revision: 1,
-      date: '10-Jul-2026',
-      enquiryId: 'ENQ-2026-0014',
-      guestName: 'Alok Kapoor',
-      total: 2200.00,
-      validTill: '17-Jul-2026',
-      status: 'Draft'
-    },
-    {
-      quotationNo: 'QTN-2026-0002',
-      revision: 0,
-      date: '09-Jul-2026',
-      enquiryId: 'ENQ-2026-0005',
-      guestName: 'somdev goyal',
-      total: 3150.00,
-      validTill: '16-Jul-2026',
-      status: 'Draft'
-    },
-    {
-      quotationNo: 'QTN-2026-0001',
-      revision: 0,
-      date: '07-Jul-2026',
-      enquiryId: 'ENQ-2026-0001',
-      guestName: 'Anil Sir',
-      companyName: 'SUN INSTITUTE OF PHARMACEUTICAL EDUCATION & RESEARCH (SIPER)',
-      total: 26250.00,
-      validTill: '14-Jul-2026',
-      status: 'Draft'
-    }
-  ]);
+  quotations = signal<Quotation[]>([]);
 
   salesTeam = signal<SalesMember[]>([
     { name: 'Aman Rajawat', designation: 'Front office', phone: '7489 711 220', email: '', monthlyTarget: 800000.00 },
@@ -333,10 +370,20 @@ export class CrmComponent implements OnInit {
     });
   }
 
+  // Helper for top-aligned MatSnackBar notifications
+  private showNotification(message: string, isError = false) {
+    this.snackBar.open(message, 'Close', {
+      duration: isError ? 4000 : 3000,
+      verticalPosition: 'top',
+      horizontalPosition: 'right',
+      panelClass: isError ? ['snackbar-error'] : ['snackbar-success']
+    });
+  }
+
   // Navigate to edit route with query parameters (triggers OnInit loading on the active tab instance)
   editEnquiry(item: Enquiry) {
     if (!item.dbId) {
-      this.snackBar.open('Cannot edit enquiry: missing database ID', 'Close', { duration: 3000 });
+      this.showNotification('Cannot edit enquiry: missing database ID', true);
       return;
     }
     this.router.navigate(['/crm/new'], { queryParams: { edit: item.dbId } });
@@ -371,7 +418,123 @@ export class CrmComponent implements OnInit {
       nextFollowUp: '',
       message: ''
     };
+    this.errors = {
+      guestName: '',
+      phone: '',
+      altPhone: '',
+      email: '',
+      checkOut: '',
+      rooms: '',
+      adults: '',
+      children: '',
+      gstNumber: ''
+    };
     this.router.navigate(['/crm/tasks']);
+  }
+
+  // Validate specific input fields on input/blur and update errors object
+  validateField(field: string) {
+    if (field === 'guestName') {
+      if (!this.newEnquiry.guestName || !this.newEnquiry.guestName.trim()) {
+        this.errors['guestName'] = 'Guest Full Name is required';
+      } else {
+        this.errors['guestName'] = '';
+      }
+    }
+
+    if (field === 'phone') {
+      if (!this.newEnquiry.phone || !this.newEnquiry.phone.trim()) {
+        this.errors['phone'] = 'Phone Number is required';
+      } else {
+        const cleanPhone = this.newEnquiry.phone.replace(/[\s\-().]/g, '');
+        // Indian mobile: optional +91 or 0 prefix, then 10 digits starting with 6-9
+        const phoneRegex = /^(\+91|91|0)?[6-9][0-9]{9}$/;
+        if (!phoneRegex.test(cleanPhone)) {
+          this.errors['phone'] = 'Invalid mobile number (e.g. 9876543210 or +919876543210)';
+        } else {
+          this.errors['phone'] = '';
+        }
+      }
+    }
+
+    if (field === 'altPhone') {
+      if (this.newEnquiry.altPhone && this.newEnquiry.altPhone.trim()) {
+        const cleanAlt = this.newEnquiry.altPhone.replace(/[\s\-().]/g, '');
+        // Indian mobile: optional +91 or 0 prefix, then 10 digits starting with 6-9
+        const phoneRegex = /^(\+91|91|0)?[6-9][0-9]{9}$/;
+        if (!phoneRegex.test(cleanAlt)) {
+          this.errors['altPhone'] = 'Invalid mobile number (e.g. 9876543210 or +919876543210)';
+        } else {
+          this.errors['altPhone'] = '';
+        }
+      } else {
+        this.errors['altPhone'] = '';
+      }
+    }
+
+    if (field === 'email') {
+      if (this.newEnquiry.email && this.newEnquiry.email.trim()) {
+        const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(this.newEnquiry.email.trim())) {
+          this.errors['email'] = 'Invalid Email Address format (e.g. guest@example.com)';
+        } else {
+          this.errors['email'] = '';
+        }
+      } else {
+        this.errors['email'] = '';
+      }
+    }
+
+    if (field === 'checkOut' || field === 'checkIn') {
+      if (this.newEnquiry.checkIn && this.newEnquiry.checkOut) {
+        const checkInDate = new Date(this.newEnquiry.checkIn);
+        const checkOutDate = new Date(this.newEnquiry.checkOut);
+        if (checkOutDate < checkInDate) {
+          this.errors['checkOut'] = 'Check-out date cannot be earlier than check-in date';
+        } else {
+          this.errors['checkOut'] = '';
+        }
+      } else {
+        this.errors['checkOut'] = '';
+      }
+    }
+
+    if (field === 'rooms') {
+      if (this.newEnquiry.rooms !== undefined && Number(this.newEnquiry.rooms) < 1) {
+        this.errors['rooms'] = 'Rooms count must be at least 1';
+      } else {
+        this.errors['rooms'] = '';
+      }
+    }
+
+    if (field === 'adults') {
+      if (this.newEnquiry.adults !== undefined && Number(this.newEnquiry.adults) < 1) {
+        this.errors['adults'] = 'Adults count must be at least 1';
+      } else {
+        this.errors['adults'] = '';
+      }
+    }
+
+    if (field === 'children') {
+      if (this.newEnquiry.children !== undefined && Number(this.newEnquiry.children) < 0) {
+        this.errors['children'] = 'Children count cannot be negative';
+      } else {
+        this.errors['children'] = '';
+      }
+    }
+
+    if (field === 'gstNumber') {
+      if (this.newEnquiry.gstNumber && this.newEnquiry.gstNumber.trim()) {
+        const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$/;
+        if (!gstRegex.test(this.newEnquiry.gstNumber.trim().toUpperCase())) {
+          this.errors['gstNumber'] = 'Invalid GST format (15 Alphanumeric e.g. 22AAAAA0000A1Z5)';
+        } else {
+          this.errors['gstNumber'] = '';
+        }
+      } else {
+        this.errors['gstNumber'] = '';
+      }
+    }
   }
 
   // Toggle detail rows (fallback or for display logic if needed)
@@ -379,7 +542,7 @@ export class CrmComponent implements OnInit {
     this.editEnquiry(enquiry);
   }
 
-  // Delete Enquiry (calls backend API and shows SnackBar)
+  // Delete Enquiry (calls backend API and shows SnackBar on top)
   deleteEnquiry(id: string) {
     const enquiry = this.enquiries().find(e => e.id === id);
     if (!enquiry) return;
@@ -390,41 +553,55 @@ export class CrmComponent implements OnInit {
           next: (res) => {
             if (res.success) {
               this.enquiries.update(list => list.filter(e => e.id !== id));
-              this.snackBar.open('Enquiry deleted successfully', 'Close', { duration: 3000 });
+              this.showNotification('Enquiry deleted successfully');
             } else {
-              this.snackBar.open('Failed to delete enquiry: ' + (res.message || 'Unknown error'), 'Close', { duration: 4000 });
+              this.showNotification('Failed to delete enquiry: ' + (res.message || 'Unknown error'), true);
             }
           },
           error: (err) => {
             console.error('Failed to delete enquiry:', err);
-            this.snackBar.open('Failed to delete enquiry. Please try again.', 'Close', { duration: 4000 });
+            this.showNotification('Failed to delete enquiry. Please try again.', true);
           }
         });
       } else {
         this.enquiries.update(list => list.filter(e => e.id !== id));
-        this.snackBar.open('Local enquiry deleted successfully', 'Close', { duration: 3000 });
+        this.showNotification('Local enquiry deleted successfully');
       }
     }
   }
 
-  // Add or update Enquiry (calls backend API and shows SnackBar)
+  // Add or update Enquiry (calls backend API and shows SnackBar on top)
   onSubmitEnquiry() {
-    if (!this.newEnquiry.guestName || !this.newEnquiry.phone) {
-      this.snackBar.open('Please enter Guest Name and Phone Number', 'Close', { duration: 3000 });
+    // Run all validations to populate validation state
+    this.validateField('guestName');
+    this.validateField('phone');
+    this.validateField('altPhone');
+    this.validateField('email');
+    this.validateField('checkOut');
+    this.validateField('rooms');
+    this.validateField('adults');
+    this.validateField('children');
+    this.validateField('gstNumber');
+
+    // Check if there are any validation errors
+    const errorList = Object.values(this.errors).filter(err => !!err);
+    if (errorList.length > 0) {
+      this.showNotification('Please correct validation errors on the form', true);
       return;
     }
 
+    const cleanPhone = this.newEnquiry.phone.replace(/[\s-]/g, '');
     const payload = {
       salutation: this.newEnquiry.salutation || 'Mr.',
-      guestName: this.newEnquiry.guestName,
-      companyName: this.newEnquiry.companyName || undefined,
-      phone: this.newEnquiry.phone,
-      altPhone: this.newEnquiry.altPhone || undefined,
-      email: this.newEnquiry.email || undefined,
-      address: this.newEnquiry.address || undefined,
-      city: this.newEnquiry.city || undefined,
-      state: this.newEnquiry.state || undefined,
-      gstNumber: this.newEnquiry.gstNumber || undefined,
+      guestName: this.newEnquiry.guestName.trim(),
+      companyName: this.newEnquiry.companyName ? this.newEnquiry.companyName.trim() : undefined,
+      phone: cleanPhone,
+      altPhone: this.newEnquiry.altPhone ? this.newEnquiry.altPhone.trim() : undefined,
+      email: this.newEnquiry.email ? this.newEnquiry.email.trim().toLowerCase() : undefined,
+      address: this.newEnquiry.address ? this.newEnquiry.address.trim() : undefined,
+      city: this.newEnquiry.city ? this.newEnquiry.city.trim() : undefined,
+      state: this.newEnquiry.state ? this.newEnquiry.state.trim() : undefined,
+      gstNumber: this.newEnquiry.gstNumber ? this.newEnquiry.gstNumber.trim().toUpperCase() : undefined,
       enquiryType: this.newEnquiry.enquiryType || 'Room',
       source: this.newEnquiry.source || 'Direct',
       checkIn: this.newEnquiry.checkIn || undefined,
@@ -438,7 +615,7 @@ export class CrmComponent implements OnInit {
       salesPerson: this.newEnquiry.salesPerson || undefined,
       priority: this.newEnquiry.priority || 'Medium',
       nextFollowUp: this.newEnquiry.nextFollowUp || undefined,
-      message: this.newEnquiry.message || undefined
+      message: this.newEnquiry.message ? this.newEnquiry.message.trim() : undefined
     };
 
     this.isLoading.set(true);
@@ -450,17 +627,17 @@ export class CrmComponent implements OnInit {
         next: (res) => {
           this.isLoading.set(false);
           if (res.success) {
-            this.snackBar.open(`Enquiry ${res.data?.enquiryRef || ''} successfully updated!`, 'Close', { duration: 3000 });
+            this.showNotification(`Enquiry ${res.data?.enquiryRef || ''} successfully updated!`);
             this.cancelEnquiryForm(); // clears edit mode, resets form, and routes to list
             this.loadEnquiries();
           } else {
-            this.snackBar.open('Failed to update enquiry: ' + (res.message || 'Unknown error'), 'Close', { duration: 4000 });
+            this.showNotification('Failed to update enquiry: ' + (res.message || 'Unknown error'), true);
           }
         },
         error: (err) => {
           this.isLoading.set(false);
           console.error('Failed to update enquiry:', err);
-          this.snackBar.open('Failed to update enquiry. Please check your network and try again.', 'Close', { duration: 4000 });
+          this.showNotification('Failed to update enquiry. Please check your network and try again.', true);
         }
       });
     } else {
@@ -469,17 +646,17 @@ export class CrmComponent implements OnInit {
         next: (res) => {
           this.isLoading.set(false);
           if (res.success) {
-            this.snackBar.open(`Enquiry ${res.data?.enquiryRef || ''} successfully created!`, 'Close', { duration: 3000 });
+            this.showNotification(`Enquiry ${res.data?.enquiryRef || ''} successfully created!`);
             this.cancelEnquiryForm(); // clears edit mode, resets form, and routes to list
             this.loadEnquiries();
           } else {
-            this.snackBar.open('Failed to create enquiry: ' + (res.message || 'Unknown error'), 'Close', { duration: 4000 });
+            this.showNotification('Failed to create enquiry: ' + (res.message || 'Unknown error'), true);
           }
         },
         error: (err) => {
           this.isLoading.set(false);
           console.error('Failed to create enquiry:', err);
-          this.snackBar.open('Failed to create enquiry. Please check your network and try again.', 'Close', { duration: 4000 });
+          this.showNotification('Failed to create enquiry. Please check your network and try again.', true);
         }
       });
     }
@@ -525,51 +702,119 @@ export class CrmComponent implements OnInit {
     if (selected) {
       this.newQuotation.guestName = selected.guestName;
       this.newQuotation.companyName = selected.companyName || '';
-      this.newQuotation.total = selected.expectedRevenue;
+      this.newQuotation.roomRate = selected.expectedRevenue || 0;
+      this.newQuotation.taxAmount = 0;
+      this.newQuotation.discountAmount = 0;
+      this.newQuotation.advanceAmount = 0;
+      this.updateQuotationTotal();
     }
+  }
+
+  // Calculate total amount dynamically: Total = Room Rate + Tax - Discount
+  updateQuotationTotal() {
+    const rate = Number(this.newQuotation.roomRate) || 0;
+    const tax = Number(this.newQuotation.taxAmount) || 0;
+    const discount = Number(this.newQuotation.discountAmount) || 0;
+    this.newQuotation.total = rate + tax - discount;
   }
 
   // Create Quotation Proposal
   onSubmitQuotation() {
-    if (!this.newQuotation.guestName || !this.newQuotation.total) {
-      alert('Please fill out all required fields');
+    if (!this.newQuotation.enquiryId) {
+      this.showNotification('Please select a linked Enquiry Reference', true);
       return;
     }
 
-    const nextNoNum = this.quotations().length + 1;
-    const newRecord: Quotation = {
-      quotationNo: `QTN-2026-000${nextNoNum}`,
-      revision: 0,
-      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      enquiryId: this.newQuotation.enquiryId || 'N/A',
-      guestName: this.newQuotation.guestName,
-      companyName: this.newQuotation.companyName || undefined,
-      total: Number(this.newQuotation.total) || 0,
-      validTill: this.newQuotation.validTill || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+    const selectedEnq = this.enquiries().find(e => e.id === this.newQuotation.enquiryId);
+    if (!selectedEnq || !selectedEnq.dbId) {
+      this.showNotification('Selected enquiry has no valid database ID', true);
+      return;
+    }
+
+    if (!this.newQuotation.guestName || !this.newQuotation.total) {
+      this.showNotification('Please fill out Guest Full Name and Valuation Amount', true);
+      return;
+    }
+
+    const payload = {
+      enquiryId: selectedEnq.dbId,
+      guestName: this.newQuotation.guestName.trim(),
+      companyName: this.newQuotation.companyName ? this.newQuotation.companyName.trim() : undefined,
+      checkIn: selectedEnq.checkIn,
+      checkOut: selectedEnq.checkOut,
+      rooms: selectedEnq.rooms,
+      adults: selectedEnq.adults,
+      children: selectedEnq.children,
+      mealPlan: selectedEnq.mealPlan,
+      roomRate: Number(this.newQuotation.roomRate) || 0,
+      taxAmount: Number(this.newQuotation.taxAmount) || 0,
+      discountAmount: Number(this.newQuotation.discountAmount) || 0,
+      totalAmount: Number(this.newQuotation.total) || 0,
+      advanceAmount: Number(this.newQuotation.advanceAmount) || 0,
+      validTill: this.newQuotation.validTill || undefined,
       status: 'Draft'
     };
 
-    // Prepend to array
-    this.quotations.update(list => [newRecord, ...list]);
-    alert(`Quotation ${newRecord.quotationNo} successfully created!`);
-    
-    // Close modal
-    this.isQuotationModalOpen.set(false);
-
-    // Reset Form
-    this.newQuotation = {
-      enquiryId: '',
-      guestName: '',
-      companyName: '',
-      total: 0,
-      validTill: ''
-    };
+    this.isLoading.set(true);
+    this.crmApi.createQuotation(payload).subscribe({
+      next: (res) => {
+        this.isLoading.set(false);
+        if (res.success) {
+          this.showNotification(`Quotation ${res.data?.quotationRef || ''} successfully created!`);
+          this.loadQuotations();
+          this.isQuotationModalOpen.set(false);
+          // Reset form
+          this.newQuotation = {
+            enquiryId: '',
+            guestName: '',
+            companyName: '',
+            roomRate: 0,
+            taxAmount: 0,
+            discountAmount: 0,
+            total: 0,
+            advanceAmount: 0,
+            validTill: ''
+          };
+        } else {
+          this.showNotification('Failed to create quotation: ' + (res.message || 'Unknown error'), true);
+        }
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        console.error('Failed to create quotation:', err);
+        this.showNotification('Failed to create quotation. Please try again.', true);
+      }
+    });
   }
 
   // Delete Quotation
   deleteQuotation(quotationNo: string) {
+    const q = this.quotations().find(item => item.quotationNo === quotationNo);
+    if (!q) return;
+
     if (confirm(`Are you sure you want to delete quotation ${quotationNo}?`)) {
-      this.quotations.update(list => list.filter(q => q.quotationNo !== quotationNo));
+      if (q.id) {
+        this.isLoading.set(true);
+        this.crmApi.deleteQuotation(q.id).subscribe({
+          next: (res) => {
+            this.isLoading.set(false);
+            if (res.success) {
+              this.showNotification(`Quotation ${quotationNo} deleted successfully`);
+              this.loadQuotations();
+            } else {
+              this.showNotification('Failed to delete quotation: ' + (res.message || 'Unknown error'), true);
+            }
+          },
+          error: (err) => {
+            this.isLoading.set(false);
+            console.error('Failed to delete quotation:', err);
+            this.showNotification('Failed to delete quotation. Please try again.', true);
+          }
+        });
+      } else {
+        this.quotations.update(list => list.filter(item => item.quotationNo !== quotationNo));
+        this.showNotification('Local quotation deleted');
+      }
     }
   }
 

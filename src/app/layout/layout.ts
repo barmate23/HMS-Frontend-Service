@@ -151,7 +151,20 @@ export class Layout implements OnInit {
         { label: 'Guest Profiles', icon: 'person_search', route: '/guests' }
       ]
     },
-    { label: 'CRM', icon: 'groups', route: '/crm' },
+    {
+      label: 'CRM',
+      icon: 'groups',
+      expanded: false,
+      children: [
+        { label: 'Board', icon: 'space_dashboard', route: '/crm/dashboard' },
+        { label: 'Tasks', icon: 'assignment', route: '/crm/tasks' },
+        { label: 'New Enquiry', icon: 'add_box', route: '/crm/new' },
+        { label: 'Quotations', icon: 'description', route: '/crm/quotations' },
+        { label: 'Staff', icon: 'badge', route: '/crm/staff' }
+      ]
+    },
+
+
     {
       label: 'Housekeeping',
       icon: 'cleaning_services',
@@ -254,9 +267,9 @@ export class Layout implements OnInit {
         { label: 'Table Dining', icon: 'table_restaurant', route: '/pos/dining' },
         { label: 'Orders', icon: 'restaurant_menu', route: '/pos/orders' },
         { label: 'Billing', icon: 'receipt_long', route: '/pos/billing' },
-        { label: 'Menu Management', icon: 'menu_book', route: '/pos/menu' },
-        { label: 'Billing Setup', icon: 'settings', route: '/pos/billing-setup' }
+        { label: 'Menu Management', icon: 'menu_book', route: '/pos/menu' }
       ]
+
     },
     {
       label: 'Channel Manager',

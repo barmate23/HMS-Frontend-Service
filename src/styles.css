@@ -36,9 +36,9 @@
   --sidebar-collapsed-width: 40px;
   --topbar-height: 32px; /* Dense top bar for data-heavy screens */
   
-  --font-sans: "Poppins", sans-serif;
-  --font-poppins: "Poppins", sans-serif;
-  --font-inter: "Poppins", sans-serif;
+  --font-sans: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-poppins: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-inter: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 * {
@@ -53,24 +53,49 @@ html {
   overflow: hidden !important;
 }
 
-body {
-  font-family: var(--font-sans);
-  background-color: var(--surface-100);
-  color: var(--surface-700);
+body, button, input, select, textarea {
+  font-family: var(--font-poppins);
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Material Icons Font Protection */
+.material-icons,
+.material-icons-round,
+.material-icons-outlined,
+[class*="material-icons"] {
+  font-family: 'Material Icons Round', 'Material Icons' !important;
+  font-weight: normal !important;
+  font-style: normal !important;
+  line-height: 1;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: var(--surface-100);
+  color: var(--surface-700);
   height: 100vh !important;
   width: 100vw !important;
   overflow: hidden !important; /* Force no outer scroll */
   margin: 0;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1, h2, h3, h4, h5, h6, th, strong, b, .card-title, .section-title, .section-subtitle {
   font-family: var(--font-poppins);
   font-weight: 600;
   color: var(--surface-900);
-  letter-spacing: -0.025em;
+  letter-spacing: -0.01em;
 }
+
+
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {

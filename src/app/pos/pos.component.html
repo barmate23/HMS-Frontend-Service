@@ -315,7 +315,7 @@
       <div class="card-header"><h2 class="card-title">Billing, Payments & Room Posting</h2><span class="total-badge">{{ filteredBills().length }} Bills</span></div>
       <div class="table-container">
         <table class="premium-table hk-grid-table">
-          <thead><tr><th>BILL</th><th>ORDER</th><th>GUEST / ROOM</th><th>AMOUNT</th><th>DISCOUNT</th><th>PAYMENT</th><th>FOLIO</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+          <thead><tr><th>BILL</th><th>ORDER</th><th>GUEST / ROOM</th><th>AMOUNT</th><th>DISCOUNT</th><th>PAYMENT</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
           <tbody>
             <tr *ngFor="let bill of filteredBills()">
               <td><strong>{{ bill.billNo }}</strong></td>
@@ -325,14 +325,35 @@
               <td>₹{{ billTotal(bill) | number:'1.0-0' }}<span class="subline">Paid ₹{{ bill.paid | number:'1.0-0' }}</span></td>
               <td>₹{{ bill.discount | number:'1.0-0' }}<span class="subline" *ngIf="bill.compReason">Comp: {{ bill.compReason }}</span></td>
               <td>{{ bill.paymentModes.join(', ') }}</td>
-              <td><span class="status-badge" [class.completed]="bill.postedToFolio">{{ bill.postedToFolio ? 'POSTED' : 'PENDING' }}</span></td>
               <td><span class="status-badge" [class]="bill.status.toLowerCase()">{{ bill.status }}</span></td>
-              <td><div class="action-buttons"><button class="btn-icon check" title="Post to Folio" (click)="pos.postBillToRoom(bill.id)"><span class="material-icons-round">bed</span></button><button class="btn-icon edit" (click)="openEdit('bill', bill)"><span class="material-icons-round">edit</span></button><button class="btn-icon delete" (click)="voidBill(bill)"><span class="material-icons-round">block</span></button></div></td>
+              <td><div class="action-buttons"><button class="btn-icon check" [class.frozen]="!bill.isRoomOrder || bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')" [disabled]="!bill.isRoomOrder || bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')" [title]="!bill.isRoomOrder ? 'Room posting disabled for non-room orders' : ((bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')) ? 'Already posted to room folio' : 'Post to Folio')" (click)="pos.postBillToRoom(bill.id)"><span class="material-icons-round">bed</span></button><button class="btn-icon edit" (click)="openEdit('bill', bill)"><span class="material-icons-round">edit</span></button><button class="btn-icon delete" (click)="voidBill(bill)"><span class="material-icons-round">block</span></button></div></td>
+
+
+
+
+
             </tr>
           </tbody>
         </table>
       </div>
+
+      <!-- Billing Pagination -->
+      <div class="pos-pagination" *ngIf="pos.bills().length">
+        <span>{{ billsPaginationRangeLabel() }}</span>
+        <div>
+          <button type="button" class="pagination-btn" [disabled]="pos.billsPage() === 0" (click)="prevBillsPage()">
+            <span class="material-icons-round">chevron_left</span>
+            Prev
+          </button>
+          <strong>Page {{ pos.billsPage() + 1 }} / {{ pos.billsTotalPages() || 1 }}</strong>
+          <button type="button" class="pagination-btn" [disabled]="pos.billsPage() + 1 >= pos.billsTotalPages()" (click)="nextBillsPage()">
+            Next
+            <span class="material-icons-round">chevron_right</span>
+          </button>
+        </div>
+      </div>
     </div>
+
 
     <div class="modern-card" *ngSwitchCase="'billing-setup'">
       <div class="card-header">
@@ -587,10 +608,33 @@
           <div class="ci-input-group"><label>Table</label><select [ngModel]="currentOrder().tableNo" (ngModelChange)="updateOrderTable($event)"><option value="" disabled>Select table</option><option *ngFor="let table of orderTables()" [value]="table.number">{{ table.number }} - {{ table.section }}</option></select></div>
         </div>
         <div class="ci-form-grid mt-3" *ngIf="currentOrder().type === 'ROOM'">
-          <div class="ci-input-group"><label>Floor</label><select [ngModel]="currentOrder().floorId" (ngModelChange)="updateOrderFloor($event)"><option [ngValue]="null" disabled>Select floor</option><option *ngFor="let floor of orderRoomFloors()" [ngValue]="floor.id">{{ floor.floorNumber }}</option></select></div>
-          <div class="ci-input-group"><label>Room</label><select [ngModel]="currentOrder().roomId" (ngModelChange)="updateOrderRoom($event)"><option [ngValue]="null" disabled>Select room</option><option *ngFor="let room of orderRooms()" [ngValue]="room.id">{{ room.roomNumber }} - {{ room.status }}</option></select></div>
-          <div class="ci-input-group room-note-field"><label>Guest Name</label><input [(ngModel)]="currentOrder().guestName" placeholder="Guest Name"></div>
+          <div class="ci-input-group">
+            <label>Floor</label>
+            <select [ngModel]="currentOrder().floorId" (ngModelChange)="updateOrderFloor($event)">
+              <option [ngValue]="null" disabled>Select floor</option>
+              <option *ngFor="let floor of orderRoomFloors()" [ngValue]="floor.id">{{ floor.floorNumber }}</option>
+            </select>
+          </div>
+          <div class="ci-input-group">
+            <label>Room</label>
+            <div class="paged-select-wrapper">
+              <select [ngModel]="currentOrder().roomId" (ngModelChange)="updateOrderRoom($event)">
+                <option [ngValue]="null" disabled>Select room</option>
+                <option *ngFor="let room of orderRooms()" [ngValue]="room.id">{{ room.roomNumber }} - {{ room.status }}</option>
+              </select>
+              <button type="button" class="load-more-rooms-btn" *ngIf="hasMoreOrderRooms()" (click)="loadNextOrderRoomsPage()" [disabled]="isLoadingOrderRooms()">
+                <span class="material-icons-round" *ngIf="!isLoadingOrderRooms()">expand_more</span>
+                <span class="material-icons-round spinning" *ngIf="isLoadingOrderRooms()">sync</span>
+                {{ isLoadingOrderRooms() ? 'Loading...' : 'More Rooms (' + orderRooms().length + ' loaded)' }}
+              </button>
+            </div>
+          </div>
+          <div class="ci-input-group room-note-field">
+            <label>Guest Name</label>
+            <input [(ngModel)]="currentOrder().guestName" placeholder="Guest Name">
+          </div>
         </div>
+
 
         <div class="table-order-builder">
           <div class="order-builder-panel">
@@ -669,10 +713,16 @@
               </div>
               <div class="ci-input-group">
                 <label>Bill Status</label>
-                <select [(ngModel)]="currentBill().status">
-                  <option *ngFor="let status of pos.billStatuses()" [value]="status">{{ status }}</option>
+                <select [ngModel]="currentBillStatus()" (ngModelChange)="updateBillStatus($event)">
+                  <option *ngFor="let status of availableBillStatuses()" [value]="status">{{ status }}</option>
+                  <option *ngIf="currentBill().status && !availableBillStatuses().includes(currentBillStatus())" [value]="currentBill().status">
+                    {{ currentBill().status }}
+                  </option>
                 </select>
               </div>
+
+
+
             </div>
 
             <div class="ci-form-grid mt-3" *ngIf="currentBill().orderType === 'TABLE'">
@@ -707,9 +757,30 @@
               <div class="ci-input-group"><label>Comp / Void Reason</label><select [(ngModel)]="currentBill().compReason"><option value="">Select reason</option><option *ngFor="let reason of pos.voidReasons()" [value]="reason">{{ reason }}</option></select></div>
             </div>
 
-            <label class="toggle-option mt-3">
-              <input type="checkbox" [(ngModel)]="currentBill().postedToFolio"> Post to guest room folio
+            <label class="toggle-option mt-3" [class.disabled]="!currentBillIsRoomOrder() || currentBillStatus().toLowerCase() === 'posted'">
+              <input type="checkbox"
+                [ngModel]="currentBill().postedToFolio"
+                (ngModelChange)="onPostedToFolioChange($event)"
+                [disabled]="!currentBillIsRoomOrder() || currentBillStatus().toLowerCase() === 'posted'">
+              Post to guest room folio
             </label>
+
+            <div class="folio-hint-container mt-2">
+              <div *ngIf="!currentBillIsRoomOrder()" class="folio-hint warning">
+                <span class="material-icons-round">info</span>
+                <span>Room posting is only available for Room Orders. Select Room in Order From to enable.</span>
+              </div>
+              <div *ngIf="currentBillIsRoomOrder() && currentBillStatus().toLowerCase() === 'posted'" class="folio-hint success">
+                <span class="material-icons-round">check_circle</span>
+                <span>This bill has already been posted to the guest room folio.</span>
+              </div>
+              <div *ngIf="currentBillIsRoomOrder() && currentBill().postedToFolio && currentBillStatus().toLowerCase() !== 'posted'" class="folio-hint info">
+                <span class="material-icons-round">bolt</span>
+                <span>Saving will automatically post ₹{{ billTotal(currentBill()) | number:'1.0-0' }} to the room folio.</span>
+              </div>
+            </div>
+
+
           </div>
 
           <!-- Right Column: Itemized Order & GST Live Preview -->

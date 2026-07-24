@@ -1,7 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Observable, map } from 'rxjs';
+import { Observable, map, catchError } from 'rxjs';
+
 import { UserManagementService } from '../user-management/user-management.service';
 
 export type PosTab = 'dashboard' | 'outlets' | 'dining' | 'orders' | 'billing' | 'menu' | 'billing-setup';
@@ -107,8 +108,10 @@ export interface PosBill {
   compReason?: string;
   paid: number;
   status: BillStatus;
+  statusId?: number;
   paymentModes: PaymentMode[];
   postedToFolio: boolean;
+  isRoomOrder?: boolean;
 }
 
 export interface PosShift {
@@ -351,6 +354,7 @@ interface ApiBill {
   postedToFolio?: boolean;
   isPostedToFolio?: boolean;
   postToFolio?: boolean;
+  isRoomOrder?: boolean;
   notes?: string | null;
   createdAt?: string;
   updatedAt?: string;
@@ -390,7 +394,7 @@ export class PosService {
   private readonly defaultMenuCategories: string[] = ['Food', 'Beverage', 'Retail', 'Room Service'];
   private readonly defaultMenuSubcategories: string[] = ['Starter', 'Main Course', 'Dessert', 'Beverage', 'Room Service'];
   private readonly defaultOrderStatuses: OrderStatus[] = ['OPEN', 'KOT_SENT', 'HELD', 'BILLED', 'CANCELLED'];
-  private readonly defaultBillStatuses: BillStatus[] = ['OPEN', 'PARTIAL', 'PAID', 'VOID'];
+  private readonly defaultBillStatuses: BillStatus[] = ['Open', 'Paid', 'Partial', 'Void'];
   private readonly defaultPaymentModes: PaymentMode[] = ['Cash', 'Card', 'UPI', 'Room Charge', 'City Ledger', 'Voucher'];
   private readonly defaultVoidReasons: string[] = ['Void marked by supervisor', 'Guest complaint', 'Wrong item billed', 'Manager approval'];
   private readonly defaultUsers = ['Rajan Mehta', 'Meena Pillai', 'Arjun Menon', 'Deepa Thomas', 'Outlet Manager'];
@@ -410,6 +414,8 @@ export class PosService {
   readonly orderStatusMasters = signal<ApiCommonMaster[]>([]);
   readonly kotStatusMasters = signal<ApiCommonMaster[]>([]);
   readonly billStatuses = signal<BillStatus[]>(this.defaultBillStatuses);
+  readonly billStatusMasters = signal<ApiCommonMaster[]>([]);
+
   readonly paymentModes = signal<PaymentMode[]>(this.defaultPaymentModes);
   readonly voidReasons = signal<string[]>(this.defaultVoidReasons);
   readonly users = computed(() => {
@@ -425,6 +431,10 @@ export class PosService {
   readonly tables = signal<PosTable[]>([]);
   readonly orders = signal<PosOrder[]>([]);
   readonly bills = signal<PosBill[]>([]);
+  readonly billsPage = signal<number>(0);
+  readonly billsPageSize = signal<number>(20);
+  readonly billsTotalRecords = signal<number>(0);
+  readonly billsTotalPages = signal<number>(1);
   readonly shifts = signal<PosShift[]>([]);
   readonly auditLogs = signal<PosAuditLog[]>([]);
   readonly posDashboard = signal<PosDashboardData | null>(null);
@@ -579,7 +589,9 @@ export class PosService {
   loadBillStatuses(): void {
     this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/BILL_STATUS`).subscribe({
       next: response => {
-        const billStatuses = this.commonMastersData(response)
+        const masters = this.commonMastersData(response);
+        if (masters.length) this.billStatusMasters.set(masters);
+        const billStatuses = masters
           .map(item => item.value || item.code || '')
           .map(value => value.trim())
           .filter(Boolean);
@@ -633,6 +645,17 @@ export class PosService {
     });
   }
 
+  fetchRoomsByFloor(floorId?: number | null, page: number = 0, size: number = 10): Observable<any> {
+    const floorParam = floorId ? `floorId=${floorId}&` : '';
+    const primaryUrl = `/api/masterService/v1/rooms/getAllRooms?${floorParam}page=${page}&size=${size}`;
+    return this.http.get<any>(primaryUrl).pipe(
+      catchError(() => {
+        return this.http.get<any>(`${this.hmsBaseUrl}/master/rooms/getAllRooms?${floorParam}page=${page}&size=${size}`);
+      })
+    );
+  }
+
+
 
   loadOutlets(): void {
     this.http.get<ApiOutlet[] | ApiListResponse<ApiOutlet> | StandardResponse<ApiOutlet[]>>(`${this.posBaseUrl}/outlets/getAllOutlets`).subscribe({
@@ -664,19 +687,34 @@ export class PosService {
     });
   }
 
-  loadOrders(): void {
-    this.http.get<ApiOrder[] | ApiListResponse<ApiOrder> | StandardResponse<ApiOrder[]>>(`${this.posBaseUrl}/orders/getAllOrders`).subscribe({
+  loadOrders(outletId?: number): void {
+    const url = outletId
+      ? `${this.posBaseUrl}/orders/getAllOrders?outletId=${outletId}`
+      : `${this.posBaseUrl}/orders/getAllOrders`;
+    this.http.get<ApiOrder[] | ApiListResponse<ApiOrder> | StandardResponse<ApiOrder[]>>(url).subscribe({
       next: response => this.orders.set(this.listData(response).map(item => this.mapOrder(item))),
       error: error => this.addAudit('Unable to load orders from API', 'Orders', error?.error?.message || error?.message || 'API error')
     });
   }
 
-  loadBills(status?: string): void {
+
+  loadBills(status?: string, page: number = 0, size: number = 20): void {
+    const pageParam = `page=${page}&size=${size}`;
     const url = status && status !== 'ALL'
-      ? `${this.posBaseUrl}/billing/getBillsByStatus?status=${status}`
-      : `${this.posBaseUrl}/billing/getAllBills`;
-    this.http.get<ApiBill[] | ApiListResponse<ApiBill> | StandardResponse<ApiBill[]>>(url).subscribe({
-      next: response => this.bills.set(this.listData(response).map(item => this.mapBill(item))),
+      ? `${this.posBaseUrl}/billing/getBillsByStatus?status=${status}&${pageParam}`
+      : `${this.posBaseUrl}/billing/getAllBills?${pageParam}`;
+
+    this.http.get<any>(url).subscribe({
+      next: response => {
+        const items = this.listData(response).map((item: any) => this.mapBill(item));
+        this.bills.set(items);
+
+        const metadata = response?.metadata || {};
+        this.billsPage.set(metadata.currentPage ?? page);
+        this.billsPageSize.set(metadata.pageSize ?? size);
+        this.billsTotalRecords.set(metadata.totalRecords ?? items.length);
+        this.billsTotalPages.set(metadata.totalPages ?? 1);
+      },
       error: error => this.addAudit('Unable to load bills from API', 'Billing', error?.error?.message || error?.message || 'API error')
     });
   }
@@ -1035,49 +1073,73 @@ export class PosService {
   }
 
   saveBill(input: Partial<PosBill>): void {
-    const nextId = Math.max(0, ...this.bills().map(item => item.id)) + 1;
-    const bill: PosBill = {
-      id: input.id ?? nextId,
-      orderId: Number(input.orderId || this.orders()[0]?.id || 1),
-      billNo: input.billNo || `BILL-${7000 + nextId}`,
-      orderType: input.orderType,
-      tableNo: input.tableNo || '',
-      floorId: input.floorId || null,
-      roomId: input.roomId || null,
-      guestName: input.guestName || '',
-      roomNo: input.roomNo || '',
-      subtotal: Number(input.subtotal || 0),
-      discount: Number(input.discount || 0),
-      tax: Number(input.tax ?? 18),
-      taxAmount: Number(input.taxAmount || 0),
-      compReason: input.compReason || '',
-      paid: Number(input.paid || 0),
-      status: input.status || 'OPEN',
-      paymentModes: input.paymentModes?.length ? input.paymentModes : ['Cash'],
-      postedToFolio: !!input.postedToFolio
+    const isPostedSelected = !!input.status && String(input.status).toLowerCase() === 'posted';
+
+    const executeSave = () => {
+      const nextId = Math.max(0, ...this.bills().map(item => item.id)) + 1;
+      const bill: PosBill = {
+        id: input.id ?? nextId,
+        orderId: Number(input.orderId || this.orders()[0]?.id || 1),
+        billNo: input.billNo || `BILL-${7000 + nextId}`,
+        orderType: input.orderType,
+        tableNo: input.tableNo || '',
+        floorId: input.floorId || null,
+        roomId: input.roomId || null,
+        guestName: input.guestName || '',
+        roomNo: input.roomNo || '',
+        subtotal: Number(input.subtotal || 0),
+        discount: Number(input.discount || 0),
+        tax: Number(input.tax ?? 18),
+        taxAmount: Number(input.taxAmount || 0),
+        compReason: input.compReason || '',
+        paid: Number(input.paid || 0),
+        status: input.status || 'OPEN',
+        statusId: input.statusId,
+        paymentModes: input.paymentModes?.length ? input.paymentModes : ['Cash'],
+        postedToFolio: isPostedSelected || !!input.postedToFolio,
+        isRoomOrder: input.isRoomOrder
+      };
+
+      const payload = this.toApiBill(bill);
+      const request$ = input.id
+        ? this.http.put<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/updateBill/${input.id}`, payload)
+        : this.http.post<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/createBill`, payload);
+
+      request$.subscribe({
+        next: response => {
+          const savedApiItem = (response as StandardResponse<ApiBill>)?.data || response;
+          const savedBill = savedApiItem && savedApiItem.id ? this.mapBill(savedApiItem) : bill;
+          this.bills.update(items => input.id
+            ? items.map(existing => existing.id === input.id ? savedBill : existing)
+            : [savedBill, ...items]
+          );
+          this.addAudit(input.id ? 'Bill updated' : 'Bill generated', 'Billing', savedBill.billNo);
+          this.snackBar.open(input.id ? 'Bill updated successfully' : 'Bill created successfully', 'Close', { duration: 3000 });
+        },
+        error: error => {
+          this.bills.update(items => input.id ? items.map(existing => existing.id === input.id ? bill : existing) : [bill, ...items]);
+          this.addAudit(input.id ? 'Bill updated (local fallback)' : 'Bill generated (local fallback)', 'Billing', bill.billNo);
+        }
+      });
     };
 
-    const payload = this.toApiBill(bill);
-    const request$ = input.id
-      ? this.http.put<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/updateBill/${input.id}`, payload)
-      : this.http.post<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/createBill`, payload);
-
-    request$.subscribe({
-      next: response => {
-        const savedApiItem = (response as StandardResponse<ApiBill>)?.data || response;
-        const savedBill = savedApiItem && savedApiItem.id ? this.mapBill(savedApiItem) : bill;
-        this.bills.update(items => input.id
-          ? items.map(existing => existing.id === input.id ? savedBill : existing)
-          : [savedBill, ...items]
-        );
-        this.addAudit(input.id ? 'Bill updated' : 'Bill generated', 'Billing', savedBill.billNo);
-        this.snackBar.open(input.id ? 'Bill updated successfully' : 'Bill created successfully', 'Close', { duration: 3000 });
-      },
-      error: error => {
-        this.bills.update(items => input.id ? items.map(existing => existing.id === input.id ? bill : existing) : [bill, ...items]);
-        this.addAudit(input.id ? 'Bill updated (local fallback)' : 'Bill generated (local fallback)', 'Billing', bill.billNo);
+    if (isPostedSelected) {
+      const isRoomOrder = input.isRoomOrder ?? (input.orderType === 'ROOM' || !!input.roomId || !!input.roomNo);
+      if (!isRoomOrder) {
+        this.snackBar.open('Cannot set status to Posted: Bill must be a Room order.', 'Close', { duration: 4000 });
+        return;
       }
-    });
+      if (input.id) {
+        this.postBillToRoom(input.id, () => {
+          executeSave();
+        });
+      } else {
+        executeSave();
+      }
+    } else {
+      executeSave();
+    }
+
   }
 
   voidBill(id: number, reason?: string): void {
@@ -1106,11 +1168,16 @@ export class PosService {
     });
   }
 
-  postBillToRoom(id: number): void {
+  postBillToRoom(id: number, onSuccess?: () => void): void {
     const bill = this.bills().find(item => item.id === id);
-    if (!bill) return;
+    if (!bill || !bill.isRoomOrder) return;
+    if (bill.postedToFolio || (bill.status && String(bill.status).toLowerCase() === 'posted')) {
+      this.snackBar.open('Bill is already posted to room folio', 'Close', { duration: 3000 });
+      return;
+    }
 
-    const roomId = Number(bill.roomId || 1);
+    const order = this.orders().find(o => o.id === bill.orderId);
+    const roomId = bill.roomId ? Number(bill.roomId) : (order?.roomId ? Number(order.roomId) : 1);
     const totalAmount = Number(bill.subtotal || 0);
     const taxTypeStr = `GST ${bill.tax || 18}%`;
     const descStr = `POS Bill ${bill.billNo} - ${bill.orderType || 'Order'} (${bill.guestName || 'Guest'})`;
@@ -1128,18 +1195,45 @@ export class PosService {
         if (response && response.success === false) {
           const errorMsg = response.error?.details || response.error?.message || response.message || 'Failed to post bill to folio';
           this.snackBar.open(`Failed to Post to Folio: ${errorMsg}`, 'Close', { duration: 4000 });
-          return;
+          return; // Strictly stop here! Do NOT update status or call update bill API on failure.
         }
 
-        this.bills.update(items => items.map(item => item.id === id ? { ...item, postedToFolio: true } : item));
+        const postedMaster = this.billStatusMasters().find(m =>
+          (m.value && m.value.toLowerCase() === 'posted') ||
+          (m.code && m.code.toLowerCase() === 'posted')
+        );
+
+        const updatedBill: PosBill = {
+          ...bill,
+          postedToFolio: true,
+          status: 'Posted',
+          statusId: postedMaster?.id || bill.statusId
+        };
+
+        this.bills.update(items => items.map(item => item.id === id ? updatedBill : item));
         this.addAudit('Posted POS charge to room folio', 'Room Posting', `Bill ${bill.billNo} - Room ${bill.roomNo || roomId}`);
         this.snackBar.open(`Posted to Folio: Charge of ₹${totalAmount} posted to Room Folio successfully.`, 'Close', { duration: 4000 });
+
+        const apiPayload = this.toApiBill(updatedBill);
+        this.http.put<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/updateBill/${id}`, apiPayload).subscribe({
+          next: updateRes => {
+            const savedApiItem = (updateRes as StandardResponse<ApiBill>)?.data || updateRes;
+            if (savedApiItem && savedApiItem.id) {
+              this.bills.update(items => items.map(existing => existing.id === id ? this.mapBill(savedApiItem) : existing));
+            }
+            if (onSuccess) onSuccess();
+          },
+          error: err => {
+            console.error('[POS] Failed to sync Posted status to bill edit API:', err);
+            if (onSuccess) onSuccess();
+          }
+        });
       },
       error: error => {
         console.error('[POS] Failed to post bill to folio API:', error);
-        this.bills.update(items => items.map(item => item.id === id ? { ...item, postedToFolio: true } : item));
-        this.addAudit('Posted POS charge to room folio (fallback)', 'Room Posting', `Bill ${bill.billNo}`);
-        this.snackBar.open(`Posted to Folio: Charge of ₹${totalAmount} updated.`, 'Close', { duration: 3000 });
+        const errorMsg = error?.error?.details || error?.error?.message || error?.message || 'Failed to post bill to folio';
+        this.snackBar.open(`Failed to Post to Folio: ${errorMsg}`, 'Close', { duration: 4000 });
+        // Strictly DO NOT update status or call update bill API if post to folio failed!
       }
     });
   }
@@ -1415,15 +1509,12 @@ export class PosService {
     }
     if (!modes.length) modes = ['Cash'];
 
-    const rawStatus = String(item.statusName || item.status || 'OPEN').toUpperCase();
-    let status: BillStatus = 'OPEN';
-    if (rawStatus.includes('PAID') || rawStatus === 'SETTLED') {
-      status = 'PAID';
-    } else if (rawStatus.includes('PARTIAL')) {
-      status = 'PARTIALLY_PAID';
-    } else if (rawStatus.includes('VOID') || rawStatus.includes('CANCEL')) {
-      status = 'VOID';
-    }
+    const rawStatus = String(item.statusName || item.status || 'Open').trim();
+    let status: string = item.statusName || item.status || 'Open';
+    if (rawStatus.toUpperCase() === 'OPEN') status = 'Open';
+    else if (rawStatus.toUpperCase() === 'PAID' || rawStatus.toUpperCase() === 'SETTLED') status = 'Paid';
+    else if (rawStatus.toUpperCase().includes('PARTIAL')) status = 'Partial';
+    else if (rawStatus.toUpperCase().includes('VOID')) status = 'Void';
 
     const orderFromRaw = String(item.orderFrom || item.orderType || 'TABLE').toUpperCase();
     const orderType: OrderType = orderFromRaw.includes('ROOM') ? 'ROOM' : orderFromRaw.includes('TAKEAWAY') ? 'TAKEAWAY' : 'TABLE';
@@ -1453,14 +1544,23 @@ export class PosService {
       compReason: item.compVoidReasonName || item.compReason || '',
       paid: paidAmount,
       status,
+      statusId: item.statusId ? Number(item.statusId) : undefined,
       paymentModes: modes,
-      postedToFolio: item.postToFolio ?? item.postedToFolio ?? item.isPostedToFolio ?? false
+      postedToFolio: item.postToFolio ?? item.postedToFolio ?? item.isPostedToFolio ?? false,
+      isRoomOrder: item.isRoomOrder ?? (orderType === 'ROOM' || !!item.roomId || !!item.roomNumber)
     };
   }
 
   private toApiBill(item: PosBill): ApiBill {
     const gstPercentage = item.tax && item.tax <= 100 ? item.tax : 18;
     const computedTaxAmount = item.taxAmount ?? (item.tax > 100 ? item.tax : Number((item.subtotal * (gstPercentage / 100)).toFixed(2)));
+
+    const statusMaster = this.billStatusMasters().find(m =>
+      (m.value && m.value.toLowerCase() === (item.status || '').toLowerCase()) ||
+      (m.code && m.code.toLowerCase() === (item.status || '').toLowerCase()) ||
+      (m.id && Number(m.id) === Number(item.statusId))
+    );
+    const resolvedStatusId = item.statusId || statusMaster?.id || 52;
 
     return {
       id: item.id,
@@ -1488,6 +1588,7 @@ export class PosService {
       paymentMethodName: item.paymentModes[0] || 'Cash',
       paymentMode: item.paymentModes[0] || 'Cash',
       paymentModes: item.paymentModes.join(','),
+      statusId: resolvedStatusId,
       status: item.status,
       statusName: item.status,
       compReason: item.compReason,
@@ -1496,7 +1597,8 @@ export class PosService {
       paidAmount: item.paid,
       postToFolio: item.postedToFolio,
       postedToFolio: item.postedToFolio,
-      isPostedToFolio: item.postedToFolio
+      isPostedToFolio: item.postedToFolio,
+      isRoomOrder: item.isRoomOrder ?? (item.orderType === 'ROOM')
     };
   }
 

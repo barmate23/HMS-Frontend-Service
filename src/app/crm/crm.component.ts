@@ -48,7 +48,11 @@ export interface Quotation {
   enquiryId: string;
   guestName: string;
   companyName?: string;
+  roomRate?: number;
+  taxAmount?: number;
+  discountAmount?: number;
   total: number;
+  advanceAmount?: number;
   validTill: string;
   status: 'Draft' | 'Sent' | 'Accepted' | 'Declined' | 'Rejected' | 'Expired' | 'Revised';
 }
@@ -181,7 +185,11 @@ export class CrmComponent implements OnInit {
             enquiryId: item.enquiryRef || 'N/A',
             guestName: item.guestName,
             companyName: item.companyName || '',
+            roomRate: item.roomRate || 0,
+            taxAmount: item.taxAmount || 0,
+            discountAmount: item.discountAmount || 0,
             total: item.totalAmount || 0,
+            advanceAmount: item.advanceAmount || 0,
             validTill: item.validTill ? new Date(item.validTill).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
             status: (item.status || 'Draft') as Quotation['status']
           }));
@@ -736,6 +744,34 @@ export class CrmComponent implements OnInit {
     const tax = Number(this.newQuotation.taxAmount) || 0;
     const discount = Number(this.newQuotation.discountAmount) || 0;
     this.newQuotation.total = rate + tax - discount;
+  }
+
+  // Get dynamic Rate label based on selected enquiry type (e.g. Base Event Rate, Base Room/Banquet Rate)
+  getQuotationRateLabel(): string {
+    if (!this.newQuotation.enquiryId) {
+      return 'Base Rate';
+    }
+    const selected = this.enquiries().find(e => e.id === this.newQuotation.enquiryId);
+    if (!selected || !selected.enquiryType) {
+      return 'Base Rate';
+    }
+    const types = selected.enquiryType.split(',').map(t => t.trim());
+    const formattedTypes = types.map(t => t.charAt(0).toUpperCase() + t.slice(1));
+    return `Base ${formattedTypes.join(' / ')} Rate`;
+  }
+
+  // Get dynamic Rate label for the Proposal details preview modal
+  getQuotationRateLabelForPreview(q: Quotation): string {
+    if (!q.enquiryId || q.enquiryId === 'N/A') {
+      return 'Base Rate';
+    }
+    const selected = this.enquiries().find(e => e.id === q.enquiryId);
+    if (!selected || !selected.enquiryType) {
+      return 'Base Rate';
+    }
+    const types = selected.enquiryType.split(',').map(t => t.trim());
+    const formattedTypes = types.map(t => t.charAt(0).toUpperCase() + t.slice(1));
+    return `Base ${formattedTypes.join(' / ')} Rate`;
   }
 
   // Create Quotation Proposal

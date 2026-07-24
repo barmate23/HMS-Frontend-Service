@@ -638,7 +638,7 @@
           </div>
 
           <div class="input-group">
-            <label>Base Room Rate (₹)</label>
+            <label>{{ getQuotationRateLabel() }} (₹)</label>
             <input type="number" min="0" placeholder="0.00" [(ngModel)]="newQuotation.roomRate" name="modalRoomRate" (ngModelChange)="updateQuotationTotal()">
           </div>
 
@@ -845,16 +845,24 @@
                 <span class="val">Rev {{ q.revision }}</span>
               </div>
               <div class="detail-row">
-                <span class="lbl">Base Package Valuation:</span>
-                <span class="val font-mono">{{ formatCurrency(q.total * 0.8475) }}</span>
+                <span class="lbl">{{ getQuotationRateLabelForPreview(q) }}:</span>
+                <span class="val font-mono">{{ formatCurrency(q.roomRate || 0) }}</span>
               </div>
-              <div class="detail-row">
-                <span class="lbl">GST & Tax (18% approx):</span>
-                <span class="val font-mono">{{ formatCurrency(q.total * 0.1525) }}</span>
+              <div class="detail-row" *ngIf="q.taxAmount">
+                <span class="lbl">Tax Amount:</span>
+                <span class="val font-mono">{{ formatCurrency(q.taxAmount) }}</span>
+              </div>
+              <div class="detail-row" *ngIf="q.discountAmount">
+                <span class="lbl">Discount Amount:</span>
+                <span class="val font-mono text-danger">- {{ formatCurrency(q.discountAmount) }}</span>
               </div>
               <div class="detail-row total-highlight">
                 <span class="lbl">Net Quoted Payable:</span>
                 <strong class="val price-big">{{ formatCurrency(q.total) }}</strong>
+              </div>
+              <div class="detail-row" *ngIf="q.advanceAmount">
+                <span class="lbl">Advance Paid:</span>
+                <span class="val font-mono text-success">{{ formatCurrency(q.advanceAmount) }}</span>
               </div>
             </div>
           </div>

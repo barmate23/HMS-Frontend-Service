@@ -1,13 +1,18 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
+import { CrmApiService, EnquiryApiItem } from './crm-api.service';
 
 export interface Enquiry {
   id: string;
+  dbId?: number;
   salutation?: string;
   guestName: string;
   companyName?: string;
   phone: string;
+  altPhone?: string;
   email?: string;
   address?: string;
   city?: string;
@@ -61,8 +66,94 @@ export interface SalesMember {
   templateUrl: './crm.component.html',
   styleUrls: ['./crm.component.css']
 })
-export class CrmComponent {
+export class CrmComponent implements OnInit {
+  private readonly router = inject(Router);
+  private readonly crmApi = inject(CrmApiService);
+
   currentTab = signal<'dashboard' | 'new' | 'list' | 'quotations' | 'sales'>('dashboard');
+  isLoading = signal(false);
+
+  ngOnInit() {
+    this.syncTabFromUrl(this.router.url);
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd)
+    ).subscribe(event => {
+      this.syncTabFromUrl(event.urlAfterRedirects || event.url);
+    });
+
+    // Load enquiries from backend API
+    this.loadEnquiries();
+  }
+
+  loadEnquiries(search?: string) {
+    this.isLoading.set(true);
+    this.crmApi.getAllEnquiries(search).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          const mapped: Enquiry[] = res.data.map(item => ({
+            id: item.enquiryRef,
+            dbId: item.id,
+            salutation: item.salutation,
+            guestName: item.guestName,
+            companyName: item.companyName || '',
+            phone: item.phone,
+            altPhone: item.altPhone,
+            email: item.email || '',
+            address: item.address,
+            city: item.city,
+            state: item.state,
+            gstNumber: item.gstNumber,
+            enquiryType: item.enquiryType || 'Room',
+            source: item.source || 'Direct',
+            checkIn: item.checkIn,
+            checkOut: item.checkOut,
+            rooms: item.rooms || 0,
+            adults: item.adults || 1,
+            children: item.children || 0,
+            mealPlan: item.mealPlan,
+            budget: item.budget || 0,
+            expectedRevenue: item.expectedRevenue || 0,
+            salesPerson: item.salesPerson || '',
+            priority: item.priority || 'Medium',
+            nextFollowUp: item.nextFollowUp,
+            message: item.message,
+            status: (item.status || 'New') as Enquiry['status'],
+            quoted: (item.quoted || 'No') as Enquiry['quoted'],
+            lastContacted: item.lastContacted || 'Never',
+            latestRemark: item.latestRemark || 'No remarks yet',
+            showDetails: false
+          }));
+          this.enquiries.set(mapped);
+        }
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        console.error('Failed to load enquiries:', err);
+        this.isLoading.set(false);
+      }
+    });
+  }
+
+  private syncTabFromUrl(url: string) {
+    if (url.includes('/crm/tasks')) this.currentTab.set('list');
+    else if (url.includes('/crm/new')) this.currentTab.set('new');
+    else if (url.includes('/crm/quotations')) this.currentTab.set('quotations');
+    else if (url.includes('/crm/staff')) this.currentTab.set('sales');
+    else if (url.includes('/crm/dashboard')) this.currentTab.set('dashboard');
+  }
+
+  setTab(tab: 'dashboard' | 'new' | 'list' | 'quotations' | 'sales') {
+    this.currentTab.set(tab);
+    const routeMap = {
+      dashboard: '/crm/dashboard',
+      list: '/crm/tasks',
+      new: '/crm/new',
+      quotations: '/crm/quotations',
+      sales: '/crm/staff'
+    };
+    this.router.navigateByUrl(routeMap[tab]);
+  }
+
 
   // Search and filter states
   searchText = signal('');
@@ -72,6 +163,10 @@ export class CrmComponent {
   // Modal forms trigger
   isQuotationModalOpen = signal(false);
   isSalesModalOpen = signal(false);
+  isQuotationViewModalOpen = signal(false);
+  selectedQuotation = signal<Quotation | null>(null);
+  linkedEnquiry = signal<Enquiry | null>(null);
+
 
   // Modal models
   newQuotation = {
@@ -118,114 +213,8 @@ export class CrmComponent {
     message: ''
   };
 
-  // Mock Data
-  enquiries = signal<Enquiry[]>([
-    {
-      id: 'ENQ-2026-0017',
-      guestName: 'Rashmi Thakur',
-      companyName: '',
-      phone: '6260331979',
-      email: 'rashmi.thakur@example.com',
-      enquiryType: 'Room',
-      source: 'Direct',
-      rooms: 0,
-      adults: 1,
-      children: 0,
-      budget: 0,
-      expectedRevenue: 0,
-      salesPerson: 'Khushbu',
-      priority: 'Medium',
-      status: 'New',
-      quoted: 'No',
-      lastContacted: 'Never',
-      latestRemark: 'No remarks yet',
-      showDetails: false
-    },
-    {
-      id: 'ENQ-2026-0016',
-      guestName: 'Priyank jain',
-      companyName: 'Jain Tech',
-      phone: '9977959911',
-      email: 'priyank.jain@example.com',
-      enquiryType: 'Room',
-      source: 'OTA',
-      rooms: 1,
-      adults: 2,
-      children: 0,
-      budget: 25000,
-      expectedRevenue: 28000,
-      salesPerson: 'Khushbu',
-      priority: 'High',
-      status: 'Confirmed',
-      quoted: 'No',
-      lastContacted: 'Today',
-      latestRemark: 'Status changed to Confirmed',
-      showDetails: false
-    },
-    {
-      id: 'ENQ-2026-0015',
-      guestName: 'Bhawna chandwani',
-      companyName: '',
-      phone: '7694973039',
-      email: 'bhawna@example.com',
-      enquiryType: 'Room',
-      source: 'Booking.com',
-      rooms: 1,
-      adults: 2,
-      children: 1,
-      budget: 15000,
-      expectedRevenue: 15000,
-      salesPerson: 'Khushbu',
-      priority: 'Medium',
-      status: 'Booked',
-      quoted: 'No',
-      lastContacted: 'Today',
-      latestRemark: 'Status changed to Booked',
-      showDetails: false
-    },
-    {
-      id: 'ENQ-2026-0014',
-      guestName: 'Alok Kapoor',
-      companyName: '',
-      phone: '7415 305 006',
-      email: 'alok.kapoor@example.com',
-      enquiryType: 'Room',
-      source: 'Walk-in',
-      rooms: 1,
-      adults: 2,
-      children: 0,
-      budget: 12000,
-      expectedRevenue: 12200,
-      salesPerson: 'Khushbu',
-      priority: 'Low',
-      status: 'Confirmed',
-      quoted: 'Yes',
-      lastContacted: 'Today',
-      latestRemark: 'Sent proposal, waiting on final confirmation',
-      showDetails: false
-    },
-    {
-      id: 'ENQ-2026-0013',
-      guestName: 'Somdev Goyal',
-      companyName: 'Goyal Agri Pvt',
-      phone: '9827211022',
-      email: 'somdev.g@example.com',
-      enquiryType: 'Event',
-      source: 'Direct',
-      rooms: 4,
-      adults: 8,
-      children: 2,
-      budget: 85000,
-      expectedRevenue: 95000,
-      salesPerson: 'Rishi Chauhan',
-      priority: 'High',
-      status: 'In Progress',
-      quoted: 'Yes',
-      lastContacted: 'Yesterday',
-      latestRemark: 'Quotation sent, following up on proposal detail corrections.',
-      showDetails: false
-    }
-  ]);
+  // Enquiries data (loaded from API)
+  enquiries = signal<Enquiry[]>([]);
 
   quotations = signal<Quotation[]>([
     {
@@ -268,10 +257,7 @@ export class CrmComponent {
     { name: 'Suraj Tomar', designation: 'Front office', phone: '96914 90829', email: '', monthlyTarget: 700000.00 }
   ]);
 
-  // Tab switcher
-  setTab(tab: 'dashboard' | 'new' | 'list' | 'quotations' | 'sales') {
-    this.currentTab.set(tab);
-  }
+
 
   // Filter enquiries
   filteredEnquiries() {
@@ -293,86 +279,108 @@ export class CrmComponent {
     enquiry.showDetails = !enquiry.showDetails;
   }
 
-  // Delete Enquiry
+  // Delete Enquiry (calls backend API)
   deleteEnquiry(id: string) {
+    const enquiry = this.enquiries().find(e => e.id === id);
+    if (!enquiry) return;
+
     if (confirm(`Are you sure you want to delete enquiry ${id}?`)) {
-      this.enquiries.update(list => list.filter(e => e.id !== id));
+      if (enquiry.dbId) {
+        this.crmApi.deleteEnquiry(enquiry.dbId).subscribe({
+          next: () => {
+            this.enquiries.update(list => list.filter(e => e.id !== id));
+          },
+          error: (err) => {
+            console.error('Failed to delete enquiry:', err);
+            alert('Failed to delete enquiry. Please try again.');
+          }
+        });
+      } else {
+        this.enquiries.update(list => list.filter(e => e.id !== id));
+      }
     }
   }
 
-  // Add new Enquiry
+  // Add new Enquiry (calls backend API)
   onSubmitEnquiry() {
     if (!this.newEnquiry.guestName || !this.newEnquiry.phone) {
       alert('Please enter Guest Name and Phone Number');
       return;
     }
 
-    const nextIdNum = this.enquiries().length + 18;
-    const newRecord: Enquiry = {
-      id: `ENQ-2026-00${nextIdNum}`,
+    const payload = {
+      salutation: this.newEnquiry.salutation || 'Mr.',
       guestName: this.newEnquiry.guestName,
-      companyName: this.newEnquiry.companyName || '',
+      companyName: this.newEnquiry.companyName || undefined,
       phone: this.newEnquiry.phone,
-      email: this.newEnquiry.email || '',
-      address: this.newEnquiry.address,
-      city: this.newEnquiry.city,
-      state: this.newEnquiry.state,
-      gstNumber: this.newEnquiry.gstNumber,
-      enquiryType: this.newEnquiry.enquiryType,
+      altPhone: this.newEnquiry.altPhone || undefined,
+      email: this.newEnquiry.email || undefined,
+      address: this.newEnquiry.address || undefined,
+      city: this.newEnquiry.city || undefined,
+      state: this.newEnquiry.state || undefined,
+      gstNumber: this.newEnquiry.gstNumber || undefined,
+      enquiryType: this.newEnquiry.enquiryType || 'Room',
       source: this.newEnquiry.source || 'Direct',
-      checkIn: this.newEnquiry.checkIn,
-      checkOut: this.newEnquiry.checkOut,
-      rooms: Number(this.newEnquiry.rooms) || 0,
-      adults: Number(this.newEnquiry.adults) || 1,
-      children: Number(this.newEnquiry.children) || 0,
-      mealPlan: this.newEnquiry.mealPlan,
-      budget: Number(this.newEnquiry.budget) || 0,
-      expectedRevenue: Number(this.newEnquiry.expectedRevenue) || 0,
-      salesPerson: this.newEnquiry.salesPerson || 'Khushbu',
-      priority: this.newEnquiry.priority,
-      nextFollowUp: this.newEnquiry.nextFollowUp,
-      message: this.newEnquiry.message,
-      status: 'New',
-      quoted: 'No',
-      lastContacted: 'Today',
-      latestRemark: 'Enquiry created via portal',
-      showDetails: false
+      checkIn: this.newEnquiry.checkIn || undefined,
+      checkOut: this.newEnquiry.checkOut || undefined,
+      rooms: Number(this.newEnquiry.rooms) || undefined,
+      adults: Number(this.newEnquiry.adults) || undefined,
+      children: Number(this.newEnquiry.children) || undefined,
+      mealPlan: this.newEnquiry.mealPlan || undefined,
+      budget: Number(this.newEnquiry.budget) || undefined,
+      expectedRevenue: Number(this.newEnquiry.expectedRevenue) || undefined,
+      salesPerson: this.newEnquiry.salesPerson || undefined,
+      priority: this.newEnquiry.priority || 'Medium',
+      nextFollowUp: this.newEnquiry.nextFollowUp || undefined,
+      message: this.newEnquiry.message || undefined
     };
 
-    // Prepend to show immediately
-    this.enquiries.update(list => [newRecord, ...list]);
-    alert(`Enquiry ${newRecord.id} successfully created!`);
-    
-    // Reset form
-    this.newEnquiry = {
-      salutation: 'Mr.',
-      guestName: '',
-      companyName: '',
-      phone: '',
-      altPhone: '',
-      email: '',
-      address: '',
-      city: '',
-      state: '',
-      gstNumber: '',
-      enquiryType: 'Room',
-      source: '',
-      checkIn: '',
-      checkOut: '',
-      rooms: 1,
-      adults: 2,
-      children: 0,
-      mealPlan: 'CP',
-      budget: 0,
-      expectedRevenue: 0,
-      salesPerson: '',
-      priority: 'Medium',
-      nextFollowUp: '',
-      message: ''
-    };
-
-    // Redirect to list
-    this.setTab('list');
+    this.isLoading.set(true);
+    this.crmApi.createEnquiry(payload).subscribe({
+      next: (res) => {
+        this.isLoading.set(false);
+        if (res.success) {
+          alert(`Enquiry ${res.data?.enquiryRef || ''} successfully created!`);
+          // Reset form
+          this.newEnquiry = {
+            salutation: 'Mr.',
+            guestName: '',
+            companyName: '',
+            phone: '',
+            altPhone: '',
+            email: '',
+            address: '',
+            city: '',
+            state: '',
+            gstNumber: '',
+            enquiryType: 'Room',
+            source: '',
+            checkIn: '',
+            checkOut: '',
+            rooms: 1,
+            adults: 2,
+            children: 0,
+            mealPlan: 'CP',
+            budget: 0,
+            expectedRevenue: 0,
+            salesPerson: '',
+            priority: 'Medium',
+            nextFollowUp: '',
+            message: ''
+          };
+          // Reload from API and redirect to list
+          this.loadEnquiries();
+          this.setTab('list');
+        } else {
+          alert('Failed to create enquiry: ' + (res.message || 'Unknown error'));
+        }
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        console.error('Failed to create enquiry:', err);
+        alert('Failed to create enquiry. Please check your network and try again.');
+      }
+    });
   }
 
   // Helper formatting methods
@@ -499,4 +507,19 @@ export class CrmComponent {
       this.salesTeam.update(list => list.filter(s => s.name !== name));
     }
   }
+
+  // View Proposal / Quotation details preview modal
+  viewQuotationDetails(q: Quotation) {
+    this.selectedQuotation.set(q);
+    const found = this.enquiries().find(e => e.id === q.enquiryId);
+    this.linkedEnquiry.set(found || null);
+    this.isQuotationViewModalOpen.set(true);
+  }
+
+  closeQuotationViewModal() {
+    this.isQuotationViewModalOpen.set(false);
+    this.selectedQuotation.set(null);
+    this.linkedEnquiry.set(null);
+  }
 }
+

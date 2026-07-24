@@ -251,16 +251,17 @@
           <table class="premium-table hk-grid-table hk-hover-table task-grid">
             <thead>
               <tr>
-                <th style="width: 7%;">ROOM NO.</th>
-                <th style="width: 8%;">FLOOR</th>
-                <th style="width: 31%;">TASK TYPE</th>
+                <th style="width: 14%; min-width: 120px;">ENQUIRY REF</th>
+                <th style="width: 9%;">SOURCE</th>
+                <th style="width: 27%;">GUEST & TYPE</th>
                 <th style="width: 10%;">PRIORITY</th>
                 <th style="width: 17%;">ASSIGNED TO</th>
-                <th style="width: 8%; text-align: center;">EST. MINS</th>
-                <th style="width: 11%;">STATUS</th>
-                <th style="width: 8%; text-align: center;">ACTIONS</th>
+                <th style="width: 7%; text-align: center;">EST. MINS</th>
+                <th style="width: 10%;">STATUS</th>
+                <th style="width: 6%; text-align: center;">ACTIONS</th>
               </tr>
             </thead>
+
             <tbody>
               <tr *ngFor="let item of filteredEnquiries()">
                 <td><span class="room-pill">{{ item.id }}</span></td>
@@ -323,12 +324,6 @@
                 <div class="header-title">
                   <span class="material-icons-round">person</span>
                   <h2>Guest Information</h2>
-                </div>
-                <div class="header-actions">
-                  <button type="button" class="btn-text primary">
-                    <span class="material-icons-round inline-icon">search</span>
-                    Quick Search Guest
-                  </button>
                 </div>
               </div>
               <div class="card-body">
@@ -538,12 +533,16 @@
                 </td>
                 <td style="text-align: center;">
                   <div class="quick-actions">
+                    <button type="button" class="quick-btn" title="View Proposal Preview" (click)="viewQuotationDetails(q)">
+                      <span class="material-icons-round text-primary">visibility</span>
+                    </button>
                     <button type="button" class="quick-btn" title="Delete Proposal" (click)="deleteQuotation(q.quotationNo)">
                       <span class="material-icons-round text-danger">delete_outline</span>
                     </button>
                   </div>
                 </td>
               </tr>
+
             </tbody>
           </table>
         </div>
@@ -596,4 +595,255 @@
     </div>
 
   </div>
+
+  <!-- Modal: Add Proposal / Quotation -->
+  <div class="crm-modal-overlay" *ngIf="isQuotationModalOpen()" (click)="isQuotationModalOpen.set(false)">
+    <div class="crm-modal-card animate-slide-down" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="material-icons-round text-primary">description</span>
+          <h3>Create Sales Proposal / Quotation</h3>
+        </div>
+        <button type="button" class="close-btn" (click)="isQuotationModalOpen.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+
+      <form (submit)="onSubmitQuotation(); $event.preventDefault()" class="modal-body-form">
+        <div class="form-grid-modal">
+          <div class="input-group full">
+            <label>Enquiry Reference</label>
+            <select [(ngModel)]="newQuotation.enquiryId" name="modalEnquiryId">
+              <option value="">Select Enquiry Ref (Optional)</option>
+              <option *ngFor="let e of enquiries()" [value]="e.id">{{ e.id }} - {{ e.guestName }}</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label>Guest Full Name <span class="required-star">*</span></label>
+            <input type="text" placeholder="Enter guest name" [(ngModel)]="newQuotation.guestName" name="modalGuestName" required>
+          </div>
+
+          <div class="input-group">
+            <label>Company Name</label>
+            <input type="text" placeholder="Enter company name (optional)" [(ngModel)]="newQuotation.companyName" name="modalCompanyName">
+          </div>
+
+          <div class="input-group">
+            <label>Valuation Amount (₹) <span class="required-star">*</span></label>
+            <input type="number" min="0" placeholder="0.00" [(ngModel)]="newQuotation.total" name="modalTotal" required>
+          </div>
+
+          <div class="input-group">
+            <label>Valid Till Date</label>
+            <input type="date" [(ngModel)]="newQuotation.validTill" name="modalValidTill">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="isQuotationModalOpen.set(false)">Cancel</button>
+          <button type="submit" class="btn btn-primary green-btn-alt">
+            <span class="material-icons-round inline-icon">check_circle</span>
+            Save Proposal
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Add Sales Staff -->
+  <div class="crm-modal-overlay" *ngIf="isSalesModalOpen()" (click)="isSalesModalOpen.set(false)">
+    <div class="crm-modal-card animate-slide-down" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="material-icons-round text-primary">badge</span>
+          <h3>Add Sales Representative</h3>
+        </div>
+        <button type="button" class="close-btn" (click)="isSalesModalOpen.set(false)">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+
+      <form (submit)="onSubmitSalesMember(); $event.preventDefault()" class="modal-body-form">
+        <div class="form-grid-modal">
+          <div class="input-group full">
+            <label>Staff Full Name <span class="required-star">*</span></label>
+            <input type="text" placeholder="Enter staff name" [(ngModel)]="newSalesMemberObj.name" name="salesName" required>
+          </div>
+
+          <div class="input-group">
+            <label>Designation</label>
+            <select [(ngModel)]="newSalesMemberObj.designation" name="salesDesignation">
+              <option>Front Office Executive</option>
+              <option>Sales Manager</option>
+              <option>Reservation Executive</option>
+              <option>General Manager</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label>Phone Number <span class="required-star">*</span></label>
+            <input type="tel" placeholder="Mobile number" [(ngModel)]="newSalesMemberObj.phone" name="salesPhone" required>
+          </div>
+
+          <div class="input-group">
+            <label>Email Address</label>
+            <input type="email" placeholder="staff@hotel.com" [(ngModel)]="newSalesMemberObj.email" name="salesEmail">
+          </div>
+
+          <div class="input-group">
+            <label>Monthly Target (₹)</label>
+            <input type="number" min="0" placeholder="500000" [(ngModel)]="newSalesMemberObj.monthlyTarget" name="salesTarget">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="isSalesModalOpen.set(false)">Cancel</button>
+          <button type="submit" class="btn btn-primary green-btn-alt">
+            <span class="material-icons-round inline-icon">check_circle</span>
+            Save Representative
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- Modal: View Proposal Details Preview -->
+  <div class="crm-modal-overlay" *ngIf="isQuotationViewModalOpen() && selectedQuotation() as q" (click)="closeQuotationViewModal()">
+
+    <div class="crm-modal-card preview-modal animate-slide-down" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="material-icons-round text-primary">analytics</span>
+          <div>
+            <h3>Sales Proposal & Quotation Details</h3>
+            <span class="sub-meta-text">Ref: {{ q.quotationNo }} • Date: {{ q.date }}</span>
+          </div>
+        </div>
+        <button type="button" class="close-btn" (click)="closeQuotationViewModal()">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+
+      <div class="modal-body-form preview-body">
+        
+        <!-- Top Status Banner -->
+        <div class="preview-banner">
+          <div class="banner-pill-col">
+            <span class="preview-badge" [class]="q.status.toLowerCase()">{{ q.status }}</span>
+            <span class="sub-label">Proposal Status</span>
+          </div>
+          <div class="banner-pill-col">
+            <strong class="banner-val">{{ formatCurrency(q.total) }}</strong>
+            <span class="sub-label">Quoted Total Valuation</span>
+          </div>
+          <div class="banner-pill-col">
+            <span class="banner-val-sm">{{ q.validTill || 'N/A' }}</span>
+            <span class="sub-label">Valid Until</span>
+          </div>
+        </div>
+
+        <div class="preview-grid mt-3">
+          
+          <!-- Left: Enquiry & Guest Info -->
+          <div class="preview-card">
+            <div class="card-sec-head">
+              <span class="material-icons-round">person</span>
+              <h4>Enquiry & Guest Information</h4>
+            </div>
+            
+            <div class="details-list">
+              <div class="detail-row">
+                <span class="lbl">Enquiry Ref:</span>
+                <span class="val font-mono"><span class="room-pill">{{ q.enquiryId }}</span></span>
+              </div>
+              <div class="detail-row">
+                <span class="lbl">Guest Name:</span>
+                <strong class="val">{{ q.guestName }}</strong>
+              </div>
+              <div class="detail-row" *ngIf="q.companyName">
+                <span class="lbl">Company Name:</span>
+                <span class="val">{{ q.companyName }}</span>
+              </div>
+
+              <ng-container *ngIf="linkedEnquiry() as e">
+                <div class="detail-row">
+                  <span class="lbl">Phone Number:</span>
+                  <span class="val">{{ e.phone }}</span>
+                </div>
+                <div class="detail-row" *ngIf="e.email">
+                  <span class="lbl">Email Address:</span>
+                  <span class="val">{{ e.email }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="lbl">Enquiry Type:</span>
+                  <span class="val">{{ e.enquiryType }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="lbl">Source:</span>
+                  <span class="val">{{ e.source }}</span>
+                </div>
+                <div class="detail-row" *ngIf="e.checkIn">
+                  <span class="lbl">Check In / Out:</span>
+                  <span class="val">{{ e.checkIn }} to {{ e.checkOut }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="lbl">Assigned Rep:</span>
+                  <span class="val">{{ e.salesPerson }}</span>
+                </div>
+                <div class="detail-row" *ngIf="e.message">
+                  <span class="lbl">Notes / Msg:</span>
+                  <span class="val text-muted">{{ e.message }}</span>
+                </div>
+              </ng-container>
+            </div>
+          </div>
+
+          <!-- Right: Quoted Commercials Breakdown -->
+          <div class="preview-card">
+            <div class="card-sec-head">
+              <span class="material-icons-round">receipt_long</span>
+              <h4>Quoted Financial Summary</h4>
+            </div>
+
+            <div class="details-list">
+              <div class="detail-row">
+                <span class="lbl">Quotation No:</span>
+                <strong class="val">{{ q.quotationNo }}</strong>
+              </div>
+              <div class="detail-row">
+                <span class="lbl">Revision No:</span>
+                <span class="val">Rev {{ q.revision }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="lbl">Base Package Valuation:</span>
+                <span class="val font-mono">{{ formatCurrency(q.total * 0.8475) }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="lbl">GST & Tax (18% approx):</span>
+                <span class="val font-mono">{{ formatCurrency(q.total * 0.1525) }}</span>
+              </div>
+              <div class="detail-row total-highlight">
+                <span class="lbl">Net Quoted Payable:</span>
+                <strong class="val price-big">{{ formatCurrency(q.total) }}</strong>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer mt-4">
+          <button type="button" class="btn btn-secondary" (click)="closeQuotationViewModal()">Close</button>
+          <button type="button" class="btn btn-primary" (click)="closeQuotationViewModal()">
+            <span class="material-icons-round inline-icon">print</span>
+            Print / Export PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
+
+

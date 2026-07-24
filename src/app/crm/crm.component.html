@@ -476,6 +476,17 @@
                   </div>
                 </div>
 
+                <div class="grid-3 mt-3">
+                  <div class="input-group">
+                    <label>Expected Budget (₹)</label>
+                    <input type="number" min="0" placeholder="0.00" [(ngModel)]="newEnquiry.budget" name="budget">
+                  </div>
+                  <div class="input-group">
+                    <label>Expected Revenue (₹)</label>
+                    <input type="number" min="0" placeholder="0.00" [(ngModel)]="newEnquiry.expectedRevenue" name="expectedRevenue">
+                  </div>
+                </div>
+
                 <div class="input-group full mt-3">
                   <label>Special Instructions / Message</label>
                   <textarea placeholder="Enter guest notes or requirement details..." [(ngModel)]="newEnquiry.message" name="message"></textarea>

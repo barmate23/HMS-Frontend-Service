@@ -28,6 +28,27 @@ export interface ApiResponse<T> {
   };
 }
 
+export interface StatusRevenueDto {
+  status: string;
+  count: number;
+  revenue: number;
+  percentage: number;
+}
+
+export interface CrmDashboardStats {
+  newEnquiriesCount: number;
+  inProgressCount: number;
+  quotationSentCount: number;
+  onHoldCount: number;
+  bookedCount: number;
+  lostCount: number;
+  openPipelineValue: number;
+  confirmedMonthlyRevenue: number;
+  statusBreakdown: StatusRevenueDto[];
+  activeFollowUps: EnquiryApiItem[];
+  recentActivity: EnquiryApiItem[];
+}
+
 /**
  * Enquiry response DTO from backend.
  */
@@ -163,16 +184,27 @@ export class CrmApiService {
   private readonly baseUrl = '/api/crmService/v1/enquiries';
   private readonly quotationBaseUrl = '/api/crmService/v1/quotations';
 
+  private readonly dashboardBaseUrl = '/api/crmService/v1/dashboard';
+
   constructor(private readonly http: HttpClient) {}
 
   /**
-   * Fetch all active enquiries (with optional search keyword).
+   * Fetch CRM dashboard stats.
    */
-  getAllEnquiries(search?: string): Observable<ApiResponse<EnquiryApiItem[]>> {
+  getDashboardStats(): Observable<ApiResponse<CrmDashboardStats>> {
+    return this.http.get<ApiResponse<CrmDashboardStats>>(`${this.dashboardBaseUrl}/stats`);
+  }
+
+  /**
+   * Fetch active enquiries with optional search keyword and pagination.
+   */
+  getAllEnquiries(search?: string, page: number = 0, size: number = 10): Observable<ApiResponse<EnquiryApiItem[]>> {
     let params = new HttpParams();
     if (search && search.trim()) {
       params = params.set('search', search.trim());
     }
+    params = params.set('page', page.toString());
+    params = params.set('size', size.toString());
     return this.http.get<ApiResponse<EnquiryApiItem[]>>(
       `${this.baseUrl}/getAllEnquiries`, { params }
     );
@@ -224,13 +256,15 @@ export class CrmApiService {
   // ── Quotation APIs ────────────────────────────────────────────────────────
 
   /**
-   * Fetch all quotations (with optional search filter).
+   * Fetch all quotations with optional search filter and pagination.
    */
-  getAllQuotations(search?: string): Observable<ApiResponse<QuotationApiItem[]>> {
+  getAllQuotations(search?: string, page: number = 0, size: number = 10): Observable<ApiResponse<QuotationApiItem[]>> {
     let params = new HttpParams();
     if (search && search.trim()) {
       params = params.set('search', search.trim());
     }
+    params = params.set('page', page.toString());
+    params = params.set('size', size.toString());
     return this.http.get<ApiResponse<QuotationApiItem[]>>(
       `${this.quotationBaseUrl}/getAllQuotations`, { params }
     );

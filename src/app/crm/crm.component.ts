@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { CrmApiService, EnquiryApiItem } from './crm-api.service';
+import { CrmApiService, EnquiryApiItem, CrmDashboardStats } from './crm-api.service';
 
 export interface Enquiry {
   id: string;
@@ -105,6 +105,7 @@ export class CrmComponent implements OnInit {
     this.loadEnquiries();
     this.loadQuotations();
     this.loadSalesTeam();
+    this.loadDashboardStats();
   }
 
   // Load active sales team members from user management module
@@ -175,7 +176,7 @@ export class CrmComponent implements OnInit {
 
   loadQuotations(search?: string) {
     this.isLoading.set(true);
-    this.crmApi.getAllQuotations(search).subscribe({
+    this.crmApi.getAllQuotations(search, this.quotationPage() - 1, this.quotationPageSize).subscribe({
       next: (res) => {
         if (res.success && res.data) {
           const mapped: Quotation[] = res.data.map(item => ({
@@ -196,6 +197,9 @@ export class CrmComponent implements OnInit {
             status: (item.status || 'Draft') as Quotation['status']
           }));
           this.quotations.set(mapped);
+          if (res.metadata) {
+            this.quotationTotalPages.set(res.metadata.totalPages || 1);
+          }
         }
         this.isLoading.set(false);
       },
@@ -206,45 +210,93 @@ export class CrmComponent implements OnInit {
     });
   }
 
-  loadEnquiries(search?: string) {
-    this.isLoading.set(true);
-    this.crmApi.getAllEnquiries(search).subscribe({
+  mapEnquiryApiToEnquiry(item: EnquiryApiItem): Enquiry {
+    return {
+      id: item.enquiryRef || '',
+      dbId: item.id,
+      salutation: item.salutation,
+      guestName: item.guestName,
+      companyName: item.companyName || '',
+      phone: item.phone,
+      altPhone: item.altPhone,
+      email: item.email || '',
+      address: item.address,
+      city: item.city,
+      state: item.state,
+      gstNumber: item.gstNumber,
+      enquiryType: item.enquiryType || 'Room',
+      source: item.source || 'Direct',
+      checkIn: item.checkIn,
+      checkOut: item.checkOut,
+      rooms: item.rooms || 0,
+      adults: item.adults || 1,
+      children: item.children || 0,
+      mealPlan: item.mealPlan,
+      budget: item.budget || 0,
+      expectedRevenue: item.expectedRevenue || 0,
+      salesPerson: item.salesPerson || '',
+      priority: item.priority || 'Medium',
+      nextFollowUp: item.nextFollowUp,
+      message: item.message,
+      status: (item.status || 'New') as Enquiry['status'],
+      quoted: (item.quoted || 'No') as Enquiry['quoted'],
+      lastContacted: item.lastContacted || 'Never',
+      latestRemark: item.latestRemark || 'No remarks yet',
+      showDetails: false
+    };
+  }
+
+  loadDashboardStats() {
+    this.crmApi.getDashboardStats().subscribe({
       next: (res) => {
         if (res.success && res.data) {
-          const mapped: Enquiry[] = res.data.map(item => ({
-            id: item.enquiryRef,
-            dbId: item.id,
-            salutation: item.salutation,
-            guestName: item.guestName,
-            companyName: item.companyName || '',
-            phone: item.phone,
-            altPhone: item.altPhone,
-            email: item.email || '',
-            address: item.address,
-            city: item.city,
-            state: item.state,
-            gstNumber: item.gstNumber,
-            enquiryType: item.enquiryType || 'Room',
-            source: item.source || 'Direct',
-            checkIn: item.checkIn,
-            checkOut: item.checkOut,
-            rooms: item.rooms || 0,
-            adults: item.adults || 1,
-            children: item.children || 0,
-            mealPlan: item.mealPlan,
-            budget: item.budget || 0,
-            expectedRevenue: item.expectedRevenue || 0,
-            salesPerson: item.salesPerson || '',
-            priority: item.priority || 'Medium',
-            nextFollowUp: item.nextFollowUp,
-            message: item.message,
-            status: (item.status || 'New') as Enquiry['status'],
-            quoted: (item.quoted || 'No') as Enquiry['quoted'],
-            lastContacted: item.lastContacted || 'Never',
-            latestRemark: item.latestRemark || 'No remarks yet',
-            showDetails: false
-          }));
+          this.dashboardData.set(res.data);
+          
+          if (res.data.activeFollowUps) {
+            this.dashboardFollowUps.set(res.data.activeFollowUps.map(item => this.mapEnquiryApiToEnquiry(item)));
+          } else {
+            this.dashboardFollowUps.set([]);
+          }
+
+          if (res.data.recentActivity) {
+            this.dashboardRecentActivity.set(res.data.recentActivity.map(item => this.mapEnquiryApiToEnquiry(item)));
+          } else {
+            this.dashboardRecentActivity.set([]);
+          }
+        }
+      },
+      error: (err) => {
+        console.error('Failed to load dashboard stats:', err);
+      }
+    });
+  }
+
+  changeEnquiryPage(dir: number) {
+    const next = this.enquiryPage() + dir;
+    if (next >= 1 && next <= this.enquiryTotalPages()) {
+      this.enquiryPage.set(next);
+      this.loadEnquiries(this.searchText());
+    }
+  }
+
+  changeQuotationPage(dir: number) {
+    const next = this.quotationPage() + dir;
+    if (next >= 1 && next <= this.quotationTotalPages()) {
+      this.quotationPage.set(next);
+      this.loadQuotations(this.searchText());
+    }
+  }
+
+  loadEnquiries(search?: string) {
+    this.isLoading.set(true);
+    this.crmApi.getAllEnquiries(search, this.enquiryPage() - 1, this.enquiryPageSize).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          const mapped: Enquiry[] = res.data.map(item => this.mapEnquiryApiToEnquiry(item));
           this.enquiries.set(mapped);
+          if (res.metadata) {
+            this.enquiryTotalPages.set(res.metadata.totalPages || 1);
+          }
         }
         this.isLoading.set(false);
       },
@@ -287,6 +339,18 @@ export class CrmComponent implements OnInit {
   isQuotationViewModalOpen = signal(false);
   selectedQuotation = signal<Quotation | null>(null);
   linkedEnquiry = signal<Enquiry | null>(null);
+  
+  // Dashboard and Pagination signals
+  dashboardData = signal<CrmDashboardStats | null>(null);
+  dashboardFollowUps = signal<Enquiry[]>([]);
+  dashboardRecentActivity = signal<Enquiry[]>([]);
+  enquiryPage = signal(1);
+  enquiryTotalPages = signal(1);
+  enquiryPageSize = 10;
+  
+  quotationPage = signal(1);
+  quotationTotalPages = signal(1);
+  quotationPageSize = 10;
 
 
   // Modal models
@@ -585,6 +649,7 @@ export class CrmComponent implements OnInit {
             if (res.success) {
               this.enquiries.update(list => list.filter(e => e.id !== id));
               this.showNotification('Enquiry deleted successfully');
+              this.loadDashboardStats();
             } else {
               this.showNotification('Failed to delete enquiry: ' + (res.message || 'Unknown error'), true);
             }
@@ -597,6 +662,7 @@ export class CrmComponent implements OnInit {
       } else {
         this.enquiries.update(list => list.filter(e => e.id !== id));
         this.showNotification('Local enquiry deleted successfully');
+        this.loadDashboardStats();
       }
     }
   }
@@ -661,6 +727,7 @@ export class CrmComponent implements OnInit {
             this.showNotification(`Enquiry ${res.data?.enquiryRef || ''} successfully updated!`);
             this.cancelEnquiryForm(); // clears edit mode, resets form, and routes to list
             this.loadEnquiries();
+            this.loadDashboardStats();
           } else {
             this.showNotification('Failed to update enquiry: ' + (res.message || 'Unknown error'), true);
           }
@@ -680,6 +747,7 @@ export class CrmComponent implements OnInit {
             this.showNotification(`Enquiry ${res.data?.enquiryRef || ''} successfully created!`);
             this.cancelEnquiryForm(); // clears edit mode, resets form, and routes to list
             this.loadEnquiries();
+            this.loadDashboardStats();
           } else {
             this.showNotification('Failed to create enquiry: ' + (res.message || 'Unknown error'), true);
           }
@@ -699,24 +767,32 @@ export class CrmComponent implements OnInit {
   }
 
   // Quick stats computed
-  totalEnquiriesCount() { return this.enquiries().length; }
-  newEnquiriesCount() { return this.enquiries().filter(e => e.status === 'New').length; }
-  inProgressCount() { return this.enquiries().filter(e => e.status === 'In Progress').length; }
-  quotationSentCount() { return this.enquiries().filter(e => e.status === 'Quotation Sent').length; }
-  onHoldCount() { return this.enquiries().filter(e => e.status === 'Hold').length; }
-  bookedCount() { return this.enquiries().filter(e => e.status === 'Confirmed' || e.status === 'Booked').length; }
-  lostCount() { return this.enquiries().filter(e => e.status === 'Lost').length; }
+  totalEnquiriesCount() {
+    return this.dashboardData() 
+      ? (this.dashboardData()?.newEnquiriesCount || 0) + (this.dashboardData()?.inProgressCount || 0) + (this.dashboardData()?.quotationSentCount || 0) + (this.dashboardData()?.onHoldCount || 0) + (this.dashboardData()?.bookedCount || 0) + (this.dashboardData()?.lostCount || 0)
+      : this.enquiries().length;
+  }
+  newEnquiriesCount() { return this.dashboardData() ? this.dashboardData()?.newEnquiriesCount || 0 : this.enquiries().filter(e => e.status === 'New').length; }
+  inProgressCount() { return this.dashboardData() ? this.dashboardData()?.inProgressCount || 0 : this.enquiries().filter(e => e.status === 'In Progress').length; }
+  quotationSentCount() { return this.dashboardData() ? this.dashboardData()?.quotationSentCount || 0 : this.enquiries().filter(e => e.status === 'Quotation Sent').length; }
+  onHoldCount() { return this.dashboardData() ? this.dashboardData()?.onHoldCount || 0 : this.enquiries().filter(e => e.status === 'Hold').length; }
+  bookedCount() { return this.dashboardData() ? this.dashboardData()?.bookedCount || 0 : this.enquiries().filter(e => e.status === 'Confirmed' || e.status === 'Booked').length; }
+  lostCount() { return this.dashboardData() ? this.dashboardData()?.lostCount || 0 : this.enquiries().filter(e => e.status === 'Lost').length; }
 
   calcOpenPipelineValue(): number {
-    return this.enquiries()
-      .filter(e => e.status !== 'Lost')
-      .reduce((sum, e) => sum + (e.expectedRevenue || 0), 0);
+    return this.dashboardData()
+      ? this.dashboardData()?.openPipelineValue || 0
+      : this.enquiries()
+        .filter(e => e.status !== 'Lost')
+        .reduce((sum, e) => sum + (e.expectedRevenue || 0), 0);
   }
 
   calcBookedValue(): number {
-    return this.enquiries()
-      .filter(e => e.status === 'Confirmed' || e.status === 'Booked')
-      .reduce((sum, e) => sum + (e.expectedRevenue || 0), 0);
+    return this.dashboardData()
+      ? this.dashboardData()?.confirmedMonthlyRevenue || 0
+      : this.enquiries()
+        .filter(e => e.status === 'Confirmed' || e.status === 'Booked')
+        .reduce((sum, e) => sum + (e.expectedRevenue || 0), 0);
   }
 
   getInitials(name: string): string {
@@ -823,6 +899,7 @@ export class CrmComponent implements OnInit {
         if (res.success) {
           this.showNotification(`Quotation ${res.data?.quotationRef || ''} successfully created!`);
           this.loadQuotations();
+          this.loadDashboardStats();
           this.isQuotationModalOpen.set(false);
           // Reset form
           this.newQuotation = {
@@ -863,6 +940,7 @@ export class CrmComponent implements OnInit {
             if (res.success) {
               this.showNotification(`Quotation ${quotationNo} deleted successfully`);
               this.loadQuotations();
+              this.loadDashboardStats();
             } else {
               this.showNotification('Failed to delete quotation: ' + (res.message || 'Unknown error'), true);
             }
@@ -876,6 +954,7 @@ export class CrmComponent implements OnInit {
       } else {
         this.quotations.update(list => list.filter(item => item.quotationNo !== quotationNo));
         this.showNotification('Local quotation deleted');
+        this.loadDashboardStats();
       }
     }
   }

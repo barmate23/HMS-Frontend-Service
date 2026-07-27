@@ -168,7 +168,7 @@ export class NewBookingComponent implements OnInit {
   numberOfChildren = signal(0);
   viewMode = signal<'list' | 'map'>('list');
   selectedRoomType = signal<string>('ALL');
-  selectedRoom = signal<Room | null>(null);
+  selectedRooms = signal<Room[]>([]);
   selectedPlan = signal<string>('EP');
   selectedFloor = signal<number>(1);
   mapModalOpen = signal(false);
@@ -362,7 +362,7 @@ export class NewBookingComponent implements OnInit {
         if (this.pendingEditDetails) {
           this.applyReservationForEdit(this.pendingEditDetails);
         } else {
-          this.selectedRoom.set(null);
+          this.selectedRooms.set([]);
         }
         this.dataRevision.update(value => value + 1);
         this.isRoomInventoryLoading.set(false);
@@ -385,7 +385,7 @@ export class NewBookingComponent implements OnInit {
       next: (response) => {
         const typeMap = this.buildRoomTypeMap();
         this.setAvailableRoomsForStay(response.data ?? [], typeMap);
-        this.selectedRoom.set(null);
+        this.selectedRooms.set([]);
         this.dataRevision.update(value => value + 1);
         this.isAvailableRoomsLoading.set(false);
       },
@@ -402,7 +402,7 @@ export class NewBookingComponent implements OnInit {
       this.checkIn.set(value);
       if (this.checkOut() && this.compareDateInput(this.checkOut(), this.minCheckOutDate()) < 0) {
         this.checkOut.set('');
-        this.selectedRoom.set(null);
+        this.selectedRooms.set([]);
       }
     } else {
       this.checkOut.set(value);
@@ -651,10 +651,33 @@ export class NewBookingComponent implements OnInit {
       this.selectedPlan.set(String(details.ratePlanId));
     }
 
-    if (room) {
-      this.selectedRoom.set(room);
-      this.selectedFloor.set(room.floor);
-      this.selectedRoomType.set(room.typeId);
+    const selected: Room[] = [];
+    const bookings = Array.isArray(details?.bookings) && details.bookings.length > 0
+      ? details.bookings
+      : Array.isArray(details?.rooms) && details.rooms.length > 0
+        ? details.rooms
+        : [];
+
+    if (bookings.length > 0) {
+      for (const b of bookings) {
+        const r = this.upsertRoomFromReservation(details, b);
+        if (r && !selected.some(s => s.id === r.id)) selected.push(r);
+      }
+    } else if (Array.isArray(details?.roomIds)) {
+      for (const rId of details.roomIds) {
+        const r = this.upsertRoomFromReservation(details, { roomId: rId });
+        if (r && !selected.some(s => s.id === r.id)) selected.push(r);
+      }
+    } else if (room) {
+      selected.push(room);
+    }
+
+    if (selected.length > 0) {
+      this.selectedRooms.set(selected);
+      this.selectedFloor.set(selected[0].floor);
+      this.selectedRoomType.set(selected[0].typeId);
+    } else {
+      this.selectedRooms.set([]);
     }
 
     const apiMembers = details.accompanyingGuests || [];
@@ -812,11 +835,53 @@ export class NewBookingComponent implements OnInit {
     return Math.max(1, Math.ceil(diff / 86400000));
   });
 
-  totalPrice = computed(() => {
-    const room = this.selectedRoom();
-    const plan = this.ratePlans.find(p => p.id === this.selectedPlan());
-    return ((room?.rate ?? 5000) + (plan?.extra ?? 0)) * this.nights();
+  isRoomSelected(room: Room | string): boolean {
+    const id = typeof room === 'string' ? room : room.id;
+    return this.selectedRooms().some(r => r.id === id);
+  }
+
+  toggleRoomSelection(room: Room) {
+    if (room.status !== 'Available') return;
+    if (this.isRoomSelected(room)) {
+      this.selectedRooms.update(rooms => rooms.filter(r => r.id !== room.id));
+    } else {
+      this.selectedRooms.update(rooms => [...rooms, room]);
+    }
+  }
+
+  totalRoomBasePrice = computed(() => {
+    const rooms = this.selectedRooms();
+    if (rooms.length === 0) return 5000 * this.nights();
+    return rooms.reduce((sum, r) => sum + r.rate, 0) * this.nights();
   });
+
+  planExtraPrice = computed(() => {
+    const plan = this.selectedPlanDetails();
+    const count = this.selectedRooms().length || 1;
+    return (plan.extra * count) * this.nights();
+  });
+
+  totalPrice = computed(() => {
+    const rooms = this.selectedRooms();
+    const plan = this.selectedPlanDetails();
+    if (rooms.length === 0) {
+      return (5000 + (plan?.extra ?? 0)) * this.nights();
+    }
+    const baseSum = rooms.reduce((sum, r) => sum + r.rate, 0);
+    const extraSum = (plan?.extra ?? 0) * rooms.length;
+    return (baseSum + extraSum) * this.nights();
+  });
+
+  getSelectedRoomsText(): string {
+    const rooms = this.selectedRooms();
+    if (rooms.length === 0) return 'Select Room(s)';
+    if (rooms.length === 1) return `${rooms[0].type} Room ${rooms[0].number}`;
+    return `${rooms.length} Rooms Selected (${rooms.map(r => r.number).join(', ')})`;
+  }
+
+  getSelectedRoomsNumbersText(): string {
+    return this.selectedRooms().map(r => `Room ${r.number}`).join(', ');
+  }
 
   selectedPlanDetails = computed(() => {
     this.dataRevision();
@@ -862,8 +927,8 @@ export class NewBookingComponent implements OnInit {
   );
 
   setViewMode(mode: 'list' | 'map') { this.viewMode.set(mode); }
-  selectRoomType(id: string) { this.selectedRoomType.set(id); this.selectedRoom.set(null); }
-  selectRoom(room: Room) { if (room.status === 'Available') this.selectedRoom.set(room); }
+  selectRoomType(id: string) { this.selectedRoomType.set(id); }
+  selectRoom(room: Room) { this.toggleRoomSelection(room); }
   selectPlan(id: string) { this.selectedPlan.set(id); }
   selectFloor(num: number) {
     this.selectedFloor.set(num);
@@ -893,7 +958,7 @@ export class NewBookingComponent implements OnInit {
     };
   });
 
-  modalActiveRoom = computed(() => this.modalHoveredRoom() ?? this.selectedRoom());
+  modalActiveRoom = computed(() => this.modalHoveredRoom() ?? (this.selectedRooms().length > 0 ? this.selectedRooms()[this.selectedRooms().length - 1] : null));
 
   // Guest Methods
   openSearchGuest() { this.searchGuestModalOpen.set(true); document.body.style.overflow = 'hidden'; this.searchQuery.set(''); }
@@ -1245,7 +1310,7 @@ export class NewBookingComponent implements OnInit {
       case 'children':
         return this.numberOfChildren() >= 0 ? '' : 'Children cannot be negative.';
       case 'room':
-        return this.selectedRoom() ? '' : 'Please select an available room.';
+        return this.selectedRooms().length > 0 ? '' : 'Please select at least one available room.';
       case 'plan':
         return this.selectedPlan() ? '' : 'Please select a rate plan.';
       default:
@@ -1358,7 +1423,9 @@ export class NewBookingComponent implements OnInit {
   }
 
   private buildReservationPayload(status: ReservationRequest['reservationStatus']): ReservationRequest {
-    const room = this.selectedRoom()!;
+    const rooms = this.selectedRooms();
+    const firstRoom = rooms[0];
+    const roomIds = rooms.map(r => Number(r.id));
     
     // Format accompanying members text to append to notes
     let baseNotes = this.guestData().notes || '';
@@ -1375,7 +1442,7 @@ export class NewBookingComponent implements OnInit {
     }
 
     const payload: any = {
-      hotelId: room.hotelId ?? this.editHotelId() ?? 1,
+      hotelId: firstRoom?.hotelId ?? this.editHotelId() ?? 1,
       checkInDate: this.checkIn(),
       checkInTime: this.toApiTime(this.checkInTime()),
       checkOutDate: this.checkOut(),
@@ -1384,7 +1451,7 @@ export class NewBookingComponent implements OnInit {
       gstPercent: Number(this.roomTaxRate() || 0),
       numberOfChildren: this.numberOfChildren(),
       reservationStatus: status,
-      roomIds: [Number(room.id)],
+      roomIds: roomIds,
       ratePlanId: Number(this.selectedPlan()),
       billingName: this.guestData().fullName,
       billingAddress: [this.guestData().address1, this.guestData().address2, this.guestData().city, this.guestData().state, this.guestData().zip]

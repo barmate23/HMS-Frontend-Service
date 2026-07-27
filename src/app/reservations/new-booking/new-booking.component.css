@@ -1919,3 +1919,65 @@ textarea {
   border-color: var(--accent-color) !important;
 }
 
+/* Multi-room selection summary pills */
+.selected-rooms-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  background: var(--surface-50);
+  border-bottom: 1px solid var(--surface-100);
+  max-height: 160px;
+  overflow-y: auto;
+}
+.selected-room-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: white;
+  border: 1px solid var(--accent-light);
+  border-left: 3px solid var(--accent-color);
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  font-size: 11px;
+}
+.srp-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary-color);
+}
+.srp-left .material-icons-round {
+  font-size: 15px;
+  color: var(--accent-color);
+}
+.srp-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.srp-rate {
+  font-weight: 700;
+  color: var(--primary-color);
+}
+.srp-remove {
+  background: transparent;
+  border: none;
+  color: var(--surface-400);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.srp-remove:hover {
+  color: var(--danger-color);
+  background: rgba(239, 68, 68, 0.1);
+}
+.srp-remove .material-icons-round {
+  font-size: 14px;
+}
+

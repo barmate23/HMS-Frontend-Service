@@ -21,6 +21,8 @@ export const routes: Routes = [
       { path: 'crm/quotations', loadComponent: () => import('./crm/crm.component').then(m => m.CrmComponent) },
       { path: 'crm/staff', loadComponent: () => import('./crm/crm.component').then(m => m.CrmComponent) },
 
+      { path: 'front-office', redirectTo: 'front-office/dashboard', pathMatch: 'full' },
+      { path: 'front-office/dashboard', loadComponent: () => import('./front-office-dashboard/front-office-dashboard.component').then(m => m.FrontOfficeDashboardComponent) },
       { path: 'reservations', component: ReservationCenter },
       { path: 'new-booking', component: NewBookingComponent },
       { path: 'arrivals', component: ArrivalsComponent },

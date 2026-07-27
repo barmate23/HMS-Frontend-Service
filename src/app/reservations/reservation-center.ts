@@ -406,15 +406,32 @@ export class ReservationCenter implements OnInit, OnDestroy {
     if (this.rangeStart()) params = params.set('fromDate', this.toApiDate(this.rangeStart()!));
     if (this.rangeEnd()) params = params.set('toDate', this.toApiDate(this.rangeEnd()!));
 
-    this.http.get<StandardResponse<any[]>>(`${this.frontOfficeBaseUrl}/frontOffice/getAllReservations`, { params }).subscribe({
+    this.http.get<StandardResponse<any>>(`${this.frontOfficeBaseUrl}/frontOffice/getAllReservations`, { params }).subscribe({
       next: (response) => {
-        this.reservations.set((response.data ?? []).map(item => this.mapReservation(item)));
-        this.totalReservationRecords.set(response.metadata?.totalRecords ?? response.data?.length ?? 0);
-        this.isLoadingReservations.set(false);
+        try {
+          let rawList: any[] = [];
+          if (response && Array.isArray(response.data)) {
+            rawList = response.data;
+          } else if (response && response.data && Array.isArray(response.data.content)) {
+            rawList = response.data.content;
+          } else if (Array.isArray(response)) {
+            rawList = response as any;
+          }
+
+          const mapped = rawList.map(item => this.mapReservation(item));
+          this.reservations.set(mapped);
+          this.totalReservationRecords.set(response?.metadata?.totalRecords ?? (response?.data as any)?.totalElements ?? rawList.length);
+        } catch (err) {
+          console.error('[ReservationCenter] mapReservation error:', err);
+          this.reservationError.set('Failed to parse reservation records.');
+        } finally {
+          this.isLoadingReservations.set(false);
+        }
       },
       error: (err) => {
         console.error('[ReservationCenter] loadReservations error:', err);
-        this.reservationError.set(err?.error?.message || err?.error?.error?.message || 'Unable to load reservations.');
+        const errMsg = err?.error?.message || err?.error?.error?.message || (err?.status === 401 ? 'Session expired or unauthorized. Please re-login.' : 'Unable to load reservations.');
+        this.reservationError.set(errMsg);
         this.isLoadingReservations.set(false);
       }
     });
@@ -481,46 +498,81 @@ export class ReservationCenter implements OnInit, OnDestroy {
   }
 
   private mapReservation(item: any): Reservation {
+    if (!item) {
+      return {
+        id: '',
+        guestName: 'Guest',
+        guestEmail: '',
+        guestPhone: '',
+        roomNumber: '-',
+        roomType: '-',
+        plan: '-',
+        checkIn: '-',
+        checkOut: '-',
+        status: 'CONFIRMED',
+        billingAmount: 0,
+        paidAmount: 0,
+        gstPercent: 0,
+        taxAmount: 0,
+        totalWithTax: 0
+      };
+    }
+
     const guest = item.guest || item.guestDetails || {};
-    const room = Array.isArray(item.rooms) ? item.rooms[0] : (item.room || {});
+    const rooms = Array.isArray(item.rooms) ? item.rooms : [];
+    const room = rooms.length > 0 ? rooms[0] : (item.room || {});
     const roomIds = Array.isArray(item.roomIds) ? item.roomIds : [];
     const ratePlan = item.ratePlan || {};
+    
+    const roomNumbersStr = rooms.length > 0
+      ? rooms.map((r: any) => r.roomNumber || r.number).filter(Boolean).join(', ')
+      : (room.roomNumber || item.roomNumber || (roomIds.length ? roomIds.join(', ') : '-'));
+
+    const roomTypesStr = rooms.length > 0
+      ? Array.from(new Set(rooms.map((r: any) => r.roomTypeName || r.type).filter(Boolean))).join(', ')
+      : (room.roomTypeName || item.roomTypeName || item.roomType || '-');
+
     const firstName = guest.firstName || item.firstName || '';
     const lastName = guest.lastName || item.lastName || '';
     const guestName = item.guestFullName || item.guestName || `${firstName} ${lastName}`.trim() || item.billingName || 'Guest';
     const checkIn = item.checkInDate || item.arrivalDate || item.checkIn || '';
     const checkOut = item.checkOutDate || item.departureDate || item.checkOut || '';
-    const billingAmount = Number(item.billingAmount ?? item.totalAmount ?? item.grandTotal ?? 0);
+    
+    const billingAmount = Number(item.grandTotal ?? item.billingAmount ?? item.totalAmount ?? 0);
+    const paidAmount = Number(item.paidAmount ?? item.amountPaid ?? 0);
     const gstPercent = Number(item.gstPercent ?? 0);
     const taxAmount = Number(item.taxAmount ?? item.taxationAmount ?? ((billingAmount * gstPercent) / 100));
-    const totalWithTax = billingAmount + taxAmount;
+    const totalWithTax = billingAmount > 0 && item.grandTotal ? billingAmount : (billingAmount + taxAmount);
 
     return {
       id: String(item.id ?? item.bookingId ?? item.reservationId ?? ''),
       guestName,
       guestEmail: guest.email || item.guestEmail || item.email || '',
-      guestPhone: guest.phone || item.guestPhone || item.phone || '',
-      roomNumber: room.roomNumber || item.roomNumber || (roomIds.length ? String(roomIds[0]) : '-'),
-      roomType: room.roomTypeName || item.roomTypeName || item.roomType || '-',
+      guestPhone: guest.phone || item.guestPhone || item.phone || item.guestContact || '',
+      roomNumber: roomNumbersStr || '-',
+      roomType: roomTypesStr || '-',
       plan: room.ratePlanName || ratePlan.shortLabel || ratePlan.name || item.ratePlanName || String(item.ratePlanId ?? '-'),
       checkIn: this.formatDateLabel(checkIn),
       checkOut: this.formatDateLabel(checkOut),
       status: this.normalizeStatus(item.reservationStatus || item.status),
       billingAmount,
-      paidAmount: Number(item.paidAmount ?? item.amountPaid ?? 0),
+      paidAmount,
       gstPercent,
       taxAmount,
       totalWithTax,
       nights: Number(item.numberOfNights ?? item.nights ?? 0),
       adults: Number(item.numberOfAdults ?? item.adults ?? 0),
       children: Number(item.numberOfChildren ?? item.children ?? 0),
-      vip: Boolean(guest.isVip || item.isVip),
+      vip: Boolean(guest.isVip || item.isVip || item.guestBadge === 'VIP'),
       new: this.normalizeStatus(item.reservationStatus || item.status) === 'PENDING'
     };
   }
 
-  private normalizeStatus(status: string | undefined | null): Reservation['status'] {
+  private normalizeStatus(status: any): Reservation['status'] {
     if (!status) return 'CONFIRMED';
+    if (typeof status === 'object') {
+      status = status.code || status.value || status.name || status.status || 'CONFIRMED';
+    }
     const s = String(status).trim().toUpperCase().replace(/[\s-]+/g, '_');
     if (s === 'CHECKED_IN' || s === 'CHECKEDIN' || s === 'CHECKIN') return 'CHECKED_IN';
     if (s === 'CHECKED_OUT' || s === 'CHECKEDOUT' || s === 'CHECKOUT') return 'CHECKED_OUT';

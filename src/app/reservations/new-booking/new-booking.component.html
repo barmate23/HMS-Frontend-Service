@@ -311,15 +311,15 @@
                 <p>Select arrival and departure dates to view available rooms</p>
               </div>
               <div class="room-list-item" *ngFor="let room of filteredRooms()"
-                   [class.selected]="selectedRoom()?.id === room.id"
-                   (click)="selectRoom(room)" [id]="'room-' + room.id">
+                   [class.selected]="isRoomSelected(room)"
+                   (click)="toggleRoomSelection(room)" [id]="'room-' + room.id">
                 <div class="rli-number">{{ room.number }}</div>
                 <div class="rli-info">
                   <span class="rli-type">{{ room.type }}</span>
                   <span class="rli-meta">Floor {{ room.floor }} &bull; {{ room.view }} View &bull; {{ room.beds }}</span>
                 </div>
                 <div class="rli-rate">{{ formatINR(room.rate) }}<small>/night</small></div>
-                <div class="rli-check" *ngIf="selectedRoom()?.id === room.id">
+                <div class="rli-check" *ngIf="isRoomSelected(room)">
                   <span class="material-icons-round">check_circle</span>
                 </div>
               </div>
@@ -377,27 +377,25 @@
             <div class="hero-overlay">
               <span class="status-badge">AVAILABLE</span>
               <div class="hero-text">
-                <h3>{{ selectedRoom() ? selectedRoom()!.type + ' Room ' + selectedRoom()!.number : 'Select a Room' }}</h3>
-                <p>{{ nights() }} Night{{ nights() !== 1 ? 's' : '' }} &bull; {{ selectedRoom() ? selectedRoom()!.view + ' View' : 'Choose from map or list' }}</p>
+                <h3>{{ getSelectedRoomsText() }}</h3>
+                <p>{{ nights() }} Night{{ nights() !== 1 ? 's' : '' }} &bull; {{ selectedRooms().length > 0 ? selectedRooms().length + ' Room' + (selectedRooms().length > 1 ? 's' : '') + ' selected' : 'Choose from map or list' }}</p>
               </div>
             </div>
           </div>
 
-          <!-- Selected Room Info Pill -->
-          <div class="room-info-pill" *ngIf="selectedRoom()">
-            <div class="rip-item">
-              <span class="material-icons-round">meeting_room</span>
-              <span>Room {{ selectedRoom()!.number }}</span>
-            </div>
-            <div class="rip-divider"></div>
-            <div class="rip-item">
-              <span class="material-icons-round">layers</span>
-              <span>Floor {{ selectedRoom()!.floor }}</span>
-            </div>
-            <div class="rip-divider"></div>
-            <div class="rip-item">
-              <span class="material-icons-round">king_bed</span>
-              <span>{{ selectedRoom()!.beds }}</span>
+          <!-- Selected Rooms Info Pills -->
+          <div class="selected-rooms-container" *ngIf="selectedRooms().length > 0">
+            <div class="selected-room-pill" *ngFor="let room of selectedRooms()">
+              <div class="srp-left">
+                <span class="material-icons-round">meeting_room</span>
+                <span>Room <strong>{{ room.number }}</strong> ({{ room.typeShort }})</span>
+              </div>
+              <div class="srp-right">
+                <span class="srp-rate">{{ formatINR(room.rate) }}</span>
+                <button type="button" class="srp-remove" (click)="toggleRoomSelection(room)" title="Remove room">
+                  <span class="material-icons-round">close</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -411,12 +409,12 @@
             <h4 class="summary-title">Billing Summary</h4>
 
             <div class="summary-line">
-              <span>Room ({{ nights() }} Night{{ nights() !== 1 ? 's' : '' }})</span>
-              <span>{{ formatINR((selectedRoom()?.rate ?? 5000) * nights()) }}</span>
+              <span>Rooms{{ selectedRooms().length > 0 ? ' (' + selectedRooms().length + ')' : '' }} ({{ nights() }} Night{{ nights() !== 1 ? 's' : '' }})</span>
+              <span>{{ formatINR(totalRoomBasePrice()) }}</span>
             </div>
             <div class="summary-line" *ngIf="selectedPlanDetails().extra > 0">
-              <span>{{ selectedPlanDetails().shortLabel }} Plan Add-on</span>
-              <span>{{ formatINR(selectedPlanDetails().extra * nights()) }}</span>
+              <span>{{ selectedPlanDetails().shortLabel }} Plan Add-on ({{ selectedRooms().length || 1 }} Room{{ (selectedRooms().length || 1) !== 1 ? 's' : '' }})</span>
+              <span>{{ formatINR(planExtraPrice()) }}</span>
             </div>
             <div class="summary-line">
               <span>Taxes &amp; Fees ({{ roomTaxRate() }}%)</span>
@@ -556,9 +554,9 @@
                [class.occupied]="room.status === 'Occupied'"
                [class.reserved]="room.status === 'Reserved'"
                [class.maintenance]="room.status === 'Maintenance'"
-               [class.fmap-selected]="selectedRoom()?.id === room.id"
+               [class.fmap-selected]="isRoomSelected(room)"
                [class.fmap-clickable]="room.status === 'Available'"
-               (click)="selectRoom(room)"
+               (click)="toggleRoomSelection(room)"
                (mouseenter)="hoverRoom(room)"
                (mouseleave)="hoverRoom(null)">
             <div class="fmrc-number">{{ room.number }}</div>
@@ -574,7 +572,7 @@
               {{ formatINR(room.rate) }}<small>/night</small>
             </div>
             <div class="fmrc-status-label" *ngIf="room.status !== 'Available'">{{ room.status }}</div>
-            <div class="fmrc-selected-badge" *ngIf="selectedRoom()?.id === room.id">
+            <div class="fmrc-selected-badge" *ngIf="isRoomSelected(room)">
               <span class="material-icons-round">done</span> Selected
             </div>
           </div>
@@ -624,17 +622,18 @@
             <span class="fdp-total-val">{{ formatINR((modalActiveRoom()!.rate + selectedPlanDetails().extra) * nights()) }}</span>
           </div>
 
-          <button class="fdp-select-btn"
-                  *ngIf="modalActiveRoom()!.status === 'Available' && selectedRoom()?.id !== modalActiveRoom()!.id"
-                  (click)="selectRoom(modalActiveRoom()!)">
+          <button class="fdp-select-btn selected"
+                  *ngIf="modalActiveRoom()!.status === 'Available' && isRoomSelected(modalActiveRoom()!)"
+                  (click)="toggleRoomSelection(modalActiveRoom()!)"
+                  style="background: #059669; color: white;">
             <span class="material-icons-round">check_circle</span>
-            Select This Room
+            Selected (Click to Deselect)
           </button>
-          <button class="fdp-confirm-btn"
-                  *ngIf="selectedRoom()?.id === modalActiveRoom()!.id"
-                  (click)="confirmModalRoom()">
-            <span class="material-icons-round">done_all</span>
-            Confirm &amp; Close
+          <button class="fdp-select-btn"
+                  *ngIf="modalActiveRoom()!.status === 'Available' && !isRoomSelected(modalActiveRoom()!)"
+                  (click)="toggleRoomSelection(modalActiveRoom()!)">
+            <span class="material-icons-round">add_circle</span>
+            Select This Room
           </button>
           <button class="fdp-unavail-btn" *ngIf="modalActiveRoom()!.status !== 'Available'" disabled>
             <span class="material-icons-round">block</span>
@@ -654,19 +653,19 @@
 
     <!-- Modal Footer -->
     <div class="fmap-footer">
-      <div class="fmf-selected" *ngIf="selectedRoom()">
+      <div class="fmf-selected" *ngIf="selectedRooms().length > 0">
         <span class="material-icons-round">hotel</span>
-        Room <strong>{{ selectedRoom()!.number }}</strong> — {{ selectedRoom()!.type }} — {{ formatINR(selectedRoom()!.rate) }}/night
+        <strong>{{ selectedRooms().length }} Room(s) Selected:</strong> {{ getSelectedRoomsNumbersText() }}
       </div>
-      <div class="fmf-selected empty" *ngIf="!selectedRoom()">
+      <div class="fmf-selected empty" *ngIf="selectedRooms().length === 0">
         <span class="material-icons-round">info_outline</span>
         No room selected yet
       </div>
       <div class="fmf-actions">
         <button class="fmf-cancel" (click)="closeMapModal()">Cancel</button>
-        <button class="fmf-confirm" [disabled]="!selectedRoom()" (click)="confirmModalRoom()">
+        <button class="fmf-confirm" [disabled]="selectedRooms().length === 0" (click)="confirmModalRoom()">
           <span class="material-icons-round">check</span>
-          Confirm Selection
+          Confirm Selection ({{ selectedRooms().length }})
         </button>
       </div>
     </div>

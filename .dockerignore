@@ -8,3 +8,8 @@ Jenkinsfile
 README.md
 e2e
 coverage
+*.md
+*.log
+.angular
+.nyc_output
+tmp

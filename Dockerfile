@@ -3,19 +3,22 @@ FROM node:18-alpine AS build
 
 # Increase Node.js heap so Angular build doesn't OOM on low-RAM servers
 ENV NODE_OPTIONS="--max-old-space-size=1536"
-ENV NODE_ENV=production
 
 WORKDIR /app
 
 # Copy lockfiles first — Docker caches this layer until package.json changes
 COPY package.json package-lock.json ./
+
+# Install ALL dependencies (including devDependencies which contain Angular CLI)
+# NOTE: Do NOT set NODE_ENV=production here — it skips devDependencies
 RUN npm install --prefer-offline --no-audit --no-fund --legacy-peer-deps
 
 # Copy source code
 COPY . .
 
-# Build with source maps disabled and parallelism limited (speeds up on CI servers)
-RUN npx ng build --configuration production \
+# Build with source maps disabled (speeds up on CI servers)
+# Use ./node_modules/.bin/ng directly to avoid npx resolution issues
+RUN NODE_ENV=production ./node_modules/.bin/ng build --configuration production \
     --source-map=false \
     --named-chunks=false \
     --output-hashing=all

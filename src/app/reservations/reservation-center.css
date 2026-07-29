@@ -915,51 +915,53 @@
 .reservation-table {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 0 8px;
-  white-space: nowrap;
+  border-spacing: 0 5px;
+  table-layout: auto;
 }
 
 .reservation-table th {
   text-align: left;
-  padding: 4px 12px;
+  padding: 4px 6px;
   background-color: var(--surface-50);
   color: var(--surface-500);
   font-family: var(--font-poppins);
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.04em;
   position: sticky;
   top: 0;
   z-index: 20;
   border: none;
+  white-space: nowrap;
 }
 
 .reservation-table td {
-  padding: 8px 12px;
+  padding: 6px 6px;
   background-color: var(--surface-50);
   border-top: 1px solid var(--surface-200);
   border-bottom: 1px solid var(--surface-200);
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .reservation-table td:first-child {
   border-left: 1px solid var(--surface-200);
-  border-radius: 12px 0 0 12px;
+  border-radius: 10px 0 0 10px;
 }
 
 .reservation-table td:last-child {
   border-right: 1px solid var(--surface-200);
-  border-radius: 0 12px 12px 0;
+  border-radius: 0 10px 10px 0;
 }
 
 .header-content {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 .header-content .material-icons-round {
-  font-size: 16px;
+  font-size: 13px;
 }
 
 /* Header Icon Colors */
@@ -2306,5 +2308,79 @@
     grid-column: 1 / -1;
   }
 }
+
+/* ─── Booking From / Channel Badge Styling ───────────────────────────── */
+.source-cell {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 9.5px;
+  font-weight: 700;
+  font-family: var(--font-poppins);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.source-badge__icon {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.source-badge--mmt {
+  background: #FFF1F2;
+  color: #BE123C;
+  border: 1px solid #FECDD3;
+}
+
+.source-badge--booking {
+  background: #EFF6FF;
+  color: #1E40AF;
+  border: 1px solid #BFDBFE;
+}
+
+.source-badge--agoda {
+  background: #E6FFFA;
+  color: #0D9488;
+  border: 1px solid #99F6E4;
+}
+
+.source-badge--channex {
+  background: #F0FDF4;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+
+.source-badge--expedia {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.source-badge--airbnb {
+  background: #FFF1F2;
+  color: #E11D48;
+  border: 1px solid #FDA4AF;
+}
+
+.source-badge--website {
+  background: #F3E8FF;
+  color: #6B21A8;
+  border: 1px solid #E9D5FF;
+}
+
+.source-badge--direct {
+  background: #F3F4F6;
+  color: #374151;
+  border: 1px solid #E5E7EB;
+}
+
 
 

@@ -95,6 +95,12 @@
             </th>
             <th>
               <div class="header-content">
+                <span class="material-icons-round source-icon">travel_explore</span>
+                BOOKING FROM
+              </div>
+            </th>
+            <th>
+              <div class="header-content">
                 <span class="material-icons-round room-icon">bed</span>
                 ROOM & PLAN
               </div>
@@ -154,6 +160,14 @@
                     {{res.guestPhone}}
                   </div>
                 </div>
+              </div>
+            </td>
+            <td>
+              <div class="source-cell">
+                <span class="source-badge" [ngClass]="getSourceBadgeClass(res.bookingSource)">
+                  <span class="material-icons-round source-badge__icon">{{ getSourceIcon(res.bookingSource) }}</span>
+                  {{ res.bookingSource || 'Direct Walk-in' }}
+                </span>
               </div>
             </td>
             <td>

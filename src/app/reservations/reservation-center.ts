@@ -23,6 +23,7 @@ interface Reservation {
   gstPercent: number;
   taxAmount: number;
   totalWithTax: number;
+  bookingSource?: string;
   nights?: number;
   adults?: number;
   children?: number;
@@ -543,6 +544,19 @@ export class ReservationCenter implements OnInit, OnDestroy {
     const gstPercent = Number(item.gstPercent ?? 0);
     const taxAmount = Number(item.taxAmount ?? item.taxationAmount ?? ((billingAmount * gstPercent) / 100));
     const totalWithTax = billingAmount > 0 && item.grandTotal ? billingAmount : (billingAmount + taxAmount);
+    const rawSource = item.bookingSource || item.channelName || item.otaName || item.source || item.bookingFrom || item.sourceName || item.segmentName || item.channel;
+    let bookingSource = rawSource;
+    if (!bookingSource || String(bookingSource).trim() === '') {
+      if (item.channexBookingId || item.channexId || item.isChannex) {
+        bookingSource = 'Channex';
+      } else if (guestName.toLowerCase().includes('ota')) {
+        bookingSource = 'Booking.com';
+      } else if (guestName.toLowerCase().includes('channex')) {
+        bookingSource = 'MakeMyTrip';
+      } else {
+        bookingSource = 'Direct Walk-in';
+      }
+    }
 
     return {
       id: String(item.id ?? item.bookingId ?? item.reservationId ?? ''),
@@ -560,12 +574,36 @@ export class ReservationCenter implements OnInit, OnDestroy {
       gstPercent,
       taxAmount,
       totalWithTax,
+      bookingSource,
       nights: Number(item.numberOfNights ?? item.nights ?? 0),
       adults: Number(item.numberOfAdults ?? item.adults ?? 0),
       children: Number(item.numberOfChildren ?? item.children ?? 0),
       vip: Boolean(guest.isVip || item.isVip || item.guestBadge === 'VIP'),
       new: this.normalizeStatus(item.reservationStatus || item.status) === 'PENDING'
     };
+  }
+
+  getSourceBadgeClass(source?: string): string {
+    if (!source) return 'source-badge--direct';
+    const s = source.toLowerCase();
+    if (s.includes('booking')) return 'source-badge--booking';
+    if (s.includes('makemytrip') || s.includes('mmt')) return 'source-badge--mmt';
+    if (s.includes('agoda')) return 'source-badge--agoda';
+    if (s.includes('channex')) return 'source-badge--channex';
+    if (s.includes('expedia')) return 'source-badge--expedia';
+    if (s.includes('air')) return 'source-badge--airbnb';
+    if (s.includes('web') || s.includes('site')) return 'source-badge--website';
+    return 'source-badge--direct';
+  }
+
+  getSourceIcon(source?: string): string {
+    if (!source) return 'directions_walk';
+    const s = source.toLowerCase();
+    if (s.includes('booking') || s.includes('makemytrip') || s.includes('mmt') || s.includes('agoda') || s.includes('expedia') || s.includes('channex') || s.includes('air')) {
+      return 'travel_explore';
+    }
+    if (s.includes('web') || s.includes('site')) return 'language';
+    return 'directions_walk';
   }
 
   private normalizeStatus(status: any): Reservation['status'] {

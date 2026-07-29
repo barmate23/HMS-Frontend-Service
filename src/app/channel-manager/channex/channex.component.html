@@ -1,0 +1,788 @@
+<div class="cx-root">
+
+  <!-- ─── Toast Notifications ─────────────────────────────────────────── -->
+  <div class="toast-area">
+    @for (t of toasts(); track t.id) {
+      <div class="toast toast--{{ t.type }}" (click)="dismissToast(t.id)">
+        <mat-icon class="toast-icon">
+          {{ t.type === 'success' ? 'check_circle' : t.type === 'error' ? 'error' : 'info' }}
+        </mat-icon>
+        <span>{{ t.message }}</span>
+        <button class="toast-close"><mat-icon>close</mat-icon></button>
+      </div>
+    }
+  </div>
+
+  <!-- ─── Page Header ──────────────────────────────────────────────────── -->
+  <header class="cx-header">
+    <div class="cx-header__left">
+      <div class="cx-logo">
+        <mat-icon>cloud_sync</mat-icon>
+      </div>
+      <div>
+        <span class="command-eyebrow">Channel Manager</span>
+        <h1 class="cx-header__title">Channex OTA Sync</h1>
+        <p class="cx-header__sub">Real-time channel management via Channex.io</p>
+      </div>
+    </div>
+    <div class="cx-header__right">
+      <div class="status-pill" [class.status-pill--ok]="webhookStatus() === 'ok'" [class.status-pill--error]="webhookStatus() === 'error'">
+        <span class="status-dot"></span>
+        {{ webhookStatus() === 'ok' ? 'Webhook Live' : webhookStatus() === 'error' ? 'Webhook Down' : 'Status Unknown' }}
+      </div>
+      <button class="btn btn--primary btn--sm" (click)="checkWebhook()" [disabled]="loadingWebhookCheck()">
+        <mat-icon>wifi_tethering</mat-icon>
+        {{ loadingWebhookCheck() ? 'Checking…' : 'Check Webhook' }}
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── Tab Bar ──────────────────────────────────────────────────────── -->
+  <nav class="cx-tabs">
+    @for (tab of tabs; track tab.id) {
+      <button class="cx-tab" [class.cx-tab--active]="activeTab() === tab.id" (click)="setTab(tab.id)">
+        <mat-icon>{{ tab.icon }}</mat-icon>
+        <span>{{ tab.label }}</span>
+      </button>
+    }
+  </nav>
+
+  <!-- ─── Tab Content ──────────────────────────────────────────────────── -->
+  <div class="cx-body">
+
+    <!-- ══════════════════════════════════════════
+         TAB: OVERVIEW
+    ══════════════════════════════════════════ -->
+    @if (activeTab() === 'overview') {
+      <div class="tab-content fade-in">
+
+        <!-- Sync Status Cards -->
+        <section class="section">
+          <h2 class="section-title">Sync Status</h2>
+          <div class="card-grid card-grid--3">
+
+            <div class="status-card" (click)="setTab('master-sync')">
+              <div class="status-card__icon status-card__icon--blue">
+                <mat-icon>sync</mat-icon>
+              </div>
+              <div>
+                <p class="status-card__label">Last Master Sync</p>
+                <p class="status-card__value">{{ formatDate(lastMasterSync()) }}</p>
+              </div>
+              <mat-icon class="status-card__arrow">chevron_right</mat-icon>
+            </div>
+
+            <div class="status-card" (click)="setTab('availability')">
+              <div class="status-card__icon status-card__icon--green">
+                <mat-icon>event_available</mat-icon>
+              </div>
+              <div>
+                <p class="status-card__label">Last Availability Sync</p>
+                <p class="status-card__value">{{ formatDate(lastAvailSync()) }}</p>
+              </div>
+              <mat-icon class="status-card__arrow">chevron_right</mat-icon>
+            </div>
+
+            <div class="status-card" (click)="setTab('bookings')">
+              <div class="status-card__icon status-card__icon--amber">
+                <mat-icon>inbox</mat-icon>
+              </div>
+              <div>
+                <p class="status-card__label">Last Feed Pull</p>
+                <p class="status-card__value">{{ formatDate(lastFeedPull()) }}</p>
+              </div>
+              <mat-icon class="status-card__arrow">chevron_right</mat-icon>
+            </div>
+          </div>
+        </section>
+
+        <!-- Quick Actions -->
+        <section class="section">
+          <h2 class="section-title">Quick Actions</h2>
+          <div class="quick-actions">
+            <button class="action-card" (click)="runMasterSync()" [disabled]="loadingMasterSync()">
+              <div class="action-card__icon action-card__icon--blue">
+                <mat-icon>sync</mat-icon>
+              </div>
+              <span class="action-card__label">Run Master Sync</span>
+              <span class="action-card__desc">Sync room types, rate plans & rates to Channex</span>
+              @if (loadingMasterSync()) { <div class="spinner spinner--sm"></div> }
+            </button>
+
+            <button class="action-card" (click)="runPullFeed()" [disabled]="loadingFeed()">
+              <div class="action-card__icon action-card__icon--green">
+                <mat-icon>inbox</mat-icon>
+              </div>
+              <span class="action-card__label">Pull Booking Feed</span>
+              <span class="action-card__desc">Fetch & process unacknowledged OTA revisions</span>
+              @if (loadingFeed()) { <div class="spinner spinner--sm"></div> }
+            </button>
+
+            <button class="action-card" (click)="runAvailabilitySync()" [disabled]="loadingAvailability()">
+              <div class="action-card__icon action-card__icon--amber">
+                <mat-icon>event_available</mat-icon>
+              </div>
+              <span class="action-card__label">Sync Availability</span>
+              <span class="action-card__desc">Push live availability & rates for next 30 days</span>
+              @if (loadingAvailability()) { <div class="spinner spinner--sm"></div> }
+            </button>
+
+            <button class="action-card" (click)="setTab('config'); loadAllConfig()">
+              <div class="action-card__icon action-card__icon--purple">
+                <mat-icon>settings</mat-icon>
+              </div>
+              <span class="action-card__label">View Config</span>
+              <span class="action-card__desc">Manage API key, property & channel details</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Webhook URL Banner -->
+        <section class="section">
+          <h2 class="section-title">Channex Webhook URL</h2>
+          <div class="webhook-banner">
+            <mat-icon class="webhook-banner__icon">webhook</mat-icon>
+            <div class="webhook-banner__content">
+              <p class="webhook-banner__label">Register this URL in Channex dashboard → Settings → Webhooks</p>
+              <code class="webhook-banner__url">{{ cx.config().webhookUrl }}</code>
+            </div>
+            <button class="btn btn--primary btn--sm" (click)="copyWebhookUrl()">
+              <mat-icon>{{ webhookCopied() ? 'check' : 'content_copy' }}</mat-icon>
+              {{ webhookCopied() ? 'Copied!' : 'Copy' }}
+            </button>
+          </div>
+        </section>
+
+        <!-- Recent Logs -->
+        @if (cx.syncLogs().length > 0) {
+          <section class="section">
+            <div class="section-header">
+              <h2 class="section-title">Recent Activity</h2>
+              <button class="btn btn--ghost btn--sm" (click)="clearLogs()">
+                <mat-icon>delete_sweep</mat-icon> Clear
+              </button>
+            </div>
+            <div class="log-list">
+              @for (log of cx.syncLogs().slice(0, 8); track log.id) {
+                <div class="log-item" [class.log-item--success]="log.success" [class.log-item--error]="!log.success">
+                  <mat-icon class="log-item__icon">{{ log.success ? 'check_circle' : 'error' }}</mat-icon>
+                  <div class="log-item__body">
+                    <span class="log-item__action">{{ log.action }}</span>
+                    <span class="log-item__msg">{{ log.message }}</span>
+                  </div>
+                  <span class="log-item__time">{{ formatDate(log.timestamp) }}</span>
+                </div>
+              }
+            </div>
+          </section>
+        }
+      </div>
+    }
+
+    <!-- ══════════════════════════════════════════
+         TAB: MASTER SYNC
+    ══════════════════════════════════════════ -->
+    @if (activeTab() === 'master-sync') {
+      <div class="tab-content fade-in">
+        <section class="section">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Master Sync</h2>
+              <p class="section-desc">One-click full sync: Room Types → Rate Plans → Rates & Availability (next 30 days)</p>
+            </div>
+            <button class="btn btn--primary" (click)="runMasterSync()" [disabled]="loadingMasterSync()">
+              @if (loadingMasterSync()) { <div class="spinner spinner--sm spinner--white"></div> } @else { <mat-icon>sync</mat-icon> }
+              {{ loadingMasterSync() ? 'Syncing…' : 'Run Master Sync' }}
+            </button>
+          </div>
+
+          <!-- Pipeline Steps Illustration -->
+          <div class="pipeline">
+            <div class="pipeline-step">
+              <div class="pipeline-step__num">1</div>
+              <div class="pipeline-step__text">Read HMS Room Types</div>
+            </div>
+            <mat-icon class="pipeline-arrow">arrow_forward</mat-icon>
+            <div class="pipeline-step">
+              <div class="pipeline-step__num">2</div>
+              <div class="pipeline-step__text">Compare with Channex</div>
+            </div>
+            <mat-icon class="pipeline-arrow">arrow_forward</mat-icon>
+            <div class="pipeline-step">
+              <div class="pipeline-step__num">3</div>
+              <div class="pipeline-step__text">Create Missing Room Types</div>
+            </div>
+            <mat-icon class="pipeline-arrow">arrow_forward</mat-icon>
+            <div class="pipeline-step">
+              <div class="pipeline-step__num">4</div>
+              <div class="pipeline-step__text">Create Missing Rate Plans</div>
+            </div>
+            <mat-icon class="pipeline-arrow">arrow_forward</mat-icon>
+            <div class="pipeline-step">
+              <div class="pipeline-step__num">5</div>
+              <div class="pipeline-step__text">Push Rates & Availability</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Master Sync Results -->
+        @if (masterSyncResult()) {
+          <section class="section">
+            <h2 class="section-title">Sync Result</h2>
+            <div class="card-grid card-grid--4">
+              <div class="metric-card">
+                <span class="metric-card__value">{{ masterSyncResult()!.hmsRoomTypesTotal }}</span>
+                <span class="metric-card__label">HMS Room Types</span>
+              </div>
+              <div class="metric-card metric-card--blue">
+                <span class="metric-card__value">{{ masterSyncResult()!.newRoomTypesCreatedInChannex }}</span>
+                <span class="metric-card__label">New Room Types Created</span>
+              </div>
+              <div class="metric-card metric-card--green">
+                <span class="metric-card__value">{{ masterSyncResult()!.newRatePlansCreatedInChannex }}</span>
+                <span class="metric-card__label">New Rate Plans Created</span>
+              </div>
+              <div class="metric-card metric-card--amber">
+                <span class="metric-card__value">{{ masterSyncResult()!.ratesAndAvailabilityPushed }}</span>
+                <span class="metric-card__label">ARI Updates Pushed</span>
+              </div>
+            </div>
+
+            @if (masterSyncResult()!.createdRoomTypeTitles.length > 0) {
+              <div class="tag-section">
+                <p class="tag-section__label">New Room Types:</p>
+                @for (title of masterSyncResult()!.createdRoomTypeTitles; track title) {
+                  <span class="tag tag--blue">{{ title }}</span>
+                }
+              </div>
+            }
+            @if (masterSyncResult()!.createdRatePlanTitles.length > 0) {
+              <div class="tag-section">
+                <p class="tag-section__label">New Rate Plans:</p>
+                @for (title of masterSyncResult()!.createdRatePlanTitles; track title) {
+                  <span class="tag tag--green">{{ title }}</span>
+                }
+              </div>
+            }
+          </section>
+        }
+      </div>
+    }
+
+    <!-- ══════════════════════════════════════════
+         TAB: AVAILABILITY
+    ══════════════════════════════════════════ -->
+    @if (activeTab() === 'availability') {
+      <div class="tab-content fade-in">
+        <section class="section">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Availability Sync</h2>
+              <p class="section-desc">Push live booking-adjusted availability & base rates to Channex for a date range</p>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Start Date</label>
+              <input class="form-input" type="date" [(ngModel)]="availForm.startDate" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">End Date</label>
+              <input class="form-input" type="date" [(ngModel)]="availForm.endDate" />
+            </div>
+            <button class="btn btn--primary btn--lg" style="align-self:flex-end" (click)="runAvailabilitySync()" [disabled]="loadingAvailability()">
+              @if (loadingAvailability()) { <div class="spinner spinner--sm spinner--white"></div> } @else { <mat-icon>event_available</mat-icon> }
+              {{ loadingAvailability() ? 'Syncing…' : 'Sync Availability' }}
+            </button>
+          </div>
+        </section>
+
+        @if (availabilityResult()) {
+          <section class="section">
+            <h2 class="section-title">Sync Result</h2>
+            <div class="card-grid card-grid--3">
+              <div class="metric-card metric-card--blue">
+                <span class="metric-card__value">{{ availabilityResult()!.roomTypesSynced }}</span>
+                <span class="metric-card__label">Room Types Synced</span>
+              </div>
+              <div class="metric-card metric-card--green">
+                <span class="metric-card__value">{{ availabilityResult()!.ariUpdatesPushed }}</span>
+                <span class="metric-card__label">ARI Blocks Pushed</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-card__value" style="font-size:0.9rem">{{ availabilityResult()!.startDate }} → {{ availabilityResult()!.endDate }}</span>
+                <span class="metric-card__label">Sync Window</span>
+              </div>
+            </div>
+
+            @if (hasSummary) {
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Room Type</th>
+                    <th>Total HMS Rooms</th>
+                    <th>Base Rate (₹)</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of availabilityResult()!.summary; track s.roomType) {
+                    <tr>
+                      <td><span class="room-type-badge">{{ s.roomType }}</span></td>
+                      <td>{{ s.totalHmsRooms }}</td>
+                      <td>{{ s.baseRate | number:'1.2-2' }}</td>
+                      <td><span class="badge badge--success">Synced</span></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+        }
+      </div>
+    }
+
+    <!-- ══════════════════════════════════════════
+         TAB: ARI PUSH
+    ══════════════════════════════════════════ -->
+    @if (activeTab() === 'ari-push') {
+      <div class="tab-content fade-in">
+        <section class="section">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Manual ARI Push</h2>
+              <p class="section-desc">Push a targeted Availability + Rate update to Channex for a specific room type & rate plan</p>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-row">
+              <div class="form-group form-group--full">
+                <label class="form-label">Room Type ID (Channex UUID)</label>
+                @if (roomTypes().length > 0) {
+                  <select class="form-input" [(ngModel)]="ariForm.roomTypeId">
+                    <option value="">— Select Room Type —</option>
+                    @for (rt of roomTypes(); track rt.id) {
+                      <option [value]="rt.id">{{ rt.attributes.title }} ({{ rt.id }})</option>
+                    }
+                  </select>
+                } @else {
+                  <div class="input-with-hint">
+                    <input class="form-input" type="text" [(ngModel)]="ariForm.roomTypeId" placeholder="e.g. abc-def-123-channex-room-type-uuid" />
+                    <button class="btn btn--ghost btn--sm" (click)="setTab('config'); loadRoomTypes()">Load from Channex</button>
+                  </div>
+                }
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group form-group--full">
+                <label class="form-label">Rate Plan ID (Channex UUID)</label>
+                @if (ratePlans().length > 0) {
+                  <select class="form-input" [(ngModel)]="ariForm.ratePlanId">
+                    <option value="">— Select Rate Plan —</option>
+                    @for (rp of ratePlans(); track rp.id) {
+                      <option [value]="rp.id">{{ rp.attributes.title }} ({{ rp.id }})</option>
+                    }
+                  </select>
+                } @else {
+                  <div class="input-with-hint">
+                    <input class="form-input" type="text" [(ngModel)]="ariForm.ratePlanId" placeholder="e.g. xyz-uvw-456-channex-rate-plan-uuid" />
+                    <button class="btn btn--ghost btn--sm" (click)="setTab('config'); loadRatePlans()">Load from Channex</button>
+                  </div>
+                }
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Start Date</label>
+                <input class="form-input" type="date" [(ngModel)]="ariForm.startDate" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">End Date</label>
+                <input class="form-input" type="date" [(ngModel)]="ariForm.endDate" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Availability (rooms)</label>
+                <input class="form-input" type="number" [(ngModel)]="ariForm.availability" placeholder="e.g. 8" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Rate (₹)</label>
+                <input class="form-input" type="number" [(ngModel)]="ariForm.rate" placeholder="e.g. 2500.00" />
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn btn--primary" (click)="runAriPush()" [disabled]="loadingAriPush()">
+                @if (loadingAriPush()) { <div class="spinner spinner--sm spinner--white"></div> } @else { <mat-icon>upload</mat-icon> }
+                {{ loadingAriPush() ? 'Pushing…' : 'Push ARI to Channex' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Info box -->
+          <div class="info-box">
+            <mat-icon>info</mat-icon>
+            <div>
+              <strong>Tip:</strong> Visit the <button class="link-btn" (click)="setTab('config'); loadAllConfig()">Config tab</button> to load room types and rate plans from Channex — they'll auto-populate the dropdowns above.
+            </div>
+          </div>
+        </section>
+      </div>
+    }
+
+    <!-- ══════════════════════════════════════════
+         TAB: BOOKINGS
+    ══════════════════════════════════════════ -->
+    @if (activeTab() === 'bookings') {
+      <div class="tab-content fade-in">
+
+        <!-- Pull Feed -->
+        <section class="section">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Pull Revision Feed</h2>
+              <p class="section-desc">Fetch all unacknowledged booking revisions from Channex, process them into HMS & auto-acknowledge</p>
+            </div>
+            <button class="btn btn--primary" (click)="runPullFeed()" [disabled]="loadingFeed()">
+              @if (loadingFeed()) { <div class="spinner spinner--sm spinner--white"></div> } @else { <mat-icon>inbox</mat-icon> }
+              {{ loadingFeed() ? 'Pulling…' : 'Pull Feed' }}
+            </button>
+          </div>
+
+          @if (feedResult()) {
+            <div class="card-grid card-grid--4">
+              <div class="metric-card">
+                <span class="metric-card__value">{{ feedResult()!.totalFetched }}</span>
+                <span class="metric-card__label">Total Fetched</span>
+              </div>
+              <div class="metric-card metric-card--blue">
+                <span class="metric-card__value">{{ feedResult()!.processedCount }}</span>
+                <span class="metric-card__label">Processed</span>
+              </div>
+              <div class="metric-card metric-card--green">
+                <span class="metric-card__value">{{ feedResult()!.acknowledgedCount }}</span>
+                <span class="metric-card__label">Acknowledged</span>
+              </div>
+              <div class="metric-card metric-card--amber">
+                <span class="metric-card__value">{{ feedResult()!.bookingReferences.length }}</span>
+                <span class="metric-card__label">Booking Refs</span>
+              </div>
+            </div>
+            @if (feedResult()!.bookingReferences.length > 0) {
+              <div class="tag-section">
+                <p class="tag-section__label">Booking References:</p>
+                @for (ref of feedResult()!.bookingReferences; track ref) {
+                  <span class="tag tag--blue mono">{{ ref }}</span>
+                }
+              </div>
+            }
+          }
+        </section>
+
+        <hr class="section-divider" />
+
+        <!-- Manual Booking Sync -->
+        <section class="section">
+          <h2 class="section-title">Manual Booking Sync</h2>
+          <p class="section-desc">Re-process a specific Channex booking payload. Idempotent — duplicates are safely skipped.</p>
+
+          <div class="form-card">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Booking Unique ID <span class="required">*</span></label>
+                <input class="form-input mono" type="text" [(ngModel)]="bookingForm.booking_unique_id" placeholder="BK-2026-00123456" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Status</label>
+                <select class="form-input" [(ngModel)]="bookingForm.status">
+                  <option value="new">new</option>
+                  <option value="modified">modified</option>
+                  <option value="cancelled">cancelled</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">OTA Name</label>
+                <input class="form-input" type="text" [(ngModel)]="bookingForm.ota_name" placeholder="Booking.com" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">GST %</label>
+                <input class="form-input" type="number" [(ngModel)]="bookingForm.gst_percent" placeholder="18" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Arrival Date <span class="required">*</span></label>
+                <input class="form-input" type="date" [(ngModel)]="bookingForm.arrival_date" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Departure Date</label>
+                <input class="form-input" type="date" [(ngModel)]="bookingForm.departure_date" />
+              </div>
+            </div>
+
+            <div class="form-section-title">Guest Details</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">First Name <span class="required">*</span></label>
+                <input class="form-input" type="text" [(ngModel)]="bookingForm.customer!.name" placeholder="John" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Last Name</label>
+                <input class="form-input" type="text" [(ngModel)]="bookingForm.customer!.surname" placeholder="Doe" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input class="form-input" type="email" [(ngModel)]="bookingForm.customer!.email" placeholder="john@example.com" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Phone</label>
+                <input class="form-input" type="text" [(ngModel)]="bookingForm.customer!.phone" placeholder="+919876543210" />
+              </div>
+            </div>
+
+            <div class="form-section-title">Room & Occupancy</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Room Type Title</label>
+                <input class="form-input" type="text" [(ngModel)]="bookingForm.rooms![0].title" placeholder="Delux" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Adults</label>
+                <input class="form-input" type="number" [(ngModel)]="bookingForm.occupancy!.adults" placeholder="2" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Children</label>
+                <input class="form-input" type="number" [(ngModel)]="bookingForm.occupancy!.children" placeholder="0" />
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn btn--primary" (click)="runManualBookingSync()" [disabled]="loadingManualSync()">
+                @if (loadingManualSync()) { <div class="spinner spinner--sm spinner--white"></div> } @else { <mat-icon>hotel</mat-icon> }
+                {{ loadingManualSync() ? 'Syncing…' : 'Sync Booking' }}
+              </button>
+            </div>
+          </div>
+
+          @if (manualSyncData) {
+            <div class="result-panel" [class.result-panel--success]="manualSyncData.success" [class.result-panel--error]="!manualSyncData.success">
+              <mat-icon>{{ manualSyncData.success ? 'check_circle' : 'error' }}</mat-icon>
+              <div>
+                <p class="result-panel__msg">{{ manualSyncData.message }}</p>
+                @if (manualSyncData.data?.confirmationNumber) {
+                  <p class="result-panel__ref mono">Confirmation: {{ manualSyncData.data?.confirmationNumber }}</p>
+                }
+              </div>
+            </div>
+          }
+        </section>
+
+        <hr class="section-divider" />
+
+        <!-- Acknowledge Revision -->
+        <section class="section">
+          <h2 class="section-title">Acknowledge Revision</h2>
+          <p class="section-desc">Manually acknowledge a specific Channex booking revision UUID</p>
+
+          <div class="form-row form-row--inline">
+            <div class="form-group" style="flex:1">
+              <label class="form-label">Revision UUID</label>
+              <input class="form-input mono" type="text" [ngModel]="ackRevisionId()" (ngModelChange)="ackRevisionId.set($event)" placeholder="e1a2b3c4-d5e6-7890-abcd-ef1234567890" />
+            </div>
+            <button class="btn btn--primary" style="align-self:flex-end" (click)="runAckRevision()" [disabled]="loadingAck()">
+              @if (loadingAck()) { <div class="spinner spinner--sm spinner--white"></div> } @else { <mat-icon>done_all</mat-icon> }
+              {{ loadingAck() ? 'Acknowledging…' : 'Acknowledge' }}
+            </button>
+          </div>
+
+          @if (ackResult()) {
+            <div class="result-panel result-panel--success">
+              <mat-icon>check_circle</mat-icon>
+              <div>
+                <p class="result-panel__msg">Revision acknowledged successfully</p>
+                <p class="result-panel__ref mono">{{ ackResult()!.revisionId }}</p>
+              </div>
+            </div>
+          }
+        </section>
+      </div>
+    }
+
+    <!-- ══════════════════════════════════════════
+         TAB: CONFIG
+    ══════════════════════════════════════════ -->
+    @if (activeTab() === 'config') {
+      <div class="tab-content fade-in">
+
+        <!-- API Config -->
+        <section class="section">
+          <h2 class="section-title">API Configuration</h2>
+          <p class="section-desc">Stored in <code class="inline-code">localStorage</code> — persists between sessions. Leave blank to use HMS server defaults.</p>
+
+          <div class="form-card">
+            <div class="form-row">
+              <div class="form-group form-group--full">
+                <label class="form-label">Channex API Key</label>
+                <div class="input-with-btn">
+                  <input class="form-input mono" [type]="showApiKey() ? 'text' : 'password'" [(ngModel)]="configForm.apiKey" placeholder="uUvCy9Uq... (optional — uses server default if blank)" />
+                  <button class="btn btn--ghost btn--icon" (click)="toggleShowApiKey()">
+                    <mat-icon>{{ showApiKey() ? 'visibility_off' : 'visibility' }}</mat-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Property ID (UUID)</label>
+                <input class="form-input mono" type="text" [(ngModel)]="configForm.propertyId" placeholder="3ac4f491-34c0-462e-95fd-acdf20006bdb" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Channex Base URL</label>
+                <input class="form-input" type="text" [(ngModel)]="configForm.baseUrl" placeholder="https://staging.channex.io/api/v1" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group form-group--full">
+                <label class="form-label">Webhook Registration URL (read-only)</label>
+                <div class="input-with-btn">
+                  <input class="form-input mono" type="text" [value]="configForm.webhookUrl" readonly />
+                  <button class="btn btn--ghost btn--sm" (click)="copyWebhookUrl()">
+                    <mat-icon>{{ webhookCopied() ? 'check' : 'content_copy' }}</mat-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn--primary" (click)="saveConfig()">
+                <mat-icon>save</mat-icon> Save Configuration
+              </button>
+              <button class="btn btn--ghost" (click)="loadAllConfig()">
+                <mat-icon>refresh</mat-icon> Load from Channex
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Properties -->
+        <section class="section">
+          <div class="section-header">
+            <h2 class="section-title">Channex Properties</h2>
+            <button class="btn btn--ghost btn--sm" (click)="loadProperties()" [disabled]="loadingProperties()">
+              @if (loadingProperties()) { <div class="spinner spinner--sm"></div> } @else { <mat-icon>refresh</mat-icon> }
+              Refresh
+            </button>
+          </div>
+          @if (properties().length === 0) {
+            <div class="empty-state">
+              <mat-icon>domain</mat-icon>
+              <p>No properties loaded. Click "Load from Channex" to fetch.</p>
+            </div>
+          } @else {
+            @for (prop of properties(); track prop.id) {
+              <div class="property-card">
+                <div class="property-card__header">
+                  <mat-icon>location_city</mat-icon>
+                  <div>
+                    <p class="property-card__name">{{ prop.attributes.title }}</p>
+                    <code class="mono property-card__id">{{ prop.id }}</code>
+                  </div>
+                </div>
+                <div class="property-card__meta">
+                  <span><mat-icon>language</mat-icon> {{ prop.attributes.country }} · {{ prop.attributes.city }}</span>
+                  <span><mat-icon>currency_rupee</mat-icon> {{ prop.attributes.currency }}</span>
+                  <span><mat-icon>schedule</mat-icon> {{ prop.attributes.timezone }}</span>
+                  <span><mat-icon>email</mat-icon> {{ prop.attributes.email }}</span>
+                </div>
+              </div>
+            }
+          }
+        </section>
+
+        <!-- Room Types Table -->
+        <section class="section">
+          <div class="section-header">
+            <h2 class="section-title">Channex Room Types</h2>
+            <button class="btn btn--ghost btn--sm" (click)="loadRoomTypes()" [disabled]="loadingRoomTypes()">
+              @if (loadingRoomTypes()) { <div class="spinner spinner--sm"></div> } @else { <mat-icon>refresh</mat-icon> }
+              Refresh
+            </button>
+          </div>
+          @if (roomTypes().length === 0) {
+            <div class="empty-state">
+              <mat-icon>bed</mat-icon>
+              <p>No room types loaded yet.</p>
+            </div>
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Channex ID</th>
+                  <th>Rooms</th>
+                  <th>Max Occupancy</th>
+                  <th>Currency</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (rt of roomTypes(); track rt.id) {
+                  <tr>
+                    <td><span class="room-type-badge">{{ rt.attributes.title }}</span></td>
+                    <td><code class="mono small">{{ rt.id }}</code></td>
+                    <td>{{ rt.attributes.count_of_rooms }}</td>
+                    <td>{{ rt.attributes.default_occupancy }}</td>
+                    <td>{{ rt.attributes.currency || 'INR' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </section>
+
+        <!-- Rate Plans Table -->
+        <section class="section">
+          <div class="section-header">
+            <h2 class="section-title">Channex Rate Plans</h2>
+            <button class="btn btn--ghost btn--sm" (click)="loadRatePlans()" [disabled]="loadingRatePlans()">
+              @if (loadingRatePlans()) { <div class="spinner spinner--sm"></div> } @else { <mat-icon>refresh</mat-icon> }
+              Refresh
+            </button>
+          </div>
+          @if (ratePlans().length === 0) {
+            <div class="empty-state">
+              <mat-icon>sell</mat-icon>
+              <p>No rate plans loaded yet.</p>
+            </div>
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Channex ID</th>
+                  <th>Room Type</th>
+                  <th>Currency</th>
+                  <th>Base Rate</th>
+                  <th>Sell Mode</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (rp of ratePlans(); track rp.id) {
+                  <tr>
+                    <td>{{ rp.attributes.title }}</td>
+                    <td><code class="mono small">{{ rp.id }}</code></td>
+                    <td><span class="room-type-badge">{{ getRoomTypeTitle(rp) }}</span></td>
+                    <td>{{ rp.attributes.currency }}</td>
+                    <td>{{ rp.attributes.options?.[0]?.rate || '—' }}</td>
+                    <td><span class="badge badge--neutral">{{ rp.attributes.sell_mode }}</span></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </section>
+      </div>
+    }
+
+  </div>
+</div>

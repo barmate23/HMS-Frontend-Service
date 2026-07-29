@@ -275,7 +275,7 @@ export class Layout implements OnInit {
       icon: 'hub',
       expanded: true,
       children: [
-        { label: 'Agoda YCS API', icon: 'sync_alt', route: '/channel-manager/agoda' }
+        { label: 'Channex OTA Sync', icon: 'cloud_sync', route: '/channel-manager/channex' }
       ]
     }
   ];

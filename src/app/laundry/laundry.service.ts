@@ -582,10 +582,6 @@ export class LaundryService {
         this.upsertOrder(savedOrder);
         this.loadDashboardData();
 
-        if (savedOrder.billingMode === 'Room Account') {
-          this.postOrderToFolio(savedOrder.id);
-        }
-
         return { success: true, data: savedOrder };
       }),
       catchError(err => {

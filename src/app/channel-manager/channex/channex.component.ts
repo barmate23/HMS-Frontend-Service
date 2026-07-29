@@ -14,10 +14,13 @@ import {
   ChannexRoomType,
   ChannexRatePlan,
   ChannexSyncLog,
-  AckRevisionData
+  AckRevisionData,
+  ChannexChannel,
+  CreateChannelParams,
+  TestConnectionData
 } from './channex.service';
 
-type TabId = 'overview' | 'master-sync' | 'availability' | 'ari-push' | 'bookings' | 'config';
+type TabId = 'overview' | 'master-sync' | 'channels' | 'config';
 
 interface Toast {
   id: string;
@@ -39,12 +42,10 @@ export class ChannexComponent implements OnInit {
   activeTab = signal<TabId>('overview');
 
   tabs: Array<{ id: TabId; label: string; icon: string }> = [
-    { id: 'overview',      label: 'Overview',      icon: 'hub' },
-    { id: 'master-sync',   label: 'Master Sync',   icon: 'sync' },
-    { id: 'availability',  label: 'Availability',  icon: 'event_available' },
-    { id: 'ari-push',      label: 'ARI Push',      icon: 'upload' },
-    { id: 'bookings',      label: 'Bookings',      icon: 'hotel' },
-    { id: 'config',        label: 'Config',        icon: 'settings' }
+    { id: 'overview',    label: 'Overview',         icon: 'hub' },
+    { id: 'master-sync', label: 'Master Sync',      icon: 'sync' },
+    { id: 'channels',    label: 'Channels',         icon: 'travel_explore' },
+    { id: 'config',      label: 'Property & Rates', icon: 'domain' }
   ];
 
   // ─── Loading Flags ────────────────────────────────────────────────────────
@@ -58,6 +59,9 @@ export class ChannexComponent implements OnInit {
   loadingProperties   = signal(false);
   loadingRoomTypes    = signal(false);
   loadingRatePlans    = signal(false);
+  loadingChannels     = signal(false);
+  loadingCreateChannel= signal(false);
+  loadingTestConn     = signal(false);
 
   // ─── Response Data ────────────────────────────────────────────────────────
   masterSyncResult    = signal<MasterSyncData | null>(null);
@@ -69,6 +73,8 @@ export class ChannexComponent implements OnInit {
   properties          = signal<ChannexProperty[]>([]);
   roomTypes           = signal<ChannexRoomType[]>([]);
   ratePlans           = signal<ChannexRatePlan[]>([]);
+  channels            = signal<ChannexChannel[]>([]);
+  testConnResult      = signal<TestConnectionData | null>(null);
 
   // ─── Toasts ───────────────────────────────────────────────────────────────
   toasts = signal<Toast[]>([]);
@@ -107,6 +113,39 @@ export class ChannexComponent implements OnInit {
     rooms: [{ title: '' }]
   };
 
+  // ─── Create Channel Form ──────────────────────────────────────────────────
+  channelForm: CreateChannelParams = {
+    channel: 'Make My Trip',
+    channelCode: 'makemytrip',
+    title: '',
+    propertyId: '',
+    groupId: '',
+    currency: 'Auto',
+    hotelId: '',
+    accessToken: '',
+    sendBookingNotificationEmail: false,
+    syncB2bRateType: false,
+    syncMybizRateType: false,
+    isActive: true
+  };
+
+  channelProviders = [
+    { code: 'makemytrip', name: 'Make My Trip', icon: 'travel_explore' },
+    { code: 'booking_com', name: 'Booking.com', icon: 'hotel' },
+    { code: 'agoda', name: 'Agoda', icon: 'beach_access' },
+    { code: 'expedia', name: 'Expedia', icon: 'flight' },
+    { code: 'airbnb', name: 'Airbnb', icon: 'home' },
+    { code: 'yantra', name: 'Yantra Channel', icon: 'hub' }
+  ];
+
+  onChannelProviderChange(code: string): void {
+    const p = this.channelProviders.find(x => x.code === code);
+    if (p) {
+      this.channelForm.channel = p.name;
+      this.channelForm.channelCode = p.code;
+    }
+  }
+
   // ─── Acknowledge Form ─────────────────────────────────────────────────────
   ackRevisionId = signal('');
 
@@ -118,10 +157,20 @@ export class ChannexComponent implements OnInit {
   ngOnInit(): void {
     const cfg = this.cx.config();
     this.configForm = { ...cfg };
+    this.channelForm.propertyId = cfg.propertyId;
+
+    // Automatically pre-load properties, room types, rate plans, channels & test connection
+    this.loadAllConfig(true);
+    this.testConnection(true);
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
-  setTab(id: TabId): void { this.activeTab.set(id); }
+  setTab(id: TabId): void {
+    this.activeTab.set(id);
+    if (id === 'channels' && this.channels().length === 0) {
+      this.loadChannels();
+    }
+  }
 
   private todayStr(): string {
     return new Date().toISOString().slice(0, 10);
@@ -325,60 +374,138 @@ export class ChannexComponent implements OnInit {
   }
 
   // ─── Endpoint 11: Properties ──────────────────────────────────────────────
-  loadProperties(): void {
+  loadProperties(silent = false): void {
     this.loadingProperties.set(true);
     this.cx.getProperties().subscribe({
       next: res => {
         this.properties.set(res.data || []);
-        this.toast('info', `Loaded ${res.data?.length || 0} properties`);
+        if (!silent) this.toast('info', `Loaded ${res.data?.length || 0} properties`);
         this.loadingProperties.set(false);
       },
       error: () => {
-        this.toast('error', 'Failed to load properties');
+        if (!silent) this.toast('error', 'Failed to load properties');
         this.loadingProperties.set(false);
       }
     });
   }
 
   // ─── Endpoint 12: Room Types ──────────────────────────────────────────────
-  loadRoomTypes(): void {
+  loadRoomTypes(silent = false): void {
     this.loadingRoomTypes.set(true);
     this.cx.getRoomTypes(this.cx.config().propertyId).subscribe({
       next: res => {
         this.roomTypes.set(res.data || []);
-        this.toast('info', `Loaded ${res.data?.length || 0} room types`);
+        if (!silent) this.toast('info', `Loaded ${res.data?.length || 0} room types`);
         this.loadingRoomTypes.set(false);
       },
       error: () => {
-        this.toast('error', 'Failed to load room types');
+        if (!silent) this.toast('error', 'Failed to load room types');
         this.loadingRoomTypes.set(false);
       }
     });
   }
 
   // ─── Endpoint 13: Rate Plans ──────────────────────────────────────────────
-  loadRatePlans(): void {
+  loadRatePlans(silent = false): void {
     this.loadingRatePlans.set(true);
     if (this.roomTypes().length === 0) {
-      this.loadRoomTypes();
+      this.loadRoomTypes(silent);
     }
     this.cx.getRatePlans(this.cx.config().propertyId).subscribe({
       next: res => {
         this.ratePlans.set(res.data || []);
-        this.toast('info', `Loaded ${res.data?.length || 0} rate plans`);
+        if (!silent) this.toast('info', `Loaded ${res.data?.length || 0} rate plans`);
         this.loadingRatePlans.set(false);
       },
       error: () => {
-        this.toast('error', 'Failed to load rate plans');
+        if (!silent) this.toast('error', 'Failed to load rate plans');
         this.loadingRatePlans.set(false);
       }
     });
   }
 
-  loadAllConfig(): void {
-    this.loadProperties();
-    this.loadRoomTypes();
-    this.loadRatePlans();
+  loadAllConfig(silent = false): void {
+    this.loadProperties(silent);
+    this.loadRoomTypes(silent);
+    this.loadRatePlans(silent);
+    this.loadChannels(silent);
+  }
+
+  // ─── Test Channex Connection API ──────────────────────────────────────────
+  testConnection(silent = false): void {
+    this.loadingTestConn.set(true);
+    this.cx.testConnection().subscribe({
+      next: (res) => {
+        this.loadingTestConn.set(false);
+        if (res && (res.success || res.data)) {
+          this.testConnResult.set(res.data);
+          if (!silent) this.toast('success', res.message || 'Channex connection test successful!');
+          this.cx.addLog({ action: 'Test Connection', success: true, message: res.message || 'Connected to Channex API' });
+        } else {
+          if (!silent) this.toast('error', res?.message || 'Connection test failed');
+          this.cx.addLog({ action: 'Test Connection', success: false, message: res?.message || 'Connection failed' });
+        }
+      },
+      error: (err) => {
+        this.loadingTestConn.set(false);
+        const msg = err?.error?.message || 'Channex connection test failed. Please check API Key.';
+        if (!silent) this.toast('error', msg);
+        this.cx.addLog({ action: 'Test Connection', success: false, message: msg });
+      }
+    });
+  }
+
+  // ─── Fetch Property Channels API ──────────────────────────────────────────
+  loadChannels(silent = false): void {
+    this.loadingChannels.set(true);
+    this.cx.getChannels().subscribe({
+      next: (res) => {
+        this.loadingChannels.set(false);
+        let raw: ChannexChannel[] = [];
+        if (Array.isArray(res)) {
+          raw = res;
+        } else if (res && Array.isArray(res.data)) {
+          raw = res.data;
+        } else if (res && res.data && Array.isArray(res.data.data)) {
+          raw = res.data.data;
+        }
+        this.channels.set(raw);
+        if (!silent) this.toast('info', `Loaded ${raw.length} property channels from Channex`);
+      },
+      error: (err) => {
+        this.loadingChannels.set(false);
+        if (!silent) this.toast('error', err?.error?.message || 'Failed to fetch property channels');
+      }
+    });
+  }
+
+  // ─── Create Channel API ──────────────────────────────────────────────────
+  createChannel(): void {
+    if (!this.channelForm.title?.trim()) {
+      this.toast('error', 'Channel title is required');
+      return;
+    }
+    this.loadingCreateChannel.set(true);
+    this.cx.createChannel(this.channelForm).subscribe({
+      next: (res) => {
+        this.loadingCreateChannel.set(false);
+        const msg = res?.message || 'Channel created in Channex successfully';
+        this.toast('success', msg);
+        this.cx.addLog({
+          action: 'Create Channel',
+          success: true,
+          message: `${this.channelForm.title} (${this.channelForm.channelCode})`
+        });
+        this.channelForm.title = '';
+        this.loadChannels();
+      },
+      error: (err) => {
+        this.loadingCreateChannel.set(false);
+        const msg = err?.error?.message || 'Failed to create channel in Channex';
+        this.toast('error', msg);
+        this.cx.addLog({ action: 'Create Channel', success: false, message: msg });
+      }
+    });
   }
 
   clearLogs(): void { this.cx.clearLogs(); }

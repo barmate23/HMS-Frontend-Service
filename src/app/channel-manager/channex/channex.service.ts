@@ -172,6 +172,52 @@ export interface ChannexListResponse<T> {
   meta?: { total: number; page: number; limit: number };
 }
 
+// ─── Channel Management & Connection Interfaces ──────────────────────────────
+export interface ChannexChannel {
+  id: string;
+  type: string;
+  attributes: {
+    title: string;
+    channel_code: string;
+    is_active: boolean;
+    property_id: string;
+    group_id?: string;
+  };
+}
+
+export interface CreateChannelParams {
+  channel?: string;
+  channelCode: string;
+  groupId?: string;
+  title: string;
+  propertyId: string;
+  currency?: string;
+  hotelId?: string;
+  accessToken?: string;
+  sendBookingNotificationEmail?: boolean;
+  syncB2bRateType?: boolean;
+  syncMybizRateType?: boolean;
+  isActive?: boolean;
+  apiKey?: string;
+}
+
+export interface TestConnectionData {
+  connected: boolean;
+  status: number;
+  channexBaseUrl: string;
+  propertyId: string;
+  response?: {
+    data?: {
+      id?: string;
+      type?: string;
+      attributes?: {
+        title?: string;
+        currency?: string;
+      };
+    };
+  };
+}
+
 // ─── Endpoint 9: Create Room Type ────────────────────────────────────────────
 export interface CreateRoomTypeParams {
   title: string;
@@ -424,6 +470,40 @@ export class ChannexService {
     const p = this.params({ propertyId, apiKey });
     return this.http.get<ChannexListResponse<ChannexRatePlan>>(
       `${this.base}/frontOffice/channex/rate-plans`,
+      { headers: this.headers(apiKey), params: p }
+    );
+  }
+
+  // ─── Endpoint: Create Channel ───────────────────────────────────────────────
+  createChannel(params: CreateChannelParams): Observable<HmsResponse<{ data: ChannexChannel }> | any> {
+    const p = this.params({ apiKey: params.apiKey });
+    return this.http.post<any>(
+      '/api/v1/reservations/channex/channel/create',
+      {
+        title: params.title,
+        channelCode: params.channelCode,
+        propertyId: params.propertyId || this.config().propertyId,
+        groupId: params.groupId,
+        isActive: params.isActive ?? true
+      },
+      { headers: this.headers(params.apiKey), params: p }
+    );
+  }
+
+  // ─── Endpoint: Fetch Property Channels ──────────────────────────────────────
+  getChannels(propertyId?: string, apiKey?: string): Observable<any> {
+    const p = this.params({ propertyId: propertyId || this.config().propertyId, apiKey });
+    return this.http.get<any>(
+      '/api/v1/reservations/channex/channels',
+      { headers: this.headers(apiKey), params: p }
+    );
+  }
+
+  // ─── Endpoint: Test Connection ─────────────────────────────────────────────
+  testConnection(propertyId?: string, apiKey?: string): Observable<HmsResponse<TestConnectionData>> {
+    const p = this.params({ propertyId: propertyId || this.config().propertyId, apiKey });
+    return this.http.get<HmsResponse<TestConnectionData>>(
+      '/api/v1/reservations/channex/test-connection',
       { headers: this.headers(apiKey), params: p }
     );
   }

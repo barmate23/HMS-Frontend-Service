@@ -539,11 +539,11 @@ export class ReservationCenter implements OnInit, OnDestroy {
     const checkIn = item.checkInDate || item.arrivalDate || item.checkIn || '';
     const checkOut = item.checkOutDate || item.departureDate || item.checkOut || '';
     
-    const billingAmount = Number(item.grandTotal ?? item.billingAmount ?? item.totalAmount ?? 0);
+    const billingAmount = Number(item.billingAmount ?? item.baseRate ?? item.grandTotal ?? item.totalAmount ?? 0);
     const paidAmount = Number(item.paidAmount ?? item.amountPaid ?? 0);
     const gstPercent = Number(item.gstPercent ?? 0);
-    const taxAmount = Number(item.taxAmount ?? item.taxationAmount ?? ((billingAmount * gstPercent) / 100));
-    const totalWithTax = billingAmount > 0 && item.grandTotal ? billingAmount : (billingAmount + taxAmount);
+    const taxAmount = Number(item.taxAmount ?? item.taxationAmount ?? item.gstAmount ?? Math.round((billingAmount * gstPercent) / 100));
+    const totalWithTax = billingAmount + taxAmount;
     const rawSource = item.bookingSource || item.channelName || item.otaName || item.source || item.bookingFrom || item.sourceName || item.segmentName || item.channel;
     let bookingSource = rawSource;
     if (!bookingSource || String(bookingSource).trim() === '') {

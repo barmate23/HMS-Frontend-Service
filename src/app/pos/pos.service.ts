@@ -96,6 +96,7 @@ export interface PosBill {
   orderId: number;
   billNo: string;
   orderType?: OrderType;
+  tableId?: number | null;
   tableNo?: string;
   floorId?: number | null;
   roomId?: number | null;
@@ -106,12 +107,16 @@ export interface PosBill {
   tax: number; // GST Percentage Rate (e.g. 18)
   taxAmount?: number; // Calculated Tax Amount in Rupees (e.g. 366.10)
   compReason?: string;
+  compVoidReasonId?: number | null;
   paid: number;
   status: BillStatus;
   statusId?: number;
+  paymentMethodId?: number | null;
   paymentModes: PaymentMode[];
   postedToFolio: boolean;
+  folioPostingId?: number | null;
   isRoomOrder?: boolean;
+  notes?: string;
 }
 
 export interface PosShift {
@@ -354,6 +359,7 @@ interface ApiBill {
   postedToFolio?: boolean;
   isPostedToFolio?: boolean;
   postToFolio?: boolean;
+  folioPostingId?: number | null;
   isRoomOrder?: boolean;
   notes?: string | null;
   createdAt?: string;
@@ -378,6 +384,7 @@ interface ApiCommonMaster {
   category?: string;
   code?: string;
   value?: string;
+  name?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -440,9 +447,9 @@ export class PosService {
   readonly posDashboard = signal<PosDashboardData | null>(null);
   readonly gstRules = signal<ApiGstRule[]>([
     { id: 1, serviceCategory: 'Room', cgstRate: 9, sgstRate: 9, igstRate: 18, isActive: true },
-    { id: 2, serviceCategory: 'Food', cgstRate: 9, sgstRate: 9, igstRate: 18, isActive: true },
+    { id: 2, serviceCategory: 'Food', cgstRate: 2.5, sgstRate: 2.5, igstRate: 5, isActive: true },
     { id: 3, serviceCategory: 'Laundry', cgstRate: 9, sgstRate: 9, igstRate: 18, isActive: true },
-    { id: 5, serviceCategory: 'Beverages', cgstRate: 8, sgstRate: 8, igstRate: 16, isActive: true }
+    { id: 5, serviceCategory: 'Beverages', cgstRate: 9, sgstRate: 9, igstRate: 18, isActive: true }
   ]);
 
   readonly outletMap = computed(() => new Map(this.outlets().map(outlet => [outlet.id, outlet])));
@@ -601,10 +608,15 @@ export class PosService {
     });
   }
 
+  readonly paymentModeMasters = signal<ApiCommonMaster[]>([]);
+  readonly voidReasonMasters = signal<ApiCommonMaster[]>([]);
+
   loadPaymentModes(): void {
     this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/PAYMENT_MODE`).subscribe({
       next: response => {
-        const paymentModes = this.commonMastersData(response)
+        const masters = this.commonMastersData(response);
+        if (masters.length) this.paymentModeMasters.set(masters);
+        const paymentModes = masters
           .map(item => item.value || item.code || '')
           .map(value => value.trim())
           .filter(Boolean);
@@ -617,7 +629,9 @@ export class PosService {
   loadVoidReasons(): void {
     this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/VOID_REASON`).subscribe({
       next: response => {
-        const voidReasons = this.commonMastersData(response)
+        const masters = this.commonMastersData(response);
+        if (masters.length) this.voidReasonMasters.set(masters);
+        const voidReasons = masters
           .map(item => item.value || item.code || '')
           .map(value => value.trim())
           .filter(Boolean);
@@ -669,7 +683,10 @@ export class PosService {
       ? `${this.posBaseUrl}/tables/getAllTables?outletId=${outletId}`
       : `${this.posBaseUrl}/tables/getAllTables`;
     this.http.get<ApiDiningTable[] | ApiListResponse<ApiDiningTable> | StandardResponse<ApiDiningTable[]>>(url).subscribe({
-      next: response => this.tables.set(this.listData(response).map(item => this.mapTable(item))),
+      next: response => {
+        const loadedTables = this.listData(response).map(item => this.mapTable(item));
+        this.tables.set(loadedTables);
+      },
       error: error => this.addAudit('Unable to load dining tables from API', 'Table Dining', error?.error?.message || error?.message || 'API error')
     });
   }
@@ -692,7 +709,10 @@ export class PosService {
       ? `${this.posBaseUrl}/orders/getAllOrders?outletId=${outletId}`
       : `${this.posBaseUrl}/orders/getAllOrders`;
     this.http.get<ApiOrder[] | ApiListResponse<ApiOrder> | StandardResponse<ApiOrder[]>>(url).subscribe({
-      next: response => this.orders.set(this.listData(response).map(item => this.mapOrder(item))),
+      next: response => {
+        const loadedOrders = this.listData(response).map(item => this.mapOrder(item));
+        this.orders.set(loadedOrders);
+      },
       error: error => this.addAudit('Unable to load orders from API', 'Orders', error?.error?.message || error?.message || 'API error')
     });
   }
@@ -881,6 +901,7 @@ export class PosService {
         const saved = responseOrder ? this.mapOrder(responseOrder) : order;
         this.orders.update(items => isUpdate ? items.map(existing => existing.id === saved.id ? saved : existing) : [saved, ...items]);
         this.loadOrders();
+        this.loadTables();
         this.addAudit(isUpdate ? 'Order updated' : 'Order created', 'Orders', saved.orderNo);
       },
       error: error => {
@@ -1006,7 +1027,21 @@ export class PosService {
       lines: orderLines
     };
     this.saveOrder(order);
-    this.tables.update(items => items.map(item => item.id === table.id ? { ...item, status: 'OCCUPIED', covers: table.covers || item.covers || 2, server: order.server } : item));
+
+    const totalItems = orderLines.reduce((sum, line) => sum + (Number(line.qty) || 1), 0);
+    const updatedTable: PosTable = {
+      ...table,
+      status: 'OCCUPIED',
+      covers: table.covers || 2,
+      server: order.server,
+      guestName: table.guestName || '',
+      activeOrderNo: nextId,
+      numberOfItems: totalItems
+    };
+
+    this.tables.update(items => items.map(item => item.id === table.id ? updatedTable : item));
+    this.saveTable(updatedTable);
+
     this.addAudit('Started table order', 'Table Dining', `${table.number} / ${order.orderNo}`);
   }
 
@@ -1312,6 +1347,8 @@ export class PosService {
       rawStatus === 'MOPPING' ? 'MOPPING' :
       this.asTableStatus(item.statusName);
 
+    const isAvailable = mappedStatus === 'AVAILABLE';
+
     return {
       id: Number(item.id),
       outletId: Number(item.outletId || this.outlets()[0]?.id || 1),
@@ -1320,9 +1357,9 @@ export class PosService {
       status: mappedStatus,
       covers: Number(item.covers || 0),
       server: item.serverName || 'Unassigned',
-      guestName: item.guestName ? String(item.guestName).trim() : '',
-      activeOrderNo: item.activeOrderNo ? Number(item.activeOrderNo) : null,
-      numberOfItems: item.numberOfItems ? Number(item.numberOfItems) : null,
+      guestName: isAvailable ? '' : (item.guestName ? String(item.guestName).trim() : ''),
+      activeOrderNo: isAvailable ? null : (item.activeOrderNo ? Number(item.activeOrderNo) : null),
+      numberOfItems: isAvailable ? null : (item.numberOfItems ? Number(item.numberOfItems) : null),
       mergedWith: item.linkedTableNumber || ''
     };
   }
@@ -1351,7 +1388,10 @@ export class PosService {
       serverId: server?.id,
       serverName: item.server,
       linkedTableId: linkedTable?.id,
-      linkedTableNumber: item.mergedWith || undefined
+      linkedTableNumber: item.mergedWith || undefined,
+      guestName: item.guestName || null,
+      activeOrderNo: item.activeOrderNo ?? null,
+      numberOfItems: item.numberOfItems ?? null
     };
   }
 
@@ -1532,6 +1572,7 @@ export class PosService {
       orderId: Number(item.orderId || 0),
       billNo,
       orderType,
+      tableId: item.tableId ? Number(item.tableId) : null,
       tableNo,
       floorId: item.floorId || null,
       roomId: item.roomId || null,
@@ -1542,12 +1583,16 @@ export class PosService {
       tax: Number(item.gstPercent ?? item.tax ?? 0),
       taxAmount: Number(item.gstAmount ?? item.taxAmount ?? 0),
       compReason: item.compVoidReasonName || item.compReason || '',
+      compVoidReasonId: item.compVoidReasonId ? Number(item.compVoidReasonId) : null,
       paid: paidAmount,
       status,
       statusId: item.statusId ? Number(item.statusId) : undefined,
+      paymentMethodId: item.paymentMethodId ? Number(item.paymentMethodId) : null,
       paymentModes: modes,
       postedToFolio: item.postToFolio ?? item.postedToFolio ?? item.isPostedToFolio ?? false,
-      isRoomOrder: item.isRoomOrder ?? (orderType === 'ROOM' || !!item.roomId || !!item.roomNumber)
+      folioPostingId: item.folioPostingId ? Number(item.folioPostingId) : null,
+      isRoomOrder: item.isRoomOrder ?? (orderType === 'ROOM'),
+      notes: item.notes || ''
     };
   }
 
@@ -1562,46 +1607,51 @@ export class PosService {
     );
     const resolvedStatusId = item.statusId || statusMaster?.id || 52;
 
+    const primaryPaymentMode = item.paymentModes && item.paymentModes.length ? item.paymentModes[0] : 'Cash';
+    const paymentMaster = this.paymentModeMasters().find(m =>
+      (m.value && m.value.toLowerCase() === primaryPaymentMode.toLowerCase()) ||
+      (m.code && m.code.toLowerCase() === primaryPaymentMode.toLowerCase()) ||
+      (m.name && m.name.toLowerCase() === primaryPaymentMode.toLowerCase())
+    );
+    const resolvedPaymentMethodId = item.paymentMethodId || paymentMaster?.id || (primaryPaymentMode.toLowerCase() === 'cash' ? 1 : primaryPaymentMode.toLowerCase() === 'card' ? 2 : primaryPaymentMode.toLowerCase() === 'upi' ? 3 : 1);
+
+    const voidReasonMaster = this.voidReasonMasters().find(m =>
+      (m.value && m.value.toLowerCase() === (item.compReason || '').toLowerCase()) ||
+      (m.code && m.code.toLowerCase() === (item.compReason || '').toLowerCase())
+    );
+    const resolvedCompVoidReasonId = item.compVoidReasonId || voidReasonMaster?.id || null;
+
+    const netAmt = Number((item.subtotal - item.discount + computedTaxAmount).toFixed(2));
+
     return {
       id: item.id,
-      orderId: item.orderId,
-      orderRef: item.orderId ? `ORD-${item.orderId}` : undefined,
-      billNo: item.billNo,
       billNumber: item.billNo,
-      orderType: item.orderType,
-      orderFrom: item.orderType,
-      tableNo: item.tableNo,
-      tableNumber: item.tableNo,
-      floorId: item.floorId,
-      roomId: item.roomId,
-      guestName: item.guestName,
-      roomNo: item.roomNo,
-      roomNumber: item.roomNo,
+      orderId: item.orderId,
+      orderRef: item.orderId ? (String(item.orderId).startsWith('ORD-') ? String(item.orderId) : `ORD-${item.orderId}`) : '',
+      orderFrom: item.orderType || 'TABLE',
+      tableId: item.tableId || null,
+      tableNumber: item.tableNo || null,
+      roomId: item.roomId || null,
+      roomNumber: item.roomNo || null,
+      guestName: item.guestName || '',
+      isRoomOrder: item.isRoomOrder ?? (item.orderType === 'ROOM'),
       grossAmount: item.subtotal,
-      netAmount: item.subtotal,
-      subtotal: item.subtotal,
       discount: item.discount,
+      netAmount: netAmt,
+      paidAmount: item.paid,
       gstPercent: gstPercentage,
       gstAmount: computedTaxAmount,
-      tax: gstPercentage,
-      taxAmount: computedTaxAmount,
-      paymentMethodName: item.paymentModes[0] || 'Cash',
-      paymentMode: item.paymentModes[0] || 'Cash',
-      paymentModes: item.paymentModes.join(','),
+      paymentMethodId: resolvedPaymentMethodId,
+      paymentMethodName: primaryPaymentMode,
       statusId: resolvedStatusId,
-      status: item.status,
       statusName: item.status,
-      compReason: item.compReason,
-      compVoidReasonName: item.compReason,
-      paid: item.paid,
-      paidAmount: item.paid,
-      postToFolio: item.postedToFolio,
-      postedToFolio: item.postedToFolio,
-      isPostedToFolio: item.postedToFolio,
-      isRoomOrder: item.isRoomOrder ?? (item.orderType === 'ROOM')
+      compVoidReasonId: resolvedCompVoidReasonId,
+      compVoidReasonName: item.compReason || null,
+      postToFolio: Boolean(item.postedToFolio),
+      folioPostingId: item.folioPostingId || null,
+      notes: item.notes || ''
     };
   }
-
 
   private asOutletType(value?: string): OutletType {
     return this.outletTypes().find(type => type.toLowerCase() === String(value || '').toLowerCase()) || value || this.outletTypes()[0] || 'Restaurant';

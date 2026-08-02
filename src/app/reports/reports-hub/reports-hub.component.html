@@ -1,0 +1,368 @@
+<div class="reports-hub-wrapper">
+
+  <!-- HERO EXECUTIVE ANALYTICS PANEL -->
+  <section class="hero-executive-panel">
+    <div class="hero-top-bar">
+      <div class="hero-title-group">
+        <div class="title-badge-pill">
+          <span class="live-dot"></span>
+          <span>FRONT OFFICE ANALYTICAL INTELLIGENCE</span>
+        </div>
+        <h1 class="hero-title">Front Office Reports & Operations Hub</h1>
+        <p class="hero-subtitle">Real-time room occupancy, guest operations, front desk cashier audit, and revenue analytics.</p>
+      </div>
+
+      <div class="hero-search-box">
+        <mat-icon class="search-icon">search</mat-icon>
+        <input
+          type="text"
+          placeholder="Search Front Office reports..."
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+        />
+        @if (searchQuery()) {
+          <button class="clear-btn" (click)="searchQuery.set('')">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- EXECUTIVE VISUAL GRAPHICS ROW -->
+    <div class="hero-graphics-grid">
+
+      <!-- 1. LIVE OCCUPANCY DONUT GAUGE CARD -->
+      <div class="glass-chart-card">
+        <div class="chart-card-header">
+          <div class="header-left">
+            <mat-icon class="chart-icon text-teal">donut_small</mat-icon>
+            <span class="chart-card-title">Live Occupancy Gauge</span>
+          </div>
+          <span class="pulse-badge">86.4% OCCUPIED</span>
+        </div>
+
+        <div class="donut-chart-body">
+          <!-- SVG Donut Chart -->
+          <div class="svg-donut-container">
+            <svg viewBox="0 0 36 36" class="donut-svg">
+              <!-- Background Circle -->
+              <path class="donut-ring" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#E2E8F0" stroke-width="3.8"/>
+              <!-- Occupied Slice (86.4%) -->
+              <path class="donut-segment segment-occupied" stroke-dasharray="86.4, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="url(#tealGradient)" stroke-width="4.2" stroke-linecap="round"/>
+              <defs>
+                <linearGradient id="tealGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#0F3D3E" />
+                  <stop offset="100%" stop-color="#2A9D8F" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="donut-center-label">
+              <span class="center-val">108</span>
+              <span class="center-sub">/ 125 Rooms</span>
+            </div>
+          </div>
+
+          <!-- Donut Legend Grid -->
+          <div class="donut-legend-list">
+            <div class="legend-row">
+              <span class="dot dot-occupied"></span>
+              <span class="leg-label">Occupied Rooms</span>
+              <strong class="leg-val">108 (86.4%)</strong>
+            </div>
+            <div class="legend-row">
+              <span class="dot dot-clean"></span>
+              <span class="leg-label">Vacant Clean</span>
+              <strong class="leg-val">10 (8.0%)</strong>
+            </div>
+            <div class="legend-row">
+              <span class="dot dot-dirty"></span>
+              <span class="leg-label">Vacant Dirty</span>
+              <strong class="leg-val">3 (2.4%)</strong>
+            </div>
+            <div class="legend-row">
+              <span class="dot dot-ooo"></span>
+              <span class="leg-label">OOO / Blocked</span>
+              <strong class="leg-val">4 (3.2%)</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. FRONT DESK CASHIER COLLECTIONS SPECTRUM CARD -->
+      <div class="glass-chart-card">
+        <div class="chart-card-header">
+          <div class="header-left">
+            <mat-icon class="chart-icon text-purple">point_of_sale</mat-icon>
+            <span class="chart-card-title">Front Desk Cashier Settlement</span>
+          </div>
+          <span class="amount-badge">₹3,84,500</span>
+        </div>
+
+        <div class="spectrum-chart-body">
+          <div class="spectrum-total">
+            <span class="total-label">Total Collections Received Today</span>
+            <h2 class="total-val">₹3,84,500</h2>
+          </div>
+
+          <!-- Multi-Color Progress Spectrum Bar -->
+          <div class="spectrum-bar">
+            <div class="spec-seg seg-card" style="width: 52%" title="Credit/Debit Card: 52%"></div>
+            <div class="spec-seg seg-cash" style="width: 28%" title="Cash: 28%"></div>
+            <div class="spec-seg seg-upi" style="width: 15%" title="UPI: 15%"></div>
+            <div class="spec-seg seg-city" style="width: 5%" title="City Ledger: 5%"></div>
+          </div>
+
+          <!-- Spectrum Breakdown Chips -->
+          <div class="spectrum-chips-grid">
+            <div class="chip-item">
+              <span class="chip-dot card-dot"></span>
+              <span class="chip-name">Credit Card (52%)</span>
+              <span class="chip-amt">₹2,00,000</span>
+            </div>
+            <div class="chip-item">
+              <span class="chip-dot cash-dot"></span>
+              <span class="chip-name">Cash (28%)</span>
+              <span class="chip-amt">₹1,07,600</span>
+            </div>
+            <div class="chip-item">
+              <span class="chip-dot upi-dot"></span>
+              <span class="chip-name">UPI / Online (15%)</span>
+              <span class="chip-amt">₹57,675</span>
+            </div>
+            <div class="chip-item">
+              <span class="chip-dot city-dot"></span>
+              <span class="chip-name">City Ledger (5%)</span>
+              <span class="chip-amt">₹19,225</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. REAL-TIME FRONT OFFICE KPI METRIC TILES CARD -->
+      <div class="glass-chart-card kpi-tiles-card">
+        <div class="chart-card-header">
+          <div class="header-left">
+            <mat-icon class="chart-icon text-amber">insights</mat-icon>
+            <span class="chart-card-title">Operations Daily Pulse</span>
+          </div>
+          <span class="date-chip">Today (31 Jul 2026)</span>
+        </div>
+
+        <div class="kpi-quad-grid">
+          <div class="mini-kpi-box">
+            <div class="kpi-box-icon bg-blue"><mat-icon>flight_land</mat-icon></div>
+            <div class="kpi-box-data">
+              <span class="kpi-box-val">24 Arrivals</span>
+              <span class="kpi-box-sub">18 Checked In (75%)</span>
+            </div>
+          </div>
+
+          <div class="mini-kpi-box">
+            <div class="kpi-box-icon bg-rose"><mat-icon>flight_takeoff</mat-icon></div>
+            <div class="kpi-box-data">
+              <span class="kpi-box-val">19 Departures</span>
+              <span class="kpi-box-sub">14 Checked Out</span>
+            </div>
+          </div>
+
+          <div class="mini-kpi-box">
+            <div class="kpi-box-icon bg-emerald"><mat-icon>people</mat-icon></div>
+            <div class="kpi-box-data">
+              <span class="kpi-box-val">142 In-House</span>
+              <span class="kpi-box-sub">42% Repeat Guests</span>
+            </div>
+          </div>
+
+          <div class="mini-kpi-box">
+            <div class="kpi-box-icon bg-amber"><mat-icon>key</mat-icon></div>
+            <div class="kpi-box-data">
+              <span class="kpi-box-val">₹3,560 ADR</span>
+              <span class="kpi-box-sub">RevPAR: ₹3,076</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FRONT OFFICE SUB-DOMAIN CATEGORY TABS -->
+  <nav class="category-tabs-bar">
+    @for (cat of categories; track cat.id) {
+      <button
+        class="category-tab-pill"
+        [class.active]="selectedCategory() === cat.id"
+        (click)="selectedCategory.set(cat.id)"
+      >
+        <mat-icon class="tab-icon">{{ cat.icon }}</mat-icon>
+        <span>{{ cat.label }}</span>
+        @if (cat.id === 'favourites') {
+          <span class="count-badge">{{ favouriteReports().length }}</span>
+        }
+      </button>
+    }
+  </nav>
+
+  <!-- MAIN CATALOG CONTENT GRID AREA -->
+  <main class="catalog-content-area">
+
+    <!-- 1. FAVOURITE REPORTS SECTION -->
+    @if (selectedCategory() === 'all' || selectedCategory() === 'favourites') {
+      @if (favouriteReports().length > 0) {
+        <section class="catalog-section">
+          <div class="section-title-bar">
+            <div class="title-left">
+              <mat-icon class="sec-icon text-amber">star</mat-icon>
+              <h2>Favourite Front Office Reports</h2>
+            </div>
+            <span class="section-count">{{ favouriteReports().length }} Pinned Reports</span>
+          </div>
+
+          <div class="glass-cards-grid">
+            @for (report of favouriteReports(); track report.id) {
+              <div class="glass-report-card" (click)="openReport(report.id)">
+                <!-- Card Header -->
+                <div class="card-header-row">
+                  <div class="card-icon-avatar" [style.background]="report.gradientBg">
+                    <mat-icon [style.color]="report.iconColor">{{ report.icon }}</mat-icon>
+                  </div>
+                  <div class="card-header-tags">
+                    @if (report.isNew) {
+                      <span class="badge-new">NEW</span>
+                    }
+                    <button class="fav-star-btn active" (click)="toggleFav(report.id, $event)" title="Toggle Favourite">
+                      <mat-icon>star</mat-icon>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Card Body -->
+                <div class="card-main-body">
+                  <span class="card-category-tag">{{ report.categoryLabel }}</span>
+                  <h3 class="card-title">{{ report.title }}</h3>
+                  <p class="card-desc">{{ report.description }}</p>
+                </div>
+
+                <!-- Card Live Metric & Sparkline Graphic -->
+                <div class="card-metric-graph">
+                  <div class="metric-text-group">
+                    <span class="metric-val">{{ report.liveMetric }}</span>
+                    <span class="metric-sub">{{ report.liveMetricSubtext }}</span>
+                  </div>
+
+                  <!-- SVG Mini Sparkline Curve -->
+                  <div class="sparkline-box">
+                    <svg viewBox="0 0 120 36" class="sparkline-svg">
+                      <polyline
+                        fill="none"
+                        stroke="#2A9D8F"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        [attr.points]="getSparklinePoints(report.sparklineData)"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Card Action Footer -->
+                <div class="card-footer-action">
+                  <span class="action-btn">
+                    <span>View Analytical Report</span>
+                    <mat-icon>arrow_forward</mat-icon>
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+    }
+
+    <!-- 2. CATEGORIZED SECTIONS -->
+    @for (sec of groupedSections(); track sec.sectionTitle) {
+      <section class="catalog-section">
+        <div class="section-title-bar">
+          <div class="title-left">
+            <mat-icon class="sec-icon text-teal">folder_open</mat-icon>
+            <h2>{{ sec.sectionTitle }}</h2>
+          </div>
+          <span class="section-count">{{ sec.items.length }} Reports</span>
+        </div>
+
+        <div class="glass-cards-grid">
+          @for (report of sec.items; track report.id) {
+            <div class="glass-report-card" (click)="openReport(report.id)">
+              <!-- Card Header -->
+              <div class="card-header-row">
+                <div class="card-icon-avatar" [style.background]="report.gradientBg">
+                  <mat-icon [style.color]="report.iconColor">{{ report.icon }}</mat-icon>
+                </div>
+                <div class="card-header-tags">
+                  @if (report.isNew) {
+                    <span class="badge-new">NEW</span>
+                  }
+                  <button
+                    class="fav-star-btn"
+                    [class.active]="isFav(report.id)"
+                    (click)="toggleFav(report.id, $event)"
+                    title="Toggle Favourite"
+                  >
+                    <mat-icon>{{ isFav(report.id) ? 'star' : 'star_border' }}</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Card Body -->
+              <div class="card-main-body">
+                <span class="card-category-tag">{{ report.categoryLabel }}</span>
+                <h3 class="card-title">{{ report.title }}</h3>
+                <p class="card-desc">{{ report.description }}</p>
+              </div>
+
+              <!-- Card Live Metric & Sparkline Graphic -->
+              <div class="card-metric-graph">
+                <div class="metric-text-group">
+                  <span class="metric-val">{{ report.liveMetric }}</span>
+                  <span class="metric-sub">{{ report.liveMetricSubtext }}</span>
+                </div>
+
+                <!-- SVG Mini Sparkline Curve -->
+                <div class="sparkline-box">
+                  <svg viewBox="0 0 120 36" class="sparkline-svg">
+                    <polyline
+                      fill="none"
+                      stroke="#0F3D3E"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      [attr.points]="getSparklinePoints(report.sparklineData)"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Card Action Footer -->
+              <div class="card-footer-action">
+                <span class="action-btn">
+                  <span>View Analytical Report</span>
+                  <mat-icon>arrow_forward</mat-icon>
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    } @empty {
+      <div class="no-results-card">
+        <mat-icon class="no-res-icon">search_off</mat-icon>
+        <h3>No matching Front Office reports found</h3>
+        <p>Try searching for a different term or choose another category pillar.</p>
+        <button class="btn btn-primary" (click)="searchQuery.set(''); selectedCategory.set('all')">
+          Reset Filter
+        </button>
+      </div>
+    }
+
+  </main>
+</div>

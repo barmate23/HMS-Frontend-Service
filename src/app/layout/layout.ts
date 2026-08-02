@@ -148,7 +148,8 @@ export class Layout implements OnInit {
         { label: 'Gantt Chart', icon: 'view_timeline', route: '/gantt-chart' },
         { label: 'Arrivals', icon: 'login', route: '/arrivals' },
         { label: 'Departures', icon: 'logout', route: '/departures' },
-        { label: 'Guest Profiles', icon: 'person_search', route: '/guests' }
+        { label: 'Guest Profiles', icon: 'person_search', route: '/guests' },
+        { label: 'Reports & Graphs', icon: 'assessment', route: '/reports' }
       ]
     },
     {
@@ -277,6 +278,11 @@ export class Layout implements OnInit {
       children: [
         { label: 'Channex OTA Sync', icon: 'cloud_sync', route: '/channel-manager/channex' }
       ]
+    },
+    {
+      label: 'Reports & Analytics',
+      icon: 'assessment',
+      route: '/reports'
     }
   ];
 

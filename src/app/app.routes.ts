@@ -82,7 +82,9 @@ export const routes: Routes = [
       { path: 'pos/billing', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) },
       { path: 'pos/menu', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) },
       { path: 'channel-manager', redirectTo: 'channel-manager/channex', pathMatch: 'full' },
-      { path: 'channel-manager/channex', loadComponent: () => import('./channel-manager/channex/channex.component').then(m => m.ChannexComponent) }
+      { path: 'channel-manager/channex', loadComponent: () => import('./channel-manager/channex/channex.component').then(m => m.ChannexComponent) },
+      { path: 'reports', loadComponent: () => import('./reports/reports-hub/reports-hub.component').then(m => m.ReportsHubComponent) },
+      { path: 'reports/view/:reportId', loadComponent: () => import('./reports/report-viewer/report-viewer.component').then(m => m.ReportViewerComponent) }
     ]
   }
 ];

@@ -109,8 +109,8 @@
             <button type="button" class="queue-row" *ngFor="let order of kitchenQueue()" (click)="openEdit('order', order)">
               <span class="queue-code">{{ order.orderNo }}</span>
               <div>
-                <strong>{{ outletName(order.outletId) }}</strong>
-                <small>{{ order.tableNo || order.roomNo || order.type }} • {{ order.server }}</small>
+                <strong>{{ order.outletDisplayName || outletName(order.outletId) }}</strong>
+                <small>{{ order.tableNo || order.roomNo || order.type }} • {{ order.guestName || order.server }}</small>
               </div>
               <em>{{ order.itemCount }} items</em>
               <span class="status-badge" [class]="order.status.toLowerCase()">{{ order.status }}</span>
@@ -126,7 +126,7 @@
             <h3>Outlet Revenue Mix</h3>
             <button type="button" (click)="switchTab('outlets')">Outlets</button>
           </div>
-          <div class="revenue-list">
+          <div class="revenue-list" *ngIf="outletRevenue().length; else noRevenueMix">
             <button type="button" class="revenue-row" *ngFor="let outlet of outletRevenue()" (click)="switchTab('billing')">
               <div>
                 <strong>{{ outlet.name }}</strong>
@@ -136,6 +136,9 @@
               <em>&#8377;{{ outlet.amount | number:'1.0-0' }}</em>
             </button>
           </div>
+          <ng-template #noRevenueMix>
+            <div class="dashboard-empty">No revenue mix data recorded.</div>
+          </ng-template>
         </div>
 
         <div class="pos-panel payment-panel">
@@ -143,13 +146,16 @@
             <h3>Payment Split</h3>
             <button type="button" (click)="switchTab('billing')">Billing</button>
           </div>
-          <div class="payment-grid">
+          <div class="payment-grid" *ngIf="paymentMix().length; else noPaymentSplit">
             <button type="button" class="payment-tile" *ngFor="let row of paymentMix()" (click)="switchTab('billing')">
               <strong>{{ row.percent }}%</strong>
               <span>{{ row.mode }}</span>
               <small>&#8377;{{ row.amount | number:'1.0-0' }}</small>
             </button>
           </div>
+          <ng-template #noPaymentSplit>
+            <div class="dashboard-empty">No payment transactions recorded.</div>
+          </ng-template>
         </div>
 
         <div class="pos-panel menu-panel">
@@ -242,9 +248,11 @@
             <span class="material-icons-round">{{ tableStatusIcon(table.status) }}</span>
             <strong>{{ table.number }}</strong>
             <small>{{ table.section }} • {{ table.covers }} Covers</small>
-            <em *ngIf="table.guestName">{{ table.guestName }}</em>
-            <em *ngIf="!table.guestName && table.server && table.server !== 'Unassigned'">{{ table.server }}</em>
-            <small *ngIf="table.activeOrderNo">Order #{{ table.activeOrderNo }}<span *ngIf="table.numberOfItems"> • {{ table.numberOfItems }} Items</span></small>
+            <ng-container *ngIf="table.status !== 'AVAILABLE'">
+              <em *ngIf="table.guestName">{{ table.guestName }}</em>
+              <em *ngIf="!table.guestName && table.server && table.server !== 'Unassigned'">{{ table.server }}</em>
+              <small *ngIf="table.activeOrderNo">Order #{{ table.activeOrderNo }}<span *ngIf="table.numberOfItems"> • {{ table.numberOfItems }} Items</span></small>
+            </ng-container>
 
             <small *ngIf="table.bookingTime">{{ table.bookingTime }}</small>
             <small *ngIf="table.mergedWith">Linked: {{ table.mergedWith }}</small>
@@ -795,7 +803,7 @@
                 </div>
                 <div class="net-total-badge">
                   <small>Net Payable</small>
-                  <strong>₹{{ bill.total | number:'1.0-0' }}</strong>
+                  <strong>₹{{ bill.total | number:'1.2-2' }}</strong>
                 </div>
               </div>
 
@@ -819,10 +827,10 @@
                         <span class="course-label" *ngIf="line.course">{{ line.course }}</span>
                       </td>
                       <td class="text-center"><strong>{{ line.qty }}</strong></td>
-                      <td class="text-right">₹{{ line.price | number:'1.0-0' }}</td>
+                      <td class="text-right">₹{{ line.price | number:'1.2-2' }}</td>
                       <td class="text-center"><span class="tax-rate-pill">{{ line.taxRate }}%</span></td>
                       <td class="text-right"><span class="tax-amt-text">₹{{ line.taxAmount | number:'1.2-2' }}</span></td>
-                      <td class="text-right"><strong>₹{{ line.totalAmount | number:'1.0-0' }}</strong></td>
+                      <td class="text-right"><strong>₹{{ line.totalAmount | number:'1.2-2' }}</strong></td>
                     </tr>
                   </tbody>
                 </table>
@@ -848,12 +856,12 @@
 
               <!-- Grand Total Summary -->
               <div class="bill-totals-summary-card mt-3">
-                <div class="total-summary-row"><span>Gross Items Total</span><strong>₹{{ bill.grossAmount | number:'1.0-0' }}</strong></div>
-                <div class="total-summary-row" *ngIf="bill.discount"><span>Discount Offered</span><strong style="color: #dc2626;">-₹{{ bill.discount | number:'1.0-0' }}</strong></div>
-                <div class="total-summary-row"><span>Taxable Amount</span><strong>₹{{ bill.taxableSubtotal | number:'1.0-0' }}</strong></div>
+                <div class="total-summary-row"><span>Gross Items Total</span><strong>₹{{ bill.grossAmount | number:'1.2-2' }}</strong></div>
+                <div class="total-summary-row" *ngIf="bill.discount"><span>Discount Offered</span><strong style="color: #dc2626;">-₹{{ bill.discount | number:'1.2-2' }}</strong></div>
+                <div class="total-summary-row"><span>Taxable Amount</span><strong>₹{{ bill.taxableSubtotal | number:'1.2-2' }}</strong></div>
                 <div class="total-summary-row"><span>Total GST Tax</span><strong>₹{{ bill.taxTotal | number:'1.2-2' }}</strong></div>
-                <div class="total-summary-row final"><span>Net Total</span><strong>₹{{ bill.total | number:'1.0-0' }}</strong></div>
-                <div class="total-summary-row due" *ngIf="bill.due > 0"><span>Balance Due</span><strong>₹{{ bill.due | number:'1.0-0' }}</strong></div>
+                <div class="total-summary-row final"><span>Net Total</span><strong>₹{{ bill.total | number:'1.2-2' }}</strong></div>
+                <div class="total-summary-row due" *ngIf="bill.due > 0"><span>Balance Due</span><strong>₹{{ bill.due | number:'1.2-2' }}</strong></div>
               </div>
             </div>
           </div>

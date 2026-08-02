@@ -1,0 +1,256 @@
+<div class="viewer-container">
+  @if (reportData(); as report) {
+
+    <!-- Toast Feedback Notification -->
+    @if (notification()) {
+      <div class="toast-notification">
+        <mat-icon>check_circle</mat-icon>
+        <span>{{ notification() }}</span>
+      </div>
+    }
+
+    <!-- Header Navigation & Title Bar -->
+    <header class="viewer-header">
+      <div class="header-top">
+        <button class="back-btn" (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          <span>Back to Reports Hub</span>
+        </button>
+
+        <div class="header-actions">
+          <div class="export-group">
+            <button class="btn btn-outline" (click)="exportReport('excel')" title="Export to Excel">
+              <mat-icon class="btn-icon">grid_on</mat-icon>
+              <span>Excel</span>
+            </button>
+            <button class="btn btn-outline" (click)="exportReport('csv')" title="Export to CSV">
+              <mat-icon class="btn-icon">description</mat-icon>
+              <span>CSV</span>
+            </button>
+            <button class="btn btn-outline" (click)="exportReport('pdf')" title="Export to PDF">
+              <mat-icon class="btn-icon">picture_as_pdf</mat-icon>
+              <span>PDF</span>
+            </button>
+            <button class="btn btn-primary" (click)="exportReport('print')" title="Print Report">
+              <mat-icon class="btn-icon">print</mat-icon>
+              <span>Print</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-main">
+        <div class="title-meta">
+          <span class="category-badge">{{ report.category }}</span>
+          <h1 class="report-title">{{ report.title }}</h1>
+          <p class="report-subtitle">{{ report.subtitle }}</p>
+        </div>
+
+        <!-- Filter Controls Bar -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label>Date Filter:</label>
+            <select [ngModel]="dateRange()" (ngModelChange)="dateRange.set($event)" class="form-select">
+              <option value="today">Today (31 Jul 2026)</option>
+              <option value="yesterday">Yesterday (30 Jul 2026)</option>
+              <option value="week">This Week (MTD)</option>
+              <option value="month">This Month (July 2026)</option>
+              <option value="custom">Custom Date Range</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Property / Outlet:</label>
+            <select [ngModel]="selectedProperty()" (ngModelChange)="selectedProperty.set($event)" class="form-select">
+              <option value="all">All Outlets & Property</option>
+              <option value="main">Main Grand Hotel</option>
+              <option value="pos">Oasis Fine Dining POS</option>
+              <option value="spa">Wellness & Spa Center</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="viewer-body">
+
+      <!-- Executive KPI Cards Row -->
+      <section class="kpi-grid">
+        @for (kpi of report.kpis; track kpi.label) {
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div class="kpi-icon-box">
+                <mat-icon>{{ kpi.icon }}</mat-icon>
+              </div>
+              @if (kpi.change) {
+                <span class="kpi-change" [class.positive]="kpi.changeType === 'positive'" [class.negative]="kpi.changeType === 'negative'">
+                  {{ kpi.change }}
+                </span>
+              }
+            </div>
+            <div class="kpi-content">
+              <span class="kpi-label">{{ kpi.label }}</span>
+              <h2 class="kpi-value">{{ kpi.value }}</h2>
+              @if (kpi.subtext) {
+                <span class="kpi-subtext">{{ kpi.subtext }}</span>
+              }
+            </div>
+          </div>
+        }
+      </section>
+
+      <!-- Analytical SVG Chart Section -->
+      @if (report.chartData; as chart) {
+        <section class="chart-card">
+          <div class="chart-header">
+            <h3 class="chart-title">
+              <mat-icon class="chart-icon">show_chart</mat-icon>
+              Analytical Trend Analytics
+            </h3>
+            <div class="chart-legend">
+              @for (ds of chart.datasets; track ds.label) {
+                <div class="legend-item">
+                  <span class="legend-color" [style.background-color]="ds.color"></span>
+                  <span class="legend-label">{{ ds.label }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="chart-body">
+            <div class="bar-chart-container">
+              @for (label of chart.labels; track label; let i = $index) {
+                <div class="bar-group">
+                  <div class="bars-wrapper">
+                    @for (ds of chart.datasets; track ds.label) {
+                      <div
+                        class="chart-bar"
+                        [style.height.%]="(ds.data[i] / getMaxChartVal()) * 85"
+                        [style.background-color]="ds.color"
+                        [title]="ds.label + ': ' + ds.data[i]"
+                      >
+                        <span class="bar-val-tooltip">{{ ds.data[i] | number }}</span>
+                      </div>
+                    }
+                  </div>
+                  <span class="x-axis-label">{{ label }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+      }
+
+      <!-- Detailed Data Grid Table Section -->
+      <section class="data-table-card">
+        <div class="table-header">
+          <div class="table-title-group">
+            <h3>Detailed Statement Ledger</h3>
+            <span class="record-count">{{ filteredRows().length }} Records</span>
+          </div>
+
+          <div class="table-search">
+            <mat-icon>search</mat-icon>
+            <input
+              type="text"
+              placeholder="Search table rows..."
+              [ngModel]="tableSearch()"
+              (ngModelChange)="tableSearch.set($event); currentPage.set(1)"
+            />
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="report-table">
+            <thead>
+              <tr>
+                @for (col of report.columns; track col.key) {
+                  <th [class.sortable]="col.sortable" (click)="col.sortable ? toggleSort(col.key) : null">
+                    <div class="th-content">
+                      <span>{{ col.label }}</span>
+                      @if (col.sortable && sortKey() === col.key) {
+                        <mat-icon class="sort-icon">{{ sortAsc() ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                      }
+                    </div>
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of paginatedRows(); track $index) {
+                <tr>
+                  @for (col of report.columns; track col.key) {
+                    <td>
+                      @if (col.type === 'currency') {
+                        <strong class="currency-val">{{ row[col.key] | currency:'INR':'symbol':'1.0-0' }}</strong>
+                      } @else if (col.type === 'percentage') {
+                        <span class="badge-percent">{{ row[col.key] }}%</span>
+                      } @else if (col.type === 'badge') {
+                        <span class="status-pill">{{ row[col.key] }}</span>
+                      } @else {
+                        {{ row[col.key] }}
+                      }
+                    </td>
+                  }
+                </tr>
+              } @empty {
+                <tr>
+                  <td [attr.colspan]="report.columns.length" class="empty-cell">
+                    No records found matching current query.
+                  </td>
+                </tr>
+              }
+            </tbody>
+            @if (report.summaryRow; as summary) {
+              <tfoot>
+                <tr class="summary-footer-row">
+                  @for (col of report.columns; track col.key) {
+                    <td>
+                      @if (col.type === 'currency') {
+                        <strong>{{ summary[col.key] | currency:'INR':'symbol':'1.0-0' }}</strong>
+                      } @else {
+                        <strong>{{ summary[col.key] || '' }}</strong>
+                      }
+                    </td>
+                  }
+                </tr>
+              </tfoot>
+            }
+          </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="table-pagination">
+          <div class="pagination-info">
+            Showing Page <strong>{{ currentPage() }}</strong> of <strong>{{ totalPages() }}</strong>
+          </div>
+
+          <div class="pagination-buttons">
+            <button
+              class="btn btn-icon-only"
+              [disabled]="currentPage() === 1"
+              (click)="currentPage.set(currentPage() - 1)"
+            >
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <span class="page-indicator">{{ currentPage() }}</span>
+            <button
+              class="btn btn-icon-only"
+              [disabled]="currentPage() >= totalPages()"
+              (click)="currentPage.set(currentPage() + 1)"
+            >
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+  } @else {
+    <div class="loading-state">
+      <mat-icon class="spin-icon">sync</mat-icon>
+      <p>Loading report analytical dataset...</p>
+    </div>
+  }
+</div>

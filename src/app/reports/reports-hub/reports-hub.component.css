@@ -4,9 +4,9 @@
   height: calc(100vh - var(--topbar-height, 32px));
   width: 100%;
   background: var(--surface-100);
-  padding: 1.25rem 1.5rem;
+  padding: 0.75rem 1rem 2rem 1rem;
   overflow-y: auto;
-  gap: 1.5rem;
+  gap: 0.75rem;
 }
 
 /* ==========================================================================
@@ -15,13 +15,14 @@
 .hero-executive-panel {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.85) 100%);
   border: 1px solid var(--surface-200);
-  border-radius: 1.25rem;
-  padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  border-radius: 1rem;
+  padding: 0.85rem 1.1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
   backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 .hero-top-bar {
@@ -394,18 +395,19 @@
 .category-tabs-bar {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   overflow-x: auto;
-  padding-bottom: 0.5rem;
+  padding: 0.25rem 0;
   border-bottom: 1px solid var(--surface-200);
+  flex-shrink: 0;
 }
 
 .category-tab-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.75rem;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.625rem;
   background-color: var(--surface-50);
   border: 1px solid var(--surface-200);
   color: var(--surface-700);
@@ -441,13 +443,13 @@
 .catalog-content-area {
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
+  gap: 0.85rem;
 }
 
 .catalog-section {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .section-title-bar {
@@ -455,7 +457,7 @@
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--surface-200);
-  padding-bottom: 0.5rem;
+  padding-bottom: 0.35rem;
 }
 
 .title-left {
@@ -465,14 +467,14 @@
 }
 
 .title-left h2 {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: var(--surface-900);
   margin: 0;
 }
 
 .sec-icon {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
 }
 
 .section-count {
@@ -488,21 +490,21 @@
 .glass-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1.25rem;
+  gap: 0.75rem;
 }
 
 .glass-report-card {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--surface-200);
-  border-radius: 1.125rem;
-  padding: 1.15rem;
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 210px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  min-height: 180px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
 }

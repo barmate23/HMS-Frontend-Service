@@ -262,6 +262,47 @@ export class DashboardComponent {
     }));
   }
 
+  onImgError(event: Event, itemName?: string): void {
+    const target = event.target as HTMLImageElement;
+    if (target) {
+      target.src = this.getFallbackFoodImage(itemName);
+    }
+  }
+
+  private getValidImageUrl(name?: string, url?: string | null): string {
+    if (!url || typeof url !== 'string' || url === 'string' || url.trim() === '') {
+      return this.getFallbackFoodImage(name);
+    }
+    const cleanUrl = url.trim();
+    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://') || cleanUrl.startsWith('assets/') || cleanUrl.startsWith('data:')) {
+      return cleanUrl;
+    }
+    return this.getFallbackFoodImage(name);
+  }
+
+  private getFallbackFoodImage(name?: string): string {
+    const lower = (name || '').toLowerCase();
+    if (lower.includes('roti') || lower.includes('naan') || lower.includes('bread') || lower.includes('tandoor')) {
+      return 'https://images.unsplash.com/photo-1626074353765-517a681e40be?w=150&auto=format&fit=crop&q=80';
+    }
+    if (lower.includes('paneer') || lower.includes('tikka') || lower.includes('kabab')) {
+      return 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=150&auto=format&fit=crop&q=80';
+    }
+    if (lower.includes('biryani') || lower.includes('rice') || lower.includes('pulao')) {
+      return 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=150&auto=format&fit=crop&q=80';
+    }
+    if (lower.includes('coffee') || lower.includes('tea') || lower.includes('latte')) {
+      return 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=150&auto=format&fit=crop&q=80';
+    }
+    if (lower.includes('burger') || lower.includes('sandwich')) {
+      return 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=150&auto=format&fit=crop&q=80';
+    }
+    if (lower.includes('pizza')) {
+      return 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=150&auto=format&fit=crop&q=80';
+    }
+    return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&auto=format&fit=crop&q=80';
+  }
+
   private mapPosItemStat(item: PosItemStatDto): PosItemMetric {
     const qty = Number(item.soldQty || 0);
     const value = Number(item.totalValue || 0);
@@ -272,7 +313,7 @@ export class DashboardComponent {
       name: item.itemName || 'Menu Item',
       category: item.category || 'POS',
       subcategory: 'Item',
-      imageUrl: item.imageUrl || '',
+      imageUrl: this.getValidImageUrl(item.itemName, item.imageUrl),
       price,
       qty,
       value,

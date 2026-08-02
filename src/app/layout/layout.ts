@@ -282,7 +282,15 @@ export class Layout implements OnInit {
     {
       label: 'Reports & Analytics',
       icon: 'assessment',
-      route: '/reports'
+      expanded: true,
+      children: [
+        { label: 'All Reports', icon: 'auto_awesome', route: '/reports' },
+        { label: 'Front Office', icon: 'bed', route: '/reports', queryParams: { category: 'front_office' } },
+        { label: 'POS & Dining', icon: 'restaurant', route: '/reports', queryParams: { category: 'pos' } },
+        { label: 'Housekeeping', icon: 'cleaning_services', route: '/reports', queryParams: { category: 'housekeeping' } },
+        { label: 'Laundry', icon: 'local_laundry_service', route: '/reports', queryParams: { category: 'laundry' } },
+        { label: 'Purchase & Inventory', icon: 'inventory_2', route: '/reports', queryParams: { category: 'purchase_inventory' } }
+      ]
     }
   ];
 

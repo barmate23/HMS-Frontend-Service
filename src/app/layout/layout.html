@@ -39,6 +39,7 @@
           <div class="submenu-container" *ngIf="item.expanded && !isCollapsed()">
             <a *ngFor="let child of item.children"
                [routerLink]="child.route" 
+               [queryParams]="child.queryParams || {}"
                routerLinkActive="active" 
                class="nav-item submenu-item">
               <span class="material-icons-round">{{child.icon}}</span>

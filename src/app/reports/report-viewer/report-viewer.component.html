@@ -41,7 +41,13 @@
 
       <div class="header-main">
         <div class="title-meta">
-          <span class="category-badge">{{ report.category }}</span>
+          <div class="meta-row">
+            <span class="category-badge">{{ report.category }}</span>
+            <span class="active-range-pill">
+              <mat-icon class="pill-icon">calendar_today</mat-icon>
+              {{ activeDateRangeText() }}
+            </span>
+          </div>
           <h1 class="report-title">{{ report.title }}</h1>
           <p class="report-subtitle">{{ report.subtitle }}</p>
         </div>
@@ -59,15 +65,105 @@
             </select>
           </div>
 
+          <!-- Custom Date Range Picker (From Date & To Date) -->
+          @if (dateRange() === 'custom') {
+            <div class="custom-date-bar">
+              <div class="filter-group">
+                <label>From Date:</label>
+                <input
+                  type="date"
+                  [ngModel]="fromDate()"
+                  (ngModelChange)="fromDate.set($event)"
+                  class="form-control date-input"
+                />
+              </div>
+
+              <div class="filter-group">
+                <label>To Date:</label>
+                <input
+                  type="date"
+                  [ngModel]="toDate()"
+                  (ngModelChange)="toDate.set($event)"
+                  class="form-control date-input"
+                />
+              </div>
+
+              <button class="btn btn-apply-filter" (click)="applyCustomRange()">
+                <mat-icon>filter_alt</mat-icon>
+                <span>Apply Range</span>
+              </button>
+            </div>
+          }
+
           <div class="filter-group">
             <label>Property / Outlet:</label>
             <select [ngModel]="selectedProperty()" (ngModelChange)="selectedProperty.set($event)" class="form-select">
               <option value="all">All Outlets & Property</option>
-              <option value="main">Main Grand Hotel</option>
+              <option value="main">Grand Palace Hotel</option>
               <option value="pos">Oasis Fine Dining POS</option>
               <option value="spa">Wellness & Spa Center</option>
             </select>
           </div>
+
+          @if (reportId() === 'fo-occupancy-summary') {
+            <div class="filter-group">
+              <label>Room Category:</label>
+              <select [ngModel]="selectedRoomType()" (ngModelChange)="selectedRoomType.set($event)" class="form-select">
+                <option value="all">All Room Types</option>
+                <option value="Deluxe Queen Room">Deluxe Queen Room</option>
+                <option value="Executive King Room">Executive King Room</option>
+                <option value="Superior Twin Room">Superior Twin Room</option>
+                <option value="Luxury Ocean Suite">Luxury Ocean Suite</option>
+                <option value="Presidential Penthouse">Presidential Penthouse</option>
+              </select>
+            </div>
+          }
+
+          @if (reportId() === 'fo-cashier-settlement') {
+            <div class="filter-group">
+              <label>Shift Filter:</label>
+              <select [ngModel]="selectedShift()" (ngModelChange)="selectedShift.set($event)" class="form-select">
+                <option value="all">All Shifts</option>
+                <option value="Morning">Morning Shift</option>
+                <option value="Evening">Evening Shift</option>
+                <option value="Night">Night Shift</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label>Cashier:</label>
+              <select [ngModel]="selectedCashier()" (ngModelChange)="selectedCashier.set($event)" class="form-select">
+                <option value="all">All Cashiers</option>
+                <option value="Sunil Kumar">Sunil Kumar (Morning)</option>
+                <option value="Priya Sharma">Priya Sharma (Evening)</option>
+                <option value="Rohan Verma">Rohan Verma (Night)</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label>Pay Mode:</label>
+              <select [ngModel]="selectedPayMode()" (ngModelChange)="selectedPayMode.set($event)" class="form-select">
+                <option value="all">All Pay Modes</option>
+                <option value="CREDIT CARD">Credit Card</option>
+                <option value="CASH">Cash</option>
+                <option value="UPI App">UPI App</option>
+                <option value="CITY LEDGER">City Ledger</option>
+              </select>
+            </div>
+          }
+
+          @if (reportId() === 'fo-guest-manifest') {
+            <div class="filter-group">
+              <label>Manifest View:</label>
+              <select [ngModel]="selectedManifest()" (ngModelChange)="selectedManifest.set($event)" class="form-select">
+                <option value="all">All Roster</option>
+                <option value="IN-HOUSE">In-House Guests</option>
+                <option value="ARRIVING TODAY">Expected Arrivals</option>
+                <option value="DEPARTING TODAY">Expected Departures</option>
+                <option value="VIP ARRIVAL">VIP Manifest</option>
+              </select>
+            </div>
+          }
         </div>
       </div>
     </header>
@@ -76,8 +172,8 @@
 
       <!-- Executive KPI Cards Row -->
       <section class="kpi-grid">
-        @for (kpi of report.kpis; track kpi.label) {
-          <div class="kpi-card">
+        @for (kpi of report.kpis; track kpi.label; let idx = $index) {
+          <div class="kpi-card kpi-card-color-{{ (idx % 4) + 1 }}">
             <div class="kpi-top">
               <div class="kpi-icon-box">
                 <mat-icon>{{ kpi.icon }}</mat-icon>
@@ -101,43 +197,189 @@
 
       <!-- Analytical SVG Chart Section -->
       @if (report.chartData; as chart) {
-        <section class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">
-              <mat-icon class="chart-icon">show_chart</mat-icon>
-              Analytical Trend Analytics
-            </h3>
-            <div class="chart-legend">
-              @for (ds of chart.datasets; track ds.label) {
-                <div class="legend-item">
-                  <span class="legend-color" [style.background-color]="ds.color"></span>
-                  <span class="legend-label">{{ ds.label }}</span>
-                </div>
-              }
+        <section class="charts-dual-grid">
+          <!-- Main Grouped Bar Chart -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <h3 class="chart-title">
+                <mat-icon class="chart-icon text-teal">bar_chart</mat-icon>
+                @if (reportId() === 'fo-cashier-settlement') {
+                  Payment Collection Breakdown by Mode
+                } @else if (reportId() === 'fo-guest-manifest') {
+                  Hourly Guest Movement Pulse (Arrivals vs Departures)
+                } @else {
+                  Occupancy & Capacity Comparison by Category
+                }
+              </h3>
+              <div class="chart-legend">
+                @for (ds of chart.datasets; track ds.label) {
+                  <div class="legend-item">
+                    <span class="legend-color" [style.background-color]="ds.color"></span>
+                    <span class="legend-label">{{ ds.label }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="chart-body">
+              <div class="bar-chart-container">
+                @for (label of chart.labels; track label; let i = $index) {
+                  <div class="bar-group">
+                    <div class="bars-wrapper">
+                      @for (ds of chart.datasets; track ds.label) {
+                        <div
+                          class="chart-bar"
+                          [style.height.%]="(ds.data[i] / getMaxChartVal()) * 85"
+                          [style.background-color]="ds.color"
+                          [title]="ds.label + ': ' + ds.data[i]"
+                        >
+                          <span class="bar-val-tooltip">{{ ds.data[i] | number }}</span>
+                        </div>
+                      }
+                    </div>
+                    <span class="x-axis-label">{{ label }}</span>
+                  </div>
+                }
+              </div>
             </div>
           </div>
 
-          <div class="chart-body">
-            <div class="bar-chart-container">
-              @for (label of chart.labels; track label; let i = $index) {
-                <div class="bar-group">
-                  <div class="bars-wrapper">
-                    @for (ds of chart.datasets; track ds.label) {
-                      <div
-                        class="chart-bar"
-                        [style.height.%]="(ds.data[i] / getMaxChartVal()) * 85"
-                        [style.background-color]="ds.color"
-                        [title]="ds.label + ': ' + ds.data[i]"
-                      >
-                        <span class="bar-val-tooltip">{{ ds.data[i] | number }}</span>
-                      </div>
-                    }
+          <!-- Secondary Graphic: Donut for Occupancy OR Shift Recon for Cashier OR VIP Manifest for Guest Roster -->
+          @if (reportId() === 'fo-occupancy-summary') {
+            <div class="chart-card side-donut-card">
+              <div class="chart-header">
+                <h3 class="chart-title">
+                  <mat-icon class="chart-icon text-purple">donut_large</mat-icon>
+                  Room Status Distribution
+                </h3>
+              </div>
+              <div class="side-donut-body">
+                <div class="conic-donut-box">
+                  <div class="conic-donut-ring"></div>
+                  <div class="donut-inner-text">
+                    <span class="d-val">86.4%</span>
+                    <span class="d-sub">Occupied</span>
                   </div>
-                  <span class="x-axis-label">{{ label }}</span>
                 </div>
-              }
+                <div class="side-stats-list">
+                  <div class="s-stat-row">
+                    <span class="s-dot s-occ"></span>
+                    <span class="s-label">Occupied Rooms</span>
+                    <strong class="s-val">108</strong>
+                  </div>
+                  <div class="s-stat-row">
+                    <span class="s-dot s-clean"></span>
+                    <span class="s-label">Vacant Clean</span>
+                    <strong class="s-val">10</strong>
+                  </div>
+                  <div class="s-stat-row">
+                    <span class="s-dot s-dirty"></span>
+                    <span class="s-label">Vacant Dirty</span>
+                    <strong class="s-val">3</strong>
+                  </div>
+                  <div class="s-stat-row">
+                    <span class="s-dot s-ooo"></span>
+                    <span class="s-label">OOO Maintenance</span>
+                    <strong class="s-val">4</strong>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          }
+
+          @if (reportId() === 'fo-cashier-settlement') {
+            <div class="chart-card shift-recon-card">
+              <div class="chart-header">
+                <h3 class="chart-title">
+                  <mat-icon class="chart-icon text-blue">verified_user</mat-icon>
+                  Cashier Shift Reconciliations
+                </h3>
+              </div>
+              <div class="shift-recon-body">
+                <div class="shift-row-card">
+                  <div class="shift-row-top">
+                    <span class="shift-badge shift-morn">MORNING SHIFT</span>
+                    <span class="recon-status status-bal">✓ BALANCED</span>
+                  </div>
+                  <div class="shift-row-details">
+                    <span class="cashier-name">Sunil Kumar</span>
+                    <strong class="shift-amt">₹1,48,000</strong>
+                  </div>
+                </div>
+
+                <div class="shift-row-card">
+                  <div class="shift-row-top">
+                    <span class="shift-badge shift-eve">EVENING SHIFT</span>
+                    <span class="recon-status status-bal">✓ BALANCED</span>
+                  </div>
+                  <div class="shift-row-details">
+                    <span class="cashier-name">Priya Sharma</span>
+                    <strong class="shift-amt">₹1,05,175</strong>
+                  </div>
+                </div>
+
+                <div class="shift-row-card">
+                  <div class="shift-row-top">
+                    <span class="shift-badge shift-night">NIGHT SHIFT</span>
+                    <span class="recon-status status-pend">⌛ AUDIT PENDING</span>
+                  </div>
+                  <div class="shift-row-details">
+                    <span class="cashier-name">Rohan Verma</span>
+                    <strong class="shift-amt">₹79,100</strong>
+                  </div>
+                </div>
+
+                <div class="safe-drop-box">
+                  <mat-icon class="safe-icon">lock</mat-icon>
+                  <div class="safe-text">
+                    <span class="safe-title">Safe Drop Vault Status</span>
+                    <span class="safe-desc">100% Cash Drops Sealed & Verified</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+
+          @if (reportId() === 'fo-guest-manifest') {
+            <div class="chart-card vip-manifest-card">
+              <div class="chart-header">
+                <h3 class="chart-title">
+                  <mat-icon class="chart-icon text-amber">workspace_premium</mat-icon>
+                  VIP & Priority Arrival Manifest
+                </h3>
+              </div>
+              <div class="vip-manifest-body">
+                <div class="vip-guest-item">
+                  <div class="vip-item-top">
+                    <span class="vip-name">Dr. Vikram Malhotra</span>
+                    <span class="vip-tag">⭐ VIP AMBASSADOR</span>
+                  </div>
+                  <span class="vip-room">Presidential Penthouse (Room 501)</span>
+                  <div class="vip-item-meta">
+                    <span>ETA: 05:45 PM</span>
+                    <span>BMW 7-Series Transfer</span>
+                  </div>
+                </div>
+
+                <div class="vip-guest-item">
+                  <div class="vip-item-top">
+                    <span class="vip-name">Rajesh Sharma</span>
+                    <span class="vip-tag">⭐ CORPORATE HEAD</span>
+                  </div>
+                  <span class="vip-room">Deluxe Queen (Room 302)</span>
+                  <div class="vip-item-meta">
+                    <span>In-House</span>
+                    <span>Late Checkout Requested</span>
+                  </div>
+                </div>
+
+                <div class="vip-alert-box">
+                  <mat-icon class="vip-alert-icon">notifications_active</mat-icon>
+                  <span>5 Protocol Amenity Trays Scheduled</span>
+                </div>
+              </div>
+            </div>
+          }
         </section>
       }
 
@@ -184,9 +426,52 @@
                       @if (col.type === 'currency') {
                         <strong class="currency-val">{{ row[col.key] | currency:'INR':'symbol':'1.0-0' }}</strong>
                       } @else if (col.type === 'percentage') {
-                        <span class="badge-percent">{{ row[col.key] }}%</span>
+                        <span class="badge-percent" [class.high]="row[col.key] >= 85" [class.med]="row[col.key] >= 70 && row[col.key] < 85" [class.low]="row[col.key] < 70">
+                          {{ row[col.key] }}%
+                        </span>
                       } @else if (col.type === 'badge') {
-                        <span class="status-pill">{{ row[col.key] }}</span>
+                        @if (col.key === 'payMode') {
+                          <span
+                            class="paymode-badge"
+                            [class.pay-card]="row[col.key] === 'CREDIT CARD'"
+                            [class.pay-cash]="row[col.key] === 'CASH'"
+                            [class.pay-upi]="row[col.key] === 'UPI App' || row[col.key] === 'UPI'"
+                            [class.pay-folio]="row[col.key] === 'CITY LEDGER'"
+                          >
+                            {{ row[col.key] }}
+                          </span>
+                        } @else if (col.key === 'auditStatus') {
+                          <span
+                            class="audit-badge"
+                            [class.audit-cleared]="row[col.key] === 'CLEARED'"
+                            [class.audit-posted]="row[col.key] === 'POSTED TO FOLIO'"
+                            [class.audit-pending]="row[col.key] === 'PENDING AUDIT'"
+                          >
+                            {{ row[col.key] }}
+                          </span>
+                        } @else if (col.key === 'manifestCat') {
+                          <span
+                            class="manifest-badge"
+                            [class.man-house]="row[col.key] === 'IN-HOUSE'"
+                            [class.man-arr]="row[col.key] === 'ARRIVING TODAY'"
+                            [class.man-dep]="row[col.key] === 'DEPARTING TODAY'"
+                            [class.man-vip]="row[col.key] === 'VIP ARRIVAL'"
+                          >
+                            {{ row[col.key] }}
+                          </span>
+                        } @else if (col.key === 'guestStatus') {
+                          <span
+                            class="guest-status-badge"
+                            [class.st-in]="row[col.key] === 'CHECKED IN' || row[col.key] === 'VIP CHECKED IN'"
+                            [class.st-arr]="row[col.key] === 'EXPECTED ARRIVAL'"
+                            [class.st-out]="row[col.key] === 'CHECKED OUT'"
+                            [class.st-pend]="row[col.key] === 'CHECKOUT PENDING'"
+                          >
+                            {{ row[col.key] }}
+                          </span>
+                        } @else {
+                          <span class="status-pill">{{ row[col.key] }}</span>
+                        }
                       } @else {
                         {{ row[col.key] }}
                       }
@@ -196,7 +481,7 @@
               } @empty {
                 <tr>
                   <td [attr.colspan]="report.columns.length" class="empty-cell">
-                    No records found matching current query.
+                    No records found matching current criteria.
                   </td>
                 </tr>
               }
@@ -208,6 +493,8 @@
                     <td>
                       @if (col.type === 'currency') {
                         <strong>{{ summary[col.key] | currency:'INR':'symbol':'1.0-0' }}</strong>
+                      } @else if (col.type === 'percentage') {
+                        <strong>{{ summary[col.key] }}%</strong>
                       } @else {
                         <strong>{{ summary[col.key] || '' }}</strong>
                       }

@@ -1,7 +1,7 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { ReportsService, ReportItem } from '../reports.service';
 
@@ -12,7 +12,7 @@ import { ReportsService, ReportItem } from '../reports.service';
   templateUrl: './reports-hub.component.html',
   styleUrls: ['./reports-hub.component.css']
 })
-export class ReportsHubComponent {
+export class ReportsHubComponent implements OnInit {
   searchQuery = signal<string>('');
   selectedCategory = signal<string>('all');
 
@@ -28,8 +28,19 @@ export class ReportsHubComponent {
 
   constructor(
     public reportsService: ReportsService,
+    private route: ActivatedRoute,
     private router: Router
   ) {}
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      if (params['category']) {
+        this.selectedCategory.set(params['category']);
+      } else {
+        this.selectedCategory.set('all');
+      }
+    });
+  }
 
   favouriteReports = computed(() => this.reportsService.favouriteReports());
 

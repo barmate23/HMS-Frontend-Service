@@ -32,7 +32,7 @@
   --border-color: var(--surface-200);
 
   /* Layout Variables */
-  --sidebar-width: 176px; /* Compact dashboard shell */
+  --sidebar-width: 195px; /* Compact & readable sidebar shell */
   --sidebar-collapsed-width: 40px;
   --topbar-height: 32px; /* Dense top bar for data-heavy screens */
   

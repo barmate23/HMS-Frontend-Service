@@ -18,7 +18,19 @@ export class ReportViewerComponent implements OnInit {
 
   // Filter Bar state
   dateRange = signal<string>('today');
+  fromDate = signal<string>('2026-08-01');
+  toDate = signal<string>('2026-08-03');
   selectedProperty = signal<string>('all');
+  selectedRoomType = signal<string>('all');
+
+  // Cashier Settlement Audit specific filters
+  selectedShift = signal<string>('all');
+  selectedCashier = signal<string>('all');
+  selectedPayMode = signal<string>('all');
+
+  // Guest Manifest specific filter
+  selectedManifest = signal<string>('all');
+
   tableSearch = signal<string>('');
 
   // Pagination & Sorting state
@@ -45,6 +57,31 @@ export class ReportViewerComponent implements OnInit {
     });
   }
 
+  // Active date range text description
+  activeDateRangeText = computed(() => {
+    const range = this.dateRange();
+    if (range === 'today') return 'Today (31 Jul 2026)';
+    if (range === 'yesterday') return 'Yesterday (30 Jul 2026)';
+    if (range === 'week') return 'This Week (27 Jul - 02 Aug 2026)';
+    if (range === 'month') return 'This Month (July 2026)';
+    if (range === 'custom') {
+      const f = this.fromDate();
+      const t = this.toDate();
+      return `Custom Range: ${f || 'Start Date'} to ${t || 'End Date'}`;
+    }
+    return 'Active Date Window';
+  });
+
+  applyCustomRange(): void {
+    const f = this.fromDate();
+    const t = this.toDate();
+    if (!f || !t) {
+      this.showToast('Please select both From Date and To Date');
+      return;
+    }
+    this.showToast(`Applied Custom Date Filter: ${f} to ${t}`);
+  }
+
   // Filtered & Sorted Table Rows
   filteredRows = computed(() => {
     const data = this.reportData();
@@ -52,6 +89,39 @@ export class ReportViewerComponent implements OnInit {
 
     let rows = [...data.rows];
     const query = this.tableSearch().toLowerCase().trim();
+
+    // Specific filters for fo-occupancy-summary
+    if (this.reportId() === 'fo-occupancy-summary') {
+      const roomCatFilter = this.selectedRoomType();
+      if (roomCatFilter !== 'all') {
+        rows = rows.filter(r => r.roomCategory === roomCatFilter);
+      }
+    }
+
+    // Specific filters for fo-cashier-settlement
+    if (this.reportId() === 'fo-cashier-settlement') {
+      const shift = this.selectedShift();
+      const cashier = this.selectedCashier();
+      const payMode = this.selectedPayMode();
+
+      if (shift !== 'all') {
+        rows = rows.filter(r => String(r.time).toLowerCase().includes(shift.toLowerCase()));
+      }
+      if (cashier !== 'all') {
+        rows = rows.filter(r => r.cashier === cashier);
+      }
+      if (payMode !== 'all') {
+        rows = rows.filter(r => r.payMode === payMode);
+      }
+    }
+
+    // Specific filters for fo-guest-manifest
+    if (this.reportId() === 'fo-guest-manifest') {
+      const manifest = this.selectedManifest();
+      if (manifest !== 'all') {
+        rows = rows.filter(r => r.manifestCat === manifest);
+      }
+    }
 
     if (query) {
       rows = rows.filter(row =>
@@ -117,7 +187,6 @@ export class ReportViewerComponent implements OnInit {
     setTimeout(() => this.notification.set(null), 3000);
   }
 
-  // Max value calculation for SVG chart heights
   getMaxChartVal(): number {
     const chart = this.reportData()?.chartData;
     if (!chart || !chart.datasets.length) return 100;

@@ -320,17 +320,18 @@ export class ReportsService {
             { key: 'vacantDirty', label: 'Vacant Dirty' },
             { key: 'ooo', label: 'OOO Blocked' },
             { key: 'occPercent', label: 'Occupancy %', type: 'percentage', sortable: true },
-            { key: 'adr', label: 'ADR (₹)', type: 'currency' },
-            { key: 'revpar', label: 'RevPAR (₹)', type: 'currency', sortable: true }
+            { key: 'adr', label: 'ADR (₹)', type: 'currency', sortable: true },
+            { key: 'revpar', label: 'RevPAR (₹)', type: 'currency', sortable: true },
+            { key: 'totalRevenue', label: 'Total Revenue (₹)', type: 'currency', sortable: true }
           ],
           rows: [
-            { roomCategory: 'Deluxe Queen Room', totalRooms: 45, occupied: 41, vacantClean: 2, vacantDirty: 1, ooo: 1, occPercent: 91.1, adr: 3200, revpar: 2915 },
-            { roomCategory: 'Executive King Room', totalRooms: 35, occupied: 31, vacantClean: 3, vacantDirty: 1, ooo: 0, occPercent: 88.6, adr: 4100, revpar: 3632 },
-            { roomCategory: 'Superior Twin Room', totalRooms: 25, occupied: 20, vacantClean: 3, vacantDirty: 1, ooo: 1, occPercent: 80.0, adr: 2900, revpar: 2320 },
-            { roomCategory: 'Luxury Ocean Suite', totalRooms: 12, occupied: 10, vacantClean: 1, vacantDirty: 0, ooo: 1, occPercent: 83.3, adr: 7500, revpar: 6247 },
-            { roomCategory: 'Presidential Penthouse', totalRooms: 8, occupied: 6, vacantClean: 1, vacantDirty: 0, ooo: 1, occPercent: 75.0, adr: 14500, revpar: 10875 }
+            { roomCategory: 'Deluxe Queen Room', totalRooms: 45, occupied: 41, vacantClean: 2, vacantDirty: 1, ooo: 1, occPercent: 91.1, adr: 3200, revpar: 2915, totalRevenue: 131200 },
+            { roomCategory: 'Executive King Room', totalRooms: 35, occupied: 31, vacantClean: 3, vacantDirty: 1, ooo: 0, occPercent: 88.6, adr: 4100, revpar: 3632, totalRevenue: 127100 },
+            { roomCategory: 'Superior Twin Room', totalRooms: 25, occupied: 20, vacantClean: 3, vacantDirty: 1, ooo: 1, occPercent: 80.0, adr: 2900, revpar: 2320, totalRevenue: 58000 },
+            { roomCategory: 'Luxury Ocean Suite', totalRooms: 12, occupied: 10, vacantClean: 1, vacantDirty: 0, ooo: 1, occPercent: 83.3, adr: 7500, revpar: 6247, totalRevenue: 75000 },
+            { roomCategory: 'Presidential Penthouse', totalRooms: 8, occupied: 6, vacantClean: 1, vacantDirty: 0, ooo: 1, occPercent: 75.0, adr: 14500, revpar: 10875, totalRevenue: 87000 }
           ],
-          summaryRow: { roomCategory: 'OVERALL HOTEL YIELD', totalRooms: 125, occupied: 108, vacantClean: 10, vacantDirty: 3, ooo: 4, occPercent: 86.4, adr: 3560, revpar: 3076 }
+          summaryRow: { roomCategory: 'OVERALL HOTEL YIELD', totalRooms: 125, occupied: 108, vacantClean: 10, vacantDirty: 3, ooo: 4, occPercent: 86.4, adr: 3560, revpar: 3076, totalRevenue: 478300 }
         };
 
       case 'fo-cashier-settlement':
@@ -340,33 +341,76 @@ export class ReportsService {
           category: 'Front Office',
           subtitle: 'Shift collections audit by Cash, Credit Card, UPI, and Folio settlements.',
           kpis: [
-            { label: 'Total Collections Today', value: '₹3,84,500', change: '+14.2%', changeType: 'positive', icon: 'payments', subtext: 'All Payment Modes' },
-            { label: 'Credit & Debit Cards', value: '₹2,00,000', icon: 'credit_card', subtext: '52.0% Share' },
-            { label: 'Cash Collections', value: '₹1,07,600', icon: 'money', subtext: '28.0% Share' },
-            { label: 'UPI / Digital Payment', value: '₹57,675', icon: 'qr_code_scanner', subtext: '15.0% Share' }
+            { label: 'Total Collections Today', value: '₹3,84,500', change: '+14.2%', changeType: 'positive', icon: 'payments', subtext: 'All Payment Modes (148 Txns)' },
+            { label: 'Credit & Debit Cards', value: '₹2,00,000', icon: 'credit_card', subtext: '52.0% Share • Terminal #1 & #2' },
+            { label: 'Cash Drawer Collections', value: '₹1,07,600', icon: 'payments', subtext: '28.0% Share • Safe Drop Verified' },
+            { label: 'Digital & City Ledger', value: '₹76,900', icon: 'qr_code_scanner', subtext: 'UPI: ₹57.67K | Folio: ₹19.23K' }
           ],
           chartData: {
             labels: ['Credit Card', 'Cash', 'UPI App', 'City Ledger', 'Bank Transfer'],
             datasets: [
-              { label: 'Collection Amount (₹)', data: [200000, 107600, 57675, 12000, 7225], color: '#1E3A8A' }
+              { label: 'Collection Amount (₹)', data: [200000, 107600, 57675, 12000, 7225], color: '#0F3D3E' }
             ]
           },
           columns: [
             { key: 'receiptNo', label: 'Receipt No.', sortable: true },
             { key: 'time', label: 'Time & Shift', type: 'date' },
-            { key: 'guestRoom', label: 'Guest Name / Room' },
+            { key: 'guestRoom', label: 'Guest Name / Folio' },
             { key: 'payMode', label: 'Payment Mode', type: 'badge' },
+            { key: 'refNo', label: 'Txn Ref / Terminal' },
             { key: 'cashier', label: 'Front Desk Cashier' },
+            { key: 'auditStatus', label: 'Audit Status', type: 'badge' },
             { key: 'amount', label: 'Amount (₹)', type: 'currency', sortable: true }
           ],
           rows: [
-            { receiptNo: 'RCP-801', time: '09:15 AM (Morning)', guestRoom: 'Rajesh Sharma (Room 302)', payMode: 'CREDIT CARD', cashier: 'Sunil Kumar', amount: 45000 },
-            { receiptNo: 'RCP-802', time: '10:30 AM (Morning)', guestRoom: 'Infosys Corp (Room 405)', payMode: 'CITY LEDGER', cashier: 'Sunil Kumar', amount: 88000 },
-            { receiptNo: 'RCP-803', time: '11:45 AM (Morning)', guestRoom: 'Sarah Jenkins (Room 214)', payMode: 'UPI', cashier: 'Sunil Kumar', amount: 15000 },
-            { receiptNo: 'RCP-804', time: '01:20 PM (Evening)', guestRoom: 'Amitav Ghosh (Room 108)', payMode: 'CASH', cashier: 'Priya Sharma', amount: 28500 },
-            { receiptNo: 'RCP-805', time: '03:10 PM (Evening)', guestRoom: 'David Miller (Room 218)', payMode: 'CREDIT CARD', cashier: 'Priya Sharma', amount: 34000 }
+            { receiptNo: 'RCP-801', time: '09:15 AM (Morning)', guestRoom: 'Rajesh Sharma (Room 302)', payMode: 'CREDIT CARD', refNo: 'TERM-01 / #8821', cashier: 'Sunil Kumar', auditStatus: 'CLEARED', amount: 45000 },
+            { receiptNo: 'RCP-802', time: '10:30 AM (Morning)', guestRoom: 'Infosys Corp (Room 405)', payMode: 'CITY LEDGER', refNo: 'FOLIO-POST #405', cashier: 'Sunil Kumar', auditStatus: 'POSTED TO FOLIO', amount: 88000 },
+            { receiptNo: 'RCP-803', time: '11:45 AM (Morning)', guestRoom: 'Sarah Jenkins (Room 214)', payMode: 'UPI App', refNo: 'UPI-TXN-99812', cashier: 'Sunil Kumar', auditStatus: 'CLEARED', amount: 15000 },
+            { receiptNo: 'RCP-804', time: '01:20 PM (Evening)', guestRoom: 'Amitav Ghosh (Room 108)', payMode: 'CASH', refNo: 'DRAWER-DROP #04', cashier: 'Priya Sharma', auditStatus: 'CLEARED', amount: 28500 },
+            { receiptNo: 'RCP-805', time: '03:10 PM (Evening)', guestRoom: 'David Miller (Room 218)', payMode: 'CREDIT CARD', refNo: 'TERM-02 / #9910', cashier: 'Priya Sharma', auditStatus: 'CLEARED', amount: 34000 },
+            { receiptNo: 'RCP-806', time: '05:45 PM (Evening)', guestRoom: 'Vikram Malhotra (Room 501)', payMode: 'UPI App', refNo: 'UPI-TXN-10442', cashier: 'Priya Sharma', auditStatus: 'CLEARED', amount: 42675 },
+            { receiptNo: 'RCP-807', time: '09:30 PM (Night)', guestRoom: 'Anita Roy (Room 112)', payMode: 'CASH', refNo: 'DRAWER-DROP #08', cashier: 'Rohan Verma', auditStatus: 'PENDING AUDIT', amount: 79100 }
           ],
-          summaryRow: { receiptNo: 'TOTAL', guestRoom: 'Shift Collections Total', amount: 210500 }
+          summaryRow: { receiptNo: 'TOTAL', guestRoom: 'Shift Collections Total', refNo: '7 Transactions', cashier: '3 Cashiers', auditStatus: '100% RECONCILED', amount: 332275 }
+        };
+
+      case 'fo-guest-manifest':
+        return {
+          reportId,
+          title: 'Arrivals, Departures & In-House Ledger',
+          category: 'Front Office',
+          subtitle: 'Expected arrivals today, VIP manifests, pending checkout folios, and active guest roster.',
+          kpis: [
+            { label: 'Guests Currently In-House', value: '142 Guests', icon: 'people', subtext: '108 Occupied Rooms (1.3/Room)' },
+            { label: 'Expected Arrivals Today', value: '24 Arrivals', change: '+4 VIPs', changeType: 'positive', icon: 'flight_land', subtext: '18 Checked-In | 6 Expected ETA' },
+            { label: 'Expected Departures Today', value: '19 Departures', icon: 'flight_takeoff', subtext: '14 Checked-Out | 5 Pending Folio' },
+            { label: 'VIP Guest Manifest', value: '5 VIP Guests', icon: 'star', subtext: '3 Suites | Airport Pickups Scheduled' }
+          ],
+          chartData: {
+            labels: ['08:00 AM', '11:00 AM', '02:00 PM', '05:00 PM', '08:00 PM', '11:00 PM'],
+            datasets: [
+              { label: 'Arrivals', data: [3, 8, 7, 4, 2, 0], color: '#6D28D9' },
+              { label: 'Departures', data: [5, 9, 3, 2, 0, 0], color: '#2A9D8F' }
+            ]
+          },
+          columns: [
+            { key: 'resRef', label: 'Res. Ref & Room', sortable: true },
+            { key: 'guestName', label: 'Guest Name & VIP Tag', sortable: true },
+            { key: 'manifestCat', label: 'Manifest Status', type: 'badge' },
+            { key: 'dates', label: 'Stay Duration' },
+            { key: 'roomCategory', label: 'Room Category' },
+            { key: 'folioBalance', label: 'Folio Balance (₹)', type: 'currency', sortable: true },
+            { key: 'guestStatus', label: 'Guest Status', type: 'badge' }
+          ],
+          rows: [
+            { resRef: 'RES-9012 (Room 302)', guestName: 'Rajesh Sharma ⭐ VIP', manifestCat: 'IN-HOUSE', dates: '29 Jul - 02 Aug 2026', roomCategory: 'Deluxe Queen Room', folioBalance: 0, guestStatus: 'CHECKED IN' },
+            { resRef: 'RES-9015 (Room 405)', guestName: 'Infosys Corp Group', manifestCat: 'ARRIVING TODAY', dates: '31 Jul - 05 Aug 2026', roomCategory: 'Executive King Room', folioBalance: 88000, guestStatus: 'EXPECTED ARRIVAL' },
+            { resRef: 'RES-8998 (Room 214)', guestName: 'Sarah Jenkins', manifestCat: 'DEPARTING TODAY', dates: '28 Jul - 31 Jul 2026', roomCategory: 'Superior Twin Room', folioBalance: 0, guestStatus: 'CHECKED OUT' },
+            { resRef: 'RES-9022 (Room 108)', guestName: 'Amitav Ghosh', manifestCat: 'IN-HOUSE', dates: '30 Jul - 03 Aug 2026', roomCategory: 'Deluxe Queen Room', folioBalance: 12500, guestStatus: 'CHECKED IN' },
+            { resRef: 'RES-9030 (Room 501)', guestName: 'Dr. Vikram Malhotra ⭐ VIP', manifestCat: 'VIP ARRIVAL', dates: '31 Jul - 04 Aug 2026', roomCategory: 'Presidential Penthouse', folioBalance: 145000, guestStatus: 'VIP CHECKED IN' },
+            { resRef: 'RES-9004 (Room 218)', guestName: 'David Miller', manifestCat: 'DEPARTING TODAY', dates: '27 Jul - 31 Jul 2026', roomCategory: 'Luxury Ocean Suite', folioBalance: 4500, guestStatus: 'CHECKOUT PENDING' }
+          ],
+          summaryRow: { resRef: 'TOTAL MANIFEST', guestName: '6 Key Manifest Records', dates: 'Active Audit Window', folioBalance: 250000, guestStatus: 'ROSTER AUDITED' }
         };
 
       case 'pos-outlet-revenue':

@@ -15,14 +15,14 @@ import { ReportsService, ReportItem } from '../reports.service';
 export class ReportsHubComponent {
   searchQuery = signal<string>('');
   selectedCategory = signal<string>('all');
-  activeView = signal<'grid' | 'analytics'>('grid');
 
   categories = [
-    { id: 'all', label: 'All Front Office Reports', icon: 'auto_awesome' },
-    { id: 'occupancy', label: 'Occupancy & Demand', icon: 'donut_small' },
-    { id: 'guest_ops', label: 'Guest & In-House Ops', icon: 'flight_land' },
-    { id: 'room_inventory', label: 'Room Inventory & OOO', icon: 'meeting_room' },
-    { id: 'desk_finance', label: 'Front Desk Financials', icon: 'point_of_sale' },
+    { id: 'all', label: 'All Admin Reports', icon: 'auto_awesome' },
+    { id: 'front_office', label: 'Front Office', icon: 'bed' },
+    { id: 'pos', label: 'POS & Dining', icon: 'restaurant' },
+    { id: 'housekeeping', label: 'Housekeeping', icon: 'cleaning_services' },
+    { id: 'laundry', label: 'Laundry', icon: 'local_laundry_service' },
+    { id: 'purchase_inventory', label: 'Purchase & Inventory', icon: 'inventory_2' },
     { id: 'favourites', label: 'Favourites', icon: 'star' }
   ];
 
@@ -56,7 +56,7 @@ export class ReportsHubComponent {
     return list;
   });
 
-  // Grouped by Category Pillar for Structured Sections
+  // Grouped by Department Pillar for Structured Display
   groupedSections = computed(() => {
     const reports = this.filteredReports();
     const map = new Map<string, ReportItem[]>();
@@ -98,7 +98,7 @@ export class ReportsHubComponent {
     return data.map((val, idx) => {
       const x = (idx / (data.length - 1)) * width;
       const normalizedY = (val - min) / (max - min || 1);
-      const y = height - (normalizedY * (height - 8) + 4);
+      const y = height - normalizedY * (height - 8) - 4;
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     }).join(' ');
   }

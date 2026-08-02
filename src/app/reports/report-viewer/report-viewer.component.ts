@@ -38,7 +38,7 @@ export class ReportViewerComponent implements OnInit {
 
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {
-      const id = params.get('reportId') || 'manager-flash';
+      const id = params.get('reportId') || 'fo-occupancy-summary';
       this.reportId.set(id);
       const data = this.reportsService.getAnalyticalReportData(id);
       this.reportData.set(data);

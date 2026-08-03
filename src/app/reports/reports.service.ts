@@ -1,4 +1,7 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 
 export interface ReportItem {
   id: string;
@@ -272,11 +275,32 @@ export class ReportsService {
     return this.favouritesSignal().includes(reportId);
   }
 
-  getReportById(reportId: string): ReportItem | undefined {
-    return this.reportsList().find(r => r.id === reportId);
+  private readonly http = inject(HttpClient);
+  private readonly apiBaseUrl = '/api/reportService/v1/frontoffice';
+
+  /**
+   * Fetch live report data from backend HMS_Report_Service via API Gateway.
+   * Falls back to offline mock dataset if backend service is unreachable.
+   */
+  fetchAnalyticalReportData(reportId: string, startDate?: string, endDate?: string): Observable<AnalyticalReportData> {
+    let params = new HttpParams();
+    if (startDate) params = params.set('startDate', startDate);
+    if (endDate) params = params.set('endDate', endDate);
+
+    return this.http.get<any>(`${this.apiBaseUrl}/report-data/${reportId}`, { params }).pipe(
+      map(res => {
+        if (res && res.success && res.data) {
+          return res.data as AnalyticalReportData;
+        }
+        return this.getAnalyticalReportData(reportId);
+      }),
+      catchError(() => {
+        return of(this.getAnalyticalReportData(reportId));
+      })
+    );
   }
 
-  // Analytical Dataset Generator for Viewer
+  // Analytical Dataset Generator for Viewer (Fallback)
   getAnalyticalReportData(reportId: string): AnalyticalReportData {
     const item: ReportItem = this.getReportById(reportId) || {
       id: reportId,

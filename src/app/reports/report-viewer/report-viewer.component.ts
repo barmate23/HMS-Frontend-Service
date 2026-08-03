@@ -52,7 +52,14 @@ export class ReportViewerComponent implements OnInit {
     this.route.paramMap.subscribe(params => {
       const id = params.get('reportId') || 'fo-occupancy-summary';
       this.reportId.set(id);
-      const data = this.reportsService.getAnalyticalReportData(id);
+      this.loadReportData(id);
+    });
+  }
+
+  loadReportData(id: string): void {
+    const from = this.dateRange() === 'custom' ? this.fromDate() : undefined;
+    const to = this.dateRange() === 'custom' ? this.toDate() : undefined;
+    this.reportsService.fetchAnalyticalReportData(id, from, to).subscribe(data => {
       this.reportData.set(data);
     });
   }
@@ -79,6 +86,7 @@ export class ReportViewerComponent implements OnInit {
       this.showToast('Please select both From Date and To Date');
       return;
     }
+    this.loadReportData(this.reportId());
     this.showToast(`Applied Custom Date Filter: ${f} to ${t}`);
   }
 

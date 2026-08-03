@@ -330,7 +330,7 @@
 
               <td>{{ bill.guestName || 'Walk-in' }}<span class="subline">{{ bill.roomNo ? 'Room ' + bill.roomNo : 'No room posting' }}</span></td>
               <td>₹{{ billTotal(bill) | number:'1.0-0' }}<span class="subline">Paid ₹{{ bill.paid | number:'1.0-0' }}</span></td>
-              <td>₹{{ bill.discount | number:'1.0-0' }}<span class="subline" *ngIf="bill.compReason">Comp: {{ bill.compReason }}</span></td>
+              <td>{{ billBreakdown(bill).discountPercent }}%<span class="subline" *ngIf="billBreakdown(bill).discountAmount">₹{{ billBreakdown(bill).discountAmount | number:'1.0-0' }}</span><span class="subline" *ngIf="bill.compReason">Comp: {{ bill.compReason }}</span></td>
               <td>{{ bill.paymentModes.join(', ') }}</td>
               <td><span class="status-badge" [class]="bill.status.toLowerCase()">{{ bill.status }}</span></td>
               <td><div class="action-buttons"><button class="btn-icon check" [class.frozen]="!bill.isRoomOrder || bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')" [disabled]="!bill.isRoomOrder || bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')" [title]="!bill.isRoomOrder ? 'Room posting disabled for non-room orders' : ((bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')) ? 'Already posted to room folio' : 'Post to Folio')" (click)="pos.postBillToRoom(bill.id)"><span class="material-icons-round">bed</span></button><button class="btn-icon edit" (click)="openEdit('bill', bill)"><span class="material-icons-round">edit</span></button><button class="btn-icon delete" (click)="voidBill(bill)"><span class="material-icons-round">block</span></button></div></td>
@@ -755,7 +755,7 @@
             <h3 class="section-subtitle mt-4"><span class="material-icons-round">payments</span>Payment & Settlement</h3>
 
             <div class="ci-form-grid">
-              <div class="ci-input-group"><label>Discount (₹)</label><input type="number" min="0" [ngModel]="currentBill().discount" (ngModelChange)="updateBillDiscount($event)" placeholder="0"></div>
+              <div class="ci-input-group"><label>Discount (%)</label><input type="number" min="0" max="100" step="0.1" [ngModel]="currentBill().discount" (ngModelChange)="updateBillDiscount($event)" placeholder="0"></div>
               <div class="ci-input-group"><label>Paid Amount (₹)</label><input type="number" min="0" [ngModel]="currentBill().paid" (ngModelChange)="updateBillPaid($event)" placeholder="0"></div>
             </div>
 
@@ -855,8 +855,8 @@
 
               <!-- Grand Total Summary -->
               <div class="bill-totals-summary-card mt-3">
-                <div class="total-summary-row" *ngIf="bill.discount"><span>Gross Items Total</span><strong>₹{{ bill.grossAmount | number:'1.2-2' }}</strong></div>
-                <div class="total-summary-row" *ngIf="bill.discount"><span>Discount Offered</span><strong style="color: #dc2626;">-₹{{ bill.discount | number:'1.2-2' }}</strong></div>
+                <div class="total-summary-row" *ngIf="bill.discountAmount"><span>Gross Items Total</span><strong>₹{{ bill.grossAmount | number:'1.2-2' }}</strong></div>
+                <div class="total-summary-row" *ngIf="bill.discountAmount"><span>Discount Offered ({{ bill.discountPercent }}%)</span><strong style="color: #dc2626;">-₹{{ bill.discountAmount | number:'1.2-2' }}</strong></div>
                 <div class="total-summary-row"><span>Taxable Amount</span><strong>₹{{ bill.taxableSubtotal | number:'1.2-2' }}</strong></div>
                 <div class="total-summary-row"><span>Total GST Tax</span><strong>₹{{ bill.taxTotal | number:'1.2-2' }}</strong></div>
                 <div class="total-summary-row final"><span>Net Total</span><strong>₹{{ bill.total | number:'1.2-2' }}</strong></div>

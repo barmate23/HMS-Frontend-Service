@@ -49,6 +49,8 @@ type BillBreakdown = {
   order: PosOrder | null;
   lines: BillLinePreview[];
   grossAmount: number;
+  discountPercent: number;
+  discountAmount: number;
   discount: number;
   taxableSubtotal: number;
   taxTotal: number;
@@ -1252,7 +1254,7 @@ export class PosComponent implements OnInit, OnDestroy {
 
 
   updateBillDiscount(value: number | string): void {
-    const discount = Number(value || 0);
+    const discount = Math.min(100, Math.max(0, Number(value || 0)));
     this.currentBill.update(bill => {
       const order = this.billOrder(bill);
       const draft = this.billDraftForOrder(order, { ...bill, discount });
@@ -1450,7 +1452,8 @@ export class PosComponent implements OnInit, OnDestroy {
     const order = this.billOrder(bill);
     const rawLines = order?.lines || [];
     const grossAmount = rawLines.reduce((sum, line) => sum + line.qty * line.price, 0);
-    const discount = Math.min(Number(bill.discount || 0), grossAmount);
+    const discountPercent = Math.min(100, Math.max(0, Number(bill.discount || 0)));
+    const discountAmount = Number(((grossAmount * discountPercent) / 100).toFixed(2));
     const inclusive = this.billingSetup().enableInclusiveTax;
     const bucketMap = new Map<number, BillTaxBucket>();
     let taxableSubtotal = 0;
@@ -1470,7 +1473,7 @@ export class PosComponent implements OnInit, OnDestroy {
       const taxRate = Number(matchedRule.igstRate || (cgstRate + sgstRate));
 
       const grossLineAmount = line.qty * line.price;
-      const discountShare = grossAmount ? discount * (grossLineAmount / grossAmount) : 0;
+      const discountShare = grossAmount ? discountAmount * (grossLineAmount / grossAmount) : 0;
       const discountedAmount = Math.max(0, grossLineAmount - discountShare);
       const taxableAmount = inclusive ? discountedAmount / (1 + taxRate / 100) : discountedAmount;
       const taxAmount = inclusive ? discountedAmount - taxableAmount : taxableAmount * taxRate / 100;
@@ -1485,10 +1488,8 @@ export class PosComponent implements OnInit, OnDestroy {
       taxableSubtotal += taxableAmount;
       taxTotal += taxAmount;
 
-
       return { ...line, taxRate, taxableAmount, taxAmount, totalAmount };
     });
-
 
     const total = taxableSubtotal + taxTotal;
     const paid = Number(bill.paid || 0);
@@ -1497,7 +1498,9 @@ export class PosComponent implements OnInit, OnDestroy {
       order,
       lines,
       grossAmount,
-      discount,
+      discountPercent,
+      discountAmount,
+      discount: discountAmount,
       taxableSubtotal,
       taxTotal,
       total,

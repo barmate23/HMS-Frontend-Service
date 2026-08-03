@@ -1564,7 +1564,8 @@ export class PosService {
     const tableNo = item.tableNumber || item.tableNo || '';
     const guestName = item.guestName || (roomNo ? `Room ${roomNo} Guest` : tableNo ? `Table ${tableNo} Guest` : 'Walk-in');
 
-    const totalAmount = Number(item.netAmount ?? item.totalAmount ?? item.grossAmount ?? item.subtotal ?? 0);
+    const grossOrSubtotal = Number(item.grossAmount ?? item.subtotal ?? 0);
+    const totalAmount = Number(item.netAmount ?? item.totalAmount ?? grossOrSubtotal);
     const paidAmount = Number(item.paidAmount ?? item.paid ?? 0);
 
     return {
@@ -1578,7 +1579,7 @@ export class PosService {
       roomId: item.roomId || null,
       guestName,
       roomNo,
-      subtotal: totalAmount,
+      subtotal: grossOrSubtotal,
       discount: Number(item.discount || 0),
       tax: Number(item.gstPercent ?? item.tax ?? 0),
       taxAmount: Number(item.gstAmount ?? item.taxAmount ?? 0),

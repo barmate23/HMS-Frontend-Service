@@ -298,7 +298,7 @@
       <div class="card-header"><h2 class="card-title">Menu & Item Catalog</h2><span class="total-badge">{{ filteredMenu().length }} Items</span></div>
       <div class="table-container">
         <table class="premium-table hk-grid-table menu-table">
-          <thead><tr><th>ITEM</th><th>OUTLET</th><th>CATEGORY</th><th>PRICE</th><th>TAX</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+          <thead><tr><th>ITEM</th><th>OUTLET</th><th>CATEGORY</th><th>PRICE</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
           <tbody>
             <tr *ngFor="let item of filteredMenu()">
               <td>
@@ -310,7 +310,6 @@
               <td>{{ outletName(item.outletId) }}</td>
               <td>{{ item.category }}<span class="subline">{{ item.subcategory }}</span></td>
               <td>₹{{ item.price }}<span class="subline" *ngIf="item.happyHourPrice">HH ₹{{ item.happyHourPrice }} • {{ item.happyHourWindow }}</span></td>
-              <td>{{ item.taxPercent }}%</td>
               <td><span class="status-badge" [class.completed]="item.available" [class.cancelled]="!item.available">{{ item.available ? 'AVAILABLE' : 'UNAVAILABLE' }}</span></td>
               <td><div class="action-buttons"><button class="btn-icon check" (click)="toggleMenuAvailability(item)" title="Toggle Available"><span class="material-icons-round">{{ item.available ? 'visibility_off' : 'visibility' }}</span></button><button class="btn-icon edit" (click)="openEdit('menu', item)"><span class="material-icons-round">edit</span></button><button class="btn-icon delete" (click)="deleteMenuItem(item.id)"><span class="material-icons-round">delete_outline</span></button></div></td>
             </tr>
@@ -606,7 +605,7 @@
             </label>
           </div>
         </div>
-        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Price</label><input type="number" [(ngModel)]="currentMenuItem().price"></div><div class="ci-input-group"><label>Tax %</label><input type="number" min="0" max="100" step="0.01" [(ngModel)]="currentMenuItem().taxPercent"></div></div>
+        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Price</label><input type="number" [(ngModel)]="currentMenuItem().price"></div></div>
         <div class="toggle-row"><label class="toggle-option"><input type="checkbox" [(ngModel)]="currentMenuItem().available"> Available</label><label class="toggle-option"><input type="checkbox" [(ngModel)]="currentMenuItem().featured"> Featured / Fast moving</label></div>
       </ng-container>
 
@@ -856,7 +855,7 @@
 
               <!-- Grand Total Summary -->
               <div class="bill-totals-summary-card mt-3">
-                <div class="total-summary-row"><span>Gross Items Total</span><strong>₹{{ bill.grossAmount | number:'1.2-2' }}</strong></div>
+                <div class="total-summary-row" *ngIf="bill.discount"><span>Gross Items Total</span><strong>₹{{ bill.grossAmount | number:'1.2-2' }}</strong></div>
                 <div class="total-summary-row" *ngIf="bill.discount"><span>Discount Offered</span><strong style="color: #dc2626;">-₹{{ bill.discount | number:'1.2-2' }}</strong></div>
                 <div class="total-summary-row"><span>Taxable Amount</span><strong>₹{{ bill.taxableSubtotal | number:'1.2-2' }}</strong></div>
                 <div class="total-summary-row"><span>Total GST Tax</span><strong>₹{{ bill.taxTotal | number:'1.2-2' }}</strong></div>

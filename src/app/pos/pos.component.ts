@@ -677,7 +677,7 @@ export class PosComponent implements OnInit, OnDestroy {
     this.modalKind.set(kind);
     this.modalMode.set('create');
     if (kind === 'outlet') this.currentOutlet.set({ name: '', type: this.pos.outletTypes()[0] || 'Restaurant', location: '', timing: this.pos.shiftSchedules()[0] || '09:00 AM - 09:00 PM', taxProfile: 'GST 5%', active: true, manager: 'Outlet Manager' });
-    if (kind === 'menu') this.currentMenuItem.set({ outletId: this.defaultOutletId(), name: '', category: this.pos.menuCategories()[0] || 'Food', subcategory: this.pos.menuSubcategories()[0] || '', price: 0, taxPercent: 5, variants: [], modifiers: [], available: true, featured: false, stockItem: '', imageUrl: '' });
+    if (kind === 'menu') this.currentMenuItem.set({ outletId: this.defaultOutletId(), name: '', category: this.pos.menuCategories()[0] || 'Food', subcategory: this.pos.menuSubcategories()[0] || '', price: 0, taxPercent: 0, variants: [], modifiers: [], available: true, featured: false, stockItem: '', imageUrl: '' });
     if (kind === 'order') {
       const outletId = this.defaultOutletId();
       this.pos.loadMenuItems(outletId);
@@ -1252,7 +1252,16 @@ export class PosComponent implements OnInit, OnDestroy {
 
 
   updateBillDiscount(value: number | string): void {
-    this.currentBill.update(bill => this.billDraftForOrder(this.billOrder(bill), { ...bill, discount: Number(value || 0) }));
+    const discount = Number(value || 0);
+    this.currentBill.update(bill => {
+      const order = this.billOrder(bill);
+      const draft = this.billDraftForOrder(order, { ...bill, discount });
+      const breakdown = this.billBreakdown(draft);
+      return {
+        ...draft,
+        paid: Number(breakdown.total.toFixed(2))
+      };
+    });
   }
 
   updateBillPaid(value: number | string): void {

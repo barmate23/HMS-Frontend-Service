@@ -275,6 +275,10 @@ export class ReportsService {
     return this.favouritesSignal().includes(reportId);
   }
 
+  getReportById(reportId: string): ReportItem | undefined {
+    return this.reportsList().find(r => r.id === reportId);
+  }
+
   private readonly http = inject(HttpClient);
   private readonly apiBaseUrl = '/api/reportService/v1/frontoffice';
 

@@ -49,6 +49,7 @@ export interface AnalyticalReportData {
   columns: ReportTableColumn[];
   rows: any[];
   summaryRow?: Record<string, any>;
+  abbreviationGuide?: { term: string; fullForm: string; description: string }[];
 }
 
 @Injectable({

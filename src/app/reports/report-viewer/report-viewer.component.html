@@ -530,6 +530,27 @@
             </button>
           </div>
         </div>
+
+        <!-- Report Terms & Abbreviation Guide Section -->
+        @if (report.abbreviationGuide && report.abbreviationGuide.length > 0) {
+          <div class="abbreviation-guide-card">
+            <div class="abbr-guide-header">
+              <mat-icon class="abbr-icon">info</mat-icon>
+              <h4>Report Terms & Abbreviation Guide</h4>
+            </div>
+            <div class="abbr-grid">
+              @for (abbr of report.abbreviationGuide; track abbr.term) {
+                <div class="abbr-item">
+                  <span class="abbr-badge">{{ abbr.term }}</span>
+                  <div class="abbr-details">
+                    <strong class="abbr-title">{{ abbr.fullForm }}</strong>
+                    <p class="abbr-desc">{{ abbr.description }}</p>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
       </section>
 
     </main>

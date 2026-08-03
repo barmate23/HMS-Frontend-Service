@@ -56,25 +56,64 @@ export class ReportViewerComponent implements OnInit {
     });
   }
 
+  getDateRangeValues(): { from?: string; to?: string } {
+    const today = new Date();
+    const range = this.dateRange();
+
+    if (range === 'today') {
+      const d = today.toISOString().split('T')[0];
+      return { from: d, to: d };
+    }
+
+    if (range === 'yesterday') {
+      const y = new Date(today);
+      y.setDate(today.getDate() - 1);
+      const d = y.toISOString().split('T')[0];
+      return { from: d, to: d };
+    }
+
+    if (range === 'week') {
+      const w = new Date(today);
+      w.setDate(today.getDate() - today.getDay());
+      return { from: w.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+    }
+
+    if (range === 'month') {
+      const m = new Date(today.getFullYear(), today.getMonth(), 1);
+      return { from: m.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+    }
+
+    if (range === 'custom') {
+      return { from: this.fromDate(), to: this.toDate() };
+    }
+
+    return {};
+  }
+
   loadReportData(id: string): void {
-    const from = this.dateRange() === 'custom' ? this.fromDate() : undefined;
-    const to = this.dateRange() === 'custom' ? this.toDate() : undefined;
+    const { from, to } = this.getDateRangeValues();
     this.reportsService.fetchAnalyticalReportData(id, from, to).subscribe(data => {
       this.reportData.set(data);
     });
   }
 
+  onDateFilterChange(val: string): void {
+    this.dateRange.set(val);
+    if (val !== 'custom') {
+      this.loadReportData(this.reportId());
+    }
+  }
+
   // Active date range text description
   activeDateRangeText = computed(() => {
     const range = this.dateRange();
-    if (range === 'today') return 'Today (31 Jul 2026)';
-    if (range === 'yesterday') return 'Yesterday (30 Jul 2026)';
-    if (range === 'week') return 'This Week (27 Jul - 02 Aug 2026)';
-    if (range === 'month') return 'This Month (July 2026)';
+    const { from, to } = this.getDateRangeValues();
+    if (range === 'today') return `Today (${from || 'Active Date'})`;
+    if (range === 'yesterday') return `Yesterday (${from || 'Active Date'})`;
+    if (range === 'week') return `This Week (${from} to ${to})`;
+    if (range === 'month') return `This Month (${from} to ${to})`;
     if (range === 'custom') {
-      const f = this.fromDate();
-      const t = this.toDate();
-      return `Custom Range: ${f || 'Start Date'} to ${t || 'End Date'}`;
+      return `Custom Range: ${from || 'Start Date'} to ${to || 'End Date'}`;
     }
     return 'Active Date Window';
   });
@@ -182,12 +221,34 @@ export class ReportViewerComponent implements OnInit {
     this.router.navigate(['/reports']);
   }
 
-  exportReport(type: 'excel' | 'pdf' | 'csv' | 'print'): void {
+  exportReport(type: 'excel' | 'print'): void {
     const title = this.reportData()?.title || 'Report';
-    this.showToast(`Exporting ${title} as ${type.toUpperCase()}...`);
     if (type === 'print') {
       window.print();
+      return;
     }
+
+    // Export to Excel (.xls format)
+    const data = this.reportData();
+    if (!data || !data.rows.length) {
+      this.showToast('No data available to export');
+      return;
+    }
+
+    const headers = data.columns.map(c => c.label).join(',');
+    const csvRows = data.rows.map(row =>
+      data.columns.map(c => `"${String(row[c.key] ?? '').replace(/"/g, '""')}"`).join(',')
+    );
+    const content = [headers, ...csvRows].join('\n');
+    const blob = new Blob([content], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    this.showToast(`Exported ${title} to Excel (.xls) successfully`);
   }
 
   private showToast(msg: string): void {

@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of, forkJoin } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 export interface ReportItem {
@@ -46,10 +46,16 @@ export interface AnalyticalReportData {
     labels: string[];
     datasets: { label: string; data: number[]; color: string }[];
   };
+  categoryMix?: { category: string; sales: number; qty: number; pct: number; color: string }[];
   columns: ReportTableColumn[];
   rows: any[];
   summaryRow?: Record<string, any>;
   abbreviationGuide?: { term: string; fullForm: string; description: string }[];
+}
+
+export interface OutletOption {
+  id: string;
+  name: string;
 }
 
 @Injectable({
@@ -118,7 +124,7 @@ export class ReportsService {
       isNew: true
     },
     {
-      id: 'pos-payment-split',
+      id: 'pos-payment-method-settlement',
       title: 'POS Payment Method Settlement',
       category: 'pos',
       categoryLabel: 'POS & Dining',
@@ -131,7 +137,7 @@ export class ReportsService {
       sparklineData: [110, 120, 130, 145, 152, 148, 148]
     },
     {
-      id: 'pos-top-items',
+      id: 'pos-fast-moving-items',
       title: 'Fast-Moving Menu Items & Sales Matrix',
       category: 'pos',
       categoryLabel: 'POS & Dining',
@@ -283,14 +289,43 @@ export class ReportsService {
   private readonly http = inject(HttpClient);
   private readonly apiBaseUrl = '/api/reportService/v1/frontoffice';
 
+  fetchOutlets(): Observable<OutletOption[]> {
+    return this.http.get<any>('/api/hmsService/v1/pos/outlets/getAllOutlets').pipe(
+      map(res => {
+        const items = Array.isArray(res) ? res : (res?.data || res?.content || []);
+        const list: OutletOption[] = [];
+        const seenNames = new Set<string>();
+
+        items.forEach((i: any) => {
+          if (i && (i.id || i.outletId || i.outletName || i.name)) {
+            const name = (i.outletName || i.name || `Outlet #${i.id}`).trim();
+            if (!seenNames.has(name.toLowerCase())) {
+              seenNames.add(name.toLowerCase());
+              list.push({
+                id: String(i.id || i.outletId || name),
+                name: name
+              });
+            }
+          }
+        });
+
+        return [{ id: 'all', name: 'All Outlets & Property' }, ...list];
+      }),
+      catchError(() => {
+        return of([{ id: 'all', name: 'All Outlets & Property' }]);
+      })
+    );
+  }
+
   /**
    * Fetch live report data from backend HMS_Report_Service via API Gateway.
    * Falls back to offline mock dataset if backend service is unreachable.
    */
-  fetchAnalyticalReportData(reportId: string, startDate?: string, endDate?: string): Observable<AnalyticalReportData> {
+  fetchAnalyticalReportData(reportId: string, startDate?: string, endDate?: string, outletId?: string): Observable<AnalyticalReportData> {
     let params = new HttpParams();
     if (startDate) params = params.set('startDate', startDate);
     if (endDate) params = params.set('endDate', endDate);
+    if (outletId && outletId !== 'all') params = params.set('outletId', outletId);
 
     return this.http.get<any>(`${this.apiBaseUrl}/report-data/${reportId}`, { params }).pipe(
       map(res => {
@@ -477,12 +512,43 @@ export class ReportsService {
           summaryRow: { outletName: 'TOTAL F&B REVENUE', orders: 148, avgTicket: 985, revenue: 145800 }
         };
 
+      case 'pos-payment-method-settlement':
+      case 'pos-payment-split':
+        return {
+          reportId,
+          title: 'POS Payment Method Settlement',
+          category: 'POS & Dining',
+          subtitle: 'Breakdown of Cash, Card, UPI, Room Posting, and Voided order settlement amounts.',
+          kpis: [
+            { label: 'Total POS Collections', value: '₹1,45,800', icon: 'payments', subtext: '148 Orders Settled' },
+            { label: 'Cash Collections', value: '₹15,000', icon: 'point_of_sale', subtext: 'Cash Drawer' },
+            { label: 'UPI / QR Payments', value: '₹38,000', icon: 'qr_code_2', subtext: 'Digital Direct' },
+            { label: 'Card & Folio Postings', value: '₹92,800', icon: 'credit_card', subtext: 'Terminal & Room Folio' }
+          ],
+          columns: [
+            { key: 'orderNo', label: 'Order #', sortable: true },
+            { key: 'outlet', label: 'Outlet', sortable: true },
+            { key: 'guestName', label: 'Guest / Table', sortable: true },
+            { key: 'time', label: 'Date & Time', type: 'date' },
+            { key: 'paymentMode', label: 'Payment Mode', type: 'badge' },
+            { key: 'amount', label: 'Amount (₹)', type: 'currency', sortable: true },
+            { key: 'status', label: 'Audit Status', type: 'badge' }
+          ],
+          rows: [
+            { orderNo: 'ORD-101', outlet: 'Grand Palace Restaurant', guestName: 'Table 4 • Walk-in', time: '2026-08-04 12:15:00', paymentMode: 'UPI App', amount: 3200, status: 'SETTLED' },
+            { orderNo: 'ORD-102', outlet: 'Sky Lounge & Bar', guestName: 'Table 12 • Room 304', time: '2026-08-04 12:45:00', paymentMode: 'ROOM POSTING', amount: 5400, status: 'SETTLED' },
+            { orderNo: 'ORD-103', outlet: 'Poolside Cafe', guestName: 'Table 2 • Walk-in', time: '2026-08-04 13:10:00', paymentMode: 'CASH', amount: 1800, status: 'SETTLED' }
+          ],
+          summaryRow: { orderNo: 'TOTAL', guestName: '3 Orders Reconciled', amount: 10400 }
+        };
+
+      case 'pos-fast-moving-items':
       case 'pos-top-items':
         return {
           reportId,
-          title: 'Top-Selling Fast Moving Items Analysis',
+          title: 'Fast-Moving Menu Items & Sales Matrix',
           category: 'POS & Dining',
-          subtitle: 'Best-selling dishes and drinks, quantity sold, category contribution, and item margins.',
+          subtitle: 'Top-selling dishes & drinks, portion volume, category contribution, and item popularity.',
           kpis: [
             { label: 'Top Item (Volume)', value: 'Paneer Tikka', icon: 'star', subtext: '142 Portions Sold' },
             { label: 'Total Item Revenue', value: '₹1,45,800', icon: 'payments', subtext: 'All Categories' },

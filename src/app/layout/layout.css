@@ -574,10 +574,9 @@
 .page-content {
   flex: 1;
   min-height: 0;
-  overflow: hidden !important;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--topbar-height)) !important;
   background-color: var(--surface-100);
 }
 

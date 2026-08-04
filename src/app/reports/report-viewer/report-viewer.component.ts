@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { ReportsService, AnalyticalReportData } from '../reports.service';
+import { ReportsService, AnalyticalReportData, OutletOption } from '../reports.service';
 
 @Component({
   selector: 'app-report-viewer',
@@ -15,6 +15,7 @@ import { ReportsService, AnalyticalReportData } from '../reports.service';
 export class ReportViewerComponent implements OnInit {
   reportId = signal<string>('');
   reportData = signal<AnalyticalReportData | null>(null);
+  outletsList = signal<OutletOption[]>([]);
 
   // Filter Bar state
   dateRange = signal<string>('today');
@@ -39,6 +40,9 @@ export class ReportViewerComponent implements OnInit {
   currentPage = signal<number>(1);
   pageSize = signal<number>(10);
 
+  // View mode switcher: combined | charts | table
+  activeViewMode = signal<'combined' | 'charts' | 'table'>('combined');
+
   // Export Feedback Notification
   notification = signal<string | null>(null);
 
@@ -49,6 +53,10 @@ export class ReportViewerComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.reportsService.fetchOutlets().subscribe(outlets => {
+      this.outletsList.set(outlets);
+    });
+
     this.route.paramMap.subscribe(params => {
       const id = params.get('reportId') || 'fo-occupancy-summary';
       this.reportId.set(id);
@@ -92,7 +100,25 @@ export class ReportViewerComponent implements OnInit {
 
   loadReportData(id: string): void {
     const { from, to } = this.getDateRangeValues();
-    this.reportsService.fetchAnalyticalReportData(id, from, to).subscribe(data => {
+    const outletId = this.selectedProperty();
+    this.reportsService.fetchAnalyticalReportData(id, from, to, outletId).subscribe(data => {
+      if (data && !data.chartData && data.rows && data.rows.length > 0) {
+        if (id === 'pos-fast-moving-items' || id === 'pos-top-items') {
+          data.chartData = {
+            labels: data.rows.map((r: any) => r.itemName || 'Item'),
+            datasets: [
+              { label: 'Quantity Sold', data: data.rows.map((r: any) => r.qtySold || 0), color: '#D97706' }
+            ]
+          };
+        } else if (id === 'pos-payment-method-settlement' || id === 'pos-payment-split') {
+          data.chartData = {
+            labels: data.rows.map((r: any) => r.orderNo || 'Bill'),
+            datasets: [
+              { label: 'Settlement Amount (₹)', data: data.rows.map((r: any) => r.amount || 0), color: '#059669' }
+            ]
+          };
+        }
+      }
       this.reportData.set(data);
     });
   }
@@ -102,6 +128,11 @@ export class ReportViewerComponent implements OnInit {
     if (val !== 'custom') {
       this.loadReportData(this.reportId());
     }
+  }
+
+  onPropertyFilterChange(val: string): void {
+    this.selectedProperty.set(val);
+    this.loadReportData(this.reportId());
   }
 
   // Active date range text description
@@ -136,14 +167,6 @@ export class ReportViewerComponent implements OnInit {
 
     let rows = [...data.rows];
     const query = this.tableSearch().toLowerCase().trim();
-
-    // Specific filters for fo-occupancy-summary
-    if (this.reportId() === 'fo-occupancy-summary') {
-      const roomCatFilter = this.selectedRoomType();
-      if (roomCatFilter !== 'all') {
-        rows = rows.filter(r => r.roomCategory === roomCatFilter);
-      }
-    }
 
     // Specific filters for fo-cashier-settlement
     if (this.reportId() === 'fo-cashier-settlement') {
@@ -197,11 +220,7 @@ export class ReportViewerComponent implements OnInit {
   });
 
   paginatedRows = computed(() => {
-    const rows = this.filteredRows();
-    const page = this.currentPage();
-    const size = this.pageSize();
-    const start = (page - 1) * size;
-    return rows.slice(start, start + size);
+    return this.filteredRows();
   });
 
   totalPages = computed(() => {
@@ -215,6 +234,16 @@ export class ReportViewerComponent implements OnInit {
       this.sortKey.set(key);
       this.sortAsc.set(true);
     }
+  }
+
+  buildConicGradient(categoryMix: { pct: number; color: string }[]): string {
+    let pos = 0;
+    const stops = categoryMix.map(m => {
+      const start = pos;
+      pos += m.pct;
+      return `${m.color} ${start}% ${pos}%`;
+    });
+    return `conic-gradient(${stops.join(', ')})`;
   }
 
   goBack(): void {

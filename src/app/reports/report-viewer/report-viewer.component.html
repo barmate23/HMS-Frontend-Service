@@ -89,71 +89,43 @@
 
           <div class="filter-group">
             <label>Property / Outlet:</label>
-            <select [ngModel]="selectedProperty()" (ngModelChange)="selectedProperty.set($event)" class="form-select">
-              <option value="all">All Outlets & Property</option>
-              <option value="main">Grand Palace Hotel</option>
-              <option value="pos">Oasis Fine Dining POS</option>
-              <option value="spa">Wellness & Spa Center</option>
+            <select [ngModel]="selectedProperty()" (ngModelChange)="onPropertyFilterChange($event)" class="form-select">
+              @for (outlet of outletsList(); track outlet.id) {
+                <option [value]="outlet.id">{{ outlet.name }}</option>
+              }
             </select>
           </div>
 
-          @if (reportId() === 'fo-occupancy-summary') {
-            <div class="filter-group">
-              <label>Room Category:</label>
-              <select [ngModel]="selectedRoomType()" (ngModelChange)="selectedRoomType.set($event)" class="form-select">
-                <option value="all">All Room Types</option>
-                <option value="Deluxe Queen Room">Deluxe Queen Room</option>
-                <option value="Executive King Room">Executive King Room</option>
-                <option value="Superior Twin Room">Superior Twin Room</option>
-                <option value="Luxury Ocean Suite">Luxury Ocean Suite</option>
-                <option value="Presidential Penthouse">Presidential Penthouse</option>
-              </select>
-            </div>
-          }
-
-          @if (reportId() === 'fo-cashier-settlement') {
-            <div class="filter-group">
-              <label>Shift Filter:</label>
-              <select [ngModel]="selectedShift()" (ngModelChange)="selectedShift.set($event)" class="form-select">
-                <option value="all">All Shifts</option>
-                <option value="Morning">Morning Shift</option>
-                <option value="Evening">Evening Shift</option>
-                <option value="Night">Night Shift</option>
-              </select>
-            </div>
-
-            <div class="filter-group">
-              <label>Cashier:</label>
-              <select [ngModel]="selectedCashier()" (ngModelChange)="selectedCashier.set($event)" class="form-select">
-                <option value="all">All Cashiers</option>
-                <option value="Sunil Kumar">Sunil Kumar (Morning)</option>
-                <option value="Priya Sharma">Priya Sharma (Evening)</option>
-                <option value="Rohan Verma">Rohan Verma (Night)</option>
-              </select>
-            </div>
-
-            <div class="filter-group">
-              <label>Pay Mode:</label>
-              <select [ngModel]="selectedPayMode()" (ngModelChange)="selectedPayMode.set($event)" class="form-select">
-                <option value="all">All Pay Modes</option>
-                <option value="CREDIT CARD">Credit Card</option>
-                <option value="CASH">Cash</option>
-                <option value="UPI App">UPI App</option>
-                <option value="CITY LEDGER">City Ledger</option>
-              </select>
-            </div>
-          }
-
-          @if (reportId() === 'fo-guest-manifest') {
-            <div class="filter-group">
-              <label>Manifest View:</label>
-              <select [ngModel]="selectedManifest()" (ngModelChange)="selectedManifest.set($event)" class="form-select">
-                <option value="all">All Roster</option>
-                <option value="IN-HOUSE">In-House Guests</option>
-                <option value="ARRIVING TODAY">Expected Arrivals</option>
-                <option value="DEPARTING TODAY">Expected Departures</option>
-                <option value="VIP ARRIVAL">VIP Manifest</option>
-              </select>
+          <!-- View Mode Toggle Buttons -->
+          @if (reportId() !== 'pos-payment-method-settlement') {
+            <div class="view-mode-toggle">
+              <button
+                type="button"
+                class="view-toggle-btn"
+                [class.active]="activeViewMode() === 'combined'"
+                (click)="activeViewMode.set('combined')"
+              >
+                <mat-icon>dashboard</mat-icon>
+                <span>Combined</span>
+              </button>
+              <button
+                type="button"
+                class="view-toggle-btn"
+                [class.active]="activeViewMode() === 'charts'"
+                (click)="activeViewMode.set('charts')"
+              >
+                <mat-icon>bar_chart</mat-icon>
+                <span>Graphical</span>
+              </button>
+              <button
+                type="button"
+                class="view-toggle-btn"
+                [class.active]="activeViewMode() === 'table'"
+                (click)="activeViewMode.set('table')"
+              >
+                <mat-icon>table_chart</mat-icon>
+                <span>Tabular Ledger</span>
+              </button>
             </div>
           }
         </div>
@@ -188,9 +160,10 @@
       </section>
 
       <!-- Analytical SVG Chart Section -->
-      @if (report.chartData; as chart) {
-        <section class="charts-dual-grid">
-          <!-- Main Grouped Bar Chart -->
+      @if ((activeViewMode() === 'combined' || activeViewMode() === 'charts') && reportId() !== 'pos-payment-method-settlement') {
+        @if (report.chartData; as chart) {
+          <section class="charts-dual-grid">
+            <!-- Main Grouped Bar Chart -->
           <div class="chart-card">
             <div class="chart-header">
               <h3 class="chart-title">
@@ -199,6 +172,8 @@
                   Payment Collection Breakdown by Mode
                 } @else if (reportId() === 'fo-guest-manifest') {
                   Hourly Guest Movement Pulse (Arrivals vs Departures)
+                } @else if (reportId() === 'pos-fast-moving-items' || reportId() === 'pos-top-items') {
+                  Top-Selling Menu Items & Quantity Matrix
                 } @else {
                   Occupancy & Capacity Comparison by Category
                 }
@@ -279,6 +254,39 @@
             </div>
           }
 
+          @if (reportId() === 'pos-fast-moving-items' || reportId() === 'pos-top-items') {
+            <div class="chart-card side-donut-card">
+              <div class="chart-header">
+                <h3 class="chart-title">
+                  <mat-icon class="chart-icon text-amber">pie_chart</mat-icon>
+                  Category Sales Mix
+                </h3>
+              </div>
+              @if (report.categoryMix && report.categoryMix.length > 0) {
+                <div class="side-donut-body">
+                  <div class="conic-donut-box">
+                    <div class="conic-donut-ring" [style.background]="buildConicGradient(report.categoryMix)"></div>
+                    <div class="donut-inner-text">
+                      <span class="d-val">{{ report.categoryMix[0].pct }}%</span>
+                      <span class="d-sub">{{ report.categoryMix[0].category }}</span>
+                    </div>
+                  </div>
+                  <div class="side-stats-list">
+                    @for (mix of report.categoryMix; track mix.category) {
+                      <div class="s-stat-row">
+                        <span class="s-dot" [style.background-color]="mix.color"></span>
+                        <span class="s-label">{{ mix.category }}</span>
+                        <strong class="s-val">{{ mix.pct }}%</strong>
+                      </div>
+                    }
+                  </div>
+                </div>
+              } @else {
+                <div class="no-data-placeholder">No category data</div>
+              }
+            </div>
+          }
+
           @if (reportId() === 'fo-cashier-settlement') {
             <div class="chart-card shift-recon-card">
               <div class="chart-header">
@@ -290,34 +298,12 @@
               <div class="shift-recon-body">
                 <div class="shift-row-card">
                   <div class="shift-row-top">
-                    <span class="shift-badge shift-morn">MORNING SHIFT</span>
+                    <span class="shift-badge shift-morn">CURRENT SHIFT AUDIT</span>
                     <span class="recon-status status-bal">✓ BALANCED</span>
                   </div>
                   <div class="shift-row-details">
-                    <span class="cashier-name">Sunil Kumar</span>
-                    <strong class="shift-amt">₹1,48,000</strong>
-                  </div>
-                </div>
-
-                <div class="shift-row-card">
-                  <div class="shift-row-top">
-                    <span class="shift-badge shift-eve">EVENING SHIFT</span>
-                    <span class="recon-status status-bal">✓ BALANCED</span>
-                  </div>
-                  <div class="shift-row-details">
-                    <span class="cashier-name">Priya Sharma</span>
-                    <strong class="shift-amt">₹1,05,175</strong>
-                  </div>
-                </div>
-
-                <div class="shift-row-card">
-                  <div class="shift-row-top">
-                    <span class="shift-badge shift-night">NIGHT SHIFT</span>
-                    <span class="recon-status status-pend">⌛ AUDIT PENDING</span>
-                  </div>
-                  <div class="shift-row-details">
-                    <span class="cashier-name">Rohan Verma</span>
-                    <strong class="shift-amt">₹79,100</strong>
+                    <span class="cashier-name">Audited Shift Collections</span>
+                    <strong class="shift-amt">{{ (report.summaryRow?.['amount'] || 0) | currency:'INR':'symbol':'1.0-0' }}</strong>
                   </div>
                 </div>
 
@@ -373,24 +359,16 @@
             </div>
           }
         </section>
+        }
       }
 
       <!-- Detailed Data Grid Table Section -->
-      <section class="data-table-card">
+      @if (activeViewMode() === 'combined' || activeViewMode() === 'table') {
+        <section class="data-table-card">
         <div class="table-header">
           <div class="table-title-group">
             <h3>Detailed Statement Ledger</h3>
             <span class="record-count">{{ filteredRows().length }} Records</span>
-          </div>
-
-          <div class="table-search">
-            <mat-icon>search</mat-icon>
-            <input
-              type="text"
-              placeholder="Search table rows..."
-              [ngModel]="tableSearch()"
-              (ngModelChange)="tableSearch.set($event); currentPage.set(1)"
-            />
           </div>
         </div>
 
@@ -422,22 +400,22 @@
                           {{ row[col.key] }}%
                         </span>
                       } @else if (col.type === 'badge') {
-                        @if (col.key === 'payMode') {
+                        @if (col.key === 'paymentMode' || col.key === 'payMode') {
                           <span
                             class="paymode-badge"
-                            [class.pay-card]="row[col.key] === 'CREDIT CARD'"
+                            [class.pay-card]="row[col.key] === 'CREDIT CARD' || row[col.key] === 'CARD' || row[col.key] === 'CREDIT_CARD' || row[col.key] === 'DEBIT_CARD'"
                             [class.pay-cash]="row[col.key] === 'CASH'"
                             [class.pay-upi]="row[col.key] === 'UPI App' || row[col.key] === 'UPI'"
-                            [class.pay-folio]="row[col.key] === 'CITY LEDGER'"
+                            [class.pay-folio]="row[col.key] === 'CITY LEDGER' || row[col.key] === 'FOLIO'"
                           >
                             {{ row[col.key] }}
                           </span>
-                        } @else if (col.key === 'auditStatus') {
+                        } @else if (col.key === 'status' || col.key === 'auditStatus' || col.key === 'vipStatus') {
                           <span
                             class="audit-badge"
-                            [class.audit-cleared]="row[col.key] === 'CLEARED'"
-                            [class.audit-posted]="row[col.key] === 'POSTED TO FOLIO'"
-                            [class.audit-pending]="row[col.key] === 'PENDING AUDIT'"
+                            [class.audit-cleared]="row[col.key] === 'SETTLED' || row[col.key] === 'PAID' || row[col.key] === 'CLEARED' || row[col.key] === 'VERIFIED' || row[col.key] === 'SUCCESS'"
+                            [class.audit-posted]="row[col.key] === 'POSTED TO FOLIO' || row[col.key] === 'VIP'"
+                            [class.audit-pending]="row[col.key] === 'PENDING AUDIT' || row[col.key] === 'DRAFT' || row[col.key] === 'STANDARD'"
                           >
                             {{ row[col.key] }}
                           </span>
@@ -498,31 +476,6 @@
           </table>
         </div>
 
-        <!-- Pagination Controls -->
-        <div class="table-pagination">
-          <div class="pagination-info">
-            Showing Page <strong>{{ currentPage() }}</strong> of <strong>{{ totalPages() }}</strong>
-          </div>
-
-          <div class="pagination-buttons">
-            <button
-              class="btn btn-icon-only"
-              [disabled]="currentPage() === 1"
-              (click)="currentPage.set(currentPage() - 1)"
-            >
-              <mat-icon>chevron_left</mat-icon>
-            </button>
-            <span class="page-indicator">{{ currentPage() }}</span>
-            <button
-              class="btn btn-icon-only"
-              [disabled]="currentPage() >= totalPages()"
-              (click)="currentPage.set(currentPage() + 1)"
-            >
-              <mat-icon>chevron_right</mat-icon>
-            </button>
-          </div>
-        </div>
-
         <!-- Report Terms & Abbreviation Guide Section -->
         @if (report.abbreviationGuide && report.abbreviationGuide.length > 0) {
           <div class="abbreviation-guide-card">
@@ -544,6 +497,7 @@
           </div>
         }
       </section>
+      }
 
     </main>
 

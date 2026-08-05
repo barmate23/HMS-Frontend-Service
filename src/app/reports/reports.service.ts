@@ -329,15 +329,55 @@ export class ReportsService {
 
     return this.http.get<any>(`${this.apiBaseUrl}/report-data/${reportId}`, { params }).pipe(
       map(res => {
-        if (res && res.success && res.data && res.data.reportId === reportId) {
+        if (res && res.success && res.data) {
           return res.data as AnalyticalReportData;
         }
-        return this.getAnalyticalReportData(reportId);
+        return this.getEmptyReportData(reportId);
       }),
       catchError(() => {
-        return of(this.getAnalyticalReportData(reportId));
+        return of(this.getEmptyReportData(reportId));
       })
     );
+  }
+
+  getEmptyReportData(reportId: string): AnalyticalReportData {
+    const item = this.getReportById(reportId);
+    return {
+      reportId,
+      title: item?.title || 'Analytical Report',
+      category: item?.categoryLabel || 'Reports',
+      subtitle: item?.description || 'Real-time database report ledger',
+      kpis: [
+        { label: 'Total Hotel Capacity', value: '0 Rooms', icon: 'domain', subtext: 'Database Inventory' },
+        { label: 'Occupied Rooms', value: '0 Rooms', icon: 'king_bed', subtext: '0% Occupancy' },
+        { label: 'Vacant Clean', value: '0 Rooms', icon: 'check_circle', subtext: 'No Clean Rooms' },
+        { label: 'Out-of-Order (OOO)', value: '0 Rooms', icon: 'construction', subtext: 'No Maintenance Entries' }
+      ],
+      chartData: {
+        labels: ['Occupied Clean', 'Occupied Dirty', 'Vacant Clean', 'Vacant Dirty', 'OOO Maintenance'],
+        datasets: [
+          { label: 'Room Count', data: [0, 0, 0, 0, 0], color: '#2A9D8F' }
+        ]
+      },
+      categoryMix: [
+        { category: 'Occupied Clean', sales: 0, qty: 0, pct: 0, color: '#0F3D3E' },
+        { category: 'Vacant Clean', sales: 0, qty: 0, pct: 0, color: '#10B981' },
+        { category: 'Occupied Dirty', sales: 0, qty: 0, pct: 0, color: '#F59E0B' },
+        { category: 'Vacant Dirty', sales: 0, qty: 0, pct: 0, color: '#EF4444' },
+        { category: 'OOO Maintenance', sales: 0, qty: 0, pct: 0, color: '#6B7280' }
+      ],
+      columns: [
+        { key: 'floor', label: 'Floor Block', sortable: true },
+        { key: 'occupiedClean', label: 'Occupied Clean', sortable: true },
+        { key: 'occupiedDirty', label: 'Occupied Dirty' },
+        { key: 'clean', label: 'Vacant Clean' },
+        { key: 'dirty', label: 'Vacant Dirty' },
+        { key: 'ooo', label: 'OOO Maintenance' },
+        { key: 'attendant', label: 'Assigned Attendant' }
+      ],
+      rows: [],
+      summaryRow: { floor: 'TOTAL HOTEL STATUS', occupiedClean: 0, occupiedDirty: 0, clean: 0, dirty: 0, ooo: 0 }
+    };
   }
 
   // Analytical Dataset Generator for Viewer (Fallback)

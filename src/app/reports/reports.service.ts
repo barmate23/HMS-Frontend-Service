@@ -844,22 +844,22 @@ export class ReportsService {
           category: 'Laundry',
           subtitle: 'Hotel bedsheets, towels, tablecloths wash cycle counts, housekeeper linen distribution, and damage log.',
           kpis: [
-            { label: 'Total Hotel Linen Stock', value: '1,810 Pcs', icon: 'dry_cleaning', subtext: 'Hotel Inventory' },
-            { label: 'Active Wash Cycles', value: '645 Pcs', icon: 'local_laundry_service', subtext: 'In-House Wash' },
-            { label: 'Clean & Ready Store', value: '1,162 Pcs', icon: 'check_circle', subtext: 'Sanitized in Linen Room' },
-            { label: 'Housekeeping Staff On-Duty', value: '2 Members', icon: 'badge', subtext: 'Arshad Pappu, Aniket Dengre' }
+            { label: 'Total Hotel Linen Stock', value: '0 Pcs', icon: 'dry_cleaning', subtext: 'Hotel Inventory' },
+            { label: 'Active Wash Cycles', value: '0 Pcs', icon: 'local_laundry_service', subtext: 'In-House Wash' },
+            { label: 'Clean & Ready Store', value: '0 Pcs', icon: 'check_circle', subtext: 'Sanitized in Linen Room' },
+            { label: 'Housekeeping Staff On-Duty', value: '0 Members', icon: 'badge', subtext: 'No Active Staff' }
           ],
           chartData: {
             labels: ['Bath Linen', 'Bed Linen', 'Table Linen', 'Bathrobes'],
             datasets: [
-              { label: 'In Wash Volume (Pcs)', data: [360, 280, 60, 45], color: '#475569', colors: ['#38BDF8', '#10B981', '#F59E0B', '#7C3AED'] }
+              { label: 'In Wash Volume (Pcs)', data: [0, 0, 0, 0], color: '#475569', colors: ['#38BDF8', '#10B981', '#F59E0B', '#7C3AED'] }
             ]
           },
           categoryMix: [
-            { category: 'Bath Linen', sales: 360, qty: 360, pct: 45, color: '#38BDF8' },
-            { category: 'Bed Linen', sales: 280, qty: 280, pct: 35, color: '#10B981' },
-            { category: 'Table Linen', sales: 60, qty: 60, pct: 15, color: '#F59E0B' },
-            { category: 'Bathrobes', sales: 45, qty: 45, pct: 5, color: '#7C3AED' }
+            { category: 'Bath Linen', sales: 0, qty: 0, pct: 0, color: '#38BDF8' },
+            { category: 'Bed Linen', sales: 0, qty: 0, pct: 0, color: '#10B981' },
+            { category: 'Table Linen', sales: 0, qty: 0, pct: 0, color: '#F59E0B' },
+            { category: 'Bathrobes', sales: 0, qty: 0, pct: 0, color: '#7C3AED' }
           ],
           columns: [
             { key: 'linenItem', label: 'Linen Item Name', sortable: true },
@@ -871,15 +871,8 @@ export class ReportsService {
             { key: 'lastWashDate', label: 'Last Wash Date' },
             { key: 'status', label: 'Status', type: 'badge' }
           ],
-          rows: [
-            { linenItem: 'Luxury Bath Towel (White 600GSM)', category: 'BATH LINEN', totalStock: 450, inWashQty: 140, cleanReadyQty: 308, damagedQty: 2, lastWashDate: '2026-08-05', status: 'IN STOCK' },
-            { linenItem: 'King Size Fitted Bed Sheet (300TC)', category: 'BED LINEN', totalStock: 320, inWashQty: 95, cleanReadyQty: 225, damagedQty: 0, lastWashDate: '2026-08-05', status: 'IN STOCK' },
-            { linenItem: 'Premium Cotton Pillow Covers', category: 'BED LINEN', totalStock: 600, inWashQty: 185, cleanReadyQty: 415, damagedQty: 0, lastWashDate: '2026-08-05', status: 'IN STOCK' },
-            { linenItem: 'Plush Velvet Bathrobe (L/XL)', category: 'BATH LINEN', totalStock: 90, inWashQty: 45, cleanReadyQty: 45, damagedQty: 0, lastWashDate: '2026-08-05', status: 'IN STOCK' },
-            { linenItem: 'Banquet & Dining Table Cloths', category: 'TABLE LINEN', totalStock: 150, inWashQty: 60, cleanReadyQty: 89, damagedQty: 1, lastWashDate: '2026-08-05', status: 'IN STOCK' },
-            { linenItem: 'Hand & Face Terry Towels', category: 'BATH LINEN', totalStock: 200, inWashQty: 120, cleanReadyQty: 80, damagedQty: 0, lastWashDate: '2026-08-05', status: 'IN STOCK' }
-          ],
-          summaryRow: { linenItem: 'TOTAL', category: 'HOUSEKEEPING LINEN', totalStock: 1810, inWashQty: 645, cleanReadyQty: 1162, damagedQty: 3, lastWashDate: '2026-08-05', status: 'AUDITED' },
+          rows: [],
+          summaryRow: { linenItem: 'TOTAL', category: 'HOUSEKEEPING LINEN', totalStock: 0, inWashQty: 0, cleanReadyQty: 0, damagedQty: 0, lastWashDate: '-', status: 'NO RECORDS' },
           abbreviationGuide: [
             { term: 'BATH LINEN', fullForm: 'Bath Towels, Hand Towels, Bath Mats', description: 'Cotton terry towels washed and sanitized daily' },
             { term: 'BED LINEN', fullForm: 'Sheets, Duvet Covers, Pillowcases', description: 'High thread count bed items changed on checkout or guest request' },

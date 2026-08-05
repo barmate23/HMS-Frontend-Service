@@ -44,7 +44,7 @@ export interface AnalyticalReportData {
   kpis: KpiMetric[];
   chartData?: {
     labels: string[];
-    datasets: { label: string; data: number[]; color: string }[];
+    datasets: { label: string; data: number[]; color: string; colors?: string[] }[];
   };
   categoryMix?: { category: string; sales: number; qty: number; pct: number; color: string }[];
   columns: ReportTableColumn[];

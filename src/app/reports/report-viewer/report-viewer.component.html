@@ -203,7 +203,7 @@
                         <div
                           class="chart-bar"
                           [style.height.%]="(ds.data[i] / getMaxChartVal()) * 85"
-                          [style.background-color]="ds.colors ? ds.colors[i] : ds.color"
+                          [style.background-color]="ds.colors?.[i] || ds.color"
                           [title]="ds.label + ': ' + ds.data[i]"
                         >
                           <span class="bar-val-tooltip">{{ ds.data[i] | number }}</span>

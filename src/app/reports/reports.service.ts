@@ -347,12 +347,55 @@ export class ReportsService {
           }
           return data;
         }
-        return this.getEmptyReportData(reportId);
+        return this.filterFallbackByDate(this.getAnalyticalReportData(reportId), startDate, endDate);
       }),
       catchError(() => {
-        return of(this.getEmptyReportData(reportId));
+        return of(this.filterFallbackByDate(this.getAnalyticalReportData(reportId), startDate, endDate));
       })
     );
+  }
+
+  private filterFallbackByDate(data: AnalyticalReportData, startDate?: string, endDate?: string): AnalyticalReportData {
+    if (!startDate || !endDate || !data.rows || data.rows.length === 0) {
+      return data;
+    }
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    // Only keep rows that fall within [startDate, endDate]
+    const matchedRows = data.rows.filter(r => {
+      const rawDate = r['deliveryTime'] || r['date'] || r['reportedAt'];
+      if (!rawDate || rawDate === '-') return false;
+      const d = new Date(rawDate);
+      return !isNaN(d.getTime()) && d >= start && d <= end;
+    });
+
+    if (matchedRows.length === 0) {
+      const isRevenueReport = data.kpis.some(k => k.label.toLowerCase().includes('revenue'));
+      return {
+        ...data,
+        kpis: data.kpis.map(k => {
+          if (k.label.toLowerCase().includes('revenue')) return { ...k, value: '₹0' };
+          if (k.label.toLowerCase().includes('order')) return { ...k, value: '0 Orders' };
+          if (k.label.toLowerCase().includes('pcs') || k.label.toLowerCase().includes('volume')) return { ...k, value: '0 Pcs' };
+          return k;
+        }),
+        rows: [],
+        summaryRow: {
+          ...data.summaryRow,
+          orderNo: 'TOTAL',
+          roomGuest: '0 Orders Processed',
+          totalAmount: 0
+        }
+      };
+    }
+
+    return {
+      ...data,
+      rows: matchedRows
+    };
   }
 
   getEmptyReportData(reportId: string): AnalyticalReportData {

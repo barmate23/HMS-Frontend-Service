@@ -192,19 +192,6 @@ export class ReportsService {
       liveMetricSubtext: '28 Orders Delivered Today',
       sparklineData: [12, 15, 18, 22, 25, 27, 28]
     },
-    {
-      id: 'laundry-wash-log',
-      title: 'In-House Linen Wash & Turnaround Log',
-      category: 'laundry',
-      categoryLabel: 'Laundry',
-      description: 'Hotel bedsheets, towels, tablecloths wash cycle counts, vendor dispatch, and damage log.',
-      icon: 'dry_cleaning',
-      gradientBg: 'linear-gradient(135deg, #475569 0%, #64748B 100%)',
-      iconColor: '#FFFFFF',
-      liveMetric: '450 kg Processed',
-      liveMetricSubtext: 'Turnaround: 3.5 Hours',
-      sparklineData: [380, 400, 420, 430, 460, 440, 450]
-    },
 
     // --- 5. PURCHASE & INVENTORY REPORTS ---
     {

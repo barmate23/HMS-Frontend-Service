@@ -750,34 +750,50 @@ export class ReportsService {
           reportId,
           title: 'Guest Laundry Billing & Orders Ledger',
           category: 'Laundry',
-          subtitle: 'Room-wise guest laundry service charges, dry cleaning revenue, and delivery log.',
+          subtitle: 'Room-wise guest laundry service charges, garment item breakdown, 18% GST taxes, and delivery audit.',
           kpis: [
-            { label: 'Laundry Revenue Today', value: '₹18,400', change: '+12.0%', changeType: 'positive', icon: 'local_laundry_service', subtext: 'Guest Billing' },
-            { label: 'Completed Orders', value: '28 Orders', icon: 'task_alt', subtext: '100% On-Time' },
-            { label: 'Express Pressing', value: '18 Garments', icon: 'dry_cleaning', subtext: '2-Hour Turnaround' },
-            { label: 'Dry Cleaning', value: '₹8,200', icon: 'wash', subtext: 'Suit & Dress Care' }
+            { label: 'Total Laundry Revenue', value: '₹10,944', icon: 'local_laundry_service', subtext: 'Guest Billing' },
+            { label: 'Completed Orders', value: '6 Orders', icon: 'task_alt', subtext: '100% Delivered' },
+            { label: 'Garment Volume', value: '48 Pcs', icon: 'checkroom', subtext: 'Processed Garments' },
+            { label: 'GST Taxes (18%)', value: '₹1,669', icon: 'receipt_long', subtext: 'Statutory Tax' }
           ],
           chartData: {
-            labels: ['Morning (8-12)', 'Afternoon (12-4)', 'Evening (4-8)'],
+            labels: ['Wash & Fold', 'Wash & Press', 'Dry Clean', 'Express Surcharge'],
             datasets: [
-              { label: 'Orders Processed', data: [12, 11, 5], color: '#7C3AED' }
+              { label: 'Service Volume', data: [6, 6, 3, 3], color: '#7C3AED' }
             ]
           },
+          categoryMix: [
+            { category: 'Dry Clean', sales: 4924, qty: 3, pct: 45, color: '#7C3AED' },
+            { category: 'Wash & Press', sales: 3283, qty: 6, pct: 30, color: '#38BDF8' },
+            { category: 'Wash & Fold', sales: 1641, qty: 6, pct: 15, color: '#10B981' },
+            { category: 'Express Surcharge', sales: 1096, qty: 3, pct: 10, color: '#F59E0B' }
+          ],
           columns: [
-            { key: 'orderNo', label: 'Order #', sortable: true },
-            { key: 'roomGuest', label: 'Room & Guest Name' },
-            { key: 'serviceType', label: 'Service Type', type: 'badge' },
+            { key: 'orderNo', label: 'Order ID', sortable: true },
+            { key: 'roomGuest', label: 'Room & Guest Details' },
             { key: 'itemCount', label: 'Garment Pcs', sortable: true },
-            { key: 'status', label: 'Delivery Status', type: 'badge' },
-            { key: 'amount', label: 'Amount (₹)', type: 'currency', sortable: true }
+            { key: 'services', label: 'Service Types', type: 'badge' },
+            { key: 'taxAmount', label: 'GST Tax (₹)', type: 'currency' },
+            { key: 'totalAmount', label: 'Total Amount (₹)', type: 'currency', sortable: true },
+            { key: 'deliveryTime', label: 'Expected Delivery' },
+            { key: 'status', label: 'Status', type: 'badge' }
           ],
           rows: [
-            { orderNo: 'LND-301', roomGuest: 'Room 501 • Vikramaditya Birla', serviceType: 'DRY CLEANING', itemCount: 4, status: 'DELIVERED', amount: 3200 },
-            { orderNo: 'LND-302', roomGuest: 'Room 304 • Sarah Connor', serviceType: 'EXPRESS PRESSING', itemCount: 2, status: 'DELIVERED', amount: 950 },
-            { orderNo: 'LND-303', roomGuest: 'Room 412 • Dr. Ananya Roy', serviceType: 'WASH & FOLD', itemCount: 8, status: 'DELIVERED', amount: 1400 },
-            { orderNo: 'LND-304', roomGuest: 'Room 218 • David Miller', serviceType: 'DRY CLEANING', itemCount: 3, status: 'IN PROGRESS', amount: 2400 }
+            { orderNo: 'LND-1001', roomGuest: 'Room 101 • semi Luxury', itemCount: 6, services: 'Wash & Fold, Wash & Press, Dry Clean', taxAmount: 216.65, totalAmount: 1420.25, deliveryTime: '2026-07-29 14:00', status: 'DELIVERED' },
+            { orderNo: 'LND-1002', roomGuest: 'Room 101 • semi Luxury', itemCount: 10, services: 'Wash & Fold, Wash & Press', taxAmount: 148.68, totalAmount: 974.68, deliveryTime: '2026-07-29 12:30', status: 'DELIVERED' },
+            { orderNo: 'LND-1003', roomGuest: 'Room 101 • semi Luxury', itemCount: 1, services: 'Wash & Fold, Wash & Press', taxAmount: 14.87, totalAmount: 97.47, deliveryTime: '2026-07-30 12:00', status: 'DELIVERED' },
+            { orderNo: 'LND-1004', roomGuest: 'Room 101 • semi Luxury', itemCount: 1, services: 'Wash & Fold, Wash & Press', taxAmount: 14.87, totalAmount: 97.47, deliveryTime: '2026-07-30 12:00', status: 'DELIVERED' },
+            { orderNo: 'LND-1005', roomGuest: 'Room 102 • Delux', itemCount: 10, services: 'Wash & Fold, Wash & Press, Dry Clean', taxAmount: 361.08, totalAmount: 2367.08, deliveryTime: '2026-07-31 00:30', status: 'DELIVERED' },
+            { orderNo: 'LND-1006', roomGuest: 'Room 102 • Delux', itemCount: 20, services: 'Wash & Fold, Wash & Press, Dry Clean', taxAmount: 913.32, totalAmount: 5987.32, deliveryTime: '2026-08-02 12:00', status: 'DELIVERED' }
           ],
-          summaryRow: { orderNo: 'TOTAL', roomGuest: '28 Orders Processed Today', amount: 18400 }
+          summaryRow: { orderNo: 'TOTAL', roomGuest: '6 Orders Processed', itemCount: 48, services: 'LAUNDRY BILLING', taxAmount: 1669.47, totalAmount: 10944.27, deliveryTime: '-', status: 'AUDITED' },
+          abbreviationGuide: [
+            { term: 'DELIVERED', fullForm: 'Order Delivered', description: 'Garment wash, press, or dry cleaning completed & returned to room' },
+            { term: 'WASH & PRESS', fullForm: 'Wash & Press Service', description: 'Machine wash with steam press finish' },
+            { term: 'DRY CLEAN', fullForm: 'Dry Cleaning Service', description: 'Solvent dry cleaning care for delicate garments' },
+            { term: 'ROOM ACCOUNT', fullForm: 'Folio Posting', description: 'Laundry charges posted directly to guest room folio' }
+          ]
         };
 
       case 'inv-stock-valuation':

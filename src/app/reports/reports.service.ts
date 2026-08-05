@@ -815,7 +815,6 @@ export class ReportsService {
           columns: [
             { key: 'orderNo', label: 'Order ID', sortable: true },
             { key: 'roomGuest', label: 'Room & Guest Details' },
-            { key: 'itemCount', label: 'Garment Pcs', sortable: true },
             { key: 'services', label: 'Service Types', type: 'badge' },
             { key: 'totalAmount', label: 'Total Amount (₹)', type: 'currency', sortable: true },
             { key: 'deliveryTime', label: 'Expected Delivery' },

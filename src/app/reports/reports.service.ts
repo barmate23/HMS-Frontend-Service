@@ -367,16 +367,16 @@ export class ReportsService {
         { category: 'OOO Maintenance', sales: 0, qty: 0, pct: 0, color: '#6B7280' }
       ],
       columns: [
-        { key: 'floor', label: 'Floor Block', sortable: true },
-        { key: 'occupiedClean', label: 'Occupied Clean', sortable: true },
-        { key: 'occupiedDirty', label: 'Occupied Dirty' },
-        { key: 'clean', label: 'Vacant Clean' },
-        { key: 'dirty', label: 'Vacant Dirty' },
-        { key: 'ooo', label: 'OOO Maintenance' },
-        { key: 'attendant', label: 'Assigned Attendant' }
+        { key: 'roomNumber', label: 'Room No.', sortable: true },
+        { key: 'roomType', label: 'Room Type', sortable: true },
+        { key: 'hkStatus', label: 'Cleanliness Status', type: 'badge', sortable: true },
+        { key: 'attendant', label: 'Assigned Housekeeper', sortable: true },
+        { key: 'tasks', label: 'Assigned Tasks' },
+        { key: 'maintenance', label: 'Maintenance Requests' },
+        { key: 'lostFound', label: 'Lost & Found Log' }
       ],
       rows: [],
-      summaryRow: { floor: 'TOTAL HOTEL STATUS', occupiedClean: 0, occupiedDirty: 0, clean: 0, dirty: 0, ooo: 0 }
+      summaryRow: { roomNumber: 'TOTAL', roomType: '0 Active Rooms', hkStatus: '0 Occupied', attendant: 'No Assignments', tasks: '0 Tasks', maintenance: '0 Issues', lostFound: '0 Items' }
     };
   }
 
@@ -622,51 +622,60 @@ export class ReportsService {
       case 'hk-room-status-audit':
         return {
           reportId,
-          title: 'Room Cleanliness & Maintenance Audit',
+          title: 'Housekeeping Operations & Active Activity Audit',
           category: 'Housekeeping',
-          subtitle: 'Real-time room cleanliness states (Clean, Dirty, Inspected, Out-of-Order, Blocked) and attendant logs.',
+          subtitle: 'Active room task assignments, assigned housekeepers, maintenance repair requests, and lost & found item logs.',
           kpis: [
-            { label: 'Total Hotel Rooms', value: '125 Rooms', icon: 'domain', subtext: 'Hotel Capacity' },
-            { label: 'Occupied Rooms', value: '108 Rooms', icon: 'king_bed', subtext: '86.4% Occupancy' },
-            { label: 'Vacant Clean', value: '10 Rooms', icon: 'check_circle', subtext: 'Ready for Check-In' },
-            { label: 'Out-of-Order (OOO)', value: '4 Rooms', icon: 'construction', subtext: 'Maintenance In Progress' }
+            { label: 'Active Tasks Logged', value: '2 Tasks', icon: 'assignment', subtext: 'Stayover & Checkout Clean' },
+            { label: 'Assigned Housekeepers', value: '1 Staff On-Duty', icon: 'badge', subtext: 'Arshad Pappu' },
+            { label: 'Maintenance Issues', value: '2 Requests', icon: 'construction', subtext: 'AC & Fan Repairs' },
+            { label: 'Lost & Found Items', value: '2 Items Logged', icon: 'find_in_page', subtext: 'Watch & Gold Chain' }
           ],
           chartData: {
-            labels: ['Occupied Clean', 'Occupied Dirty', 'Vacant Clean', 'Vacant Dirty', 'OOO Maintenance'],
+            labels: ['Stayover Clean', 'Checkout Clean', 'AC Repair (HVAC)', 'Fan Repair (HVAC)', 'Lost Watch', 'Lost Gold Chain'],
             datasets: [
-              { label: 'Room Count', data: [98, 10, 10, 3, 4], color: '#2A9D8F' }
+              { label: 'Active Logs', data: [1, 1, 1, 1, 1, 1], color: '#0F3D3E' }
             ]
           },
           categoryMix: [
-            { category: 'Occupied Clean', sales: 98, qty: 98, pct: 78, color: '#0F3D3E' },
-            { category: 'Vacant Clean', sales: 10, qty: 10, pct: 8, color: '#10B981' },
-            { category: 'Occupied Dirty', sales: 10, qty: 10, pct: 8, color: '#F59E0B' },
-            { category: 'Vacant Dirty', sales: 3, qty: 3, pct: 3, color: '#EF4444' },
-            { category: 'OOO Maintenance', sales: 4, qty: 4, pct: 3, color: '#6B7280' }
+            { category: 'Cleaning Tasks', sales: 2, qty: 2, pct: 34, color: '#10B981' },
+            { category: 'Maintenance Repairs', sales: 2, qty: 2, pct: 33, color: '#F59E0B' },
+            { category: 'Lost & Found Logs', sales: 2, qty: 2, pct: 33, color: '#0284C7' }
           ],
           columns: [
-            { key: 'floor', label: 'Floor Block', sortable: true },
-            { key: 'occupiedClean', label: 'Occupied Clean', sortable: true },
-            { key: 'occupiedDirty', label: 'Occupied Dirty' },
-            { key: 'clean', label: 'Vacant Clean' },
-            { key: 'dirty', label: 'Vacant Dirty' },
-            { key: 'ooo', label: 'OOO Maintenance' },
-            { key: 'attendant', label: 'Assigned Attendant' }
+            { key: 'roomNumber', label: 'Room No.', sortable: true },
+            { key: 'roomType', label: 'Room Type', sortable: true },
+            { key: 'hkStatus', label: 'Cleanliness Status', type: 'badge', sortable: true },
+            { key: 'attendant', label: 'Assigned Housekeeper', sortable: true },
+            { key: 'tasks', label: 'Assigned Tasks' },
+            { key: 'maintenance', label: 'Maintenance Requests' },
+            { key: 'lostFound', label: 'Lost & Found Log' }
           ],
           rows: [
-            { floor: 'Floor 1 (Rooms 101-125)', occupiedClean: 20, occupiedDirty: 2, clean: 2, dirty: 1, ooo: 0, attendant: 'Ramesh Kumar' },
-            { floor: 'Floor 2 (Rooms 201-225)', occupiedClean: 22, occupiedDirty: 2, clean: 1, dirty: 0, ooo: 0, attendant: 'Sita Devi' },
-            { floor: 'Floor 3 (Rooms 301-325)', occupiedClean: 20, occupiedDirty: 3, clean: 1, dirty: 1, ooo: 0, attendant: 'Vikram Singh' },
-            { floor: 'Floor 4 (Rooms 401-425)', occupiedClean: 19, occupiedDirty: 2, clean: 3, dirty: 1, ooo: 0, attendant: 'Sunita Sharma' },
-            { floor: 'Floor 5 (Rooms 501-525 Executive)', occupiedClean: 17, occupiedDirty: 1, clean: 3, dirty: 0, ooo: 4, attendant: 'Deepak Patel' }
+            {
+              roomNumber: '101',
+              roomType: 'semi Luxury',
+              hkStatus: 'Occupied Clean',
+              attendant: 'Arshad Pappu',
+              tasks: 'Stayover clean, Checkout clean',
+              maintenance: 'AC (Completed), Fan (Open)',
+              lostFound: 'watch [CLAIMED], Gold chain [STORED]'
+            }
           ],
-          summaryRow: { floor: 'TOTAL HOTEL STATUS', occupiedClean: 98, occupiedDirty: 10, clean: 10, dirty: 3, ooo: 4 },
+          summaryRow: {
+            roomNumber: 'ACTIVE SUMMARY',
+            roomType: '1 Active Room Recorded',
+            hkStatus: 'Occupied Clean',
+            attendant: 'Arshad Pappu',
+            tasks: '2 Active Tasks',
+            maintenance: '2 Issues (1 Open, 1 Completed)',
+            lostFound: '2 Registered Items'
+          },
           abbreviationGuide: [
-            { term: 'VC', fullForm: 'Vacant Clean', description: 'Room cleaned, sanitized, and ready for immediate guest check-in' },
-            { term: 'VD', fullForm: 'Vacant Dirty', description: 'Guest has checked out; deep departure cleaning in progress' },
-            { term: 'OC', fullForm: 'Occupied Clean', description: 'In-house guest; daily stayover room cleaning completed' },
-            { term: 'OD', fullForm: 'Occupied Dirty', description: 'In-house guest; stayover cleaning pending attendant turn' },
-            { term: 'OOO', fullForm: 'Out of Order', description: 'Room taken out of inventory for plumbing, electrical, or structural maintenance' }
+            { term: 'STAYOVER CLEAN', fullForm: 'Daily Guest Room Cleaning', description: 'Occupied room linen refresh and bathroom restocking' },
+            { term: 'CHECKOUT CLEAN', fullForm: 'Departure Room Turnaround', description: 'Deep departure cleaning and sanitization post checkout' },
+            { term: 'CLAIMED', fullForm: 'Returned to Guest', description: 'Lost & found item handed over to verified guest' },
+            { term: 'STORED', fullForm: 'Secured in Locker', description: 'Item stored safely in designated housekeeping locker' }
           ]
         };
 

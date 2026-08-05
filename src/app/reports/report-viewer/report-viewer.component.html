@@ -443,6 +443,17 @@
                           >
                             {{ row[col.key] }}
                           </span>
+                        } @else if (col.key === 'hkStatus') {
+                          <span
+                            class="hk-status-badge"
+                            [class.hk-occ-clean]="row[col.key] === 'Occupied Clean'"
+                            [class.hk-vac-clean]="row[col.key] === 'Vacant Clean'"
+                            [class.hk-occ-dirty]="row[col.key] === 'Occupied Dirty'"
+                            [class.hk-vac-dirty]="row[col.key] === 'Vacant Dirty'"
+                            [class.hk-ooo]="row[col.key] === 'Out of Order'"
+                          >
+                            {{ row[col.key] }}
+                          </span>
                         } @else {
                           <span class="status-pill">{{ row[col.key] }}</span>
                         }

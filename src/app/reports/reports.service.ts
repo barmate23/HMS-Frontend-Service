@@ -330,7 +330,22 @@ export class ReportsService {
     return this.http.get<any>(`${this.apiBaseUrl}/report-data/${reportId}`, { params }).pipe(
       map(res => {
         if (res && res.success && res.data) {
-          return res.data as AnalyticalReportData;
+          const data = res.data as AnalyticalReportData;
+          if (reportId === 'hk-room-status-audit') {
+            if (data.columns) {
+              data.columns = data.columns.filter(c => c.key !== 'floor');
+            }
+            if (data.rows) {
+              const activeRows = data.rows.filter(r =>
+                (r['tasks'] && r['tasks'] !== 'None') ||
+                (r['maintenance'] && r['maintenance'] !== 'No Issues') ||
+                (r['lostFound'] && r['lostFound'] !== 'None') ||
+                (r['attendant'] && r['attendant'] !== 'Unassigned')
+              );
+              data.rows = activeRows.length > 0 ? activeRows : data.rows.slice(0, 1);
+            }
+          }
+          return data;
         }
         return this.getEmptyReportData(reportId);
       }),

@@ -178,6 +178,8 @@
                   Room Cleanliness Breakdown by Floor Block
                 } @else if (reportId() === 'hk-amenity-linen') {
                   Daily Amenity Issue Volume & Linen Consumption
+                } @else if (reportId() === 'laundry-guest-ledger') {
+                  Laundry Service Orders & Demand Breakdown
                 } @else {
                   Occupancy & Capacity Comparison by Category
                 }
@@ -201,7 +203,7 @@
                         <div
                           class="chart-bar"
                           [style.height.%]="(ds.data[i] / getMaxChartVal()) * 85"
-                          [style.background-color]="ds.color"
+                          [style.background-color]="ds.colors ? ds.colors[i] : ds.color"
                           [title]="ds.label + ': ' + ds.data[i]"
                         >
                           <span class="bar-val-tooltip">{{ ds.data[i] | number }}</span>
@@ -258,12 +260,12 @@
             </div>
           }
 
-          @if (reportId() === 'pos-fast-moving-items' || reportId() === 'pos-top-items' || reportId() === 'hk-room-status-audit' || reportId() === 'hk-amenity-linen') {
+          @if (reportId() === 'pos-fast-moving-items' || reportId() === 'pos-top-items' || reportId() === 'hk-room-status-audit' || reportId() === 'hk-amenity-linen' || reportId() === 'laundry-guest-ledger') {
             <div class="chart-card side-donut-card">
               <div class="chart-header">
                 <h3 class="chart-title">
                   <mat-icon class="chart-icon text-amber">pie_chart</mat-icon>
-                  @if (reportId() === 'hk-room-status-audit') { Housekeeping Status Mix } @else if (reportId() === 'hk-amenity-linen') { Amenity Category Mix } @else { Category Sales Mix }
+                  @if (reportId() === 'laundry-guest-ledger') { Service Revenue Mix } @else if (reportId() === 'hk-room-status-audit') { Housekeeping Status Mix } @else if (reportId() === 'hk-amenity-linen') { Amenity Category Mix } @else { Category Sales Mix }
                 </h3>
               </div>
               @if (report.categoryMix && report.categoryMix.length > 0) {

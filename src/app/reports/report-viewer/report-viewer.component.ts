@@ -146,6 +146,59 @@ export class ReportViewerComponent implements OnInit {
             deliveryTime: '-',
             status: 'AUDITED'
           };
+        } else if (id === 'laundry-wash-log' && data.rows) {
+          let bath = 0, bed = 0, tbl = 0, robe = 0;
+          let totStock = 0, totWash = 0, totClean = 0, totDamaged = 0;
+          data.rows.forEach((r: any) => {
+            const cat = String(r['category'] || '');
+            const stock = Number(r['totalStock'] || 0);
+            const wash = Number(r['inWashQty'] || 0);
+            const clean = Number(r['cleanReadyQty'] || 0);
+            const dmg = Number(r['damagedQty'] || 0);
+
+            totStock += stock;
+            totWash += wash;
+            totClean += clean;
+            totDamaged += dmg;
+
+            if (cat.includes('BATH LINEN')) bath += wash;
+            else if (cat.includes('BED LINEN')) bed += wash;
+            else if (cat.includes('TABLE LINEN')) tbl += wash;
+            else robe += wash;
+          });
+
+          const totalVol = (totWash) || 1;
+          data.chartData = {
+            labels: ['Bath Linen', 'Bed Linen', 'Table Linen', 'Bathrobes'],
+            datasets: [
+              { label: 'In Wash Volume (Pcs)', data: [bath, bed, tbl, robe], color: '#475569', colors: ['#38BDF8', '#10B981', '#F59E0B', '#7C3AED'] }
+            ]
+          };
+
+          data.categoryMix = [
+            { category: 'Bath Linen', sales: bath, qty: bath, pct: Math.round((bath / totalVol) * 100), color: '#38BDF8' },
+            { category: 'Bed Linen', sales: bed, qty: bed, pct: Math.round((bed / totalVol) * 100), color: '#10B981' },
+            { category: 'Table Linen', sales: tbl, qty: tbl, pct: Math.round((tbl / totalVol) * 100), color: '#F59E0B' },
+            { category: 'Bathrobes', sales: robe, qty: robe, pct: Math.round((robe / totalVol) * 100), color: '#7C3AED' }
+          ];
+
+          data.kpis = [
+            { label: 'Total Hotel Linen Stock', value: `${totStock} Pcs`, icon: 'dry_cleaning', subtext: 'Hotel Inventory' },
+            { label: 'Active Wash Cycles', value: `${totWash} Pcs`, icon: 'local_laundry_service', subtext: 'In-House Wash' },
+            { label: 'Clean & Ready Store', value: `${totClean} Pcs`, icon: 'check_circle', subtext: 'Sanitized in Linen Room' },
+            { label: 'Housekeeping Staff On-Duty', value: '2 Members', icon: 'badge', subtext: 'Arshad Pappu, Aniket Dengre' }
+          ];
+
+          data.summaryRow = {
+            linenItem: 'TOTAL',
+            category: 'HOUSEKEEPING LINEN',
+            totalStock: totStock,
+            inWashQty: totWash,
+            cleanReadyQty: totClean,
+            damagedQty: totDamaged,
+            lastWashDate: '-',
+            status: 'AUDITED'
+          };
         } else if (!data.chartData && data.rows && data.rows.length > 0) {
           if (id === 'pos-fast-moving-items' || id === 'pos-top-items') {
             data.chartData = {

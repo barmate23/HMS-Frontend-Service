@@ -260,12 +260,12 @@
             </div>
           }
 
-          @if (reportId() === 'pos-fast-moving-items' || reportId() === 'pos-top-items' || reportId() === 'hk-room-status-audit' || reportId() === 'hk-amenity-linen' || reportId() === 'laundry-guest-ledger') {
+          @if (reportId() === 'pos-fast-moving-items' || reportId() === 'pos-top-items' || reportId() === 'hk-room-status-audit' || reportId() === 'hk-amenity-linen' || reportId() === 'laundry-guest-ledger' || reportId() === 'laundry-wash-log') {
             <div class="chart-card side-donut-card">
               <div class="chart-header">
                 <h3 class="chart-title">
                   <mat-icon class="chart-icon text-amber">pie_chart</mat-icon>
-                  @if (reportId() === 'laundry-guest-ledger') { Service Revenue Mix } @else if (reportId() === 'hk-room-status-audit') { Housekeeping Status Mix } @else if (reportId() === 'hk-amenity-linen') { Amenity Category Mix } @else { Category Sales Mix }
+                  @if (reportId() === 'laundry-wash-log') { Linen Category Mix } @else if (reportId() === 'laundry-guest-ledger') { Service Revenue Mix } @else if (reportId() === 'hk-room-status-audit') { Housekeeping Status Mix } @else if (reportId() === 'hk-amenity-linen') { Amenity Category Mix } @else { Category Sales Mix }
                 </h3>
               </div>
               @if (report.categoryMix && report.categoryMix.length > 0) {

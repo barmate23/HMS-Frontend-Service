@@ -329,7 +329,7 @@ export class ReportsService {
 
     return this.http.get<any>(`${this.apiBaseUrl}/report-data/${reportId}`, { params }).pipe(
       map(res => {
-        if (res && res.success && res.data) {
+        if (res && res.success && res.data && res.data.reportId === reportId) {
           return res.data as AnalyticalReportData;
         }
         return this.getAnalyticalReportData(reportId);
@@ -584,35 +584,101 @@ export class ReportsService {
           reportId,
           title: 'Room Cleanliness & Maintenance Audit',
           category: 'Housekeeping',
-          subtitle: 'Real-time room cleanliness status (Clean, Dirty, Inspected, Out-of-Order).',
+          subtitle: 'Real-time room cleanliness states (Clean, Dirty, Inspected, Out-of-Order, Blocked) and attendant logs.',
           kpis: [
-            { label: 'Total Hotel Rooms', value: '125 Rooms', icon: 'domain', subtext: 'Inventory' },
-            { label: 'Occupied Rooms', value: '108 Rooms', icon: 'king_bed', subtext: 'In-House Guests' },
+            { label: 'Total Hotel Rooms', value: '125 Rooms', icon: 'domain', subtext: 'Hotel Capacity' },
+            { label: 'Occupied Rooms', value: '108 Rooms', icon: 'king_bed', subtext: '86.4% Occupancy' },
             { label: 'Vacant Clean', value: '10 Rooms', icon: 'check_circle', subtext: 'Ready for Check-In' },
             { label: 'Out-of-Order (OOO)', value: '4 Rooms', icon: 'construction', subtext: 'Maintenance In Progress' }
           ],
           chartData: {
-            labels: ['Occupied', 'Vacant Clean', 'Vacant Dirty', 'OOO Blocked'],
+            labels: ['Occupied Clean', 'Occupied Dirty', 'Vacant Clean', 'Vacant Dirty', 'OOO Maintenance'],
             datasets: [
-              { label: 'Room Count', data: [108, 10, 3, 4], color: '#2A9D8F' }
+              { label: 'Room Count', data: [98, 10, 10, 3, 4], color: '#2A9D8F' }
             ]
           },
+          categoryMix: [
+            { category: 'Occupied Clean', sales: 98, qty: 98, pct: 78, color: '#0F3D3E' },
+            { category: 'Vacant Clean', sales: 10, qty: 10, pct: 8, color: '#10B981' },
+            { category: 'Occupied Dirty', sales: 10, qty: 10, pct: 8, color: '#F59E0B' },
+            { category: 'Vacant Dirty', sales: 3, qty: 3, pct: 3, color: '#EF4444' },
+            { category: 'OOO Maintenance', sales: 4, qty: 4, pct: 3, color: '#6B7280' }
+          ],
           columns: [
             { key: 'floor', label: 'Floor Block', sortable: true },
-            { key: 'occupied', label: 'Occupied', sortable: true },
+            { key: 'occupiedClean', label: 'Occupied Clean', sortable: true },
+            { key: 'occupiedDirty', label: 'Occupied Dirty' },
             { key: 'clean', label: 'Vacant Clean' },
             { key: 'dirty', label: 'Vacant Dirty' },
             { key: 'ooo', label: 'OOO Maintenance' },
             { key: 'attendant', label: 'Assigned Attendant' }
           ],
           rows: [
-            { floor: 'Floor 1 (Rooms 101-125)', occupied: 22, clean: 2, dirty: 1, ooo: 0, attendant: 'Ramesh Kumar' },
-            { floor: 'Floor 2 (Rooms 201-225)', occupied: 24, clean: 1, dirty: 0, ooo: 0, attendant: 'Sita Devi' },
-            { floor: 'Floor 3 (Rooms 301-325)', occupied: 23, clean: 1, dirty: 1, ooo: 0, attendant: 'Vikram Singh' },
-            { floor: 'Floor 4 (Rooms 401-425)', occupied: 21, clean: 3, dirty: 1, ooo: 0, attendant: 'Sunita Sharma' },
-            { floor: 'Floor 5 (Rooms 501-525 Executive)', occupied: 18, clean: 3, dirty: 0, ooo: 4, attendant: 'Deepak Patel' }
+            { floor: 'Floor 1 (Rooms 101-125)', occupiedClean: 20, occupiedDirty: 2, clean: 2, dirty: 1, ooo: 0, attendant: 'Ramesh Kumar' },
+            { floor: 'Floor 2 (Rooms 201-225)', occupiedClean: 22, occupiedDirty: 2, clean: 1, dirty: 0, ooo: 0, attendant: 'Sita Devi' },
+            { floor: 'Floor 3 (Rooms 301-325)', occupiedClean: 20, occupiedDirty: 3, clean: 1, dirty: 1, ooo: 0, attendant: 'Vikram Singh' },
+            { floor: 'Floor 4 (Rooms 401-425)', occupiedClean: 19, occupiedDirty: 2, clean: 3, dirty: 1, ooo: 0, attendant: 'Sunita Sharma' },
+            { floor: 'Floor 5 (Rooms 501-525 Executive)', occupiedClean: 17, occupiedDirty: 1, clean: 3, dirty: 0, ooo: 4, attendant: 'Deepak Patel' }
           ],
-          summaryRow: { floor: 'TOTAL HOTEL STATUS', occupied: 108, clean: 10, dirty: 3, ooo: 4 }
+          summaryRow: { floor: 'TOTAL HOTEL STATUS', occupiedClean: 98, occupiedDirty: 10, clean: 10, dirty: 3, ooo: 4 },
+          abbreviationGuide: [
+            { term: 'VC', fullForm: 'Vacant Clean', description: 'Room cleaned, sanitized, and ready for immediate guest check-in' },
+            { term: 'VD', fullForm: 'Vacant Dirty', description: 'Guest has checked out; deep departure cleaning in progress' },
+            { term: 'OC', fullForm: 'Occupied Clean', description: 'In-house guest; daily stayover room cleaning completed' },
+            { term: 'OD', fullForm: 'Occupied Dirty', description: 'In-house guest; stayover cleaning pending attendant turn' },
+            { term: 'OOO', fullForm: 'Out of Order', description: 'Room taken out of inventory for plumbing, electrical, or structural maintenance' }
+          ]
+        };
+
+      case 'hk-amenity-linen':
+        return {
+          reportId,
+          title: 'Linen & Room Amenity Consumption Audit',
+          category: 'Housekeeping',
+          subtitle: 'Daily room amenity consumption, bath linens issued, attendant turnaround times, and stock level alerts.',
+          kpis: [
+            { label: 'Towels & Linens Issued', value: '320 Pcs', icon: 'hotel', subtext: 'Daily Issue Volume' },
+            { label: 'Toiletries Kits Used', value: '185 Kits', icon: 'clean_hands', subtext: 'Guest Replenishments' },
+            { label: 'Linen Turnaround Time', value: '2.8 Hours', icon: 'timer', subtext: 'Wash & Laundry Cycle' },
+            { label: 'Amenity Stock Health', value: '98.5%', change: 'Healthy', changeType: 'positive', icon: 'inventory', subtext: 'In Stock Level' }
+          ],
+          chartData: {
+            labels: ['Bath Towels', 'Hand Towels', 'Bed Sheets', 'Shampoo 50ml', 'Dental Kits', 'Bathrobes'],
+            datasets: [
+              { label: 'Issued Today (Pcs)', data: [140, 95, 85, 185, 120, 45], color: '#0284C7' }
+            ]
+          },
+          categoryMix: [
+            { category: 'Bath Linens', sales: 235, qty: 235, pct: 40, color: '#0284C7' },
+            { category: 'Bed Linens', sales: 145, qty: 145, pct: 25, color: '#38BDF8' },
+            { category: 'Bath Toiletries', sales: 305, qty: 305, pct: 25, color: '#0EA5E9' },
+            { category: 'Guest Refreshments', sales: 120, qty: 120, pct: 10, color: '#7DD3FC' }
+          ],
+          columns: [
+            { key: 'itemCode', label: 'Item SKU Code', sortable: true },
+            { key: 'itemName', label: 'Amenity / Linen Item Name', sortable: true },
+            { key: 'category', label: 'Category', type: 'badge' },
+            { key: 'openingStock', label: 'Opening Stock', sortable: true },
+            { key: 'issuedQty', label: 'Issued Qty', sortable: true },
+            { key: 'returnedQty', label: 'Damaged / Returned' },
+            { key: 'closingStock', label: 'Closing Stock', sortable: true },
+            { key: 'stockStatus', label: 'Stock Status', type: 'badge' }
+          ],
+          rows: [
+            { itemCode: 'HK-LIN-001', itemName: 'Luxury Bath Towel (White 600GSM)', category: 'BATH LINEN', openingStock: 450, issuedQty: 140, returnedQty: 2, closingStock: 308, stockStatus: 'IN STOCK' },
+            { itemCode: 'HK-LIN-002', itemName: 'Hand Towels Premium Cotton', category: 'BATH LINEN', openingStock: 320, issuedQty: 95, returnedQty: 0, closingStock: 225, stockStatus: 'IN STOCK' },
+            { itemCode: 'HK-BED-010', itemName: 'King Size Fitted Bed Sheet 300TC', category: 'BED LINEN', openingStock: 200, issuedQty: 85, returnedQty: 1, closingStock: 114, stockStatus: 'IN STOCK' },
+            { itemCode: 'HK-BATH-005', itemName: 'Herbal Shampoo Bottle (50ml)', category: 'TOILETRY', openingStock: 600, issuedQty: 185, returnedQty: 0, closingStock: 415, stockStatus: 'IN STOCK' },
+            { itemCode: 'HK-BATH-008', itemName: 'Eco Dental Hygiene Kit', category: 'TOILETRY', openingStock: 150, issuedQty: 120, returnedQty: 0, closingStock: 30, stockStatus: 'REORDER LOW' },
+            { itemCode: 'HK-LIN-004', itemName: 'Plush Velvet Bathrobe (L/XL)', category: 'BATH LINEN', openingStock: 90, issuedQty: 45, returnedQty: 0, closingStock: 45, stockStatus: 'IN STOCK' }
+          ],
+          summaryRow: { itemCode: 'TOTAL', itemName: 'TOTAL AMENITIES & LINEN AUDIT', openingStock: 1810, issuedQty: 670, returnedQty: 3, closingStock: 1137 },
+          abbreviationGuide: [
+            { term: 'BATH LINEN', fullForm: 'Bath Towels, Hand Towels, Bath Mats', description: 'Heavy cotton terry towels washed daily' },
+            { term: 'BED LINEN', fullForm: 'Sheets, Duvets, Pillowcases', description: 'High thread count bed items' },
+            { term: 'TOILETRY', fullForm: 'Soaps, Shampoos, Dental Kits, Comb Kits', description: 'Single-use sealed guest bathroom amenities' },
+            { term: 'REORDER LOW', fullForm: 'Below Minimum Reorder Threshold', description: 'Automated notification sent to Purchase Dept' }
+          ]
         };
 
       case 'laundry-guest-ledger':

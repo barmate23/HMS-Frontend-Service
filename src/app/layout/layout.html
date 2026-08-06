@@ -21,14 +21,14 @@
            [routerLink]="item.route" 
            routerLinkActive="active" 
            class="nav-item">
-          <span class="material-icons-round">{{item.icon}}</span>
+          <span class="material-icons-round" [style.color]="item.color">{{item.icon}}</span>
           <span class="nav-label" *ngIf="!isCollapsed()">{{item.label}}</span>
         </a>
 
         <!-- Parent Item (Submenu) -->
-        <div class="nav-group" *ngIf="item.children">
-          <div class="nav-item has-submenu" (click)="toggleSubmenu(item)" [class.expanded]="item.expanded">
-            <span class="material-icons-round">{{item.icon}}</span>
+        <div class="nav-group" *ngIf="item.children" [class.group-active-container]="isGroupActive(item)">
+          <div class="nav-item has-submenu" (click)="toggleSubmenu(item)" [class.expanded]="item.expanded" [class.group-active]="isGroupActive(item)">
+            <span class="material-icons-round" [style.color]="item.color">{{item.icon}}</span>
             <span class="nav-label" *ngIf="!isCollapsed()">{{item.label}}</span>
             <span class="material-icons-round expand-icon" *ngIf="!isCollapsed()">
               {{ item.expanded ? 'expand_less' : 'expand_more' }}
@@ -42,7 +42,7 @@
                [queryParams]="child.queryParams || {}"
                routerLinkActive="active" 
                class="nav-item submenu-item">
-              <span class="material-icons-round">{{child.icon}}</span>
+              <span class="material-icons-round" [style.color]="child.color || item.color">{{child.icon}}</span>
               <span class="nav-label">{{child.label}}</span>
             </a>
           </div>

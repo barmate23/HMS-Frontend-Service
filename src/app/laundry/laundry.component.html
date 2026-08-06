@@ -1,12 +1,12 @@
 <div class="laundry-container">
   <div class="compact-nav" [class.has-filters]="activeTab() === 'orders'">
     <div class="tabs-container">
-      <button class="tab-btn" [class.active]="activeTab() === 'dashboard'" (click)="switchTab('dashboard')"><span class="material-icons-round">dashboard</span>Dashboard</button>
-      <button class="tab-btn" [class.active]="activeTab() === 'create'" (click)="switchTab('create')"><span class="material-icons-round">add_circle</span>Create Order</button>
-      <button class="tab-btn" [class.active]="activeTab() === 'orders'" (click)="switchTab('orders')"><span class="material-icons-round">local_laundry_service</span>Tracking</button>
-      <button class="tab-btn" [class.active]="activeTab() === 'detail'" (click)="switchTab('detail')"><span class="material-icons-round">timeline</span>Status Flow</button>
-      <button class="tab-btn" [class.active]="activeTab() === 'catalogue'" (click)="switchTab('catalogue')"><span class="material-icons-round">inventory_2</span>Price Master</button>
-      <button class="tab-btn" [class.active]="activeTab() === 'services'" (click)="switchTab('services')"><span class="material-icons-round">room_service</span>Service Catalog</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'dashboard'" (click)="switchTab('dashboard')"><span class="material-icons-round" style="color:#06B6D4;">dashboard</span>Dashboard</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'create'" (click)="switchTab('create')"><span class="material-icons-round" style="color:#10B981;">add_circle</span>Create Order</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'orders'" (click)="switchTab('orders')"><span class="material-icons-round" style="color:#3B82F6;">local_laundry_service</span>Tracking</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'detail'" (click)="switchTab('detail')"><span class="material-icons-round" style="color:#8B5CF6;">timeline</span>Status Flow</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'catalogue'" (click)="switchTab('catalogue')"><span class="material-icons-round" style="color:#F59E0B;">inventory_2</span>Price Master</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'services'" (click)="switchTab('services')"><span class="material-icons-round" style="color:#EC4899;">room_service</span>Service Catalog</button>
     </div>
 
     <div class="nav-right" *ngIf="activeTab() !== 'catalogue' && activeTab() !== 'services'">

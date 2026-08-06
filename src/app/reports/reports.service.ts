@@ -3,6 +3,35 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of, forkJoin } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
+export interface ExecutiveDashboardSummary {
+  frontOfficeOccupancy: {
+    occupiedRooms: number;
+    totalRooms: number;
+    occupancyPercentage: number;
+    vacantClean: number;
+    vacantCleanPct: number;
+    vacantDirty: number;
+    vacantDirtyPct: number;
+    oooBlocked: number;
+    oooBlockedPct: number;
+  };
+  posRevenueMix: {
+    totalSalesToday: number;
+    totalOrdersToday: number;
+    outlets: { name: string; amount: number; percentage: number; color: string }[];
+  };
+  operationsPulse: {
+    hkVacantCleanText: string;
+    hkVacantCleanSubtext: string;
+    laundryRevenueText: string;
+    laundryRevenueSubtext: string;
+    storeValuationText: string;
+    storeValuationSubtext: string;
+    activePosText: string;
+    activePosSubtext: string;
+  };
+}
+
 export interface ReportItem {
   id: string;
   title: string;
@@ -302,6 +331,50 @@ export class ReportsService {
         return of([{ id: 'all', name: 'All Outlets & Property' }]);
       })
     );
+  }
+
+  /**
+   * Fetch top executive dashboard summary (Front Office, POS, Operations Pulse)
+   */
+  fetchExecutiveDashboardSummary(date?: string): Observable<ExecutiveDashboardSummary> {
+    let params = new HttpParams();
+    if (date) params = params.set('date', date);
+
+    return this.http.get<any>(`${this.apiBaseUrl}/executive-dashboard`, { params }).pipe(
+      map(res => (res && res.success && res.data) ? (res.data as ExecutiveDashboardSummary) : this.getDefaultExecutiveDashboardSummary()),
+      catchError(() => of(this.getDefaultExecutiveDashboardSummary()))
+    );
+  }
+
+  getDefaultExecutiveDashboardSummary(): ExecutiveDashboardSummary {
+    return {
+      frontOfficeOccupancy: {
+        occupiedRooms: 0,
+        totalRooms: 0,
+        occupancyPercentage: 0,
+        vacantClean: 0,
+        vacantCleanPct: 0,
+        vacantDirty: 0,
+        vacantDirtyPct: 0,
+        oooBlocked: 0,
+        oooBlockedPct: 0
+      },
+      posRevenueMix: {
+        totalSalesToday: 0,
+        totalOrdersToday: 0,
+        outlets: []
+      },
+      operationsPulse: {
+        hkVacantCleanText: '0 Vacant Clean',
+        hkVacantCleanSubtext: '0 Dirty | 0 OOO Blocked',
+        laundryRevenueText: '₹0 Laundry',
+        laundryRevenueSubtext: '0 Guest Orders Billed',
+        storeValuationText: '₹0 Store Val',
+        storeValuationSubtext: '0 Low-Stock Alerts',
+        activePosText: '0 Active POs',
+        activePosSubtext: '₹0 Pending Delivery'
+      }
+    };
   }
 
   /**

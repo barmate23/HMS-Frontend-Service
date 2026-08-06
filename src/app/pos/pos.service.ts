@@ -4,8 +4,9 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable, map, catchError } from 'rxjs';
 
 import { UserManagementService } from '../user-management/user-management.service';
+import { IngredientMaster, RecipeMaster } from './models/recipe.model';
 
-export type PosTab = 'dashboard' | 'outlets' | 'dining' | 'orders' | 'billing' | 'menu' | 'billing-setup';
+export type PosTab = 'dashboard' | 'outlets' | 'dining' | 'orders' | 'billing' | 'menu' | 'billing-setup' | 'ingredient-master' | 'recipes';
 export type OutletType = string;
 export type OutletStatus = 'ACTIVE' | 'INACTIVE';
 export type TableStatus = string;
@@ -208,6 +209,15 @@ export interface PosDashboardData {
   recentActivity?: PosDashboardRecentActivity[];
 }
 
+export interface PosDashboardCards {
+  activeOutlets: number;
+  openOrders: number;
+  kotRunning: number;
+  bills: number;
+  roomPostings: number;
+  grossSales: number;
+}
+
 interface ApiOutlet {
   id: number;
   name?: string;
@@ -390,7 +400,7 @@ interface ApiCommonMaster {
 @Injectable({ providedIn: 'root' })
 export class PosService {
   private readonly http = inject(HttpClient);
-  private readonly userManagement = inject(UserManagementService);
+  private readonly userManagement: any = inject(UserManagementService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly posBaseUrl = '/api/hmsService/v1/pos';
   private readonly hmsBaseUrl = '/api/hmsService/v1';
@@ -426,9 +436,10 @@ export class PosService {
   readonly paymentModes = signal<PaymentMode[]>(this.defaultPaymentModes);
   readonly voidReasons = signal<string[]>(this.defaultVoidReasons);
   readonly users = computed(() => {
-    const names = this.userManagement.users()
-      .filter(user => user.status === 'ACTIVE')
-      .map(user => user.fullName)
+    const rawUsers: any[] = (this.userManagement.users() as any) || [];
+    const names = rawUsers
+      .filter((user: any) => user?.status === 'ACTIVE')
+      .map((user: any) => user?.fullName)
       .filter(Boolean);
     return names.length ? names : this.defaultUsers;
   });
@@ -445,6 +456,371 @@ export class PosService {
   readonly shifts = signal<PosShift[]>([]);
   readonly auditLogs = signal<PosAuditLog[]>([]);
   readonly posDashboard = signal<PosDashboardData | null>(null);
+  readonly posDashboardCards = signal<PosDashboardCards | null>(null);
+
+  readonly ingredients = signal<IngredientMaster[]>([
+    {
+      id: 1,
+      code: 'ING-001',
+      name: 'Paneer (Cottage Cheese)',
+      category: 'Dairy',
+      baseUnit: 'GRAM',
+      purchaseUnit: 'KG',
+      conversionFactor: 1000,
+      yieldPercentage: 95,
+      costPerPurchaseUnit: 360,
+      costPerBaseUnit: 0.36,
+      currentStock: 8500,
+      reorderLevel: 5000,
+      reorderQuantity: 15000,
+      storageType: 'CHILLED',
+      supplierName: 'Milma Dairy Supplies',
+      isActive: true
+    },
+    {
+      id: 2,
+      code: 'ING-002',
+      name: 'Capsicum (Green Pepper)',
+      category: 'Produce',
+      baseUnit: 'GRAM',
+      purchaseUnit: 'KG',
+      conversionFactor: 1000,
+      yieldPercentage: 90,
+      costPerPurchaseUnit: 80,
+      costPerBaseUnit: 0.08,
+      currentStock: 3200,
+      reorderLevel: 4000,
+      reorderQuantity: 10000,
+      storageType: 'CHILLED',
+      supplierName: 'GreenField Fresh Produce',
+      isActive: true
+    },
+    {
+      id: 3,
+      code: 'ING-003',
+      name: 'Tandoori Marinade Masala',
+      category: 'Spices & Condiments',
+      baseUnit: 'GRAM',
+      purchaseUnit: 'KG',
+      conversionFactor: 1000,
+      yieldPercentage: 100,
+      costPerPurchaseUnit: 450,
+      costPerBaseUnit: 0.45,
+      currentStock: 4200,
+      reorderLevel: 2000,
+      reorderQuantity: 5000,
+      storageType: 'DRY_STORE',
+      supplierName: 'MDH Spice Distributors',
+      isActive: true
+    },
+    {
+      id: 4,
+      code: 'ING-004',
+      name: 'Amul Fresh Cream',
+      category: 'Dairy',
+      baseUnit: 'ML',
+      purchaseUnit: 'LITER',
+      conversionFactor: 1000,
+      yieldPercentage: 98,
+      costPerPurchaseUnit: 220,
+      costPerBaseUnit: 0.22,
+      currentStock: 1800,
+      reorderLevel: 3000,
+      reorderQuantity: 10000,
+      storageType: 'CHILLED',
+      supplierName: 'Amul Depot',
+      isActive: true
+    },
+    {
+      id: 5,
+      code: 'ING-005',
+      name: 'Chicken (Boneless Breasts)',
+      category: 'Poultry & Meat',
+      baseUnit: 'GRAM',
+      purchaseUnit: 'KG',
+      conversionFactor: 1000,
+      yieldPercentage: 92,
+      costPerPurchaseUnit: 280,
+      costPerBaseUnit: 0.28,
+      currentStock: 12500,
+      reorderLevel: 8000,
+      reorderQuantity: 20000,
+      storageType: 'FROZEN',
+      supplierName: 'RealFresh Meats',
+      isActive: true
+    },
+    {
+      id: 6,
+      code: 'ING-006',
+      name: 'Desi Ghee / Pure Butter',
+      category: 'Oils & Ghee',
+      baseUnit: 'GRAM',
+      purchaseUnit: 'KG',
+      conversionFactor: 1000,
+      yieldPercentage: 100,
+      costPerPurchaseUnit: 580,
+      costPerBaseUnit: 0.58,
+      currentStock: 6500,
+      reorderLevel: 3000,
+      reorderQuantity: 10000,
+      storageType: 'DRY_STORE',
+      supplierName: 'Mother Dairy Direct',
+      isActive: true
+    },
+    {
+      id: 7,
+      code: 'ING-007',
+      name: 'Basmati Rice (Premium)',
+      category: 'Dry Grocery',
+      baseUnit: 'GRAM',
+      purchaseUnit: 'KG',
+      conversionFactor: 1000,
+      yieldPercentage: 98,
+      costPerPurchaseUnit: 140,
+      costPerBaseUnit: 0.14,
+      currentStock: 45000,
+      reorderLevel: 20000,
+      reorderQuantity: 50000,
+      storageType: 'DRY_STORE',
+      supplierName: 'India Gate Traders',
+      isActive: true
+    },
+    {
+      id: 8,
+      code: 'ING-008',
+      name: 'Ginger Garlic Paste',
+      category: 'Spices & Condiments',
+      baseUnit: 'GRAM',
+      purchaseUnit: 'KG',
+      conversionFactor: 1000,
+      yieldPercentage: 95,
+      costPerPurchaseUnit: 160,
+      costPerBaseUnit: 0.16,
+      currentStock: 2800,
+      reorderLevel: 1500,
+      reorderQuantity: 5000,
+      storageType: 'CHILLED',
+      supplierName: 'Capital Foods',
+      isActive: true
+    },
+    {
+      id: 9,
+      code: 'ING-009',
+      name: 'Fresh Tomatoes (Ripe Red)',
+      category: 'Produce',
+      baseUnit: 'GRAM',
+      purchaseUnit: 'KG',
+      conversionFactor: 1000,
+      yieldPercentage: 92,
+      costPerPurchaseUnit: 45,
+      costPerBaseUnit: 0.045,
+      currentStock: 18500,
+      reorderLevel: 10000,
+      reorderQuantity: 30000,
+      storageType: 'CHILLED',
+      supplierName: 'GreenField Fresh Produce',
+      isActive: true
+    },
+    {
+      id: 10,
+      code: 'ING-010',
+      name: 'Onions (Red Medium)',
+      category: 'Produce',
+      baseUnit: 'GRAM',
+      purchaseUnit: 'KG',
+      conversionFactor: 1000,
+      yieldPercentage: 88,
+      costPerPurchaseUnit: 35,
+      costPerBaseUnit: 0.035,
+      currentStock: 25000,
+      reorderLevel: 12000,
+      reorderQuantity: 40000,
+      storageType: 'DRY_STORE',
+      supplierName: 'GreenField Fresh Produce',
+      isActive: true
+    },
+    {
+      id: 11,
+      code: 'ING-011',
+      name: 'Refined Sunflower Oil',
+      category: 'Oils & Ghee',
+      baseUnit: 'ML',
+      purchaseUnit: 'LITER',
+      conversionFactor: 1000,
+      yieldPercentage: 100,
+      costPerPurchaseUnit: 145,
+      costPerBaseUnit: 0.145,
+      currentStock: 35000,
+      reorderLevel: 15000,
+      reorderQuantity: 50000,
+      storageType: 'DRY_STORE',
+      supplierName: 'Fortune Oil Depot',
+      isActive: true
+    },
+    {
+      id: 12,
+      code: 'ING-012',
+      name: 'Cashew Nuts (Whole W320)',
+      category: 'Dry Grocery',
+      baseUnit: 'GRAM',
+      purchaseUnit: 'KG',
+      conversionFactor: 1000,
+      yieldPercentage: 98,
+      costPerPurchaseUnit: 820,
+      costPerBaseUnit: 0.82,
+      currentStock: 4800,
+      reorderLevel: 2500,
+      reorderQuantity: 10000,
+      storageType: 'DRY_STORE',
+      supplierName: 'Royal Dry Fruits',
+      isActive: true
+    }
+  ]);
+
+  readonly recipes = signal<RecipeMaster[]>([
+    {
+      id: 1,
+      menuItemId: 1,
+      recipeCode: 'RCP-001',
+      recipeName: 'Paneer Tikka Standard Recipe',
+      portionSize: 1,
+      portionUnit: 'PLATE',
+      prepTimeMins: 20,
+      sellingPrice: 320,
+      totalPortionCost: 103.07,
+      foodCostPercent: 32.2,
+      grossMarginPercent: 67.8,
+      instructions: 'Marinate cottage cheese cubes with tandoori spices and capsicum for 30 mins before roasting in tandoor at 240C.',
+      isActive: true,
+      ingredients: [
+        {
+          ingredientId: 1,
+          ingredientCode: 'ING-001',
+          ingredientName: 'Paneer (Cottage Cheese)',
+          category: 'Dairy',
+          netQuantity: 200,
+          unit: 'GRAM',
+          wastePercent: 5,
+          grossQuantity: 210.53,
+          unitCost: 0.36,
+          lineCost: 75.79
+        },
+        {
+          ingredientId: 2,
+          ingredientCode: 'ING-002',
+          ingredientName: 'Capsicum (Green Pepper)',
+          category: 'Produce',
+          netQuantity: 50,
+          unit: 'GRAM',
+          wastePercent: 10,
+          grossQuantity: 55.56,
+          unitCost: 0.08,
+          lineCost: 4.44
+        },
+        {
+          ingredientId: 3,
+          ingredientCode: 'ING-003',
+          ingredientName: 'Tandoori Marinade Masala',
+          category: 'Spices & Condiments',
+          netQuantity: 25,
+          unit: 'GRAM',
+          wastePercent: 0,
+          grossQuantity: 25,
+          unitCost: 0.45,
+          lineCost: 11.25
+        },
+        {
+          ingredientId: 6,
+          ingredientCode: 'ING-006',
+          ingredientName: 'Desi Ghee / Pure Butter',
+          category: 'Oils & Ghee',
+          netQuantity: 20,
+          unit: 'GRAM',
+          wastePercent: 0,
+          grossQuantity: 20,
+          unitCost: 0.58,
+          lineCost: 11.60
+        },
+        {
+          ingredientId: 12,
+          ingredientCode: 'ING-012',
+          ingredientName: 'Cashew Nuts (Whole W320)',
+          category: 'Dry Grocery',
+          netQuantity: 15,
+          unit: 'GRAM',
+          wastePercent: 2,
+          grossQuantity: 15.31,
+          unitCost: 0.82,
+          lineCost: 12.55
+        }
+      ]
+    },
+    {
+      id: 2,
+      menuItemId: 2,
+      recipeCode: 'RCP-002',
+      recipeName: 'Murgh Makhani (Butter Chicken)',
+      portionSize: 1,
+      portionUnit: 'PORTION',
+      prepTimeMins: 25,
+      sellingPrice: 420,
+      totalPortionCost: 109.48,
+      foodCostPercent: 26.1,
+      grossMarginPercent: 73.9,
+      instructions: 'Simmer roasted tandoori chicken in rich tomato and cashew gravy enriched with butter and fresh cream.',
+      isActive: true,
+      ingredients: [
+        {
+          ingredientId: 5,
+          ingredientCode: 'ING-005',
+          ingredientName: 'Chicken (Boneless Breasts)',
+          category: 'Poultry & Meat',
+          netQuantity: 250,
+          unit: 'GRAM',
+          wastePercent: 8,
+          grossQuantity: 271.74,
+          unitCost: 0.28,
+          lineCost: 76.09
+        },
+        {
+          ingredientId: 4,
+          ingredientCode: 'ING-004',
+          ingredientName: 'Amul Fresh Cream',
+          category: 'Dairy',
+          netQuantity: 60,
+          unit: 'ML',
+          wastePercent: 2,
+          grossQuantity: 61.22,
+          unitCost: 0.22,
+          lineCost: 13.47
+        },
+        {
+          ingredientId: 6,
+          ingredientCode: 'ING-006',
+          ingredientName: 'Desi Ghee / Pure Butter',
+          category: 'Oils & Ghee',
+          netQuantity: 30,
+          unit: 'GRAM',
+          wastePercent: 0,
+          grossQuantity: 30,
+          unitCost: 0.58,
+          lineCost: 17.40
+        },
+        {
+          ingredientId: 8,
+          ingredientCode: 'ING-008',
+          ingredientName: 'Ginger Garlic Paste',
+          category: 'Spices & Condiments',
+          netQuantity: 15,
+          unit: 'GRAM',
+          wastePercent: 5,
+          grossQuantity: 15.79,
+          unitCost: 0.16,
+          lineCost: 2.53
+        }
+      ]
+    }
+  ]);
   readonly gstRules = signal<ApiGstRule[]>([
     { id: 1, serviceCategory: 'Room', cgstRate: 9, sgstRate: 9, igstRate: 18, isActive: true },
     { id: 2, serviceCategory: 'Food', cgstRate: 2.5, sgstRate: 2.5, igstRate: 5, isActive: true },
@@ -477,6 +853,7 @@ export class PosService {
     this.loadOrders();
     this.loadBills();
     this.loadPosDashboard();
+    this.loadPosDashboardCards();
   }
 
   loadOutletTypes(): void {
@@ -748,6 +1125,42 @@ export class PosService {
     );
   }
 
+  saveIngredient(item: IngredientMaster): void {
+    if (item.id) {
+      this.ingredients.update(list => list.map(existing => existing.id === item.id ? item : existing));
+      this.addAudit('Ingredient updated', 'Ingredient Master', item.name);
+    } else {
+      const nextId = Math.max(0, ...this.ingredients().map(i => i.id)) + 1;
+      const newItem = { ...item, id: nextId, code: `ING-${String(nextId).padStart(3, '0')}` };
+      this.ingredients.update(list => [newItem, ...list]);
+      this.addAudit('Ingredient created', 'Ingredient Master', newItem.name);
+    }
+  }
+
+  deleteIngredient(id: number): void {
+    const item = this.ingredients().find(i => i.id === id);
+    this.ingredients.update(list => list.filter(i => i.id !== id));
+    if (item) this.addAudit('Ingredient deleted', 'Ingredient Master', item.name);
+  }
+
+  saveRecipe(item: RecipeMaster): void {
+    if (item.id) {
+      this.recipes.update(list => list.map(existing => existing.id === item.id ? item : existing));
+      this.addAudit('Recipe updated', 'Recipes', item.recipeName);
+    } else {
+      const nextId = Math.max(0, ...this.recipes().map(r => r.id)) + 1;
+      const newItem = { ...item, id: nextId, recipeCode: `RCP-${String(nextId).padStart(3, '0')}` };
+      this.recipes.update(list => [newItem, ...list]);
+      this.addAudit('Recipe created', 'Recipes', newItem.recipeName);
+    }
+  }
+
+  deleteRecipe(id: number): void {
+    const recipe = this.recipes().find(r => r.id === id);
+    this.recipes.update(list => list.filter(r => r.id !== id));
+    if (recipe) this.addAudit('Recipe deleted', 'Recipes', recipe.recipeName);
+  }
+
   getBillByOrderId(orderId: number): Observable<PosBill | null> {
     return this.http.get<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/getBillByOrderId/${orderId}`).pipe(
       map(response => {
@@ -783,6 +1196,13 @@ export class PosService {
     });
   }
 
+  loadPosDashboardCards(): void {
+    this.http.get<StandardResponse<PosDashboardCards>>(`${this.posBaseUrl}/dashboard/getPosDashboardCards`).subscribe({
+      next: response => this.posDashboardCards.set(response?.data || null),
+      error: () => { /* silently fall back to computed values */ }
+    });
+  }
+
   saveOutlet(input: Partial<PosOutlet>): void {
     const nextId = Math.max(0, ...this.outlets().map(item => item.id)) + 1;
     const outlet: PosOutlet = {
@@ -792,7 +1212,7 @@ export class PosService {
       type: input.type || 'Restaurant',
       location: input.location || '',
       timing: input.timing || '09:00 AM - 09:00 PM',
-      taxProfile: input.taxProfile || 'GST 5%',
+      taxProfile: '',
       managerId: input.managerId,
       active: input.active ?? true,
       manager: input.manager || 'Outlet Manager'
@@ -806,6 +1226,7 @@ export class PosService {
         const responseOutlet = this.itemData(response);
         const saved = responseOutlet ? this.mapOutlet(responseOutlet) : outlet;
         this.outlets.update(items => input.id ? items.map(item => item.id === saved.id ? saved : item) : [saved, ...items]);
+        this.loadPosDashboardCards();
         this.addAudit(input.id ? 'Outlet updated' : 'Outlet created', 'Outlets', saved.name);
       },
       error: error => this.addAudit(input.id ? 'Outlet update failed' : 'Outlet create failed', 'Outlets', error?.error?.message || error?.message || outlet.name)
@@ -851,6 +1272,7 @@ export class PosService {
         const responseItem = this.itemData(response);
         const saved = responseItem ? this.mapMenuItem(responseItem) : item;
         this.loadMenuItems();
+        this.loadPosDashboardCards();
         this.addAudit(input.id ? 'Menu item updated' : 'Menu item created', 'Menu', saved.name);
       },
       error: error => this.addAudit(input.id ? 'Menu item update failed' : 'Menu item create failed', 'Menu', error?.error?.message || error?.message || item.name)
@@ -863,6 +1285,7 @@ export class PosService {
       next: () => {
         this.menuItems.update(items => items.filter(value => value.id !== id));
         this.loadMenuItems();
+        this.loadPosDashboardCards();
         if (item) this.addAudit('Menu item deleted', 'Menu', item.name);
       },
       error: error => this.addAudit('Menu item delete failed', 'Menu', error?.error?.message || error?.message || `Menu #${id}`)
@@ -902,6 +1325,7 @@ export class PosService {
         this.orders.update(items => isUpdate ? items.map(existing => existing.id === saved.id ? saved : existing) : [saved, ...items]);
         this.loadOrders();
         this.loadTables();
+        this.loadPosDashboardCards();
         this.addAudit(isUpdate ? 'Order updated' : 'Order created', 'Orders', saved.orderNo);
       },
       error: error => {
@@ -942,6 +1366,7 @@ export class PosService {
                 this.orders.update(items => items.map(item => item.id === id ? { ...item, status, kotNo: item.kotNo || `KOT-${500 + id}` } : item));
                 this.loadOrders();
                 this.loadPosDashboard();
+                this.loadPosDashboardCards();
                 this.addAudit('KOT status updated on backend', 'Orders', `ORD-${1000 + id}`);
               },
               error: error => {
@@ -989,6 +1414,7 @@ export class PosService {
         const responseTable = this.itemData(response);
         const saved = responseTable ? this.mapTable(responseTable) : table;
         this.loadTables();
+        this.loadPosDashboardCards();
         this.addAudit(input.id ? 'Dining table updated' : 'Dining table created', 'Table Dining', saved.number);
       },
       error: error => this.addAudit(input.id ? 'Dining table update failed' : 'Dining table create failed', 'Table Dining', error?.error?.message || error?.message || table.number)
@@ -1001,6 +1427,7 @@ export class PosService {
       next: () => {
         this.tables.update(items => items.filter(item => item.id !== id));
         this.loadTables();
+        this.loadPosDashboardCards();
         if (table) this.addAudit('Dining table deleted', 'Table Dining', table.number);
       },
       error: error => this.addAudit('Dining table delete failed', 'Table Dining', error?.error?.message || error?.message || `Table #${id}`)
@@ -1149,6 +1576,7 @@ export class PosService {
             : [savedBill, ...items]
           );
           this.addAudit(input.id ? 'Bill updated' : 'Bill generated', 'Billing', savedBill.billNo);
+          this.loadPosDashboardCards();
           this.snackBar.open(input.id ? 'Bill updated successfully' : 'Bill created successfully', 'Close', { duration: 3000 });
         },
         error: error => {
@@ -1321,7 +1749,7 @@ export class PosService {
     const typeMaster = this.outletTypeMasters().find(master =>
       [master.value, master.code].some(value => String(value || '').toLowerCase() === item.type.toLowerCase())
     );
-    const manager = this.userManagement.users().find(user => user.fullName.toLowerCase() === item.manager.toLowerCase());
+    const manager = ((this.userManagement.users() as any) || []).find((user: any) => String(user?.fullName || '').toLowerCase() === item.manager.toLowerCase());
 
     return {
       id: item.id,
@@ -1330,7 +1758,6 @@ export class PosService {
       typeValue: item.type,
       location: item.location,
       timing: item.timing,
-      taxProfile: item.taxProfile,
       managerId: manager?.id || item.managerId,
       managerName: item.manager,
       isActive: item.active
@@ -1373,7 +1800,6 @@ export class PosService {
     const statusMaster = this.tableStatusMasters().find(master =>
       [master.value, master.code].some(value => String(value || '').toLowerCase() === String(statusValue).toLowerCase())
     );
-    const server = this.userManagement.users().find(user => user.fullName.toLowerCase() === item.server.toLowerCase());
     const linkedTable = this.tables().find(table => table.number === item.mergedWith);
 
     return {
@@ -1385,8 +1811,6 @@ export class PosService {
       statusId: statusMaster?.id ? Number(statusMaster.id) : undefined,
       statusName: statusValue,
       covers: item.covers,
-      serverId: server?.id,
-      serverName: item.server,
       linkedTableId: linkedTable?.id,
       linkedTableNumber: item.mergedWith || undefined,
       guestName: item.guestName || null,
@@ -1485,7 +1909,7 @@ export class PosService {
 
   private toApiOrder(item: PosOrder): ApiOrder {
     const table = this.tables().find(value => value.outletId === item.outletId && value.number === item.tableNo);
-    const server = this.userManagement.users().find(user => user.fullName.toLowerCase() === item.server.toLowerCase());
+    const server = ((this.userManagement.users() as any) || []).find((user: any) => String(user?.fullName || '').toLowerCase() === item.server.toLowerCase());
     const lines = item.lines.map(line => this.toApiOrderLine(line));
 
     return {

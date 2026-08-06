@@ -137,163 +137,185 @@ export class Layout implements OnInit {
   ) { }
 
   navItems = [
-    { label: 'Dashboard', icon: 'grid_view', route: '/dashboard' },
+    { label: 'Dashboard', icon: 'grid_view', route: '/dashboard', color: '#2563EB' },
     {
       label: 'Front Office',
       icon: 'business_center',
+      color: '#D97706',
       expanded: false,
       children: [
-        { label: 'Dashboard', icon: 'dashboard', route: '/front-office/dashboard' },
-        { label: 'Reservations', icon: 'calendar_month', route: '/reservations' },
-        { label: 'Gantt Chart', icon: 'view_timeline', route: '/gantt-chart' },
-        { label: 'Arrivals', icon: 'login', route: '/arrivals' },
-        { label: 'Departures', icon: 'logout', route: '/departures' },
-        { label: 'Guest Profiles', icon: 'person_search', route: '/guests' },
-        { label: 'Reports & Graphs', icon: 'assessment', route: '/reports' }
+        { label: 'Dashboard', icon: 'dashboard', route: '/front-office/dashboard', color: '#3B82F6' },
+        { label: 'Reservations', icon: 'calendar_month', route: '/reservations', color: '#059669' },
+        { label: 'Gantt Chart', icon: 'view_timeline', route: '/gantt-chart', color: '#8B5CF6' },
+        { label: 'Arrivals', icon: 'login', route: '/arrivals', color: '#10B981' },
+        { label: 'Departures', icon: 'logout', route: '/departures', color: '#EF4444' },
+        { label: 'Guest Profiles', icon: 'person_search', route: '/guests', color: '#EC4899' },
+        { label: 'Reports & Graphs', icon: 'assessment', route: '/reports', queryParams: { category: 'front_office' }, color: '#F59E0B' }
       ]
     },
     {
       label: 'CRM',
       icon: 'groups',
+      color: '#EC4899',
       expanded: false,
       children: [
-        { label: 'Board', icon: 'space_dashboard', route: '/crm/dashboard' },
-        { label: 'Tasks', icon: 'assignment', route: '/crm/tasks' },
-        { label: 'New Enquiry', icon: 'add_box', route: '/crm/new' },
-        { label: 'Quotations', icon: 'description', route: '/crm/quotations' }
+        { label: 'Board', icon: 'space_dashboard', route: '/crm/dashboard', color: '#EC4899' },
+        { label: 'Tasks', icon: 'assignment', route: '/crm/tasks', color: '#8B5CF6' },
+        { label: 'New Enquiry', icon: 'add_box', route: '/crm/new', color: '#10B981' },
+        { label: 'Quotations', icon: 'description', route: '/crm/quotations', color: '#F59E0B' }
       ]
     },
-
-
     {
       label: 'Housekeeping',
       icon: 'cleaning_services',
+      color: '#10B981',
       expanded: false,
       children: [
-        { label: 'Room Board', icon: 'dashboard', route: '/housekeeping/board' },
-        { label: 'Tasks', icon: 'assignment', route: '/housekeeping/tasks' },
-        { label: 'Audit', icon: 'fact_check', route: '/housekeeping/audit' },
-        { label: 'Lost & Found', icon: 'search_off', route: '/housekeeping/lost-found' },
-        { label: 'Maintenance', icon: 'build_circle', route: '/housekeeping/maintenance' },
-        { label: 'Staff', icon: 'badge', route: '/housekeeping/staff' }
+        { label: 'Room Board', icon: 'dashboard', route: '/housekeeping/board', color: '#10B981' },
+        { label: 'Tasks', icon: 'assignment', route: '/housekeeping/tasks', color: '#3B82F6' },
+        { label: 'Audit', icon: 'fact_check', route: '/housekeeping/audit', color: '#8B5CF6' },
+        { label: 'Lost & Found', icon: 'search_off', route: '/housekeeping/lost-found', color: '#EF4444' },
+        { label: 'Maintenance', icon: 'build_circle', route: '/housekeeping/maintenance', color: '#F59E0B' },
+        { label: 'Staff', icon: 'badge', route: '/housekeeping/staff', color: '#EC4899' }
       ]
     },
     {
       label: 'Billing',
       icon: 'account_balance_wallet',
+      color: '#16A34A',
       expanded: false,
       children: [
-        { label: 'Guest Folios', icon: 'receipt_long', route: '/billing/folios' },
-        { label: 'Invoices', icon: 'request_quote', route: '/billing/invoices' },
-        { label: 'Refunds', icon: 'currency_exchange', route: '/billing/refunds' },
-        { label: 'Inward Stock', icon: 'move_to_inbox', route: '/billing/inward' },
-        { label: 'Vendor Bills', icon: 'receipt_long', route: '/billing/bills' }
+        { label: 'Guest Folios', icon: 'receipt_long', route: '/billing/folios', color: '#16A34A' },
+        { label: 'Invoices', icon: 'request_quote', route: '/billing/invoices', color: '#2563EB' },
+        { label: 'Refunds', icon: 'currency_exchange', route: '/billing/refunds', color: '#EF4444' },
+        { label: 'Inward Stock', icon: 'move_to_inbox', route: '/billing/inward', color: '#8B5CF6' },
+        { label: 'Vendor Bills', icon: 'receipt_long', route: '/billing/bills', color: '#F59E0B' }
       ]
     },
     {
       label: 'Laundry',
       icon: 'local_laundry_service',
+      color: '#06B6D4',
       expanded: false,
       children: [
-        { label: 'Dashboard', icon: 'dashboard', route: '/laundry/dashboard' },
-        { label: 'Create Order', icon: 'add_circle', route: '/laundry/create' },
-        { label: 'Order Tracking', icon: 'list_alt', route: '/laundry/orders' },
-        { label: 'Status Flow', icon: 'timeline', route: '/laundry/detail' },
-        { label: 'Price Master', icon: 'inventory_2', route: '/laundry/catalogue' }
+        { label: 'Dashboard', icon: 'dashboard', route: '/laundry/dashboard', color: '#06B6D4' },
+        { label: 'Create Order', icon: 'add_circle', route: '/laundry/create', color: '#10B981' },
+        { label: 'Order Tracking', icon: 'list_alt', route: '/laundry/orders', color: '#3B82F6' },
+        { label: 'Status Flow', icon: 'timeline', route: '/laundry/detail', color: '#8B5CF6' },
+        { label: 'Price Master', icon: 'inventory_2', route: '/laundry/catalogue', color: '#F59E0B' }
       ]
     },
     {
       label: 'Inventory',
       icon: 'inventory',
+      color: '#8B5CF6',
       expanded: false,
       children: [
-        { label: 'Dashboard', icon: 'dashboard', route: '/inventory/dashboard' },
-        { label: 'Stock Ledger', icon: 'inventory_2', route: '/inventory/stock' },
-        { label: 'Purchase Requests', icon: 'assignment_add', route: '/inventory/requests' },
-        { label: 'Store Issues', icon: 'outbox', route: '/inventory/issues' }
+        { label: 'Dashboard', icon: 'dashboard', route: '/inventory/dashboard', color: '#8B5CF6' },
+        { label: 'Stock Ledger', icon: 'inventory_2', route: '/inventory/stock', color: '#3B82F6' },
+        { label: 'Purchase Requests', icon: 'assignment_add', route: '/inventory/requests', color: '#F97316' },
+        { label: 'Store Issues', icon: 'outbox', route: '/inventory/issues', color: '#EF4444' }
       ]
     },
     {
       label: 'Purchase',
       icon: 'shopping_cart_checkout',
+      color: '#F97316',
       expanded: false,
       children: [
-        { label: 'Dashboard', icon: 'dashboard', route: '/purchase/dashboard' },
-        { label: 'Suppliers', icon: 'storefront', route: '/purchase/suppliers' },
-        { label: 'Purchase Orders', icon: 'shopping_cart', route: '/purchase/orders' },
-        { label: 'Item Config', icon: 'inventory_2', route: '/purchase/items' }
+        { label: 'Dashboard', icon: 'dashboard', route: '/purchase/dashboard', color: '#F97316' },
+        { label: 'Suppliers', icon: 'storefront', route: '/purchase/suppliers', color: '#10B981' },
+        { label: 'Purchase Orders', icon: 'shopping_cart', route: '/purchase/orders', color: '#3B82F6' },
+        { label: 'Item Config', icon: 'inventory_2', route: '/purchase/items', color: '#8B5CF6' }
       ]
     },
     {
       label: 'Hotel Setup',
       icon: 'domain',
+      color: '#6366F1',
       expanded: false,
       children: [
-        { label: 'Hotels', icon: 'location_city', route: '/masters/hotels' },
-        { label: 'Floors', icon: 'layers', route: '/masters/floors' },
-        { label: 'Room Types', icon: 'bed', route: '/masters/room-types' },
-        { label: 'Rooms', icon: 'meeting_room', route: '/masters/rooms' },
-        { label: 'Rate Plans', icon: 'sell', route: '/masters/rate-plans' },
-        { label: 'GST Configuration', icon: 'receipt_long', route: '/masters/gst-config' }
+        { label: 'Hotels', icon: 'location_city', route: '/masters/hotels', color: '#6366F1' },
+        { label: 'Floors', icon: 'layers', route: '/masters/floors', color: '#3B82F6' },
+        { label: 'Room Types', icon: 'bed', route: '/masters/room-types', color: '#10B981' },
+        { label: 'Rooms', icon: 'meeting_room', route: '/masters/rooms', color: '#8B5CF6' },
+        { label: 'Rate Plans', icon: 'sell', route: '/masters/rate-plans', color: '#F59E0B' },
+        { label: 'GST Configuration', icon: 'receipt_long', route: '/masters/gst-config', color: '#EC4899' }
       ]
     },
     {
       label: 'User Management',
       icon: 'manage_accounts',
+      color: '#E11D48',
       expanded: false,
       children: [
-        { label: 'Users', icon: 'group', route: '/user-management/users' },
-        { label: 'Roles & Permissions', icon: 'admin_panel_settings', route: '/user-management/roles' },
-        { label: 'Departments', icon: 'apartment', route: '/user-management/departments' },
-        { label: 'Shift Configuration', icon: 'schedule', route: '/user-management/shifts' },
-        { label: 'Access Audit', icon: 'manage_history', route: '/user-management/activity' }
+        { label: 'Users', icon: 'group', route: '/user-management/users', color: '#E11D48' },
+        { label: 'Roles & Permissions', icon: 'admin_panel_settings', route: '/user-management/roles', color: '#8B5CF6' },
+        { label: 'Departments', icon: 'apartment', route: '/user-management/departments', color: '#3B82F6' },
+        { label: 'Shift Configuration', icon: 'schedule', route: '/user-management/shifts', color: '#F59E0B' },
+        { label: 'Access Audit', icon: 'manage_history', route: '/user-management/activity', color: '#10B981' }
       ]
     },
     {
       label: 'Setup',
       icon: 'tune',
+      color: '#64748B',
       expanded: false,
       children: [
-        { label: 'Master Data', icon: 'folder', route: '/setup/master-data' }
+        { label: 'Master Data', icon: 'folder', route: '/setup/master-data', color: '#64748B' }
       ]
     },
     {
       label: 'POS',
       icon: 'point_of_sale',
-      expanded: false,
+      color: '#0D9488',
+      expanded: true,
       children: [
-        { label: 'Dashboard', icon: 'dashboard', route: '/pos/dashboard' },
-        { label: 'Outlets', icon: 'storefront', route: '/pos/outlets' },
-        { label: 'Table Dining', icon: 'table_restaurant', route: '/pos/dining' },
-        { label: 'Orders', icon: 'restaurant_menu', route: '/pos/orders' },
-        { label: 'Billing', icon: 'receipt_long', route: '/pos/billing' },
-        { label: 'Menu Management', icon: 'menu_book', route: '/pos/menu' }
+        { label: 'Dashboard', icon: 'dashboard', route: '/pos/dashboard', color: '#2563EB' },
+        { label: 'Outlets', icon: 'storefront', route: '/pos/outlets', color: '#D97706' },
+        { label: 'Table Dining', icon: 'table_restaurant', route: '/pos/dining', color: '#8B5CF6' },
+        { label: 'Orders', icon: 'restaurant_menu', route: '/pos/orders', color: '#EF4444' },
+        { label: 'Billing', icon: 'receipt_long', route: '/pos/billing', color: '#16A34A' },
+        { label: 'Menu Management', icon: 'menu_book', route: '/pos/menu', color: '#06B6D4' },
+        { label: 'Ingredients', icon: 'kitchen', route: '/pos/ingredient-master', color: '#10B981' },
+        { label: 'Recipes (BOM)', icon: 'set_meal', route: '/pos/recipes', color: '#F59E0B' },
+        { label: 'Kitchen Display', icon: 'kitchen', route: '/pos/kds', color: '#EC4899' }
       ]
-
     },
     {
       label: 'Channel Manager',
       icon: 'hub',
+      color: '#A855F7',
       expanded: true,
       children: [
-        { label: 'Channex OTA Sync', icon: 'cloud_sync', route: '/channel-manager/channex' }
+        { label: 'Channex OTA Sync', icon: 'cloud_sync', route: '/channel-manager/channex', color: '#A855F7' }
       ]
     },
     {
       label: 'Reports & Analytics',
       icon: 'assessment',
+      color: '#EAB308',
       expanded: true,
       children: [
-        { label: 'All Reports', icon: 'auto_awesome', route: '/reports' },
-        { label: 'Front Office', icon: 'bed', route: '/reports', queryParams: { category: 'front_office' } },
-        { label: 'POS & Dining', icon: 'restaurant', route: '/reports', queryParams: { category: 'pos' } },
-        { label: 'Housekeeping', icon: 'cleaning_services', route: '/reports', queryParams: { category: 'housekeeping' } },
-        { label: 'Laundry', icon: 'local_laundry_service', route: '/reports', queryParams: { category: 'laundry' } },
-        { label: 'Purchase & Inventory', icon: 'inventory_2', route: '/reports', queryParams: { category: 'purchase_inventory' } }
+        { label: 'Front Office', icon: 'bed', route: '/reports', queryParams: { category: 'front_office' }, color: '#D97706' },
+        { label: 'POS & Dining', icon: 'restaurant', route: '/reports', queryParams: { category: 'pos' }, color: '#0D9488' },
+        { label: 'Housekeeping', icon: 'cleaning_services', route: '/reports', queryParams: { category: 'housekeeping' }, color: '#10B981' },
+        { label: 'Laundry', icon: 'local_laundry_service', route: '/reports', queryParams: { category: 'laundry' }, color: '#06B6D4' },
+        { label: 'Purchase & Inventory', icon: 'inventory_2', route: '/reports', queryParams: { category: 'purchase_inventory' }, color: '#8B5CF6' }
       ]
     }
   ];
 
+
+  isGroupActive(item: any): boolean {
+    if (!item.children || !item.children.length) return false;
+    const currentUrl = this.router.url;
+    return item.children.some((child: any) => {
+      if (!child.route) return false;
+      const basePath = child.route.split('?')[0];
+      return currentUrl === basePath || currentUrl.startsWith(basePath + '/') || currentUrl.startsWith(basePath + '?');
+    });
+  }
 
   toggleSidebar() {
     this.isCollapsed.update(v => !v);

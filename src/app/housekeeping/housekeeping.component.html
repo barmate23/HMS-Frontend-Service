@@ -4,28 +4,28 @@
     <div class="nav-left">
       <div class="tabs-container">
         <button class="tab-btn" [class.active]="activeTab() === 'board'" (click)="selectTab('board')">
-          <span class="material-icons-round">dashboard</span>
+          <span class="material-icons-round" style="color:#10B981;">dashboard</span>
           Board
         </button>
         <button class="tab-btn" [class.active]="activeTab() === 'tasks'" (click)="selectTab('tasks')">
-          <span class="material-icons-round">assignment</span>
+          <span class="material-icons-round" style="color:#3B82F6;">assignment</span>
           Tasks
           <span class="badge" *ngIf="hk.taskStats().pending > 0">{{ hk.taskStats().pending }}</span>
         </button>
         <button class="tab-btn" [class.active]="activeTab() === 'audit'" (click)="selectTab('audit')">
-          <span class="material-icons-round">fact_check</span>
+          <span class="material-icons-round" style="color:#8B5CF6;">fact_check</span>
           Audit
         </button>
         <button class="tab-btn" [class.active]="activeTab() === 'lost-found'" (click)="selectTab('lost-found')">
-          <span class="material-icons-round">search_off</span>
+          <span class="material-icons-round" style="color:#EF4444;">search_off</span>
           Lost & Found
         </button>
         <button class="tab-btn" [class.active]="activeTab() === 'maintenance'" (click)="selectTab('maintenance')">
-          <span class="material-icons-round">build_circle</span>
+          <span class="material-icons-round" style="color:#F59E0B;">build_circle</span>
           Maintenance
         </button>
         <button class="tab-btn" [class.active]="activeTab() === 'staff'" (click)="selectTab('staff')">
-          <span class="material-icons-round">badge</span>
+          <span class="material-icons-round" style="color:#EC4899;">badge</span>
           Staff
         </button>
       </div>

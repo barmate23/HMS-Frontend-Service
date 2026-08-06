@@ -142,8 +142,9 @@
 .nav-item.active {
   background-color: var(--primary-light);
   color: var(--primary-color);
-  border-right: 3px solid var(--primary-color);
-  border-radius: 6px 0 0 6px;
+  border-left: 3.5px solid var(--primary-color);
+  font-weight: 700;
+  border-radius: 4px;
 }
 .nav-item.active .material-icons-round {
   color: var(--primary-color);
@@ -151,6 +152,13 @@
 
 .nav-group {
   margin-bottom: 2px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.nav-group.group-active-container {
+  background-color: rgba(15, 61, 62, 0.03);
+  border-radius: 6px;
 }
 
 .nav-item.has-submenu {
@@ -159,6 +167,18 @@
 }
 .nav-item.has-submenu.expanded {
   background-color: var(--surface-100);
+  color: var(--primary-color);
+}
+
+.nav-item.has-submenu.group-active {
+  background-color: var(--primary-light);
+  color: var(--primary-color);
+  font-weight: 700;
+  border-left: 3.5px solid var(--primary-color);
+  border-radius: 4px;
+}
+
+.nav-item.has-submenu.group-active .material-icons-round {
   color: var(--primary-color);
 }
 
@@ -174,8 +194,8 @@
   padding-left: 4px;
   margin-top: 2px;
   margin-bottom: 2px;
-  border-left: 1px dashed var(--surface-300);
-  margin-left: 6px;
+  border-left: 2px solid var(--surface-200);
+  margin-left: 12px;
   animation: slideDown 0.2s ease-out;
 }
 
@@ -189,12 +209,14 @@
   align-items: center;
   gap: 6px;
   min-height: 26px;
-  padding: 4px 6px;
+  padding: 5px 8px;
   margin-bottom: 2px;
   font-size: 0.78rem;
   font-weight: 600;
-  text-transform: none;
-  letter-spacing: 0.01em;
+  color: var(--surface-700);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  position: relative;
 }
 
 .submenu-item .material-icons-round {
@@ -202,6 +224,39 @@
   width: 16px;
   min-width: 16px;
   text-align: center;
+  color: var(--surface-400);
+  transition: color 0.2s ease;
+}
+
+.submenu-item:hover {
+  background-color: var(--surface-100);
+  color: var(--primary-color);
+}
+
+.submenu-item:hover .material-icons-round {
+  color: var(--primary-color);
+}
+
+.submenu-item.active {
+  background-color: var(--primary-color);
+  color: #ffffff !important;
+  font-weight: 700;
+  border-radius: 5px;
+  box-shadow: 0 2px 6px rgba(15, 61, 62, 0.2);
+}
+
+.submenu-item.active .material-icons-round {
+  color: #ffffff !important;
+}
+
+.submenu-item.active::after {
+  content: '';
+  width: 5px;
+  height: 5px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  margin-left: auto;
+  box-shadow: 0 0 6px #ffffff;
 }
 
 .submenu-item .nav-label {

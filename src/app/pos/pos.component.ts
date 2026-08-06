@@ -23,7 +23,9 @@ import {
   TableStatus
 } from './pos.service';
 
-type ModalKind = 'outlet' | 'menu' | 'order' | 'bill' | 'table';
+import { IngredientCategory, IngredientMaster, RecipeIngredient, RecipeMaster, StorageType } from './models/recipe.model';
+
+type ModalKind = 'outlet' | 'menu' | 'order' | 'bill' | 'table' | 'ingredient' | 'recipe';
 type ModalMode = 'create' | 'edit';
 type DiningAction = 'START' | 'ROOM' | 'BOOK' | 'MERGE' | 'RESET';
 type DeleteTarget = { kind: 'outlet' | 'menu' | 'table'; id: number; title: string; message: string };
@@ -141,6 +143,89 @@ export class PosComponent implements OnInit, OnDestroy {
     { code: 'ROOMDINING', name: 'Room dining credit', type: 'Flat', value: 500, validFrom: '2026-06-01', validTo: '2026-07-15', active: false }
   ]);
 
+  ingredientCategoryFilter = signal<string>('ALL');
+
+  currentIngredient = signal<IngredientMaster>({
+    id: 0,
+    code: '',
+    name: '',
+    category: 'Dairy',
+    baseUnit: 'GRAM',
+    purchaseUnit: 'KG',
+    conversionFactor: 1000,
+    yieldPercentage: 95,
+    costPerPurchaseUnit: 0,
+    costPerBaseUnit: 0,
+    currentStock: 0,
+    reorderLevel: 0,
+    reorderQuantity: 0,
+    storageType: 'DRY_STORE',
+    supplierName: '',
+    isActive: true
+  });
+
+  currentRecipe = signal<RecipeMaster>({
+    id: 0,
+    menuItemId: 0,
+    recipeCode: '',
+    recipeName: '',
+    portionSize: 1,
+    portionUnit: 'PLATE',
+    prepTimeMins: 15,
+    ingredients: [],
+    totalPortionCost: 0,
+    sellingPrice: 0,
+    foodCostPercent: 0,
+    grossMarginPercent: 0,
+    instructions: '',
+    isActive: true
+  });
+
+  recipeIngredientRows = signal<RecipeIngredient[]>([]);
+
+  selectedRecipeForView = signal<RecipeMaster | null>(null);
+  isRecipeViewModalOpen = signal<boolean>(false);
+
+  filteredIngredients = computed(() => {
+    let list = this.pos.ingredients();
+    const cat = this.ingredientCategoryFilter();
+    const query = this.search().trim().toLowerCase();
+
+    if (cat !== 'ALL') {
+      list = list.filter(item => item.category === cat);
+    }
+    if (query) {
+      list = list.filter(item => item.name.toLowerCase().includes(query) || item.code.toLowerCase().includes(query) || item.category.toLowerCase().includes(query));
+    }
+    return list;
+  });
+
+  ingredientStats = computed(() => {
+    const list = this.pos.ingredients();
+    const lowStock = list.filter(item => item.currentStock <= item.reorderLevel).length;
+    const categories = new Set(list.map(item => item.category)).size;
+    const totalValue = list.reduce((sum, item) => sum + (item.currentStock * item.costPerBaseUnit), 0);
+    return { total: list.length, lowStock, categories, totalValue };
+  });
+
+  filteredRecipes = computed(() => {
+    let list = this.pos.recipes();
+    const query = this.search().trim().toLowerCase();
+    if (query) {
+      list = list.filter(item => item.recipeName.toLowerCase().includes(query) || item.recipeCode.toLowerCase().includes(query));
+    }
+    return list;
+  });
+
+  recipeStats = computed(() => {
+    const list = this.pos.recipes();
+    if (!list.length) return { total: 0, avgFoodCost: 0, avgMargin: 0, highMargin: 0 };
+    const avgFoodCost = (list.reduce((sum, r) => sum + r.foodCostPercent, 0) / list.length).toFixed(1);
+    const avgMargin = (list.reduce((sum, r) => sum + r.grossMarginPercent, 0) / list.length).toFixed(1);
+    const highMargin = list.filter(r => r.grossMarginPercent >= 65).length;
+    return { total: list.length, avgFoodCost, avgMargin, highMargin };
+  });
+
   readonly dashboardOutlets = computed(() => this.pos.outlets());
   readonly dashboardMenuItems = computed(() => this.pos.menuItems());
   readonly dashboardTables = computed(() => this.pos.tables());
@@ -162,6 +247,19 @@ export class PosComponent implements OnInit, OnDestroy {
   });
 
   stats = computed(() => {
+    const cards = this.pos.posDashboardCards();
+    // Prefer accurate backend API values when available
+    if (cards) {
+      return {
+        outlets: Number(cards.activeOutlets ?? 0),
+        orders: Number(cards.openOrders ?? 0),
+        kot: Number(cards.kotRunning ?? 0),
+        bills: Number(cards.bills ?? 0),
+        roomPostings: Number(cards.roomPostings ?? 0),
+        sales: Number(cards.grossSales ?? 0)
+      };
+    }
+    // Fallback: compute from local signals while API loads
     const bills = this.pos.bills();
     const totalSales = bills.reduce((sum, bill) => sum + this.billTotal(bill), 0);
     return {
@@ -778,7 +876,193 @@ export class PosComponent implements OnInit, OnDestroy {
       });
     }
     if (kind === 'table') this.pos.saveTable(this.currentTable() as PosTable);
+    if (kind === 'ingredient') {
+      const ing = this.currentIngredient();
+      const conv = Math.max(1, Number(ing.conversionFactor || 1));
+      const costPerBase = Number(ing.costPerPurchaseUnit || 0) / conv;
+      this.pos.saveIngredient({ ...ing, conversionFactor: conv, costPerBaseUnit: costPerBase });
+    }
+    if (kind === 'recipe') {
+      const rec = this.currentRecipe();
+      const rows = this.recipeIngredientRows();
+      const totalPortionCost = rows.reduce((sum, r) => sum + (r.lineCost || 0), 0);
+      const sellingPrice = Number(rec.sellingPrice || 0);
+      const foodCostPercent = sellingPrice > 0 ? Number(((totalPortionCost / sellingPrice) * 100).toFixed(1)) : 0;
+      const grossMarginPercent = sellingPrice > 0 ? Number((((sellingPrice - totalPortionCost) / sellingPrice) * 100).toFixed(1)) : 0;
+
+      this.pos.saveRecipe({
+        ...rec,
+        ingredients: rows,
+        totalPortionCost: Number(totalPortionCost.toFixed(2)),
+        foodCostPercent,
+        grossMarginPercent
+      });
+    }
     this.closeModal();
+  }
+
+  openCreateIngredient(): void {
+    this.modalKind.set('ingredient');
+    this.modalMode.set('create');
+    this.currentIngredient.set({
+      id: 0,
+      code: '',
+      name: '',
+      category: 'Dairy',
+      baseUnit: 'GRAM',
+      purchaseUnit: 'KG',
+      conversionFactor: 1000,
+      yieldPercentage: 95,
+      costPerPurchaseUnit: 100,
+      costPerBaseUnit: 0.10,
+      currentStock: 5000,
+      reorderLevel: 2000,
+      reorderQuantity: 10000,
+      storageType: 'DRY_STORE',
+      supplierName: '',
+      isActive: true
+    });
+    this.isModalOpen.set(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  openEditIngredient(ing: IngredientMaster): void {
+    this.modalKind.set('ingredient');
+    this.modalMode.set('edit');
+    this.currentIngredient.set({ ...ing });
+    this.isModalOpen.set(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  openCreateRecipe(): void {
+    this.modalKind.set('recipe');
+    this.modalMode.set('create');
+    const firstMenuItem = this.pos.menuItems()[0];
+    this.currentRecipe.set({
+      id: 0,
+      menuItemId: firstMenuItem?.id || 1,
+      recipeCode: '',
+      recipeName: firstMenuItem ? `${firstMenuItem.name} Recipe` : 'New Dish Recipe',
+      portionSize: 1,
+      portionUnit: 'PLATE',
+      prepTimeMins: 20,
+      ingredients: [],
+      totalPortionCost: 0,
+      sellingPrice: firstMenuItem?.price || 250,
+      foodCostPercent: 0,
+      grossMarginPercent: 0,
+      instructions: '',
+      isActive: true
+    });
+    this.recipeIngredientRows.set([]);
+    this.addIngredientRowToRecipe();
+    this.isModalOpen.set(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  openEditRecipe(recipe: RecipeMaster): void {
+    this.modalKind.set('recipe');
+    this.modalMode.set('edit');
+    this.currentRecipe.set({ ...recipe });
+    this.recipeIngredientRows.set([...recipe.ingredients]);
+    this.isModalOpen.set(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  openRecipeDetails(recipe: RecipeMaster): void {
+    this.selectedRecipeForView.set(recipe);
+    this.isRecipeViewModalOpen.set(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeRecipeDetails(): void {
+    this.selectedRecipeForView.set(null);
+    this.isRecipeViewModalOpen.set(false);
+    if (!this.isModalOpen() && !this.isDiningActionOpen()) document.body.style.overflow = '';
+  }
+
+  onRecipeMenuItemChange(menuItemId: number): void {
+    const item = this.pos.menuItems().find(m => m.id === Number(menuItemId));
+    if (item) {
+      this.currentRecipe.update(rec => ({
+        ...rec,
+        menuItemId: item.id,
+        recipeName: `${item.name} Recipe`,
+        sellingPrice: item.price
+      }));
+    }
+  }
+
+  addIngredientRowToRecipe(): void {
+    const firstIng = this.pos.ingredients()[0];
+    if (!firstIng) return;
+    const netQty = 100;
+    const yieldPct = Math.max(1, firstIng.yieldPercentage || 100);
+    const grossQty = Number((netQty / (yieldPct / 100)).toFixed(2));
+    const unitCost = firstIng.costPerBaseUnit;
+    const lineCost = Number((grossQty * unitCost).toFixed(2));
+
+    const newRow: RecipeIngredient = {
+      ingredientId: firstIng.id,
+      ingredientCode: firstIng.code,
+      ingredientName: firstIng.name,
+      category: firstIng.category,
+      netQuantity: netQty,
+      unit: firstIng.baseUnit,
+      wastePercent: 100 - yieldPct,
+      grossQuantity: grossQty,
+      unitCost: unitCost,
+      lineCost: lineCost
+    };
+    this.recipeIngredientRows.update(rows => [...rows, newRow]);
+    this.recalculateRecipeTotals();
+  }
+
+  removeIngredientRowFromRecipe(index: number): void {
+    this.recipeIngredientRows.update(rows => rows.filter((_, i) => i !== index));
+    this.recalculateRecipeTotals();
+  }
+
+  updateRecipeIngredientRow(index: number, field: string, value: any): void {
+    this.recipeIngredientRows.update(rows => {
+      const updated = [...rows];
+      const row = { ...updated[index] };
+      if (field === 'ingredientId') {
+        const ing = this.pos.ingredients().find(i => i.id === Number(value));
+        if (ing) {
+          row.ingredientId = ing.id;
+          row.ingredientCode = ing.code;
+          row.ingredientName = ing.name;
+          row.category = ing.category;
+          row.unit = ing.baseUnit;
+          row.unitCost = ing.costPerBaseUnit;
+          row.wastePercent = 100 - ing.yieldPercentage;
+        }
+      }
+      if (field === 'netQuantity') row.netQuantity = Number(value || 0);
+      if (field === 'wastePercent') row.wastePercent = Number(value || 0);
+
+      const yieldPct = Math.max(1, 100 - row.wastePercent);
+      row.grossQuantity = Number((row.netQuantity / (yieldPct / 100)).toFixed(2));
+      row.lineCost = Number((row.grossQuantity * row.unitCost).toFixed(2));
+      updated[index] = row;
+      return updated;
+    });
+    this.recalculateRecipeTotals();
+  }
+
+  recalculateRecipeTotals(): void {
+    const totalCost = this.recipeIngredientRows().reduce((sum, r) => sum + (r.lineCost || 0), 0);
+    const sellingPrice = Number(this.currentRecipe().sellingPrice || 0);
+    const foodCostPct = sellingPrice > 0 ? Number(((totalCost / sellingPrice) * 100).toFixed(1)) : 0;
+    const grossMarginPct = sellingPrice > 0 ? Number((((sellingPrice - totalCost) / sellingPrice) * 100).toFixed(1)) : 0;
+
+    this.currentRecipe.update(rec => ({
+      ...rec,
+      totalPortionCost: Number(totalCost.toFixed(2)),
+      foodCostPercent: foodCostPct,
+      grossMarginPercent: grossMarginPct
+    }));
   }
 
 
@@ -822,6 +1106,26 @@ export class PosComponent implements OnInit, OnDestroy {
     if (!this.isModalOpen() && !this.isDiningActionOpen()) document.body.style.overflow = '';
   }
 
+  deleteIngredient(id: number): void {
+    const item = this.pos.ingredients().find(i => i.id === id);
+    this.openDeleteConfirm({
+      kind: 'ingredient' as any,
+      id,
+      title: item?.name || 'Ingredient',
+      message: 'This raw ingredient will be removed from the Ingredient Master catalog.'
+    });
+  }
+
+  deleteRecipe(id: number): void {
+    const recipe = this.pos.recipes().find(r => r.id === id);
+    this.openDeleteConfirm({
+      kind: 'recipe' as any,
+      id,
+      title: recipe?.recipeName || 'Recipe',
+      message: 'This dish recipe (BOM) will be permanently deleted.'
+    });
+  }
+
   confirmDelete(): void {
     const target = this.deleteTarget();
     if (!target) return;
@@ -831,6 +1135,8 @@ export class PosComponent implements OnInit, OnDestroy {
       this.pos.deleteTable(target.id);
       if (this.selectedTable()?.id === target.id) this.selectedTable.set(null);
     }
+    if ((target.kind as string) === 'ingredient') this.pos.deleteIngredient(target.id);
+    if ((target.kind as string) === 'recipe') this.pos.deleteRecipe(target.id);
     this.closeDeleteConfirm();
   }
 
@@ -1413,16 +1719,29 @@ export class PosComponent implements OnInit, OnDestroy {
     }));
   }
 
+  readonly imageUploadError = signal<string>('');
+
   handleMenuImageUpload(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
 
+    const MAX_SIZE_MB = 1;
+    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+
+    if (file.size > MAX_SIZE_BYTES) {
+      this.imageUploadError.set(`Image size ${(file.size / (1024 * 1024)).toFixed(2)} MB exceeds the ${MAX_SIZE_MB} MB limit. Please choose a smaller image.`);
+      input.value = ''; // reset input
+      return;
+    }
+
+    this.imageUploadError.set('');
     const reader = new FileReader();
     reader.onload = () => {
       this.currentMenuItem.update(item => ({ ...item, imageUrl: String(reader.result || '') }));
     };
     reader.readAsDataURL(file);
+    input.value = ''; // reset so same file can be re-selected
   }
 
   outletName(id?: number): string {
@@ -1766,7 +2085,7 @@ export class PosComponent implements OnInit, OnDestroy {
 
   private updateTabFromUrl(url: string): void {
     const last = url.split('/').pop()?.split('?')[0] as PosTab;
-    const tab: PosTab = ['dashboard', 'outlets', 'dining', 'orders', 'billing', 'menu', 'billing-setup'].includes(last) ? last : 'dashboard';
+    const tab: PosTab = ['dashboard', 'outlets', 'dining', 'orders', 'billing', 'menu', 'billing-setup', 'ingredient-master', 'recipes'].includes(last) ? last : 'dashboard';
     this.activeTab.set(tab);
     this.search.set('');
     this.statusFilter.set('ALL');

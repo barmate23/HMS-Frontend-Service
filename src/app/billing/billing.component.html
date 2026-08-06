@@ -1,23 +1,23 @@
 <div class="billing-shell">
   <nav class="billing-tabs">
     <button type="button" [class.active]="activeTab() === 'folios'" (click)="setTab('folios')">
-      <span class="material-icons-round">receipt_long</span>
+      <span class="material-icons-round" style="color:#16A34A;">receipt_long</span>
       Guest Folios
     </button>
     <button type="button" [class.active]="activeTab() === 'invoices'" (click)="setTab('invoices')">
-      <span class="material-icons-round">request_quote</span>
+      <span class="material-icons-round" style="color:#2563EB;">request_quote</span>
       Invoices
     </button>
     <button type="button" [class.active]="activeTab() === 'refunds'" (click)="setTab('refunds')">
-      <span class="material-icons-round">currency_exchange</span>
+      <span class="material-icons-round" style="color:#EF4444;">currency_exchange</span>
       Refunds
     </button>
     <button type="button" [class.active]="activeTab() === 'inward'" (click)="setTab('inward')">
-      <span class="material-icons-round">move_to_inbox</span>
+      <span class="material-icons-round" style="color:#06B6D4;">move_to_inbox</span>
       Inward GRN
     </button>
     <button type="button" [class.active]="activeTab() === 'bills'" (click)="setTab('bills')">
-      <span class="material-icons-round">receipt</span>
+      <span class="material-icons-round" style="color:#F59E0B;">receipt</span>
       Vendor Bills
     </button>
   </nav>

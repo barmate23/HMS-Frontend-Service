@@ -2,23 +2,23 @@
   <div class="compact-nav">
     <div class="tabs-container">
       <button class="tab-btn" [class.active]="activeTab() === 'users'" (click)="switchTab('users')">
-        <span class="material-icons-round">group</span>
+        <span class="material-icons-round" style="color:#E11D48;">group</span>
         Users
       </button>
       <button class="tab-btn" [class.active]="activeTab() === 'roles'" (click)="switchTab('roles')">
-        <span class="material-icons-round">admin_panel_settings</span>
+        <span class="material-icons-round" style="color:#8B5CF6;">admin_panel_settings</span>
         Roles & Permissions
       </button>
       <button class="tab-btn" [class.active]="activeTab() === 'departments'" (click)="switchTab('departments')">
-        <span class="material-icons-round">apartment</span>
+        <span class="material-icons-round" style="color:#3B82F6;">apartment</span>
         Departments
       </button>
       <button class="tab-btn" [class.active]="activeTab() === 'shifts'" (click)="switchTab('shifts')">
-        <span class="material-icons-round">schedule</span>
+        <span class="material-icons-round" style="color:#F59E0B;">schedule</span>
         Shift Configuration
       </button>
       <button class="tab-btn" [class.active]="activeTab() === 'activity'" (click)="switchTab('activity')">
-        <span class="material-icons-round">manage_history</span>
+        <span class="material-icons-round" style="color:#10B981;">manage_history</span>
         Access Audit
       </button>
     </div>

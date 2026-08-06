@@ -38,14 +38,14 @@
             <mat-icon class="chart-icon text-teal">bed</mat-icon>
             <span class="chart-card-title">Front Office Occupancy</span>
           </div>
-          <span class="pulse-badge">86.4% OCCUPIED</span>
+          <span class="pulse-badge">{{ dashboardSummary()?.frontOfficeOccupancy?.occupancyPercentage ?? 0 }}% OCCUPIED</span>
         </div>
 
         <div class="donut-chart-body">
           <div class="svg-donut-container">
             <svg viewBox="0 0 36 36" class="donut-svg">
               <path class="donut-ring" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#E2E8F0" stroke-width="3.8"/>
-              <path class="donut-segment segment-occupied" stroke-dasharray="86.4, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="url(#tealGradient)" stroke-width="4.2" stroke-linecap="round"/>
+              <path class="donut-segment segment-occupied" [attr.stroke-dasharray]="(dashboardSummary()?.frontOfficeOccupancy?.occupancyPercentage ?? 0) + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="url(#tealGradient)" stroke-width="4.2" stroke-linecap="round"/>
               <defs>
                 <linearGradient id="tealGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="#0F3D3E" />
@@ -54,8 +54,8 @@
               </defs>
             </svg>
             <div class="donut-center-label">
-              <span class="center-val">108</span>
-              <span class="center-sub">/ 125 Rooms</span>
+              <span class="center-val">{{ dashboardSummary()?.frontOfficeOccupancy?.occupiedRooms ?? 0 }}</span>
+              <span class="center-sub">/ {{ dashboardSummary()?.frontOfficeOccupancy?.totalRooms ?? 0 }} Rooms</span>
             </div>
           </div>
 
@@ -63,22 +63,22 @@
             <div class="legend-row">
               <span class="dot dot-occupied"></span>
               <span class="leg-label">Occupied Rooms</span>
-              <strong class="leg-val">108 (86.4%)</strong>
+              <strong class="leg-val">{{ dashboardSummary()?.frontOfficeOccupancy?.occupiedRooms ?? 0 }} ({{ dashboardSummary()?.frontOfficeOccupancy?.occupancyPercentage ?? 0 }}%)</strong>
             </div>
             <div class="legend-row">
               <span class="dot dot-clean"></span>
               <span class="leg-label">Vacant Clean</span>
-              <strong class="leg-val">10 (8.0%)</strong>
+              <strong class="leg-val">{{ dashboardSummary()?.frontOfficeOccupancy?.vacantClean ?? 0 }} ({{ dashboardSummary()?.frontOfficeOccupancy?.vacantCleanPct ?? 0 }}%)</strong>
             </div>
             <div class="legend-row">
               <span class="dot dot-dirty"></span>
               <span class="leg-label">Vacant Dirty</span>
-              <strong class="leg-val">3 (2.4%)</strong>
+              <strong class="leg-val">{{ dashboardSummary()?.frontOfficeOccupancy?.vacantDirty ?? 0 }} ({{ dashboardSummary()?.frontOfficeOccupancy?.vacantDirtyPct ?? 0 }}%)</strong>
             </div>
             <div class="legend-row">
               <span class="dot dot-ooo"></span>
               <span class="leg-label">OOO / Blocked</span>
-              <strong class="leg-val">4 (3.2%)</strong>
+              <strong class="leg-val">{{ dashboardSummary()?.frontOfficeOccupancy?.oooBlocked ?? 0 }} ({{ dashboardSummary()?.frontOfficeOccupancy?.oooBlockedPct ?? 0 }}%)</strong>
             </div>
           </div>
         </div>
@@ -91,43 +91,29 @@
             <mat-icon class="chart-icon text-amber">restaurant</mat-icon>
             <span class="chart-card-title">POS Outlet Revenue Mix</span>
           </div>
-          <span class="amount-badge">₹1,45,800</span>
+          <span class="amount-badge">₹{{ (dashboardSummary()?.posRevenueMix?.totalSalesToday ?? 0) | number:'1.0-0' }}</span>
         </div>
 
         <div class="spectrum-chart-body">
           <div class="spectrum-total">
-            <span class="total-label">F&B Total Sales Today (148 Orders)</span>
-            <h2 class="total-val">₹1,45,800</h2>
+            <span class="total-label">F&B Total Sales Today ({{ dashboardSummary()?.posRevenueMix?.totalOrdersToday ?? 0 }} Orders)</span>
+            <h2 class="total-val">₹{{ (dashboardSummary()?.posRevenueMix?.totalSalesToday ?? 0) | number:'1.0-0' }}</h2>
           </div>
 
           <div class="spectrum-bar">
-            <div class="spec-seg seg-card" style="width: 54%" title="Restaurant: 54%"></div>
-            <div class="spec-seg seg-cash" style="width: 29%" title="Bar: 29%"></div>
-            <div class="spec-seg seg-upi" style="width: 9%" title="Poolside Cafe: 9%"></div>
-            <div class="spec-seg seg-city" style="width: 8%" title="Room Service: 8%"></div>
+            @for (outlet of (dashboardSummary()?.posRevenueMix?.outlets || []); track outlet.name) {
+              <div class="spec-seg" [style.width.%]="outlet.percentage" [style.background-color]="outlet.color" [title]="outlet.name + ': ' + outlet.percentage + '%'"></div>
+            }
           </div>
 
           <div class="spectrum-chips-grid">
-            <div class="chip-item">
-              <span class="chip-dot card-dot"></span>
-              <span class="chip-name">Grand Restaurant</span>
-              <span class="chip-amt">₹78,400</span>
-            </div>
-            <div class="chip-item">
-              <span class="chip-dot cash-dot"></span>
-              <span class="chip-name">Sky Bar</span>
-              <span class="chip-amt">₹42,200</span>
-            </div>
-            <div class="chip-item">
-              <span class="chip-dot upi-dot"></span>
-              <span class="chip-name">Poolside Cafe</span>
-              <span class="chip-amt">₹12,800</span>
-            </div>
-            <div class="chip-item">
-              <span class="chip-dot city-dot"></span>
-              <span class="chip-name">Room Service</span>
-              <span class="chip-amt">₹8,400</span>
-            </div>
+            @for (outlet of (dashboardSummary()?.posRevenueMix?.outlets || []); track outlet.name) {
+              <div class="chip-item">
+                <span class="chip-dot" [style.background-color]="outlet.color"></span>
+                <span class="chip-name">{{ outlet.name }}</span>
+                <span class="chip-amt">₹{{ outlet.amount | number:'1.0-0' }}</span>
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -146,32 +132,32 @@
           <div class="mini-kpi-box">
             <div class="kpi-box-icon bg-blue"><mat-icon>cleaning_services</mat-icon></div>
             <div class="kpi-box-data">
-              <span class="kpi-box-val">10 Vacant Clean</span>
-              <span class="kpi-box-sub">3 Dirty | 4 OOO Blocked</span>
+              <span class="kpi-box-val">{{ dashboardSummary()?.operationsPulse?.hkVacantCleanText || '0 Vacant Clean' }}</span>
+              <span class="kpi-box-sub">{{ dashboardSummary()?.operationsPulse?.hkVacantCleanSubtext || '0 Dirty | 0 OOO Blocked' }}</span>
             </div>
           </div>
 
           <div class="mini-kpi-box">
             <div class="kpi-box-icon bg-purple"><mat-icon>local_laundry_service</mat-icon></div>
             <div class="kpi-box-data">
-              <span class="kpi-box-val">₹18,400 Laundry</span>
-              <span class="kpi-box-sub">28 Guest Orders Billed</span>
+              <span class="kpi-box-val">{{ dashboardSummary()?.operationsPulse?.laundryRevenueText || '₹0 Laundry' }}</span>
+              <span class="kpi-box-sub">{{ dashboardSummary()?.operationsPulse?.laundryRevenueSubtext || '0 Guest Orders Billed' }}</span>
             </div>
           </div>
 
           <div class="mini-kpi-box">
             <div class="kpi-box-icon bg-rose"><mat-icon>inventory_2</mat-icon></div>
             <div class="kpi-box-data">
-              <span class="kpi-box-val">₹12.45L Store Val</span>
-              <span class="kpi-box-sub">6 Low-Stock Alerts</span>
+              <span class="kpi-box-val">{{ dashboardSummary()?.operationsPulse?.storeValuationText || '₹0 Store Val' }}</span>
+              <span class="kpi-box-sub">{{ dashboardSummary()?.operationsPulse?.storeValuationSubtext || '0 Low-Stock Alerts' }}</span>
             </div>
           </div>
 
           <div class="mini-kpi-box">
             <div class="kpi-box-icon bg-emerald"><mat-icon>local_shipping</mat-icon></div>
             <div class="kpi-box-data">
-              <span class="kpi-box-val">8 Active POs</span>
-              <span class="kpi-box-sub">₹2.1L Pending Delivery</span>
+              <span class="kpi-box-val">{{ dashboardSummary()?.operationsPulse?.activePosText || '0 Active POs' }}</span>
+              <span class="kpi-box-sub">{{ dashboardSummary()?.operationsPulse?.activePosSubtext || '₹0 Pending Delivery' }}</span>
             </div>
           </div>
         </div>

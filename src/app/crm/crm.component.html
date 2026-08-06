@@ -5,20 +5,20 @@
     <div class="nav-left">
       <div class="tabs-container">
         <button class="tab-btn" [class.active]="currentTab() === 'dashboard'" (click)="setTab('dashboard')">
-          <span class="material-icons-round">space_dashboard</span>
+          <span class="material-icons-round" style="color:#EC4899;">space_dashboard</span>
           Board
         </button>
         <button class="tab-btn" [class.active]="currentTab() === 'list'" (click)="setTab('list')">
-          <span class="material-icons-round">assignment</span>
+          <span class="material-icons-round" style="color:#8B5CF6;">assignment</span>
           Tasks
           <span class="badge" *ngIf="filteredEnquiries().length > 0">{{ filteredEnquiries().length }}</span>
         </button>
         <button class="tab-btn" [class.active]="currentTab() === 'new'" (click)="setTab('new')">
-          <span class="material-icons-round">add_box</span>
+          <span class="material-icons-round" style="color:#10B981;">add_box</span>
           New Enquiry
         </button>
         <button class="tab-btn" [class.active]="currentTab() === 'quotations'" (click)="setTab('quotations')">
-          <span class="material-icons-round">description</span>
+          <span class="material-icons-round" style="color:#F59E0B;">description</span>
           Quotations
         </button>
       </div>

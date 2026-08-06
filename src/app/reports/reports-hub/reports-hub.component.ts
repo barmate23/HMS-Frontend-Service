@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { ReportsService, ReportItem } from '../reports.service';
+import { ReportsService, ReportItem, ExecutiveDashboardSummary } from '../reports.service';
 
 @Component({
   selector: 'app-reports-hub',
@@ -14,10 +14,10 @@ import { ReportsService, ReportItem } from '../reports.service';
 })
 export class ReportsHubComponent implements OnInit {
   searchQuery = signal<string>('');
-  selectedCategory = signal<string>('all');
+  selectedCategory = signal<string>('front_office');
+  dashboardSummary = signal<ExecutiveDashboardSummary | null>(null);
 
   categories = [
-    { id: 'all', label: 'All Admin Reports', icon: 'auto_awesome' },
     { id: 'front_office', label: 'Front Office', icon: 'bed' },
     { id: 'pos', label: 'POS & Dining', icon: 'restaurant' },
     { id: 'housekeeping', label: 'Housekeeping', icon: 'cleaning_services' },
@@ -37,8 +37,12 @@ export class ReportsHubComponent implements OnInit {
       if (params['category']) {
         this.selectedCategory.set(params['category']);
       } else {
-        this.selectedCategory.set('all');
+        this.selectedCategory.set('front_office');
       }
+    });
+
+    this.reportsService.fetchExecutiveDashboardSummary().subscribe(data => {
+      this.dashboardSummary.set(data);
     });
   }
 

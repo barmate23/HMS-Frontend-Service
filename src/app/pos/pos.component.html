@@ -1,12 +1,27 @@
 <div class="pos-container">
   <div class="compact-nav">
     <div class="tabs-container">
-      <button class="tab-btn" [class.active]="activeTab() === 'dashboard'" (click)="switchTab('dashboard')"><span class="material-icons-round">dashboard</span>Dashboard</button>
-      <button class="tab-btn" [class.active]="activeTab() === 'outlets'" (click)="switchTab('outlets')"><span class="material-icons-round">storefront</span>Outlets</button>
-      <button class="tab-btn" [class.active]="activeTab() === 'dining'" (click)="switchTab('dining')"><span class="material-icons-round">table_restaurant</span>Table Dining</button>
-      <button class="tab-btn" [class.active]="activeTab() === 'orders'" (click)="switchTab('orders')"><span class="material-icons-round">restaurant_menu</span>Orders</button>
-      <button class="tab-btn" [class.active]="activeTab() === 'billing'" (click)="switchTab('billing')"><span class="material-icons-round">receipt_long</span>Billing</button>
-      <button class="tab-btn" [class.active]="activeTab() === 'menu'" (click)="switchTab('menu')"><span class="material-icons-round">menu_book</span>Menu Management</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'dashboard'" (click)="switchTab('dashboard')"><span class="material-icons-round" style="color:#2563EB;">dashboard</span>Dashboard</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'outlets'" (click)="switchTab('outlets')"><span class="material-icons-round" style="color:#D97706;">storefront</span>Outlets</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'dining'" (click)="switchTab('dining')"><span class="material-icons-round" style="color:#8B5CF6;">table_restaurant</span>Dining</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'orders'" (click)="switchTab('orders')"><span class="material-icons-round" style="color:#EF4444;">restaurant_menu</span>Orders</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'billing'" (click)="switchTab('billing')"><span class="material-icons-round" style="color:#16A34A;">receipt_long</span>Billing</button>
+      <button class="tab-btn" [class.active]="activeTab() === 'menu'" (click)="switchTab('menu')"><span class="material-icons-round" style="color:#06B6D4;">menu_book</span>Menu</button>
+
+      <!-- Submodule Dropdown Selector -->
+      <div class="submodule-dropdown-box">
+        <span class="material-icons-round dropdown-icon" style="color:#0D9488;">tune</span>
+        <select class="submodule-select-picker" [ngModel]="activeTab()" (ngModelChange)="switchTab($event)" title="Select POS Submodule">
+          <option value="dashboard">Dashboard</option>
+          <option value="outlets">Outlets</option>
+          <option value="dining">Table Dining</option>
+          <option value="orders">Orders</option>
+          <option value="billing">Billing</option>
+          <option value="menu">Menu Management</option>
+          <option value="ingredient-master">Kitchen Ingredients</option>
+          <option value="recipes">Recipes (BOM)</option>
+        </select>
+      </div>
     </div>
 
     <div class="nav-right" *ngIf="activeTab() !== 'dashboard' && activeTab() !== 'billing-setup'">
@@ -48,6 +63,8 @@
 
       <button class="btn-primary" *ngIf="activeTab() === 'outlets'" (click)="openCreate('outlet')"><span class="material-icons-round">add_business</span>Add Outlet</button>
       <button class="btn-primary" *ngIf="activeTab() === 'menu'" (click)="openCreate('menu')"><span class="material-icons-round">add</span>Add Item</button>
+      <button class="btn-primary" *ngIf="activeTab() === 'ingredient-master'" (click)="openCreateIngredient()"><span class="material-icons-round">add</span>Add Ingredient</button>
+      <button class="btn-primary" *ngIf="activeTab() === 'recipes'" (click)="openCreateRecipe()"><span class="material-icons-round">post_add</span>Create Recipe</button>
       <button class="btn-primary" *ngIf="activeTab() === 'orders'" (click)="openCreate('order')"><span class="material-icons-round">add_shopping_cart</span>New Order</button>
       <button class="btn-primary" *ngIf="activeTab() === 'billing'" (click)="openCreate('bill')"><span class="material-icons-round">receipt</span>New Bill</button>
     </div>
@@ -213,14 +230,14 @@
       <div class="card-header"><h2 class="card-title">POS Outlet Management</h2><span class="total-badge">{{ filteredOutlets().length }} Outlets</span></div>
       <div class="table-container">
         <table class="premium-table hk-grid-table">
-          <thead><tr><th>OUTLET</th><th>TYPE</th><th>LOCATION</th><th>TIMING</th><th>TAX PROFILE</th><th>MANAGER</th><th>STATUS</th><th style="text-align:center;">ACTIONS</th></tr></thead>
+          <thead><tr><th>OUTLET</th><th>TYPE</th><th>LOCATION</th><th>TIMING</th><th>MANAGER</th><th>STATUS</th><th style="text-align:center;">ACTIONS</th></tr></thead>
           <tbody>
             <tr *ngFor="let outlet of filteredOutlets()">
               <td><strong>{{ outlet.name }}</strong></td>
               <td>{{ outlet.type }}</td>
               <td>{{ outlet.location }}</td>
               <td>{{ outlet.timing }}</td>
-              <td><span class="soft-pill">{{ outlet.taxProfile }}</span></td>
+
               <td>{{ outlet.manager }}</td>
               <td><span class="status-badge" [class.completed]="outlet.active" [class.cancelled]="!outlet.active">{{ outlet.active ? 'ACTIVE' : 'INACTIVE' }}</span></td>
               <td><div class="action-buttons"><button class="btn-icon check" (click)="toggleOutlet(outlet)" title="Toggle Active"><span class="material-icons-round">{{ outlet.active ? 'pause' : 'play_arrow' }}</span></button><button class="btn-icon edit" (click)="openEdit('outlet', outlet)" title="Edit"><span class="material-icons-round">edit</span></button><button class="btn-icon delete" (click)="deleteOutlet(outlet.id)" title="Delete"><span class="material-icons-round">delete_outline</span></button></div></td>
@@ -456,8 +473,155 @@
       </div>
     </div>
 
+    <!-- INGREDIENT MASTER VIEW -->
+    <div class="pos-section-view" *ngSwitchCase="'ingredient-master'">
+        <section class="pos-command-band">
+          <div class="pos-command-copy">
+            <h2>Kitchen Ingredient Master</h2>
+            <p>Maintain raw material catalog, base units, purchase conversions, yield rates and reorder thresholds.</p>
+          </div>
+          <div class="command-badges">
+            <span class="soft-pill">Total: {{ ingredientStats().total }}</span>
+            <span class="soft-pill warning" *ngIf="ingredientStats().lowStock > 0">Low Stock: {{ ingredientStats().lowStock }}</span>
+            <span class="soft-pill">Categories: {{ ingredientStats().categories }}</span>
+          </div>
+        </section>
+
+        <div class="card-container mt-3">
+          <div class="card-header">
+            <h2 class="card-title">Raw Material Ingredients</h2>
+            <div class="header-filters">
+              <select class="filter-select" [ngModel]="ingredientCategoryFilter()" (ngModelChange)="ingredientCategoryFilter.set($event)">
+                <option value="ALL">All Categories</option>
+                <option value="Dairy">Dairy</option>
+                <option value="Produce">Produce</option>
+                <option value="Spices & Condiments">Spices & Condiments</option>
+                <option value="Poultry & Meat">Poultry & Meat</option>
+                <option value="Oils & Ghee">Oils & Ghee</option>
+                <option value="Dry Grocery">Dry Grocery</option>
+              </select>
+              <span class="total-badge">{{ filteredIngredients().length }} Items</span>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="premium-table hk-grid-table ingredients-table">
+              <thead>
+                <tr>
+                  <th>CODE</th>
+                  <th>INGREDIENT</th>
+                  <th>CATEGORY</th>
+                  <th>STOCK</th>
+                  <th>UNIT</th>
+                  <th>CONVERSION</th>
+                  <th>COST / UNIT</th>
+                  <th>REORDER</th>
+                  <th>STORAGE</th>
+                  <th style="text-align:center;">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let ing of filteredIngredients()">
+                  <td><code>{{ ing.code }}</code></td>
+                  <td><strong>{{ ing.name }}</strong></td>
+                  <td><span class="soft-pill">{{ ing.category }}</span></td>
+                  <td>
+                    <strong [style.color]="ing.currentStock <= ing.reorderLevel ? 'var(--danger-color)' : 'var(--text-color)'">
+                      {{ ing.currentStock | number:'1.0-0' }} {{ ing.baseUnit }}
+                    </strong>
+                    <span class="status-badge cancelled" *ngIf="ing.currentStock <= ing.reorderLevel" style="font-size:9px;padding:2px 4px;margin-left:4px;">LOW</span>
+                  </td>
+                  <td>{{ ing.baseUnit }}</td>
+                  <td>1 {{ ing.purchaseUnit }} = {{ ing.conversionFactor }} {{ ing.baseUnit }}</td>
+                  <td>₹{{ ing.costPerBaseUnit | number:'1.2-2' }}/{{ ing.baseUnit }}</td>
+                  <td>{{ ing.reorderLevel }} {{ ing.baseUnit }}</td>
+                  <td><span class="soft-pill">{{ ing.storageType }}</span></td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="btn-icon edit" (click)="openEditIngredient(ing)" title="Edit Ingredient"><span class="material-icons-round">edit</span></button>
+                      <button class="btn-icon delete" (click)="deleteIngredient(ing.id)" title="Delete Ingredient"><span class="material-icons-round">delete_outline</span></button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="!filteredIngredients().length">
+                  <td colspan="10" style="text-align:center;padding:30px;color:var(--surface-400);">No ingredients found matching your search.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECIPES (BOM) VIEW -->
+      <div class="pos-section-view" *ngSwitchCase="'recipes'">
+        <section class="pos-command-band">
+          <div class="pos-command-copy">
+            <h2>Dish Recipes (Bill of Materials)</h2>
+            <p>Link dish items to raw ingredients, track portion preparation costs, food cost %, and gross margin %.</p>
+          </div>
+          <div class="command-badges">
+            <span class="soft-pill">Total Recipes: {{ recipeStats().total }}</span>
+            <span class="soft-pill">Avg Food Cost: {{ recipeStats().avgFoodCost }}%</span>
+            <span class="soft-pill pass">Avg Margin: {{ recipeStats().avgMargin }}%</span>
+          </div>
+        </section>
+
+        <div class="card-container mt-3">
+          <div class="card-header">
+            <h2 class="card-title">Dish Recipe Catalog & Cost Breakdown</h2>
+            <span class="total-badge">{{ filteredRecipes().length }} Recipes</span>
+          </div>
+
+          <div class="table-container">
+            <table class="premium-table hk-grid-table recipes-table">
+              <thead>
+                <tr>
+                  <th>RECIPE CODE</th>
+                  <th>DISH / MENU ITEM</th>
+                  <th>PORTION SIZE</th>
+                  <th>SELLING PRICE</th>
+                  <th>PORTION COST</th>
+                  <th>FOOD COST %</th>
+                  <th>GROSS MARGIN %</th>
+                  <th style="text-align:center;">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let rec of filteredRecipes()">
+                  <td><code>{{ rec.recipeCode }}</code></td>
+                  <td>
+                    <strong>{{ rec.recipeName }}</strong>
+                    <div style="font-size:10px;color:var(--surface-500);" *ngIf="rec.prepTimeMins">Prep Time: {{ rec.prepTimeMins }} mins</div>
+                  </td>
+                  <td>{{ rec.portionSize }} {{ rec.portionUnit }}</td>
+                  <td><strong>₹{{ rec.sellingPrice | number:'1.2-2' }}</strong></td>
+                  <td><strong style="color:var(--primary-color);">₹{{ rec.totalPortionCost | number:'1.2-2' }}</strong></td>
+                  <td>
+                    <span class="soft-pill" [class.warning]="rec.foodCostPercent > 35">{{ rec.foodCostPercent }}%</span>
+                  </td>
+                  <td>
+                    <span class="status-badge" [class.completed]="rec.grossMarginPercent >= 65" [class.warning]="rec.grossMarginPercent < 65">
+                      {{ rec.grossMarginPercent }}% Margin
+                    </span>
+                  </td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="btn-icon check" (click)="openRecipeDetails(rec)" title="View Recipe Ingredients & Details"><span class="material-icons-round">visibility</span></button>
+                      <button class="btn-icon edit" (click)="openEditRecipe(rec)" title="Edit Recipe"><span class="material-icons-round">edit</span></button>
+                      <button class="btn-icon delete" (click)="deleteRecipe(rec.id)" title="Delete Recipe"><span class="material-icons-round">delete_outline</span></button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="!filteredRecipes().length">
+                  <td colspan="8" style="text-align:center;padding:30px;color:var(--surface-400);">No recipes created yet. Click "Create Recipe" to add dish BOM.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
   </div>
-</div>
 
 <div class="modal-overlay" *ngIf="isDiningActionOpen()" (click)="closeDiningAction()">
   <div class="ci-modal dining-modal" (click)="$event.stopPropagation()">
@@ -574,7 +738,7 @@
 </div>
 
 <div class="modal-overlay" *ngIf="isModalOpen()" (click)="closeModal()">
-  <div class="ci-modal pos-modal" [class.wide-modal]="modalKind() === 'bill'" (click)="$event.stopPropagation()">
+  <div class="ci-modal pos-modal" [class.wide-modal]="modalKind() === 'bill'" [class.recipe-modal]="modalKind() === 'recipe'" (click)="$event.stopPropagation()">
 
     <div class="ci-header">
       <div class="ci-title"><span class="material-icons-round">point_of_sale</span><div><h2>{{ modalMode() === 'create' ? 'Create' : 'Edit' }} {{ modalKind() | titlecase }}</h2><p>Manage POS setup, table master, orders and billing details.</p></div></div>
@@ -585,7 +749,7 @@
       <ng-container *ngSwitchCase="'outlet'">
         <div class="ci-form-grid"><div class="ci-input-group"><label>Outlet Name *</label><input [(ngModel)]="currentOutlet().name"></div><div class="ci-input-group"><label>Outlet Type</label><select [(ngModel)]="currentOutlet().type"><option *ngFor="let type of pos.outletTypes()" [value]="type">{{ type }}</option></select></div></div>
         <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Location</label><input [(ngModel)]="currentOutlet().location"></div><div class="ci-input-group"><label>Timing / Shift Schedule</label><select [(ngModel)]="currentOutlet().timing"><option *ngFor="let schedule of pos.shiftSchedules()" [value]="schedule">{{ schedule }}</option></select></div></div>
-        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Tax Profile</label><input [(ngModel)]="currentOutlet().taxProfile"></div><div class="ci-input-group"><label>Manager</label><select [(ngModel)]="currentOutlet().manager"><option *ngFor="let user of pos.users()" [value]="user">{{ user }}</option></select></div></div>
+        <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Manager</label><select [(ngModel)]="currentOutlet().manager"><option *ngFor="let user of pos.users()" [value]="user">{{ user }}</option></select></div></div>
         <label class="toggle-option mt-3"><input type="checkbox" [(ngModel)]="currentOutlet().active"> Active outlet</label>
       </ng-container>
 
@@ -597,12 +761,18 @@
             <img [src]="menuImage(currentMenuItem())" alt="Menu item preview">
           </div>
           <div class="ci-input-group">
-            <label>Food / Item Image</label>
+            <label>Food / Item Image <span style="font-size:9px;color:var(--surface-400);font-weight:600;">(Max 1 MB)</span></label>
             <label class="image-upload-btn">
               <span class="material-icons-round">upload</span>
               Upload Image
               <input type="file" accept="image/*" (change)="handleMenuImageUpload($event)">
             </label>
+            @if (imageUploadError()) {
+              <div class="image-upload-error">
+                <span class="material-icons-round">error_outline</span>
+                {{ imageUploadError() }}
+              </div>
+            }
           </div>
         </div>
         <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Price</label><input type="number" [(ngModel)]="currentMenuItem().price"></div></div>
@@ -879,7 +1049,182 @@
         </div>
         <div class="ci-form-grid mt-3">
           <div class="ci-input-group"><label>Covers</label><input type="number" min="0" [(ngModel)]="currentTable().covers"></div>
-          <div class="ci-input-group"><label>Server</label><select [(ngModel)]="currentTable().server"><option value="Unassigned">Unassigned</option><option *ngFor="let user of pos.users()" [value]="user">{{ user }}</option></select></div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'ingredient'">
+        <div class="ci-form-grid">
+          <div class="ci-input-group"><label>Ingredient Name *</label><input [(ngModel)]="currentIngredient().name" placeholder="e.g. Paneer (Cottage Cheese)"></div>
+          <div class="ci-input-group"><label>Category *</label>
+            <select [(ngModel)]="currentIngredient().category">
+              <option value="Dairy">Dairy</option>
+              <option value="Produce">Produce</option>
+              <option value="Spices & Condiments">Spices & Condiments</option>
+              <option value="Poultry & Meat">Poultry & Meat</option>
+              <option value="Oils & Ghee">Oils & Ghee</option>
+              <option value="Dry Grocery">Dry Grocery</option>
+              <option value="Beverage Raw">Beverage Raw</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="ci-form-grid mt-3">
+          <div class="ci-input-group"><label>Base Unit (Recipe Usage)</label>
+            <select [(ngModel)]="currentIngredient().baseUnit">
+              <option value="GRAM">GRAM</option>
+              <option value="ML">ML</option>
+              <option value="PCS">PCS</option>
+              <option value="KG">KG</option>
+              <option value="LITER">LITER</option>
+            </select>
+          </div>
+          <div class="ci-input-group"><label>Purchase Unit (Procurement)</label>
+            <select [(ngModel)]="currentIngredient().purchaseUnit">
+              <option value="KG">KG</option>
+              <option value="LITER">LITER</option>
+              <option value="BOX">BOX</option>
+              <option value="PACKET">PACKET</option>
+              <option value="CAN">CAN</option>
+              <option value="PCS">PCS</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="ci-form-grid mt-3">
+          <div class="ci-input-group">
+            <label>Purchase Conversion Factor <small style="color:var(--surface-400);">(1 {{ currentIngredient().purchaseUnit }} = N {{ currentIngredient().baseUnit }})</small></label>
+            <input type="number" min="1" [(ngModel)]="currentIngredient().conversionFactor" placeholder="1000">
+          </div>
+          <div class="ci-input-group">
+            <label>Usable Yield % <small style="color:var(--surface-400);">(after prep/trimming)</small></label>
+            <input type="number" min="1" max="100" [(ngModel)]="currentIngredient().yieldPercentage" placeholder="95">
+          </div>
+        </div>
+
+        <div class="ci-form-grid mt-3">
+          <div class="ci-input-group"><label>Cost Per Purchase Unit (₹/{{ currentIngredient().purchaseUnit }})</label><input type="number" min="0" step="0.01" [(ngModel)]="currentIngredient().costPerPurchaseUnit" placeholder="360"></div>
+          <div class="ci-input-group"><label>Current Stock Level ({{ currentIngredient().baseUnit }})</label><input type="number" min="0" [(ngModel)]="currentIngredient().currentStock" placeholder="8500"></div>
+        </div>
+
+        <div class="ci-form-grid mt-3">
+          <div class="ci-input-group"><label>Reorder Threshold Level ({{ currentIngredient().baseUnit }})</label><input type="number" min="0" [(ngModel)]="currentIngredient().reorderLevel" placeholder="5000"></div>
+          <div class="ci-input-group"><label>Reorder Quantity ({{ currentIngredient().baseUnit }})</label><input type="number" min="0" [(ngModel)]="currentIngredient().reorderQuantity" placeholder="15000"></div>
+        </div>
+
+        <div class="ci-form-grid mt-3">
+          <div class="ci-input-group"><label>Storage Type</label>
+            <select [(ngModel)]="currentIngredient().storageType">
+              <option value="DRY_STORE">DRY_STORE</option>
+              <option value="CHILLED">CHILLED</option>
+              <option value="FROZEN">FROZEN</option>
+              <option value="PERISHABLE">PERISHABLE</option>
+            </select>
+          </div>
+          <div class="ci-input-group"><label>Preferred Supplier</label><input [(ngModel)]="currentIngredient().supplierName" placeholder="Supplier Name"></div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'recipe'">
+        <div class="recipe-builder-container" style="display:flex;flex-direction:column;gap:12px;">
+          <!-- Row 1: Select Dish & Recipe Name -->
+          <div class="ci-form-grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="ci-input-group">
+              <label>Select Menu Item / Dish *</label>
+              <select [ngModel]="currentRecipe().menuItemId" (ngModelChange)="onRecipeMenuItemChange($event)">
+                <option *ngFor="let item of pos.menuItems()" [value]="item.id">{{ item.name }} (₹{{ item.price }}) • {{ item.category }}</option>
+              </select>
+            </div>
+            <div class="ci-input-group">
+              <label>Recipe Name</label>
+              <input [(ngModel)]="currentRecipe().recipeName" placeholder="Paneer Tikka Recipe">
+            </div>
+          </div>
+
+          <!-- Row 2: Portion Size, Portion Unit, Prep Time (mins) -->
+          <div class="ci-form-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+            <div class="ci-input-group">
+              <label>Portion Size</label>
+              <input type="number" min="1" [(ngModel)]="currentRecipe().portionSize">
+            </div>
+            <div class="ci-input-group">
+              <label>Portion Unit</label>
+              <input [(ngModel)]="currentRecipe().portionUnit" placeholder="PLATE / BOWL">
+            </div>
+            <div class="ci-input-group">
+              <label>Prep Time (mins)</label>
+              <input type="number" min="1" [(ngModel)]="currentRecipe().prepTimeMins">
+            </div>
+          </div>
+
+          <!-- Live Margin Summary Bar -->
+          <div class="recipe-margin-summary" style="display:flex;align-items:center;justify-content:space-between;background:var(--surface-100);padding:10px 14px;border-radius:8px;border:1px solid var(--surface-200);">
+            <div>
+              <span style="font-size:12px;color:var(--surface-600);font-weight:600;">Selling Price: </span>
+              <strong style="font-size:14px;color:#0f172a;margin-right:16px;">₹{{ currentRecipe().sellingPrice }}</strong>
+              <span style="font-size:12px;color:var(--surface-600);font-weight:600;">Portion Cost: </span>
+              <strong style="font-size:14px;color:var(--primary-color);">₹{{ currentRecipe().totalPortionCost }}</strong>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <span class="soft-pill" [class.warning]="currentRecipe().foodCostPercent > 35" style="font-weight:700;">Food Cost: {{ currentRecipe().foodCostPercent }}%</span>
+              <span class="status-badge" [class.completed]="currentRecipe().grossMarginPercent >= 65" [class.warning]="currentRecipe().grossMarginPercent < 65">
+                {{ currentRecipe().grossMarginPercent }}% Gross Margin
+              </span>
+            </div>
+          </div>
+
+          <!-- BOM Ingredients Breakdown Section -->
+          <div class="ingredient-rows-panel" style="background:#fff;border:1px solid var(--surface-200);border-radius:8px;padding:12px;overflow:hidden;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <h3 style="font-size:12px;font-weight:800;margin:0;text-transform:uppercase;color:#0f172a;">Recipe Ingredients Breakdown (BOM)</h3>
+              <button type="button" class="btn-primary" style="padding:4px 10px;font-size:11px;" (click)="addIngredientRowToRecipe()"><span class="material-icons-round" style="font-size:14px;">add</span>Add Ingredient</button>
+            </div>
+
+            <div style="overflow-x:auto;">
+              <table class="premium-table" style="font-size:11.5px;width:100%;">
+                <thead>
+                  <tr>
+                    <th style="min-width:230px;">INGREDIENT FROM MASTER</th>
+                    <th style="width:85px;">NET QTY</th>
+                    <th style="width:65px;">UNIT</th>
+                    <th style="width:90px;">PREP WASTE %</th>
+                    <th style="width:100px;">GROSS QTY</th>
+                    <th style="width:85px;">COST (₹)</th>
+                    <th style="width:36px;text-align:center;"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of recipeIngredientRows(); let i = index">
+                    <td>
+                      <select [ngModel]="row.ingredientId" (ngModelChange)="updateRecipeIngredientRow(i, 'ingredientId', $event)" style="width:100%;min-width:220px;padding:5px 22px 5px 8px;font-size:11px;border:1px solid var(--surface-300);border-radius:4px;outline:none;text-overflow:ellipsis;">
+                        <option *ngFor="let ing of pos.ingredients()" [value]="ing.id">{{ ing.name }} (₹{{ ing.costPerBaseUnit }}/{{ ing.baseUnit }})</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input type="number" min="0" [ngModel]="row.netQuantity" (ngModelChange)="updateRecipeIngredientRow(i, 'netQuantity', $event)" style="width:100%;padding:5px 6px;font-size:11px;border:1px solid var(--surface-300);border-radius:4px;outline:none;">
+                    </td>
+                    <td><strong style="color:#334155;">{{ row.unit }}</strong></td>
+                    <td>
+                      <input type="number" min="0" max="99" [ngModel]="row.wastePercent" (ngModelChange)="updateRecipeIngredientRow(i, 'wastePercent', $event)" style="width:100%;padding:5px 6px;font-size:11px;border:1px solid var(--surface-300);border-radius:4px;outline:none;">
+                    </td>
+                    <td><span style="white-space:nowrap;font-weight:600;">{{ row.grossQuantity }} {{ row.unit }}</span></td>
+                    <td><strong style="color:var(--primary-color);white-space:nowrap;">₹{{ row.lineCost | number:'1.2-2' }}</strong></td>
+                    <td style="text-align:center;padding:2px;">
+                      <button type="button" class="btn-icon delete" (click)="removeIngredientRowFromRecipe(i)" title="Remove Ingredient"><span class="material-icons-round" style="font-size:16px;">delete_outline</span></button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="!recipeIngredientRows().length">
+                    <td colspan="7" style="text-align:center;padding:15px;color:var(--surface-400);">No ingredients added to this recipe. Click "+ Add Ingredient".</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Preparation Notes Field -->
+          <div class="ci-input-group">
+            <label>Cooking Instructions / Preparation Notes</label>
+            <textarea rows="2" [(ngModel)]="currentRecipe().instructions" placeholder="Enter step-by-step preparation notes..."></textarea>
+          </div>
         </div>
       </ng-container>
 
@@ -919,6 +1264,89 @@
     <div class="ci-footer">
       <button class="ci-btn-cancel" (click)="closeDeleteConfirm()">Cancel</button>
       <button class="ci-btn-danger" (click)="confirmDelete()"><span class="material-icons-round">delete_outline</span>Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECIPE DETAILS VIEW POPUP MODAL -->
+<div class="modal-overlay" *ngIf="isRecipeViewModalOpen() && selectedRecipeForView()" (click)="closeRecipeDetails()">
+  <div class="ci-modal recipe-details-modal" (click)="$event.stopPropagation()" style="max-width: 800px;">
+    <div class="ci-header">
+      <div class="ci-title">
+        <span class="material-icons-round" style="color:var(--primary-color);">restaurant_menu</span>
+        <div>
+          <h2>{{ selectedRecipeForView()?.recipeName }}</h2>
+          <p>Recipe Code: {{ selectedRecipeForView()?.recipeCode }} • Portion: {{ selectedRecipeForView()?.portionSize }} {{ selectedRecipeForView()?.portionUnit }} • Prep Time: {{ selectedRecipeForView()?.prepTimeMins }} mins</p>
+        </div>
+      </div>
+      <button class="ci-close" (click)="closeRecipeDetails()"><span class="material-icons-round">close</span></button>
+    </div>
+
+    <div class="ci-body" style="padding:16px 20px;">
+      <!-- Key Financial Metrics Bar -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:10px;border-radius:8px;text-align:center;">
+          <small style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;">Selling Price</small>
+          <div style="font-size:16px;font-weight:800;color:#0f172a;margin-top:2px;">₹{{ selectedRecipeForView()?.sellingPrice | number:'1.2-2' }}</div>
+        </div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:10px;border-radius:8px;text-align:center;">
+          <small style="font-size:10px;color:#166534;font-weight:700;text-transform:uppercase;">Portion Cost</small>
+          <div style="font-size:16px;font-weight:800;color:#15803d;margin-top:2px;">₹{{ selectedRecipeForView()?.totalPortionCost | number:'1.2-2' }}</div>
+        </div>
+        <div style="background:#fffbeb;border:1px solid #fde68a;padding:10px;border-radius:8px;text-align:center;">
+          <small style="font-size:10px;color:#92400e;font-weight:700;text-transform:uppercase;">Food Cost %</small>
+          <div style="font-size:16px;font-weight:800;color:#b45309;margin-top:2px;">{{ selectedRecipeForView()?.foodCostPercent }}%</div>
+        </div>
+        <div style="background:#f5f3ff;border:1px solid #ddd6fe;padding:10px;border-radius:8px;text-align:center;">
+          <small style="font-size:10px;color:#5b21b6;font-weight:700;text-transform:uppercase;">Gross Margin %</small>
+          <div style="font-size:16px;font-weight:800;color:#6d28d9;margin-top:2px;">{{ selectedRecipeForView()?.grossMarginPercent }}%</div>
+        </div>
+      </div>
+
+      <!-- Preparation Instructions Section -->
+      <div style="background:#fff;border:1px solid #e2e8f0;padding:12px 14px;border-radius:8px;margin-bottom:16px;" *ngIf="selectedRecipeForView()?.instructions">
+        <h4 style="margin:0 0 6px;font-size:12px;font-weight:700;color:#334155;text-transform:uppercase;">Preparation Instructions</h4>
+        <p style="margin:0;font-size:11.5px;color:#475569;line-height:1.5;">{{ selectedRecipeForView()?.instructions }}</p>
+      </div>
+
+      <!-- Ingredient Bill of Materials (BOM) Table -->
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+        <div style="padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+          <h4 style="margin:0;font-size:12px;font-weight:800;color:#0f172a;text-transform:uppercase;">Bill of Materials ({{ selectedRecipeForView()?.ingredients?.length || 0 }} Ingredients)</h4>
+        </div>
+        <div class="table-container" style="max-height:260px;overflow-y:auto;">
+          <table class="premium-table">
+            <thead>
+              <tr>
+                <th>CODE</th>
+                <th>INGREDIENT</th>
+                <th>CATEGORY</th>
+                <th>NET QTY</th>
+                <th>WASTE %</th>
+                <th>GROSS QTY</th>
+                <th>UNIT COST</th>
+                <th>LINE COST</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let ing of selectedRecipeForView()?.ingredients">
+                <td><code>{{ ing.ingredientCode }}</code></td>
+                <td><strong>{{ ing.ingredientName }}</strong></td>
+                <td><span class="soft-pill">{{ ing.category }}</span></td>
+                <td>{{ ing.netQuantity }} {{ ing.unit }}</td>
+                <td>{{ ing.wastePercent }}%</td>
+                <td>{{ ing.grossQuantity }} {{ ing.unit }}</td>
+                <td>₹{{ ing.unitCost | number:'1.2-2' }}/{{ ing.unit }}</td>
+                <td><strong style="color:var(--primary-color);">₹{{ ing.lineCost | number:'1.2-2' }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="ci-footer" style="padding:12px 20px;">
+      <button class="btn-primary" (click)="closeRecipeDetails()"><span class="material-icons-round">check</span>Done</button>
     </div>
   </div>
 </div>

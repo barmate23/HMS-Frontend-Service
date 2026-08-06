@@ -1,0 +1,186 @@
+<div class="kds-root">
+
+  <!-- ── TOP HEADER BAR ── -->
+  <header class="kds-header">
+    <div class="kds-header-left">
+      <button class="kds-back-btn" (click)="goBack()">
+        <span class="material-icons-round">arrow_back</span>
+      </button>
+      <div class="kds-brand">
+        <span class="material-icons-round kds-brand-icon">kitchen</span>
+        <div class="kds-brand-text">
+          <span class="kds-title">Kitchen Display</span>
+          <span class="kds-subtitle">Live Order Queue</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="kds-stats-bar">
+      <div class="kds-stat">
+        <span class="kds-stat-value">{{ totalOpen() }}</span>
+        <span class="kds-stat-label">Open Orders</span>
+      </div>
+      <div class="kds-stat kds-stat--overdue" [class.kds-stat--alert]="overdueCount() > 0">
+        <span class="kds-stat-value">{{ overdueCount() }}</span>
+        <span class="kds-stat-label">Overdue</span>
+      </div>
+      <div class="kds-stat">
+        <span class="kds-stat-value">{{ avgWaitLabel() }}</span>
+        <span class="kds-stat-label">Avg Wait</span>
+      </div>
+    </div>
+
+    <div class="kds-header-right">
+      <div class="kds-clock">{{ now() | date:'HH:mm:ss' }}</div>
+      <button class="kds-icon-btn" (click)="refreshNow()" title="Refresh Orders">
+        <span class="material-icons-round">refresh</span>
+      </button>
+      <button class="kds-icon-btn" (click)="toggleFullScreen()" title="Full Screen">
+        <span class="material-icons-round">{{ isFullScreen() ? 'fullscreen_exit' : 'fullscreen' }}</span>
+      </button>
+      <button class="kds-demo-btn" [class.kds-demo-btn--active]="demoMode()" (click)="toggleDemo()" title="Toggle demo ticket">
+        <span class="material-icons-round">science</span>
+        {{ demoMode() ? 'Demo ON' : 'Demo' }}
+      </button>
+    </div>
+  </header>
+
+  <!-- ── OUTLET FILTER CHIPS ── -->
+  <div class="kds-filter-bar">
+    <button class="kds-chip" [class.kds-chip--active]="selectedOutletId() === 'ALL'" (click)="selectOutlet('ALL')">
+      <span class="material-icons-round">apps</span> All Outlets
+    </button>
+    @for (outlet of outlets(); track outlet.id) {
+      <button class="kds-chip" [class.kds-chip--active]="selectedOutletId() === outlet.id" (click)="selectOutlet(outlet.id)">
+        <span class="material-icons-round">storefront</span> {{ outlet.name }}
+      </button>
+    }
+  </div>
+
+  <!-- ── KOT TICKET GRID ── -->
+  <main class="kds-grid-container">
+    @if (tickets().length === 0) {
+      <div class="kds-empty">
+        <span class="material-icons-round kds-empty-icon">check_circle</span>
+        <h2>All Clear!</h2>
+        <p>No open orders in the kitchen right now.</p>
+        <button class="kds-refresh-btn" (click)="refreshNow()">
+          <span class="material-icons-round">refresh</span> Refresh
+        </button>
+      </div>
+    }
+
+    @if (tickets().length > 0) {
+      <div class="kds-grid">
+        @for (ticket of tickets(); track ticket.order.id) {
+          <div class="kds-ticket"
+               [class.kds-ticket--new]="ticket.status === 'new'"
+               [class.kds-ticket--in-progress]="ticket.status === 'in-progress'"
+               [class.kds-ticket--overdue]="ticket.status === 'overdue'"
+               [class.kds-ticket--ready]="ticket.status === 'ready'"
+               [class.kds-ticket--flash]="ticket.isFlashing">
+
+            <!-- Ticket Header -->
+            <div class="kds-ticket-header">
+              <div class="kds-ticket-header-left">
+                <span class="kds-kot-no">{{ ticket.order.kotNo || ticket.order.orderNo }}</span>
+                <span class="kds-order-type-badge">
+                  <span class="material-icons-round">{{ getOrderTypeIcon(ticket.order.type) }}</span>
+                  {{ getOrderTypeBadge(ticket.order.type) }}
+                </span>
+              </div>
+              <div class="kds-status-badge" [class]="'kds-badge--' + ticket.status">
+                {{ getStatusLabel(ticket.status) }}
+              </div>
+            </div>
+
+            <!-- Table / Room / Guest Info -->
+            <div class="kds-ticket-meta">
+              @if (ticket.order.tableNo) {
+                <span class="kds-meta-item">
+                  <span class="material-icons-round">table_restaurant</span>
+                  Table {{ ticket.order.tableNo }}
+                </span>
+              }
+              @if (ticket.order.roomNo) {
+                <span class="kds-meta-item">
+                  <span class="material-icons-round">bed</span>
+                  Room {{ ticket.order.roomNo }}
+                </span>
+              }
+              @if (ticket.order.guestName) {
+                <span class="kds-meta-item">
+                  <span class="material-icons-round">person</span>
+                  {{ ticket.order.guestName }}
+                </span>
+              }
+              <span class="kds-meta-item">
+                <span class="material-icons-round">storefront</span>
+                {{ ticket.outletName }}
+              </span>
+            </div>
+
+            <!-- Item List -->
+            <div class="kds-items">
+              @if (ticket.order.lines && ticket.order.lines.length > 0) {
+                <!-- Always show first 3 items -->
+                @for (line of ticket.order.lines.slice(0, 3); track line.itemId) {
+                  <div class="kds-item-row">
+                    <span class="kds-item-qty">{{ line.qty }}x</span>
+                    <span class="kds-item-name">{{ line.name }}</span>
+                    @if (line.notes) {
+                      <span class="kds-item-note">{{ line.notes }}</span>
+                    }
+                  </div>
+                }
+                <!-- Remaining items shown when expanded -->
+                @if (isExpanded(ticket.order.id) && ticket.order.lines.length > 3) {
+                  @for (line of ticket.order.lines.slice(3); track line.itemId) {
+                    <div class="kds-item-row kds-item-row--extra">
+                      <span class="kds-item-qty">{{ line.qty }}x</span>
+                      <span class="kds-item-name">{{ line.name }}</span>
+                      @if (line.notes) {
+                        <span class="kds-item-note">{{ line.notes }}</span>
+                      }
+                    </div>
+                  }
+                }
+                <!-- +N more / show less toggle -->
+                @if (ticket.order.lines.length > 3) {
+                  <button class="kds-more-btn" (click)="toggleExpand(ticket.order.id)">
+                    @if (!isExpanded(ticket.order.id)) {
+                      <span class="material-icons-round">expand_more</span>
+                      +{{ ticket.order.lines.length - 3 }} more item{{ ticket.order.lines.length - 3 > 1 ? 's' : '' }}
+                    } @else {
+                      <span class="material-icons-round">expand_less</span>
+                      Show less
+                    }
+                  </button>
+                }
+              } @else {
+                <div class="kds-item-row kds-item-row--empty">
+                  <span class="kds-item-name">Order received — awaiting items</span>
+                </div>
+              }
+            </div>
+
+            <!-- Ticket Footer: Timer + Actions -->
+            <div class="kds-ticket-footer">
+              <div class="kds-timer" [class.kds-timer--urgent]="ticket.status === 'overdue'">
+                <span class="material-icons-round">timer</span>
+                <span class="kds-timer-value">{{ ticket.elapsedLabel }}</span>
+              </div>
+              <div class="kds-actions">
+                <button class="kds-btn kds-btn--ready" (click)="markReady(ticket)">
+                  <span class="material-icons-round">check_circle</span>
+                  Mark Ready
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </main>
+</div>

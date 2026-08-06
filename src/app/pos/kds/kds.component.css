@@ -1,0 +1,578 @@
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* KDS — Kitchen Order Display  (matches HMS Cloud light theme)               */
+/* ─────────────────────────────────────────────────────────────────────────── */
+:host {
+  display: block;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.kds-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--surface-100);
+  font-family: var(--font-poppins);
+  overflow: hidden;
+}
+
+/* ─── HEADER ──────────────────────────────────────────────────────────────── */
+.kds-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 8px;
+  background: var(--surface-50);
+  border-radius: 6px;
+  border: 1px solid var(--surface-200);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  flex-shrink: 0;
+  margin: 4px;
+}
+
+.kds-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kds-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--surface-200);
+  border-radius: 4px;
+  background: var(--surface-100);
+  color: var(--surface-500);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.kds-back-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+.kds-back-btn .material-icons-round { font-size: 14px; }
+
+.kds-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kds-brand-icon {
+  font-size: 16px;
+  color: var(--primary-color);
+}
+
+.kds-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.kds-title {
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--primary-color);
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+.kds-subtitle {
+  font-size: 8.5px;
+  color: var(--surface-400);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ─── STATS ───────────────────────────────────────────────────────────────── */
+.kds-stats-bar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.kds-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.kds-stat-value {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--primary-color);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.kds-stat-label {
+  font-size: 8px;
+  color: var(--surface-400);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.kds-stat--alert .kds-stat-value {
+  color: var(--danger-color);
+}
+
+/* ─── HEADER RIGHT ────────────────────────────────────────────────────────── */
+.kds-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kds-clock {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--surface-700);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  padding: 0 8px;
+}
+
+.kds-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--surface-200);
+  border-radius: 4px;
+  background: var(--surface-100);
+  color: var(--surface-500);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.kds-icon-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+.kds-icon-btn .material-icons-round { font-size: 14px; }
+
+/* Demo toggle button */
+.kds-demo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  height: 26px;
+  border-radius: 4px;
+  border: 1px dashed var(--surface-300);
+  background: var(--surface-100);
+  color: var(--surface-500);
+  font-size: 9.5px;
+  font-weight: 800;
+  font-family: var(--font-poppins);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.kds-demo-btn .material-icons-round { font-size: 13px; }
+.kds-demo-btn:hover {
+  background: #FFF3E0;
+  color: #E65100;
+  border-color: #E65100;
+}
+.kds-demo-btn--active {
+  background: #FFF3E0;
+  color: #E65100;
+  border-color: #E65100;
+  border-style: solid;
+}
+
+/* ─── FILTER BAR ──────────────────────────────────────────────────────────── */
+.kds-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px 4px;
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 4px;
+}
+.kds-filter-bar::-webkit-scrollbar { display: none; }
+
+.kds-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  height: 26px;
+  border-radius: 4px;
+  border: 1px solid var(--surface-200);
+  background: var(--surface-50);
+  color: var(--surface-500);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-family: var(--font-poppins);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.kds-chip .material-icons-round { font-size: 13px; }
+.kds-chip:hover {
+  background: var(--primary-light);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+.kds-chip--active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+/* ─── GRID CONTAINER ─────────────────────────────────────────────────────── */
+.kds-grid-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 4px 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-200) transparent;
+}
+.kds-grid-container::-webkit-scrollbar { width: 4px; }
+.kds-grid-container::-webkit-scrollbar-track { background: transparent; }
+.kds-grid-container::-webkit-scrollbar-thumb { background: var(--surface-200); border-radius: 2px; }
+
+.kds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+
+/* ─── KOT TICKET ─────────────────────────────────────────────────────────── */
+.kds-ticket {
+  background: var(--surface-50);
+  border-radius: 8px;
+  border: 1px solid var(--surface-200);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+  position: relative;
+}
+.kds-ticket:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+/* Left colour accent bar */
+.kds-ticket::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+}
+
+.kds-ticket--new::before         { background: var(--success-color); }
+.kds-ticket--in-progress::before { background: #E65100; }
+.kds-ticket--overdue::before     { background: var(--danger-color); }
+.kds-ticket--ready::before       { background: var(--surface-300); }
+
+/* Border highlights */
+.kds-ticket--new         { border-color: rgba(42,157,143,0.3); }
+.kds-ticket--in-progress { border-color: rgba(230,81,0,0.25); }
+.kds-ticket--overdue     { border-color: rgba(230,57,70,0.35); box-shadow: 0 0 0 2px rgba(230,57,70,0.08); }
+.kds-ticket--ready       { opacity: 0.65; }
+
+/* Overdue pulse */
+.kds-ticket--flash {
+  animation: ticket-flash 2s ease-in-out infinite;
+}
+@keyframes ticket-flash {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(230,57,70,0.08); }
+  50%       { box-shadow: 0 0 0 3px rgba(230,57,70,0.22); }
+}
+
+/* ─── TICKET HEADER ───────────────────────────────────────────────────────── */
+.kds-ticket-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 6px 12px;
+  border-bottom: 1px solid var(--surface-200);
+  background: linear-gradient(135deg, #ffffff 0%, #f4fbfa 100%);
+}
+
+.kds-ticket-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kds-kot-no {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--primary-color);
+  letter-spacing: -0.01em;
+}
+
+.kds-order-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--surface-100);
+  color: var(--surface-500);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--surface-200);
+}
+.kds-order-type-badge .material-icons-round { font-size: 11px; }
+
+/* Status badge */
+.kds-status-badge {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.kds-badge--new         { background: #E8F5E9; color: #2E7D32; }
+.kds-badge--in-progress { background: #FFF3E0; color: #E65100; }
+.kds-badge--overdue     { background: #FFEBEE; color: var(--danger-color); }
+.kds-badge--ready       { background: var(--surface-100); color: var(--surface-400); }
+
+/* ─── TICKET META ─────────────────────────────────────────────────────────── */
+.kds-ticket-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 10px 6px 12px;
+  border-bottom: 1px solid var(--surface-200);
+  background: var(--surface-50);
+}
+
+.kds-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9.5px;
+  color: var(--surface-500);
+  font-weight: 600;
+}
+.kds-meta-item .material-icons-round { font-size: 12px; color: var(--surface-400); }
+
+/* ─── ITEM LIST ───────────────────────────────────────────────────────────── */
+.kds-items {
+  padding: 6px 10px 6px 12px;
+  min-height: 50px;
+  border-bottom: 1px solid var(--surface-200);
+}
+
+.kds-item-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--surface-200);
+}
+.kds-item-row:last-child { border-bottom: none; }
+.kds-item-row--empty { opacity: 0.5; }
+
+/* Extra items (revealed on expand) */
+.kds-item-row--extra {
+  background: var(--surface-100);
+  margin: 0 -10px 0 -12px;
+  padding: 3px 10px 3px 12px;
+  border-left: 2px solid var(--primary-color);
+}
+
+/* +N more / show less toggle */
+.kds-more-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  padding: 4px 0;
+  margin-top: 2px;
+  background: none;
+  border: none;
+  border-top: 1px dashed var(--surface-200);
+  color: var(--primary-color);
+  font-size: 9.5px;
+  font-weight: 800;
+  font-family: var(--font-poppins);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.kds-more-btn:hover { color: var(--success-color); }
+.kds-more-btn .material-icons-round { font-size: 13px; }
+
+.kds-item-qty {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--primary-color);
+  min-width: 28px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.kds-item-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--surface-800);
+  flex: 1;
+}
+
+.kds-item-note {
+  font-size: 9px;
+  color: #E65100;
+  font-style: italic;
+  background: #FFF3E0;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(230,81,0,0.15);
+  font-weight: 600;
+}
+
+/* ─── TICKET FOOTER ───────────────────────────────────────────────────────── */
+.kds-ticket-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 6px 12px;
+  background: var(--surface-50);
+}
+
+.kds-timer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--surface-400);
+  font-variant-numeric: tabular-nums;
+}
+.kds-timer .material-icons-round { font-size: 13px; }
+
+.kds-timer--urgent {
+  color: var(--danger-color);
+  animation: timer-flash 1s ease-in-out infinite;
+}
+@keyframes timer-flash {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+.kds-timer-value {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.kds-actions { display: flex; gap: 6px; }
+
+.kds-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  height: 24px;
+  border-radius: 4px;
+  border: none;
+  font-size: 9.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.18s;
+  font-family: var(--font-poppins);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.kds-btn .material-icons-round { font-size: 13px; }
+
+.kds-btn--ready {
+  background: var(--success-color);
+  color: white;
+}
+.kds-btn--ready:hover {
+  background: #1e8c7e;
+}
+.kds-btn--ready:active { transform: scale(0.97); }
+
+/* ─── EMPTY STATE ─────────────────────────────────────────────────────────── */
+.kds-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60%;
+  gap: 10px;
+  text-align: center;
+}
+
+.kds-empty-icon {
+  font-size: 48px !important;
+  color: var(--success-color);
+  opacity: 0.35;
+  margin-bottom: 4px;
+}
+
+.kds-empty h2 {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--surface-700);
+  margin: 0;
+}
+
+.kds-empty p {
+  font-size: 11px;
+  color: var(--surface-400);
+  margin: 0;
+  font-weight: 600;
+}
+
+.kds-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 14px;
+  height: 28px;
+  border-radius: 5px;
+  background: var(--primary-light);
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  font-family: var(--font-poppins);
+  transition: all 0.2s;
+  margin-top: 4px;
+}
+.kds-refresh-btn:hover { background: var(--primary-color); color: white; }
+.kds-refresh-btn .material-icons-round { font-size: 14px; }
+
+/* ─── RESPONSIVE ──────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .kds-grid { grid-template-columns: repeat(2, 1fr); }
+  .kds-stats-bar { gap: 10px; }
+}
+@media (max-width: 600px) {
+  .kds-grid { grid-template-columns: 1fr; }
+  .kds-clock { display: none; }
+}

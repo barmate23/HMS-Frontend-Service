@@ -4,6 +4,23 @@ import { Router, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../auth/auth.service';
 
+export interface NavItemChild {
+  label: string;
+  icon: string;
+  route: string;
+  color?: string;
+  queryParams?: Record<string, any>;
+}
+
+export interface NavItem {
+  label: string;
+  icon: string;
+  color?: string;
+  route?: string;
+  expanded?: boolean;
+  children?: NavItemChild[];
+}
+
 @Component({
   selector: 'app-layout',
   standalone: true,
@@ -136,7 +153,7 @@ export class Layout implements OnInit {
     private readonly router: Router
   ) { }
 
-  navItems = [
+  navItems: NavItem[] = [
     { label: 'Dashboard', icon: 'grid_view', route: '/dashboard', color: '#2563EB' },
     {
       label: 'Front Office',
@@ -149,8 +166,7 @@ export class Layout implements OnInit {
         { label: 'Gantt Chart', icon: 'view_timeline', route: '/gantt-chart', color: '#8B5CF6' },
         { label: 'Arrivals', icon: 'login', route: '/arrivals', color: '#10B981' },
         { label: 'Departures', icon: 'logout', route: '/departures', color: '#EF4444' },
-        { label: 'Guest Profiles', icon: 'person_search', route: '/guests', color: '#EC4899' },
-        { label: 'Reports & Graphs', icon: 'assessment', route: '/reports', queryParams: { category: 'front_office' }, color: '#F59E0B' }
+        { label: 'Guest Profiles', icon: 'person_search', route: '/guests', color: '#EC4899' }
       ]
     },
     {
@@ -213,6 +229,7 @@ export class Layout implements OnInit {
       children: [
         { label: 'Dashboard', icon: 'dashboard', route: '/inventory/dashboard', color: '#8B5CF6' },
         { label: 'Stock Ledger', icon: 'inventory_2', route: '/inventory/stock', color: '#3B82F6' },
+        { label: 'Kitchen Ingredients Ledger', icon: 'kitchen', route: '/inventory/kitchen-stock', color: '#10B981' },
         { label: 'Purchase Requests', icon: 'assignment_add', route: '/inventory/requests', color: '#F97316' },
         { label: 'Store Issues', icon: 'outbox', route: '/inventory/issues', color: '#EF4444' }
       ]

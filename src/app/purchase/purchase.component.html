@@ -336,6 +336,15 @@
                 <span>Reference PR No.</span>
                 <input [ngModel]="poDraft().referenceNo" (ngModelChange)="updatePoDraft('referenceNo', $event)" placeholder="e.g. PR-1007">
               </label>
+
+              <label>
+                <span>Item Category Scope</span>
+                <select [ngModel]="poDraft().itemCategoryScope || 'ALL'" (ngModelChange)="updatePoDraft('itemCategoryScope', $event)">
+                  <option value="ALL">All Items (General & Kitchen)</option>
+                  <option value="HOTEL_GENERAL">Hotel Daily Consumption (Towels, Linen, Amenities, Detergents)</option>
+                  <option value="KITCHEN_INGREDIENTS">Kitchen Raw Ingredients (Paneer, Vegetables, Meat, Spices, Oils)</option>
+                </select>
+              </label>
             </div>
           </div>
 
@@ -370,7 +379,7 @@
                     <td>
                       <select class="line-input" [ngModel]="line.itemId || null" (ngModelChange)="onPoItemSelect(i, $event)">
                         <option [ngValue]="null">-- Choose Item --</option>
-                        <option *ngFor="let item of masterItems()" [ngValue]="item.id">{{ item.name }} ({{ item.category }})</option>
+                        <option *ngFor="let item of availablePoMasterItems()" [ngValue]="item.id">{{ item.name }} ({{ item.code }}) • {{ item.category }}</option>
                       </select>
                       <small class="error-text" *ngIf="poFieldError('line-' + i + '-itemName')">Required</small>
                     </td>

@@ -7,10 +7,32 @@ import { InventoryService, ItemConfigPayload, PurchaseRequestLinePayload, Purcha
 import { DepartmentOption, UserManagementService } from '../user-management/user-management.service';
 import { PurchaseMasterOption, PurchaseService } from '../purchase/purchase.service';
 
-type InventoryTab = 'dashboard' | 'stock' | 'requests' | 'issues';
+type InventoryTab = 'dashboard' | 'stock' | 'kitchen-stock' | 'requests' | 'issues';
 type StockStatus = 'OK' | 'LOW' | 'CRITICAL' | 'OVERSTOCK';
 type IssueStatus = 'Open' | 'Issued' | 'Closed';
 type RequestStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected' | 'Ordered';
+
+export interface KitchenIngredientStock {
+  id: number | string;
+  code: string;
+  name: string;
+  category: string;
+  store: string;
+  baseUnit: string;
+  purchaseUnit: string;
+  conversionFactor: number;
+  yieldPercent: number;
+  onHand: number;
+  reorderLevel: number;
+  reorderQuantity: number;
+  costPerBaseUnit: number;
+  costPerPurchaseUnit: number;
+  totalValue: number;
+  storageType: string;
+  supplierName: string;
+  lastRestocked: string;
+  status: 'OK' | 'LOW' | 'CRITICAL';
+}
 
 interface StoreItem {
   id: number;
@@ -188,6 +210,113 @@ export class InventoryComponent implements OnInit, OnDestroy {
 
   readonly stockItems = signal<StoreItem[]>([]);
   readonly issueItems = signal<IssueItemOption[]>([]);
+
+  // Kitchen Ingredients Stock Ledger signals & mock data
+  kitchenStockSearch = signal('');
+  kitchenCategoryFilter = signal('ALL');
+  kitchenStorageFilter = signal('ALL');
+
+  readonly kitchenStockItems = signal<KitchenIngredientStock[]>([
+    {
+      id: 1, code: 'ING-001', name: 'Paneer (Cottage Cheese)', category: 'Dairy', store: 'Central Kitchen Store',
+      baseUnit: 'GRAM', purchaseUnit: 'KG', conversionFactor: 1000, yieldPercent: 95,
+      onHand: 8500, reorderLevel: 5000, reorderQuantity: 15000, costPerBaseUnit: 0.36, costPerPurchaseUnit: 360,
+      totalValue: 3060, storageType: 'CHILLED', supplierName: 'Milma Dairy Supplies', lastRestocked: 'Today, 09:30 AM', status: 'OK'
+    },
+    {
+      id: 2, code: 'ING-002', name: 'Capsicum (Green Pepper)', category: 'Produce', store: 'Cold Room / Chilled Store',
+      baseUnit: 'GRAM', purchaseUnit: 'KG', conversionFactor: 1000, yieldPercent: 88,
+      onHand: 3200, reorderLevel: 4000, reorderQuantity: 10000, costPerBaseUnit: 0.08, costPerPurchaseUnit: 80,
+      totalValue: 256, storageType: 'CHILLED', supplierName: 'GreenField Fresh', lastRestocked: 'Yesterday', status: 'LOW'
+    },
+    {
+      id: 3, code: 'ING-003', name: 'Tandoori Marinade Masala', category: 'Spices & Condiments', store: 'Spices Store',
+      baseUnit: 'GRAM', purchaseUnit: 'KG', conversionFactor: 1000, yieldPercent: 100,
+      onHand: 4200, reorderLevel: 2000, reorderQuantity: 5000, costPerBaseUnit: 0.45, costPerPurchaseUnit: 450,
+      totalValue: 1890, storageType: 'DRY_STORE', supplierName: 'MDH Spice Distributors', lastRestocked: '3 days ago', status: 'OK'
+    },
+    {
+      id: 4, code: 'ING-004', name: 'Amul Fresh Cream', category: 'Dairy', store: 'Cold Room / Chilled Store',
+      baseUnit: 'ML', purchaseUnit: 'LITER', conversionFactor: 1000, yieldPercent: 98,
+      onHand: 1800, reorderLevel: 3000, reorderQuantity: 8000, costPerBaseUnit: 0.22, costPerPurchaseUnit: 220,
+      totalValue: 396, storageType: 'CHILLED', supplierName: 'Amul Depot Direct', lastRestocked: 'Yesterday', status: 'LOW'
+    },
+    {
+      id: 5, code: 'ING-005', name: 'Chicken (Boneless Breasts)', category: 'Poultry & Meat', store: 'Deep Freezer',
+      baseUnit: 'GRAM', purchaseUnit: 'KG', conversionFactor: 1000, yieldPercent: 92,
+      onHand: 12500, reorderLevel: 8000, reorderQuantity: 20000, costPerBaseUnit: 0.28, costPerPurchaseUnit: 280,
+      totalValue: 3500, storageType: 'FROZEN', supplierName: 'RealFresh Meats', lastRestocked: 'Today, 07:00 AM', status: 'OK'
+    },
+    {
+      id: 6, code: 'ING-006', name: 'Desi Ghee / Pure Butter', category: 'Oils & Ghee', store: 'Central Kitchen Store',
+      baseUnit: 'GRAM', purchaseUnit: 'KG', conversionFactor: 1000, yieldPercent: 100,
+      onHand: 6500, reorderLevel: 3000, reorderQuantity: 10000, costPerBaseUnit: 0.58, costPerPurchaseUnit: 580,
+      totalValue: 3770, storageType: 'DRY_STORE', supplierName: 'Mother Dairy Direct', lastRestocked: '4 days ago', status: 'OK'
+    },
+    {
+      id: 7, code: 'ING-007', name: 'Basmati Rice (Premium)', category: 'Dry Grocery', store: 'Dry Grocery Store',
+      baseUnit: 'GRAM', purchaseUnit: 'KG', conversionFactor: 1000, yieldPercent: 100,
+      onHand: 45000, reorderLevel: 20000, reorderQuantity: 50000, costPerBaseUnit: 0.14, costPerPurchaseUnit: 140,
+      totalValue: 6300, storageType: 'DRY_STORE', supplierName: 'India Gate Traders', lastRestocked: '5 days ago', status: 'OK'
+    },
+    {
+      id: 8, code: 'ING-008', name: 'Ginger Garlic Paste', category: 'Spices & Condiments', store: 'Cold Room / Chilled Store',
+      baseUnit: 'GRAM', purchaseUnit: 'KG', conversionFactor: 1000, yieldPercent: 96,
+      onHand: 2800, reorderLevel: 1500, reorderQuantity: 5000, costPerBaseUnit: 0.16, costPerPurchaseUnit: 160,
+      totalValue: 448, storageType: 'CHILLED', supplierName: 'Capital Foods', lastRestocked: '2 days ago', status: 'OK'
+    },
+    {
+      id: 9, code: 'ING-009', name: 'Fresh Tomatoes (Ripe Red)', category: 'Produce', store: 'Cold Room / Chilled Store',
+      baseUnit: 'GRAM', purchaseUnit: 'KG', conversionFactor: 1000, yieldPercent: 85,
+      onHand: 18500, reorderLevel: 10000, reorderQuantity: 25000, costPerBaseUnit: 0.045, costPerPurchaseUnit: 45,
+      totalValue: 832.5, storageType: 'CHILLED', supplierName: 'GreenField Fresh', lastRestocked: 'Today, 08:15 AM', status: 'OK'
+    },
+    {
+      id: 10, code: 'ING-010', name: 'Onions (Red Medium)', category: 'Produce', store: 'Dry Grocery Store',
+      baseUnit: 'GRAM', purchaseUnit: 'KG', conversionFactor: 1000, yieldPercent: 90,
+      onHand: 25000, reorderLevel: 12000, reorderQuantity: 30000, costPerBaseUnit: 0.035, costPerPurchaseUnit: 35,
+      totalValue: 875, storageType: 'DRY_STORE', supplierName: 'GreenField Fresh', lastRestocked: '2 days ago', status: 'OK'
+    },
+    {
+      id: 11, code: 'ING-011', name: 'Refined Sunflower Oil', category: 'Oils & Ghee', store: 'Central Kitchen Store',
+      baseUnit: 'ML', purchaseUnit: 'LITER', conversionFactor: 1000, yieldPercent: 100,
+      onHand: 35000, reorderLevel: 15000, reorderQuantity: 40000, costPerBaseUnit: 0.145, costPerPurchaseUnit: 145,
+      totalValue: 5075, storageType: 'DRY_STORE', supplierName: 'Fortune Oil Depot', lastRestocked: '4 days ago', status: 'OK'
+    },
+    {
+      id: 12, code: 'ING-012', name: 'Cashew Nuts (Whole W320)', category: 'Dry Grocery', store: 'Dry Grocery Store',
+      baseUnit: 'GRAM', purchaseUnit: 'KG', conversionFactor: 1000, yieldPercent: 100,
+      onHand: 1200, reorderLevel: 2500, reorderQuantity: 5000, costPerBaseUnit: 0.82, costPerPurchaseUnit: 820,
+      totalValue: 984, storageType: 'DRY_STORE', supplierName: 'Royal Dry Fruits', lastRestocked: '6 days ago', status: 'CRITICAL'
+    }
+  ]);
+
+  readonly kitchenCategories = computed(() => ['ALL', ...Array.from(new Set(this.kitchenStockItems().map(item => item.category)))]);
+  readonly kitchenStorageTypes = computed(() => ['ALL', ...Array.from(new Set(this.kitchenStockItems().map(item => item.storageType)))]);
+
+  readonly filteredKitchenStock = computed(() => {
+    const q = this.kitchenStockSearch().toLowerCase().trim();
+    const cat = this.kitchenCategoryFilter();
+    const stg = this.kitchenStorageFilter();
+
+    return this.kitchenStockItems().filter(item => {
+      const matchesSearch = !q || [item.code, item.name, item.category, item.store, item.supplierName, item.storageType].some(v => v.toLowerCase().includes(q));
+      const matchesCat = cat === 'ALL' || item.category === cat;
+      const matchesStg = stg === 'ALL' || item.storageType === stg;
+      return matchesSearch && matchesCat && matchesStg;
+    });
+  });
+
+  readonly kitchenStockSummary = computed(() => {
+    const items = this.kitchenStockItems();
+    const lowStockCount = items.filter(i => i.onHand <= i.reorderLevel).length;
+    const totalValuation = items.reduce((sum, i) => sum + i.totalValue, 0);
+    return {
+      totalSkus: items.length,
+      lowStockCount,
+      totalValuation
+    };
+  });
 
   readonly purchaseRequests = signal<PurchaseRequest[]>([]);
   readonly storeIssues = signal<StoreIssue[]>([]);
@@ -1002,8 +1131,28 @@ export class InventoryComponent implements OnInit, OnDestroy {
     return text || fallback;
   }
 
+  quickReorderKitchenIngredient(item: KitchenIngredientStock): void {
+    const draft = this.emptyPurchaseRequestDraft();
+    draft.purpose = `Replenish low stock for ${item.name} (${item.code})`;
+    draft.lines = [
+      {
+        id: Date.now(),
+        itemId: item.code,
+        item: item.name,
+        uomId: '',
+        unit: item.purchaseUnit,
+        quantity: Math.ceil(item.reorderQuantity / item.conversionFactor),
+        estimatedRate: item.costPerPurchaseUnit
+      }
+    ];
+    this.selectedPurchaseRequest.set(null);
+    this.purchaseRequestDraft.set(draft);
+    this.createModal.set('request');
+  }
+
   private updateTabFromUrl(url: string): void {
     if (url.includes('/inventory/stock')) this.activeTab.set('stock');
+    else if (url.includes('/inventory/kitchen-stock')) this.activeTab.set('kitchen-stock');
     else if (url.includes('/inventory/requests')) this.activeTab.set('requests');
     else if (url.includes('/inventory/issues')) this.activeTab.set('issues');
     else this.activeTab.set('dashboard');

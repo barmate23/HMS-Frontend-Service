@@ -96,6 +96,7 @@ interface PurchaseOrder {
   subtotal: number;
   taxTotal: number;
   notes?: string;
+  itemCategoryScope?: 'ALL' | 'HOTEL_GENERAL' | 'KITCHEN_INGREDIENTS';
   lineItems: PurchaseOrderItem[];
 }
 
@@ -116,6 +117,7 @@ interface PurchaseOrderDraft {
   referenceNo: string;
   shippingCharges: number;
   notes: string;
+  itemCategoryScope?: 'ALL' | 'HOTEL_GENERAL' | 'KITCHEN_INGREDIENTS';
   lineItems: PurchaseOrderItem[];
   subtotal: number;
   taxTotal: number;
@@ -199,6 +201,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
   readonly suppliers = signal<Supplier[]>([]);
 
   masterItems = signal<MasterInventoryItem[]>([
+    // Hotel Operations & Daily Consumption Items
     { id: 1, code: 'HK-LIN-001', name: 'Bath Towel', category: 'Housekeeping Linen', unit: 'Pcs', unitCost: 200, taxRate: 12, description: 'Standard guest bath towel', hsnCode: '6302', reorderLevel: 50, parLevel: 140, isActive: true },
     { id: 2, code: 'HK-AMN-014', name: 'Dental Kit', category: 'Guest Amenities', unit: 'Pcs', unitCost: 15, taxRate: 18, description: 'Toothbrush and paste kit', hsnCode: '9603', reorderLevel: 200, parLevel: 500, isActive: true },
     { id: 3, code: 'LND-DET-003', name: 'Laundry Detergent', category: 'Laundry Consumable', unit: 'Kg', unitCost: 80, taxRate: 18, description: 'Commercial grade detergent', hsnCode: '3402', reorderLevel: 30, parLevel: 70, isActive: true },
@@ -207,9 +210,35 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     { id: 6, code: 'FB-DRY-012', name: 'Coffee Sachet', category: 'Guest Amenities', unit: 'Pcs', unitCost: 6, taxRate: 5, description: 'Instant coffee sachet 4g', hsnCode: '2101', reorderLevel: 500, parLevel: 1200, isActive: true },
     { id: 7, code: 'HK-LIN-002', name: 'Bed Sheet (Double)', category: 'Housekeeping Linen', unit: 'Pcs', unitCost: 400, taxRate: 12, description: 'Cotton double bed sheet', hsnCode: '6302', reorderLevel: 40, parLevel: 100, isActive: true },
     { id: 8, code: 'HK-LIN-003', name: 'Pillow Cover', category: 'Housekeeping Linen', unit: 'Pcs', unitCost: 80, taxRate: 12, description: 'Cotton pillow cover', hsnCode: '6302', reorderLevel: 80, parLevel: 200, isActive: true },
-    { id: 9, code: 'FB-KIT-001', name: 'Cooking Oil', category: 'Kitchen Raw Material', unit: 'Ltr', unitCost: 120, taxRate: 5, description: 'Refined sunflower oil', hsnCode: '1512', reorderLevel: 25, parLevel: 60, isActive: true },
-    { id: 10, code: 'FB-KIT-002', name: 'Basmati Rice', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 110, taxRate: 5, description: 'Premium aged basmati rice', hsnCode: '1006', reorderLevel: 50, parLevel: 120, isActive: true }
+    { id: 9, code: 'MB-FOD-022', name: 'Chocolate Bar', category: 'Minibar', unit: 'Pkt', unitCost: 25, taxRate: 18, description: 'Premium milk chocolate bar', hsnCode: '1806', reorderLevel: 40, parLevel: 100, isActive: true },
+
+    // Kitchen Raw Ingredients
+    { id: 101, code: 'ING-001', name: 'Paneer (Cottage Cheese)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 360, taxRate: 5, description: 'Fresh malai paneer', hsnCode: '0406', reorderLevel: 5, parLevel: 15, isActive: true },
+    { id: 102, code: 'ING-002', name: 'Capsicum (Green Pepper)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 80, taxRate: 5, description: 'Fresh green capsicum', hsnCode: '0709', reorderLevel: 4, parLevel: 10, isActive: true },
+    { id: 103, code: 'ING-003', name: 'Tandoori Marinade Masala', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 450, taxRate: 12, description: 'Authentic tandoori spice blend', hsnCode: '0910', reorderLevel: 2, parLevel: 5, isActive: true },
+    { id: 104, code: 'ING-004', name: 'Amul Fresh Cream', category: 'Kitchen Raw Material', unit: 'Ltr', unitCost: 220, taxRate: 5, description: 'Pasteurised cooking fresh cream', hsnCode: '0402', reorderLevel: 3, parLevel: 8, isActive: true },
+    { id: 105, code: 'ING-005', name: 'Chicken (Boneless Breasts)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 280, taxRate: 5, description: 'Fresh boneless chicken breasts', hsnCode: '0207', reorderLevel: 8, parLevel: 20, isActive: true },
+    { id: 106, code: 'ING-006', name: 'Desi Ghee / Pure Butter', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 580, taxRate: 12, description: 'Pure cow ghee', hsnCode: '0405', reorderLevel: 3, parLevel: 10, isActive: true },
+    { id: 107, code: 'ING-007', name: 'Basmati Rice (Premium)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 140, taxRate: 5, description: 'Aged long-grain basmati rice', hsnCode: '1006', reorderLevel: 20, parLevel: 50, isActive: true },
+    { id: 108, code: 'ING-008', name: 'Ginger Garlic Paste', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 160, taxRate: 12, description: 'Prepared ginger garlic blend', hsnCode: '2103', reorderLevel: 2, parLevel: 5, isActive: true },
+    { id: 109, code: 'ING-009', name: 'Fresh Tomatoes (Ripe Red)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 45, taxRate: 5, description: 'Fresh hybrid red tomatoes', hsnCode: '0702', reorderLevel: 10, parLevel: 25, isActive: true },
+    { id: 110, code: 'ING-010', name: 'Onions (Red Medium)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 35, taxRate: 5, description: 'Fresh red onions', hsnCode: '0703', reorderLevel: 12, parLevel: 30, isActive: true },
+    { id: 111, code: 'ING-011', name: 'Refined Sunflower Oil', category: 'Kitchen Raw Material', unit: 'Ltr', unitCost: 145, taxRate: 5, description: 'Refined sunflower cooking oil', hsnCode: '1512', reorderLevel: 15, parLevel: 40, isActive: true },
+    { id: 112, code: 'ING-012', name: 'Cashew Nuts (Whole W320)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 820, taxRate: 12, description: 'Whole premium cashew nuts', hsnCode: '0801', reorderLevel: 3, parLevel: 5, isActive: true }
   ]);
+
+  readonly availablePoMasterItems = computed(() => {
+    const scope = this.poDraft().itemCategoryScope || 'ALL';
+    const items = this.masterItems();
+
+    if (scope === 'HOTEL_GENERAL') {
+      return items.filter(item => !item.category.toLowerCase().includes('kitchen') && item.code.indexOf('ING-') !== 0);
+    }
+    if (scope === 'KITCHEN_INGREDIENTS') {
+      return items.filter(item => item.category.toLowerCase().includes('kitchen') || item.code.indexOf('ING-') === 0);
+    }
+    return items;
+  });
 
   readonly purchaseOrders = signal<PurchaseOrder[]>([
     {

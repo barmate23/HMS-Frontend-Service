@@ -186,6 +186,9 @@ export class PosComponent implements OnInit, OnDestroy {
   selectedRecipeForView = signal<RecipeMaster | null>(null);
   isRecipeViewModalOpen = signal<boolean>(false);
 
+  activeIngredientDropdownIndex = signal<number | null>(null);
+  ingredientSearchQuery = signal<string>('');
+
   filteredIngredients = computed(() => {
     let list = this.pos.ingredients();
     const cat = this.ingredientCategoryFilter();
@@ -886,6 +889,18 @@ export class PosComponent implements OnInit, OnDestroy {
     if (kind === 'recipe') {
       const rec = this.currentRecipe();
       const rows = this.recipeIngredientRows();
+
+      const ingredientIds = rows.map(r => r.ingredientId);
+      const uniqueIds = new Set(ingredientIds);
+      if (uniqueIds.size !== ingredientIds.length) {
+        this.snackBar.open('Duplicate ingredients detected! Each ingredient can only be added once per recipe.', 'Close', {
+          duration: 5000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top'
+        });
+        return;
+      }
+
       const totalPortionCost = rows.reduce((sum, r) => sum + (r.lineCost || 0), 0);
       const sellingPrice = Number(rec.sellingPrice || 0);
       const foodCostPercent = sellingPrice > 0 ? Number(((totalPortionCost / sellingPrice) * 100).toFixed(1)) : 0;
@@ -933,6 +948,42 @@ export class PosComponent implements OnInit, OnDestroy {
     this.currentIngredient.set({ ...ing });
     this.isModalOpen.set(true);
     document.body.style.overflow = 'hidden';
+  }
+
+  onIngredientCategoryChange(value: string): void {
+    const master = this.pos.ingredientCategoryMasters().find(m => (m.value || m.name || m.code) === value);
+    this.currentIngredient.update(ing => ({
+      ...ing,
+      category: value as any,
+      categoryId: master?.id ? Number(master.id) : ing.categoryId
+    }));
+  }
+
+  onBaseUnitChange(value: string): void {
+    const master = this.pos.baseUnitMasters().find(m => (m.value || m.name || m.code) === value);
+    this.currentIngredient.update(ing => ({
+      ...ing,
+      baseUnit: value,
+      baseUnitId: master?.id ? Number(master.id) : ing.baseUnitId
+    }));
+  }
+
+  onPurchaseUnitChange(value: string): void {
+    const master = this.pos.purchaseUnitMasters().find(m => (m.value || m.name || m.code) === value);
+    this.currentIngredient.update(ing => ({
+      ...ing,
+      purchaseUnit: value,
+      purchaseUnitId: master?.id ? Number(master.id) : ing.purchaseUnitId
+    }));
+  }
+
+  onStorageTypeChange(value: string): void {
+    const master = this.pos.storageTypeMasters().find(m => (m.value || m.name || m.code) === value);
+    this.currentIngredient.update(ing => ({
+      ...ing,
+      storageType: value as any,
+      storageTypeId: master?.id ? Number(master.id) : ing.storageTypeId
+    }));
   }
 
   openCreateRecipe(): void {
@@ -995,21 +1046,32 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   addIngredientRowToRecipe(): void {
-    const firstIng = this.pos.ingredients()[0];
-    if (!firstIng) return;
+    const existingIds = new Set(this.recipeIngredientRows().map(r => r.ingredientId));
+    const availableIng = this.pos.ingredients().find(i => !existingIds.has(i.id)) || this.pos.ingredients()[0];
+    if (!availableIng) return;
+
+    if (existingIds.has(availableIng.id)) {
+      this.snackBar.open('All available ingredients are already added to this recipe.', 'Close', {
+        duration: 4000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top'
+      });
+      return;
+    }
+
     const netQty = 100;
-    const yieldPct = Math.max(1, firstIng.yieldPercentage || 100);
+    const yieldPct = Math.max(1, availableIng.yieldPercentage || 100);
     const grossQty = Number((netQty / (yieldPct / 100)).toFixed(2));
-    const unitCost = firstIng.costPerBaseUnit;
+    const unitCost = availableIng.costPerBaseUnit;
     const lineCost = Number((grossQty * unitCost).toFixed(2));
 
     const newRow: RecipeIngredient = {
-      ingredientId: firstIng.id,
-      ingredientCode: firstIng.code,
-      ingredientName: firstIng.name,
-      category: firstIng.category,
+      ingredientId: availableIng.id,
+      ingredientCode: availableIng.code,
+      ingredientName: availableIng.name,
+      category: availableIng.category,
       netQuantity: netQty,
-      unit: firstIng.baseUnit,
+      unit: availableIng.baseUnit,
       wastePercent: 100 - yieldPct,
       grossQuantity: grossQty,
       unitCost: unitCost,
@@ -1017,6 +1079,126 @@ export class PosComponent implements OnInit, OnDestroy {
     };
     this.recipeIngredientRows.update(rows => [...rows, newRow]);
     this.recalculateRecipeTotals();
+
+    setTimeout(() => {
+      const container = document.querySelector('.ingredient-rows-table-wrapper');
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    }, 50);
+  }
+
+  isIngredientSelectedInOtherRow(ingredientId: number, rowIndex: number): boolean {
+    return this.recipeIngredientRows().some((r, i) => i !== rowIndex && r.ingredientId === ingredientId);
+  }
+
+  trackByRowIndex(index: number, _item: any): any {
+    return index;
+  }
+
+  activeRowDropdownIndex = signal<number | null>(null);
+  dropdownStyle = signal<{ top: string; left: string; width: string }>({ top: '0px', left: '0px', width: '290px' });
+
+  toggleRowDropdown(index: number, event?: Event): void {
+    if (event) event.stopPropagation();
+    if (this.activeRowDropdownIndex() === index) {
+      this.activeRowDropdownIndex.set(null);
+    } else {
+      if (!this.pos.ingredients().length) {
+        this.pos.loadIngredients(0, 20);
+      }
+      this.activeRowDropdownIndex.set(index);
+      this.ingredientSearchQuery.set('');
+
+      const rawTarget = event?.target as HTMLElement;
+      const target = rawTarget?.closest('.ingredient-dropdown-trigger') as HTMLElement || (event?.currentTarget as HTMLElement) || rawTarget;
+      if (target) {
+        const rect = target.getBoundingClientRect();
+        const dropdownHeight = 240;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+
+        let top: number;
+        if (spaceBelow >= 140 || spaceBelow >= spaceAbove) {
+          top = rect.bottom + 4;
+        } else {
+          top = Math.max(10, rect.top - dropdownHeight - 4);
+        }
+
+        const dropdownWidth = Math.max(300, rect.width);
+        const left = Math.min(rect.left, window.innerWidth - dropdownWidth - 16);
+
+        this.dropdownStyle.set({
+          top: `${top}px`,
+          left: `${Math.max(10, left)}px`,
+          width: `${dropdownWidth}px`
+        });
+      }
+    }
+  }
+
+  closeRowDropdown(): void {
+    this.activeRowDropdownIndex.set(null);
+  }
+
+  selectRowIngredient(rowIndex: number, ing: IngredientMaster): void {
+    if (this.isIngredientSelectedInOtherRow(ing.id, rowIndex)) {
+      this.snackBar.open(`"${ing.name}" is already added to this recipe. Duplicate ingredients are not allowed.`, 'Close', {
+        duration: 4000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top'
+      });
+      return;
+    }
+    this.updateRecipeIngredientRow(rowIndex, 'ingredientId', ing.id);
+    this.closeRowDropdown();
+  }
+
+  onIngredientSearch(query: string): void {
+    const q = query || '';
+    this.ingredientSearchQuery.set(q);
+    this.pos.loadIngredients(0, 20, false, q);
+  }
+
+  onIngredientDropdownScroll(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (!target) return;
+    const nearBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 25;
+    if (nearBottom && !this.pos.ingredientsLoading() && this.pos.ingredientsPage() < this.pos.ingredientsTotalPages() - 1) {
+      this.pos.loadIngredients(this.pos.ingredientsPage() + 1, 20, true);
+    }
+  }
+
+  recipeDropdownFilteredIngredients = computed(() => {
+    const query = (this.ingredientSearchQuery() || '').toLowerCase().trim();
+    const all = this.pos.ingredients();
+    if (!query) return all;
+    return all.filter(ing =>
+      (ing.name || '').toLowerCase().includes(query) ||
+      (ing.code || '').toLowerCase().includes(query) ||
+      (ing.category || '').toLowerCase().includes(query)
+    );
+  });
+
+  getRowIngredientOptions(currentIngredientId?: number): IngredientMaster[] {
+    const filtered = this.recipeDropdownFilteredIngredients();
+    if (!currentIngredientId) return filtered;
+    const selected = this.pos.ingredients().find(i => i.id === Number(currentIngredientId));
+    if (selected && !filtered.some(f => f.id === selected.id)) {
+      return [selected, ...filtered];
+    }
+    return filtered;
+  }
+
+  getSelectedIngredientLabel(ingredientId?: number): string {
+    if (!ingredientId) return '-- Select Ingredient --';
+    const ing = this.pos.ingredients().find(i => i.id === Number(ingredientId));
+    return ing ? `${ing.name} (₹${ing.costPerBaseUnit}/${ing.baseUnit})` : `Ingredient #${ingredientId}`;
+  }
+
+  selectIngredientForRecipeRow(rowAreaIndex: number, ing: IngredientMaster): void {
+    this.updateRecipeIngredientRow(rowAreaIndex, 'ingredientId', ing.id);
+    this.closeRowDropdown();
   }
 
   removeIngredientRowFromRecipe(index: number): void {
@@ -1025,6 +1207,21 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   updateRecipeIngredientRow(index: number, field: string, value: any): void {
+    if (field === 'ingredientId') {
+      const selectedId = Number(value);
+      const isDuplicate = this.recipeIngredientRows().some((row, i) => i !== index && row.ingredientId === selectedId);
+      if (isDuplicate) {
+        const ing = this.pos.ingredients().find(i => i.id === selectedId);
+        const name = ing?.name || 'This ingredient';
+        this.snackBar.open(`"${name}" is already added to this recipe. Duplicate ingredients are not allowed.`, 'Close', {
+          duration: 4000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top'
+        });
+        return;
+      }
+    }
+
     this.recipeIngredientRows.update(rows => {
       const updated = [...rows];
       const row = { ...updated[index] };

@@ -19,13 +19,18 @@ export interface IngredientMaster {
   storageType: StorageType;
   supplierName?: string;
   isActive: boolean;
+  categoryId?: number;
+  baseUnitId?: number;
+  purchaseUnitId?: number;
+  storageTypeId?: number;
 }
 
 export interface RecipeIngredient {
+  id?: number;
   ingredientId: number;
   ingredientCode: string;
   ingredientName: string;
-  category: IngredientCategory;
+  category?: IngredientCategory;
   netQuantity: number; // Qty required in Base Unit (e.g., 200 Grams)
   unit: string; // Base Unit
   wastePercent: number; // Recipe specific prep waste allowance

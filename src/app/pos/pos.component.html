@@ -745,7 +745,7 @@
       <button class="ci-close" (click)="closeModal()"><span class="material-icons-round">close</span></button>
     </div>
 
-    <div class="ci-body" [ngSwitch]="modalKind()">
+    <div class="ci-body" (scroll)="closeRowDropdown()" [ngSwitch]="modalKind()">
       <ng-container *ngSwitchCase="'outlet'">
         <div class="ci-form-grid"><div class="ci-input-group"><label>Outlet Name *</label><input [(ngModel)]="currentOutlet().name"></div><div class="ci-input-group"><label>Outlet Type</label><select [(ngModel)]="currentOutlet().type"><option *ngFor="let type of pos.outletTypes()" [value]="type">{{ type }}</option></select></div></div>
         <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Location</label><input [(ngModel)]="currentOutlet().location"></div><div class="ci-input-group"><label>Timing / Shift Schedule</label><select [(ngModel)]="currentOutlet().timing"><option *ngFor="let schedule of pos.shiftSchedules()" [value]="schedule">{{ schedule }}</option></select></div></div>
@@ -1057,36 +1057,57 @@
         <div class="ci-form-grid">
           <div class="ci-input-group"><label>Ingredient Name *</label><input [(ngModel)]="currentIngredient().name" placeholder="e.g. Paneer (Cottage Cheese)"></div>
           <div class="ci-input-group"><label>Category *</label>
-            <select [(ngModel)]="currentIngredient().category">
-              <option value="Dairy">Dairy</option>
-              <option value="Produce">Produce</option>
-              <option value="Spices & Condiments">Spices & Condiments</option>
-              <option value="Poultry & Meat">Poultry & Meat</option>
-              <option value="Oils & Ghee">Oils & Ghee</option>
-              <option value="Dry Grocery">Dry Grocery</option>
-              <option value="Beverage Raw">Beverage Raw</option>
+            <select [ngModel]="currentIngredient().category" (ngModelChange)="onIngredientCategoryChange($event)">
+              <ng-container *ngIf="pos.ingredientCategoryMasters().length; else defaultCategories">
+                <option *ngFor="let cat of pos.ingredientCategoryMasters()" [value]="cat.value || cat.name || cat.code">
+                  {{ cat.value || cat.name || cat.code }}
+                </option>
+              </ng-container>
+              <ng-template #defaultCategories>
+                <option value="Dairy">Dairy</option>
+                <option value="Produce">Produce</option>
+                <option value="Spices & Condiments">Spices & Condiments</option>
+                <option value="Poultry & Meat">Poultry & Meat</option>
+                <option value="Oils & Ghee">Oils & Ghee</option>
+                <option value="Dry Grocery">Dry Grocery</option>
+                <option value="Beverage Raw">Beverage Raw</option>
+              </ng-template>
             </select>
           </div>
         </div>
 
         <div class="ci-form-grid mt-3">
           <div class="ci-input-group"><label>Base Unit (Recipe Usage)</label>
-            <select [(ngModel)]="currentIngredient().baseUnit">
-              <option value="GRAM">GRAM</option>
-              <option value="ML">ML</option>
-              <option value="PCS">PCS</option>
-              <option value="KG">KG</option>
-              <option value="LITER">LITER</option>
+            <select [ngModel]="currentIngredient().baseUnit" (ngModelChange)="onBaseUnitChange($event)">
+              <ng-container *ngIf="pos.baseUnitMasters().length; else defaultBaseUnits">
+                <option *ngFor="let u of pos.baseUnitMasters()" [value]="u.value || u.name || u.code">
+                  {{ u.value || u.name || u.code }}
+                </option>
+              </ng-container>
+              <ng-template #defaultBaseUnits>
+                <option value="GRAM">GRAM</option>
+                <option value="ML">ML</option>
+                <option value="PCS">PCS</option>
+                <option value="KG">KG</option>
+                <option value="LITER">LITER</option>
+              </ng-template>
             </select>
           </div>
           <div class="ci-input-group"><label>Purchase Unit (Procurement)</label>
-            <select [(ngModel)]="currentIngredient().purchaseUnit">
-              <option value="KG">KG</option>
-              <option value="LITER">LITER</option>
-              <option value="BOX">BOX</option>
-              <option value="PACKET">PACKET</option>
-              <option value="CAN">CAN</option>
-              <option value="PCS">PCS</option>
+            <select [ngModel]="currentIngredient().purchaseUnit" (ngModelChange)="onPurchaseUnitChange($event)">
+              <ng-container *ngIf="pos.purchaseUnitMasters().length; else defaultPurchaseUnits">
+                <option *ngFor="let pu of pos.purchaseUnitMasters()" [value]="pu.value || pu.name || pu.code">
+                  {{ pu.value || pu.name || pu.code }}
+                </option>
+              </ng-container>
+              <ng-template #defaultPurchaseUnits>
+                <option value="KG">KG</option>
+                <option value="LITER">LITER</option>
+                <option value="BOX">BOX</option>
+                <option value="PACKET">PACKET</option>
+                <option value="CAN">CAN</option>
+                <option value="PCS">PCS</option>
+              </ng-template>
             </select>
           </div>
         </div>
@@ -1114,14 +1135,20 @@
 
         <div class="ci-form-grid mt-3">
           <div class="ci-input-group"><label>Storage Type</label>
-            <select [(ngModel)]="currentIngredient().storageType">
-              <option value="DRY_STORE">DRY_STORE</option>
-              <option value="CHILLED">CHILLED</option>
-              <option value="FROZEN">FROZEN</option>
-              <option value="PERISHABLE">PERISHABLE</option>
+            <select [ngModel]="currentIngredient().storageType" (ngModelChange)="onStorageTypeChange($event)">
+              <ng-container *ngIf="pos.storageTypeMasters().length; else defaultStorageTypes">
+                <option *ngFor="let st of pos.storageTypeMasters()" [value]="st.value || st.name || st.code">
+                  {{ st.value || st.name || st.code }}
+                </option>
+              </ng-container>
+              <ng-template #defaultStorageTypes>
+                <option value="DRY_STORE">DRY_STORE</option>
+                <option value="CHILLED">CHILLED</option>
+                <option value="FROZEN">FROZEN</option>
+                <option value="PERISHABLE">PERISHABLE</option>
+              </ng-template>
             </select>
           </div>
-          <div class="ci-input-group"><label>Preferred Supplier</label><input [(ngModel)]="currentIngredient().supplierName" placeholder="Supplier Name"></div>
         </div>
       </ng-container>
 
@@ -1174,15 +1201,15 @@
           </div>
 
           <!-- BOM Ingredients Breakdown Section -->
-          <div class="ingredient-rows-panel" style="background:#fff;border:1px solid var(--surface-200);border-radius:8px;padding:12px;overflow:hidden;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div class="ingredient-rows-panel" style="background:#fff;border:1px solid var(--surface-200);border-radius:8px;padding:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
               <h3 style="font-size:12px;font-weight:800;margin:0;text-transform:uppercase;color:#0f172a;">Recipe Ingredients Breakdown (BOM)</h3>
               <button type="button" class="btn-primary" style="padding:4px 10px;font-size:11px;" (click)="addIngredientRowToRecipe()"><span class="material-icons-round" style="font-size:14px;">add</span>Add Ingredient</button>
             </div>
 
-            <div style="overflow-x:auto;">
+            <div class="ingredient-rows-table-wrapper" (scroll)="closeRowDropdown()">
               <table class="premium-table" style="font-size:11.5px;width:100%;">
-                <thead>
+                <thead style="position:sticky;top:0;z-index:2;background:var(--surface-100);">
                   <tr>
                     <th style="min-width:230px;">INGREDIENT FROM MASTER</th>
                     <th style="width:85px;">NET QTY</th>
@@ -1194,11 +1221,19 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let row of recipeIngredientRows(); let i = index">
-                    <td>
-                      <select [ngModel]="row.ingredientId" (ngModelChange)="updateRecipeIngredientRow(i, 'ingredientId', $event)" style="width:100%;min-width:220px;padding:5px 22px 5px 8px;font-size:11px;border:1px solid var(--surface-300);border-radius:4px;outline:none;text-overflow:ellipsis;">
-                        <option *ngFor="let ing of pos.ingredients()" [value]="ing.id">{{ ing.name }} (₹{{ ing.costPerBaseUnit }}/{{ ing.baseUnit }})</option>
-                      </select>
+                  <tr *ngFor="let row of recipeIngredientRows(); let i = index; trackBy: trackByRowIndex">
+                    <td style="min-width: 230px;">
+                      <!-- Searchable Dropdown Trigger Box -->
+                      <div class="ingredient-dropdown-trigger"
+                           (click)="toggleRowDropdown(i, $event)"
+                           style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;font-size:11px;border:1px solid var(--surface-300);border-radius:6px;background:#fff;cursor:pointer;user-select:none;font-weight:600;color:#0f172a;min-width:210px;box-shadow:0 1px 2px rgba(0,0,0,0.03);">
+                        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px;">
+                          {{ getSelectedIngredientLabel(row.ingredientId) }}
+                        </span>
+                        <span class="material-icons-round" style="font-size:16px;color:var(--surface-500);margin-left:4px;">
+                          {{ activeRowDropdownIndex() === i ? 'arrow_drop_up' : 'arrow_drop_down' }}
+                        </span>
+                      </div>
                     </td>
                     <td>
                       <input type="number" min="0" [ngModel]="row.netQuantity" (ngModelChange)="updateRecipeIngredientRow(i, 'netQuantity', $event)" style="width:100%;padding:5px 6px;font-size:11px;border:1px solid var(--surface-300);border-radius:4px;outline:none;">
@@ -1214,10 +1249,80 @@
                     </td>
                   </tr>
                   <tr *ngIf="!recipeIngredientRows().length">
-                    <td colspan="7" style="text-align:center;padding:15px;color:var(--surface-400);">No ingredients added to this recipe. Click "+ Add Ingredient".</td>
+                    <td colspan="7" style="text-align:center;padding:16px;color:var(--surface-400);">No ingredients added yet. Click "+ Add Ingredient" above.</td>
                   </tr>
                 </tbody>
               </table>
+
+              <!-- Invisible Backdrop overlay to catch click outside -->
+              <div *ngIf="activeRowDropdownIndex() !== null"
+                   (click)="closeRowDropdown()"
+                   style="position:fixed;inset:0;z-index:99999998;background:transparent;"></div>
+
+              <!-- Fixed Position Floating Searchable Popover Overlay -->
+              <div *ngIf="activeRowDropdownIndex() !== null"
+                   (click)="$event.stopPropagation()"
+                   [ngStyle]="{
+                     'position': 'fixed',
+                     'top': dropdownStyle().top,
+                     'left': dropdownStyle().left,
+                     'width': dropdownStyle().width,
+                     'z-index': '99999999',
+                     'background': '#ffffff',
+                     'border': '1px solid var(--surface-300)',
+                     'border-radius': '8px',
+                     'box-shadow': '0 12px 35px rgba(0,0,0,0.25)',
+                     'padding': '8px',
+                     'display': 'flex',
+                     'flex-direction': 'column',
+                     'gap': '6px'
+                   }">
+                
+                <!-- Search Box Header with Close Icon -->
+                <div style="display:flex;align-items:center;gap:4px;">
+                  <div style="position:relative;flex:1;display:flex;align-items:center;">
+                    <span class="material-icons-round" style="position:absolute;left:6px;font-size:14px;color:var(--surface-400);">search</span>
+                    <input type="text"
+                           [ngModel]="ingredientSearchQuery()"
+                           (ngModelChange)="onIngredientSearch($event)"
+                           placeholder="Type ingredient name or code..."
+                           autofocus
+                           style="width:100%;padding:5px 6px 5px 24px;font-size:11px;border:1px solid var(--surface-300);border-radius:4px;outline:none;">
+                  </div>
+                  <button type="button" (click)="closeRowDropdown()" style="border:none;background:none;cursor:pointer;color:var(--surface-500);padding:2px;display:flex;align-items:center;" title="Close">
+                    <span class="material-icons-round" style="font-size:16px;">close</span>
+                  </button>
+                </div>
+
+                <!-- Scrollable Ingredients List -->
+                <div (scroll)="onIngredientDropdownScroll($event)"
+                     style="max-height:170px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;border:1px solid var(--surface-200);border-radius:4px;padding:2px;background:#f8fafc;">
+                  <div *ngFor="let ing of getRowIngredientOptions(recipeIngredientRows()[activeRowDropdownIndex()!]?.ingredientId)"
+                       (click)="selectRowIngredient(activeRowDropdownIndex()!, ing)"
+                       class="dropdown-item-row"
+                       [class.is-disabled]="isIngredientSelectedInOtherRow(ing.id, activeRowDropdownIndex()!)"
+                       style="padding:6px 8px;font-size:11px;border-radius:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background 0.12s ease;background:#fff;border:1px solid var(--surface-100);">
+                    <div style="display:flex;flex-direction:column;max-width:170px;">
+                      <strong style="color:#0f172a;font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ing.name }}</strong>
+                      <small style="color:var(--surface-500);font-size:9.5px;">{{ ing.code }} • {{ ing.category }}</small>
+                    </div>
+                    <span style="font-weight:700;color:var(--primary-color);white-space:nowrap;font-size:10px;margin-left:4px;">
+                      ₹{{ ing.costPerBaseUnit }}/{{ ing.baseUnit }}
+                      <em *ngIf="isIngredientSelectedInOtherRow(ing.id, activeRowDropdownIndex()!)" style="font-style:normal;color:#dc2626;font-size:9px;margin-left:2px;">(Selected)</em>
+                    </span>
+                  </div>
+
+                  <div *ngIf="!getRowIngredientOptions(recipeIngredientRows()[activeRowDropdownIndex()!]?.ingredientId).length && !pos.ingredientsLoading()"
+                       style="padding:10px;text-align:center;font-size:10.5px;color:var(--surface-400);">
+                    No matching ingredients found
+                  </div>
+
+                  <div *ngIf="pos.ingredientsLoading()"
+                       style="padding:8px;text-align:center;font-size:10.5px;color:var(--primary-color);font-weight:600;display:flex;align-items:center;justify-content:center;gap:4px;">
+                    <span class="material-icons-round spinning" style="font-size:13px;">sync</span> Searching...
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1271,7 +1376,7 @@
 
 <!-- RECIPE DETAILS VIEW POPUP MODAL -->
 <div class="modal-overlay" *ngIf="isRecipeViewModalOpen() && selectedRecipeForView()" (click)="closeRecipeDetails()">
-  <div class="ci-modal recipe-details-modal" (click)="$event.stopPropagation()" style="max-width: 800px;">
+  <div class="ci-modal recipe-details-modal" (click)="$event.stopPropagation()" style="max-width: 880px; width: 92vw;">
     <div class="ci-header">
       <div class="ci-title">
         <span class="material-icons-round" style="color:var(--primary-color);">restaurant_menu</span>
@@ -1315,28 +1420,28 @@
         <div style="padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
           <h4 style="margin:0;font-size:12px;font-weight:800;color:#0f172a;text-transform:uppercase;">Bill of Materials ({{ selectedRecipeForView()?.ingredients?.length || 0 }} Ingredients)</h4>
         </div>
-        <div class="table-container" style="max-height:260px;overflow-y:auto;">
-          <table class="premium-table">
+        <div class="table-container" style="max-height:280px;overflow-y:auto;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#94a3b8 #f1f5f9;">
+          <table class="premium-table" style="min-width: 820px; width: 100%;">
             <thead>
               <tr>
-                <th>CODE</th>
-                <th>INGREDIENT</th>
-                <th>CATEGORY</th>
-                <th>NET QTY</th>
-                <th>WASTE %</th>
-                <th>GROSS QTY</th>
-                <th>UNIT COST</th>
-                <th>LINE COST</th>
+                <th style="min-width: 80px;">CODE</th>
+                <th style="min-width: 120px;">INGREDIENT</th>
+                <th style="min-width: 155px;">CATEGORY</th>
+                <th style="min-width: 90px;">NET QTY</th>
+                <th style="min-width: 75px;">WASTE %</th>
+                <th style="min-width: 110px;">GROSS QTY</th>
+                <th style="min-width: 105px;">UNIT COST</th>
+                <th style="min-width: 90px;">LINE COST</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let ing of selectedRecipeForView()?.ingredients">
                 <td><code>{{ ing.ingredientCode }}</code></td>
                 <td><strong>{{ ing.ingredientName }}</strong></td>
-                <td><span class="soft-pill">{{ ing.category }}</span></td>
+                <td style="min-width: 155px; white-space: nowrap;"><span class="soft-pill" style="white-space: nowrap; max-width: none; flex-shrink: 0; font-size: 9.5px; padding: 4px 10px;">{{ pos.normalizeCategory(ing.category) }}</span></td>
                 <td>{{ ing.netQuantity }} {{ ing.unit }}</td>
                 <td>{{ ing.wastePercent }}%</td>
-                <td>{{ ing.grossQuantity }} {{ ing.unit }}</td>
+                <td>{{ ing.grossQuantity | number:'1.1-2' }} {{ ing.unit }}</td>
                 <td>₹{{ ing.unitCost | number:'1.2-2' }}/{{ ing.unit }}</td>
                 <td><strong style="color:var(--primary-color);">₹{{ ing.lineCost | number:'1.2-2' }}</strong></td>
               </tr>

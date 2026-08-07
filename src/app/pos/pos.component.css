@@ -5,6 +5,14 @@
   min-height: 0;
 }
 
+.dropdown-item-row {
+  background: transparent;
+}
+.dropdown-item-row:hover,
+.dropdown-item-row.is-selected {
+  background: #f1f5f9 !important;
+}
+
 .pos-container {
   height: 100%;
   flex: 1;
@@ -1105,6 +1113,7 @@
   font-weight: 900;
   text-transform: uppercase;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .soft-pill {
@@ -2132,6 +2141,45 @@
 .dining-modal,
 .table-order-popup {
   max-width: 760px;
+}
+
+.ci-modal.wide-modal {
+  max-width: 960px !important;
+  width: 95vw !important;
+}
+
+.ci-modal.recipe-modal {
+  max-width: 920px !important;
+  width: 92vw !important;
+}
+
+.ingredient-rows-table-wrapper {
+  max-height: 220px;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+.ingredient-rows-table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ingredient-rows-table-wrapper::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.ingredient-rows-table-wrapper::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+
+.ingredient-rows-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color, #0f3d3e);
 }
 
 .delete-confirm-modal {
@@ -3513,3 +3561,32 @@
   padding: 8px 10px;
   font-size: 11px;
 }
+
+.recipe-modal .ci-body {
+  overflow-y: auto !important;
+  max-height: calc(88vh - 120px);
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+.searchable-ingredient-dropdown {
+  position: absolute !important;
+  top: calc(100% + 4px) !important;
+  left: 0 !important;
+  z-index: 999999 !important;
+  width: 320px !important;
+  background: #ffffff !important;
+  border: 1px solid var(--surface-300) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25) !important;
+}
+
+.dropdown-item-row:hover {
+  background: var(--surface-100, #f1f5f9) !important;
+}
+
+.dropdown-item-row.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+}
+

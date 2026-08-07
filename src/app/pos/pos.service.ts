@@ -4,7 +4,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable, map, catchError, of, throwError } from 'rxjs';
 
 import { UserManagementService } from '../user-management/user-management.service';
-import { IngredientMaster, RecipeMaster } from './models/recipe.model';
+import { IngredientCategory, IngredientMaster, RecipeIngredient, RecipeMaster, StorageType } from './models/recipe.model';
 
 export type PosTab = 'dashboard' | 'outlets' | 'dining' | 'orders' | 'billing' | 'menu' | 'billing-setup' | 'ingredient-master' | 'recipes';
 export type OutletType = string;
@@ -399,14 +399,99 @@ interface ApiBill {
   compReason?: string;
   compVoidReasonId?: number | null;
   compVoidReasonName?: string | null;
+  postToFolio?: boolean;
   postedToFolio?: boolean;
   isPostedToFolio?: boolean;
-  postToFolio?: boolean;
   folioPostingId?: number | null;
   isRoomOrder?: boolean;
-  notes?: string | null;
+  notes?: string;
+}
+
+export interface ApiKitchenIngredientResponse {
+  id?: number;
+  ingredientCode?: string;
+  ingredientName?: string;
+  categoryId?: number;
+  categoryName?: string;
+  baseUnitId?: number;
+  baseUnitName?: string;
+  purchaseUnitId?: number;
+  purchaseUnitName?: string;
+  purchaseConversionFactor?: number;
+  usableYieldPercent?: number;
+  costPerPurchaseUnit?: number;
+  currentStockLevel?: number;
+  reorderThresholdLevel?: number;
+  reorderQuantity?: number;
+  storageTypeId?: number;
+  storageTypeName?: string;
+  preferredSupplier?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface ApiKitchenIngredientRequest {
+  ingredientName: string;
+  categoryId?: number | null;
+  baseUnitId?: number | null;
+  purchaseUnitId?: number | null;
+  purchaseConversionFactor?: number;
+  usableYieldPercent?: number;
+  costPerPurchaseUnit?: number;
+  currentStockLevel?: number;
+  reorderThresholdLevel?: number;
+  reorderQuantity?: number;
+  storageTypeId?: number | null;
+  preferredSupplier?: string;
+}
+
+export interface ApiRecipeIngredientResponse {
+  id?: number;
+  ingredientId?: number;
+  ingredientName?: string;
+  ingredientCode?: string;
+  unitName?: string;
+  costPerBaseUnit?: number;
+  netQty?: number;
+  prepWastePercent?: number;
+  grossQty?: number;
+  lineCost?: number;
+}
+
+export interface ApiRecipeResponse {
+  id?: number;
+  menuItemId?: number;
+  menuItemDisplayName?: string;
+  recipeName?: string;
+  portionSize?: number;
+  portionUnit?: string;
+  prepTimeMins?: number;
+  cookingInstructions?: string;
+  ingredients?: ApiRecipeIngredientResponse[];
+  portionCost?: number;
+  totalPortionCost?: number;
+  sellingPrice?: number;
+  foodCostPercent?: number;
+  grossMarginPercent?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ApiRecipeIngredientRequest {
+  id?: number;
+  ingredientId: number;
+  netQty: number;
+  prepWastePercent: number;
+}
+
+export interface ApiRecipeRequest {
+  menuItemId: number;
+  recipeName: string;
+  portionSize: number;
+  portionUnit: string;
+  prepTimeMins: number;
+  cookingInstructions: string;
+  ingredients: ApiRecipeIngredientRequest[];
 }
 
 interface StandardResponse<T = any> {
@@ -465,6 +550,10 @@ export class PosService {
   readonly kotStatusMasters = signal<ApiCommonMaster[]>([]);
   readonly billStatuses = signal<BillStatus[]>(this.defaultBillStatuses);
   readonly billStatusMasters = signal<ApiCommonMaster[]>([]);
+  readonly ingredientCategoryMasters = signal<ApiCommonMaster[]>([]);
+  readonly baseUnitMasters = signal<ApiCommonMaster[]>([]);
+  readonly purchaseUnitMasters = signal<ApiCommonMaster[]>([]);
+  readonly storageTypeMasters = signal<ApiCommonMaster[]>([]);
 
   readonly paymentModes = signal<PaymentMode[]>(this.defaultPaymentModes);
   readonly voidReasons = signal<string[]>(this.defaultVoidReasons);
@@ -491,369 +580,11 @@ export class PosService {
   readonly posDashboard = signal<PosDashboardData | null>(null);
   readonly posDashboardCards = signal<PosDashboardCards | null>(null);
 
-  readonly ingredients = signal<IngredientMaster[]>([
-    {
-      id: 1,
-      code: 'ING-001',
-      name: 'Paneer (Cottage Cheese)',
-      category: 'Dairy',
-      baseUnit: 'GRAM',
-      purchaseUnit: 'KG',
-      conversionFactor: 1000,
-      yieldPercentage: 95,
-      costPerPurchaseUnit: 360,
-      costPerBaseUnit: 0.36,
-      currentStock: 8500,
-      reorderLevel: 5000,
-      reorderQuantity: 15000,
-      storageType: 'CHILLED',
-      supplierName: 'Milma Dairy Supplies',
-      isActive: true
-    },
-    {
-      id: 2,
-      code: 'ING-002',
-      name: 'Capsicum (Green Pepper)',
-      category: 'Produce',
-      baseUnit: 'GRAM',
-      purchaseUnit: 'KG',
-      conversionFactor: 1000,
-      yieldPercentage: 90,
-      costPerPurchaseUnit: 80,
-      costPerBaseUnit: 0.08,
-      currentStock: 3200,
-      reorderLevel: 4000,
-      reorderQuantity: 10000,
-      storageType: 'CHILLED',
-      supplierName: 'GreenField Fresh Produce',
-      isActive: true
-    },
-    {
-      id: 3,
-      code: 'ING-003',
-      name: 'Tandoori Marinade Masala',
-      category: 'Spices & Condiments',
-      baseUnit: 'GRAM',
-      purchaseUnit: 'KG',
-      conversionFactor: 1000,
-      yieldPercentage: 100,
-      costPerPurchaseUnit: 450,
-      costPerBaseUnit: 0.45,
-      currentStock: 4200,
-      reorderLevel: 2000,
-      reorderQuantity: 5000,
-      storageType: 'DRY_STORE',
-      supplierName: 'MDH Spice Distributors',
-      isActive: true
-    },
-    {
-      id: 4,
-      code: 'ING-004',
-      name: 'Amul Fresh Cream',
-      category: 'Dairy',
-      baseUnit: 'ML',
-      purchaseUnit: 'LITER',
-      conversionFactor: 1000,
-      yieldPercentage: 98,
-      costPerPurchaseUnit: 220,
-      costPerBaseUnit: 0.22,
-      currentStock: 1800,
-      reorderLevel: 3000,
-      reorderQuantity: 10000,
-      storageType: 'CHILLED',
-      supplierName: 'Amul Depot',
-      isActive: true
-    },
-    {
-      id: 5,
-      code: 'ING-005',
-      name: 'Chicken (Boneless Breasts)',
-      category: 'Poultry & Meat',
-      baseUnit: 'GRAM',
-      purchaseUnit: 'KG',
-      conversionFactor: 1000,
-      yieldPercentage: 92,
-      costPerPurchaseUnit: 280,
-      costPerBaseUnit: 0.28,
-      currentStock: 12500,
-      reorderLevel: 8000,
-      reorderQuantity: 20000,
-      storageType: 'FROZEN',
-      supplierName: 'RealFresh Meats',
-      isActive: true
-    },
-    {
-      id: 6,
-      code: 'ING-006',
-      name: 'Desi Ghee / Pure Butter',
-      category: 'Oils & Ghee',
-      baseUnit: 'GRAM',
-      purchaseUnit: 'KG',
-      conversionFactor: 1000,
-      yieldPercentage: 100,
-      costPerPurchaseUnit: 580,
-      costPerBaseUnit: 0.58,
-      currentStock: 6500,
-      reorderLevel: 3000,
-      reorderQuantity: 10000,
-      storageType: 'DRY_STORE',
-      supplierName: 'Mother Dairy Direct',
-      isActive: true
-    },
-    {
-      id: 7,
-      code: 'ING-007',
-      name: 'Basmati Rice (Premium)',
-      category: 'Dry Grocery',
-      baseUnit: 'GRAM',
-      purchaseUnit: 'KG',
-      conversionFactor: 1000,
-      yieldPercentage: 98,
-      costPerPurchaseUnit: 140,
-      costPerBaseUnit: 0.14,
-      currentStock: 45000,
-      reorderLevel: 20000,
-      reorderQuantity: 50000,
-      storageType: 'DRY_STORE',
-      supplierName: 'India Gate Traders',
-      isActive: true
-    },
-    {
-      id: 8,
-      code: 'ING-008',
-      name: 'Ginger Garlic Paste',
-      category: 'Spices & Condiments',
-      baseUnit: 'GRAM',
-      purchaseUnit: 'KG',
-      conversionFactor: 1000,
-      yieldPercentage: 95,
-      costPerPurchaseUnit: 160,
-      costPerBaseUnit: 0.16,
-      currentStock: 2800,
-      reorderLevel: 1500,
-      reorderQuantity: 5000,
-      storageType: 'CHILLED',
-      supplierName: 'Capital Foods',
-      isActive: true
-    },
-    {
-      id: 9,
-      code: 'ING-009',
-      name: 'Fresh Tomatoes (Ripe Red)',
-      category: 'Produce',
-      baseUnit: 'GRAM',
-      purchaseUnit: 'KG',
-      conversionFactor: 1000,
-      yieldPercentage: 92,
-      costPerPurchaseUnit: 45,
-      costPerBaseUnit: 0.045,
-      currentStock: 18500,
-      reorderLevel: 10000,
-      reorderQuantity: 30000,
-      storageType: 'CHILLED',
-      supplierName: 'GreenField Fresh Produce',
-      isActive: true
-    },
-    {
-      id: 10,
-      code: 'ING-010',
-      name: 'Onions (Red Medium)',
-      category: 'Produce',
-      baseUnit: 'GRAM',
-      purchaseUnit: 'KG',
-      conversionFactor: 1000,
-      yieldPercentage: 88,
-      costPerPurchaseUnit: 35,
-      costPerBaseUnit: 0.035,
-      currentStock: 25000,
-      reorderLevel: 12000,
-      reorderQuantity: 40000,
-      storageType: 'DRY_STORE',
-      supplierName: 'GreenField Fresh Produce',
-      isActive: true
-    },
-    {
-      id: 11,
-      code: 'ING-011',
-      name: 'Refined Sunflower Oil',
-      category: 'Oils & Ghee',
-      baseUnit: 'ML',
-      purchaseUnit: 'LITER',
-      conversionFactor: 1000,
-      yieldPercentage: 100,
-      costPerPurchaseUnit: 145,
-      costPerBaseUnit: 0.145,
-      currentStock: 35000,
-      reorderLevel: 15000,
-      reorderQuantity: 50000,
-      storageType: 'DRY_STORE',
-      supplierName: 'Fortune Oil Depot',
-      isActive: true
-    },
-    {
-      id: 12,
-      code: 'ING-012',
-      name: 'Cashew Nuts (Whole W320)',
-      category: 'Dry Grocery',
-      baseUnit: 'GRAM',
-      purchaseUnit: 'KG',
-      conversionFactor: 1000,
-      yieldPercentage: 98,
-      costPerPurchaseUnit: 820,
-      costPerBaseUnit: 0.82,
-      currentStock: 4800,
-      reorderLevel: 2500,
-      reorderQuantity: 10000,
-      storageType: 'DRY_STORE',
-      supplierName: 'Royal Dry Fruits',
-      isActive: true
-    }
-  ]);
-
-  readonly recipes = signal<RecipeMaster[]>([
-    {
-      id: 1,
-      menuItemId: 1,
-      recipeCode: 'RCP-001',
-      recipeName: 'Paneer Tikka Standard Recipe',
-      portionSize: 1,
-      portionUnit: 'PLATE',
-      prepTimeMins: 20,
-      sellingPrice: 320,
-      totalPortionCost: 103.07,
-      foodCostPercent: 32.2,
-      grossMarginPercent: 67.8,
-      instructions: 'Marinate cottage cheese cubes with tandoori spices and capsicum for 30 mins before roasting in tandoor at 240C.',
-      isActive: true,
-      ingredients: [
-        {
-          ingredientId: 1,
-          ingredientCode: 'ING-001',
-          ingredientName: 'Paneer (Cottage Cheese)',
-          category: 'Dairy',
-          netQuantity: 200,
-          unit: 'GRAM',
-          wastePercent: 5,
-          grossQuantity: 210.53,
-          unitCost: 0.36,
-          lineCost: 75.79
-        },
-        {
-          ingredientId: 2,
-          ingredientCode: 'ING-002',
-          ingredientName: 'Capsicum (Green Pepper)',
-          category: 'Produce',
-          netQuantity: 50,
-          unit: 'GRAM',
-          wastePercent: 10,
-          grossQuantity: 55.56,
-          unitCost: 0.08,
-          lineCost: 4.44
-        },
-        {
-          ingredientId: 3,
-          ingredientCode: 'ING-003',
-          ingredientName: 'Tandoori Marinade Masala',
-          category: 'Spices & Condiments',
-          netQuantity: 25,
-          unit: 'GRAM',
-          wastePercent: 0,
-          grossQuantity: 25,
-          unitCost: 0.45,
-          lineCost: 11.25
-        },
-        {
-          ingredientId: 6,
-          ingredientCode: 'ING-006',
-          ingredientName: 'Desi Ghee / Pure Butter',
-          category: 'Oils & Ghee',
-          netQuantity: 20,
-          unit: 'GRAM',
-          wastePercent: 0,
-          grossQuantity: 20,
-          unitCost: 0.58,
-          lineCost: 11.60
-        },
-        {
-          ingredientId: 12,
-          ingredientCode: 'ING-012',
-          ingredientName: 'Cashew Nuts (Whole W320)',
-          category: 'Dry Grocery',
-          netQuantity: 15,
-          unit: 'GRAM',
-          wastePercent: 2,
-          grossQuantity: 15.31,
-          unitCost: 0.82,
-          lineCost: 12.55
-        }
-      ]
-    },
-    {
-      id: 2,
-      menuItemId: 2,
-      recipeCode: 'RCP-002',
-      recipeName: 'Murgh Makhani (Butter Chicken)',
-      portionSize: 1,
-      portionUnit: 'PORTION',
-      prepTimeMins: 25,
-      sellingPrice: 420,
-      totalPortionCost: 109.48,
-      foodCostPercent: 26.1,
-      grossMarginPercent: 73.9,
-      instructions: 'Simmer roasted tandoori chicken in rich tomato and cashew gravy enriched with butter and fresh cream.',
-      isActive: true,
-      ingredients: [
-        {
-          ingredientId: 5,
-          ingredientCode: 'ING-005',
-          ingredientName: 'Chicken (Boneless Breasts)',
-          category: 'Poultry & Meat',
-          netQuantity: 250,
-          unit: 'GRAM',
-          wastePercent: 8,
-          grossQuantity: 271.74,
-          unitCost: 0.28,
-          lineCost: 76.09
-        },
-        {
-          ingredientId: 4,
-          ingredientCode: 'ING-004',
-          ingredientName: 'Amul Fresh Cream',
-          category: 'Dairy',
-          netQuantity: 60,
-          unit: 'ML',
-          wastePercent: 2,
-          grossQuantity: 61.22,
-          unitCost: 0.22,
-          lineCost: 13.47
-        },
-        {
-          ingredientId: 6,
-          ingredientCode: 'ING-006',
-          ingredientName: 'Desi Ghee / Pure Butter',
-          category: 'Oils & Ghee',
-          netQuantity: 30,
-          unit: 'GRAM',
-          wastePercent: 0,
-          grossQuantity: 30,
-          unitCost: 0.58,
-          lineCost: 17.40
-        },
-        {
-          ingredientId: 8,
-          ingredientCode: 'ING-008',
-          ingredientName: 'Ginger Garlic Paste',
-          category: 'Spices & Condiments',
-          netQuantity: 15,
-          unit: 'GRAM',
-          wastePercent: 5,
-          grossQuantity: 15.79,
-          unitCost: 0.16,
-          lineCost: 2.53
-        }
-      ]
-    }
-  ]);
+  readonly ingredients = signal<IngredientMaster[]>([]);
+  readonly ingredientsPage = signal<number>(0);
+  readonly ingredientsTotalPages = signal<number>(1);
+  readonly ingredientsLoading = signal<boolean>(false);
+  readonly recipes = signal<RecipeMaster[]>([]);
   readonly gstRules = signal<ApiGstRule[]>([
     { id: 1, serviceCategory: 'Room', cgstRate: 9, sgstRate: 9, igstRate: 18, isActive: true },
     { id: 2, serviceCategory: 'Food', cgstRate: 2.5, sgstRate: 2.5, igstRate: 5, isActive: true },
@@ -885,6 +616,12 @@ export class PosService {
     this.loadMenuItems();
     this.loadOrders();
     this.loadBills();
+    this.loadIngredients();
+    this.loadRecipes();
+    this.loadIngredientCategoryMasters();
+    this.loadBaseUnitMasters();
+    this.loadPurchaseUnitMasters();
+    this.loadStorageTypeMasters();
     this.loadPosDashboard();
     this.loadPosDashboardCards();
   }
@@ -1069,6 +806,48 @@ export class PosService {
     });
   }
 
+  loadIngredientCategoryMasters(): void {
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/INGREDIANT_CATEGORY`).pipe(
+      catchError(() => this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/INGREDIENT_CATEGORY`))
+    ).subscribe({
+      next: response => {
+        const masters = this.commonMastersData(response);
+        if (masters.length) this.ingredientCategoryMasters.set(masters);
+      },
+      error: () => {}
+    });
+  }
+
+  loadBaseUnitMasters(): void {
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/BASE_UNIT`).subscribe({
+      next: response => {
+        const masters = this.commonMastersData(response);
+        if (masters.length) this.baseUnitMasters.set(masters);
+      },
+      error: () => {}
+    });
+  }
+
+  loadPurchaseUnitMasters(): void {
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/PURCHASE_UNIT`).subscribe({
+      next: response => {
+        const masters = this.commonMastersData(response);
+        if (masters.length) this.purchaseUnitMasters.set(masters);
+      },
+      error: () => {}
+    });
+  }
+
+  loadStorageTypeMasters(): void {
+    this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(`${this.hmsBaseUrl}/common/getCommonMaster/STORAGE_TYPE`).subscribe({
+      next: response => {
+        const masters = this.commonMastersData(response);
+        if (masters.length) this.storageTypeMasters.set(masters);
+      },
+      error: () => {}
+    });
+  }
+
   fetchRoomsByFloor(floorId?: number | null, page: number = 0, size: number = 10): Observable<any> {
     const floorParam = floorId ? `floorId=${floorId}&` : '';
     const primaryUrl = `/api/masterService/v1/rooms/getAllRooms?${floorParam}page=${page}&size=${size}`;
@@ -1158,40 +937,209 @@ export class PosService {
     );
   }
 
-  saveIngredient(item: IngredientMaster): void {
-    if (item.id) {
-      this.ingredients.update(list => list.map(existing => existing.id === item.id ? item : existing));
-      this.addAudit('Ingredient updated', 'Ingredient Master', item.name);
-    } else {
-      const nextId = Math.max(0, ...this.ingredients().map(i => i.id)) + 1;
-      const newItem = { ...item, id: nextId, code: `ING-${String(nextId).padStart(3, '0')}` };
-      this.ingredients.update(list => [newItem, ...list]);
-      this.addAudit('Ingredient created', 'Ingredient Master', newItem.name);
+  loadIngredients(page: number = 0, size: number = 20, append: boolean = false, search?: string, categoryId?: number): void {
+    let params = new HttpParams()
+      .set('page', String(page))
+      .set('size', String(size));
+
+    if (search && search.trim()) {
+      params = params.set('search', search.trim());
     }
+    if (categoryId) {
+      params = params.set('categoryId', String(categoryId));
+    }
+
+    if (this.ingredientsLoading()) return;
+    this.ingredientsLoading.set(true);
+
+    this.http.get<StandardResponse<any> | any>(`${this.posBaseUrl}/ingredients/getAllIngredients`, { params }).subscribe({
+      next: response => {
+        this.ingredientsLoading.set(false);
+        let rawItems: any[] = [];
+        let totalPages = 1;
+        let currentPage = page;
+
+        if (response && response.data) {
+          const d = response.data;
+          rawItems = Array.isArray(d.ingredients) ? d.ingredients : Array.isArray(d.content) ? d.content : Array.isArray(d) ? d : [];
+          totalPages = d.totalPages ?? 1;
+          currentPage = d.currentPage ?? page;
+        } else if (response && Array.isArray(response.ingredients)) {
+          rawItems = response.ingredients;
+        } else if (Array.isArray(response)) {
+          rawItems = response;
+        }
+
+        const mapped = rawItems.map(item => this.mapIngredient(item));
+        this.ingredientsPage.set(currentPage);
+        this.ingredientsTotalPages.set(totalPages);
+
+        if (append || (search && search.trim())) {
+          this.ingredients.update(existing => {
+            const existingIds = new Set(existing.map(i => i.id));
+            const newItems = mapped.filter(i => !existingIds.has(i.id));
+            return [...existing, ...newItems];
+          });
+        } else {
+          this.ingredients.update(existing => {
+            const fetchedIds = new Set(mapped.map(m => m.id));
+            const preserved = existing.filter(e => !fetchedIds.has(e.id));
+            return [...preserved, ...mapped];
+          });
+        }
+      },
+      error: error => {
+        this.ingredientsLoading.set(false);
+        console.warn('[POS] Unable to load kitchen ingredients from API:', error);
+        if (!append) this.ingredients.set([]);
+      }
+    });
+  }
+
+  getIngredientById(id: number): Observable<IngredientMaster | null> {
+    return this.http.get<StandardResponse<ApiKitchenIngredientResponse> | ApiKitchenIngredientResponse>(
+      `${this.posBaseUrl}/ingredients/getIngredientById/${id}`
+    ).pipe(
+      map(res => {
+        const item = (res as StandardResponse<ApiKitchenIngredientResponse>)?.data || res;
+        return item ? this.mapIngredient(item) : null;
+      }),
+      catchError(() => of(null))
+    );
+  }
+
+  saveIngredient(item: IngredientMaster): void {
+    const payload = this.toApiIngredientRequest(item);
+    const isUpdate = !!item.id && this.ingredients().some(existing => existing.id === item.id);
+    const request$ = isUpdate
+      ? this.http.put<StandardResponse<ApiKitchenIngredientResponse> | ApiKitchenIngredientResponse>(
+          `${this.posBaseUrl}/ingredients/updateIngredient/${item.id}`,
+          payload
+        )
+      : this.http.post<StandardResponse<ApiKitchenIngredientResponse> | ApiKitchenIngredientResponse>(
+          `${this.posBaseUrl}/ingredients/createIngredient`,
+          payload
+        );
+
+    request$.subscribe({
+      next: response => {
+        const responseData = (response as StandardResponse<ApiKitchenIngredientResponse>)?.data || response;
+        const saved = responseData?.id ? this.mapIngredient(responseData) : item;
+        this.ingredients.update(list => isUpdate ? list.map(existing => existing.id === saved.id ? saved : existing) : [saved, ...list]);
+        this.loadIngredients();
+        this.addAudit(isUpdate ? 'Kitchen ingredient updated' : 'Kitchen ingredient created', 'Ingredient Master', saved.name);
+      },
+      error: error => {
+        const errMsg = error?.error?.message || error?.message || (isUpdate ? 'Failed to update kitchen ingredient' : 'Failed to create kitchen ingredient');
+        this.snackBar.open(errMsg, 'Close', { duration: 5000, horizontalPosition: 'end', verticalPosition: 'top' });
+        this.addAudit(isUpdate ? 'Kitchen ingredient update failed' : 'Kitchen ingredient create failed', 'Ingredient Master', errMsg);
+      }
+    });
   }
 
   deleteIngredient(id: number): void {
     const item = this.ingredients().find(i => i.id === id);
-    this.ingredients.update(list => list.filter(i => i.id !== id));
-    if (item) this.addAudit('Ingredient deleted', 'Ingredient Master', item.name);
+    this.http.delete(`${this.posBaseUrl}/ingredients/deleteIngredient/${id}`).subscribe({
+      next: () => {
+        this.ingredients.update(list => list.filter(i => i.id !== id));
+        if (item) this.addAudit('Kitchen ingredient deleted', 'Ingredient Master', item.name);
+      },
+      error: error => {
+        const errMsg = error?.error?.message || error?.message || 'Failed to delete kitchen ingredient';
+        this.snackBar.open(errMsg, 'Close', { duration: 5000, horizontalPosition: 'end', verticalPosition: 'top' });
+      }
+    });
+  }
+
+  loadRecipes(): void {
+    this.http.get<StandardResponse<any> | any>(`${this.posBaseUrl}/recipes/getAllRecipes`).subscribe({
+      next: response => {
+        let rawItems: any[] = [];
+        if (response && Array.isArray(response.data?.recipes)) {
+          rawItems = response.data.recipes;
+        } else if (response && Array.isArray(response.recipes)) {
+          rawItems = response.recipes;
+        } else if (response && Array.isArray(response.data)) {
+          rawItems = response.data;
+        } else if (Array.isArray(response)) {
+          rawItems = response;
+        }
+
+        const mapped = rawItems.map(item => this.mapRecipe(item));
+        this.recipes.set(mapped);
+      },
+      error: error => {
+        console.warn('[POS] Unable to load recipes from API:', error);
+        this.recipes.set([]);
+      }
+    });
+  }
+
+  getRecipeById(id: number): Observable<RecipeMaster | null> {
+    return this.http.get<StandardResponse<ApiRecipeResponse> | ApiRecipeResponse>(
+      `${this.posBaseUrl}/recipes/getRecipeById/${id}`
+    ).pipe(
+      map(res => {
+        const item = (res as StandardResponse<ApiRecipeResponse>)?.data || res;
+        return item ? this.mapRecipe(item) : null;
+      }),
+      catchError(() => of(null))
+    );
+  }
+
+  getRecipeByMenuItemId(menuItemId: number): Observable<RecipeMaster | null> {
+    return this.http.get<StandardResponse<ApiRecipeResponse> | ApiRecipeResponse>(
+      `${this.posBaseUrl}/recipes/getRecipeByMenuItemId/${menuItemId}`
+    ).pipe(
+      map(res => {
+        const item = (res as StandardResponse<ApiRecipeResponse>)?.data || res;
+        return item ? this.mapRecipe(item) : null;
+      }),
+      catchError(() => of(null))
+    );
   }
 
   saveRecipe(item: RecipeMaster): void {
-    if (item.id) {
-      this.recipes.update(list => list.map(existing => existing.id === item.id ? item : existing));
-      this.addAudit('Recipe updated', 'Recipes', item.recipeName);
-    } else {
-      const nextId = Math.max(0, ...this.recipes().map(r => r.id)) + 1;
-      const newItem = { ...item, id: nextId, recipeCode: `RCP-${String(nextId).padStart(3, '0')}` };
-      this.recipes.update(list => [newItem, ...list]);
-      this.addAudit('Recipe created', 'Recipes', newItem.recipeName);
-    }
+    const payload = this.toApiRecipeRequest(item);
+    const isUpdate = !!item.id && this.recipes().some(existing => existing.id === item.id);
+    const request$ = isUpdate
+      ? this.http.put<StandardResponse<ApiRecipeResponse> | ApiRecipeResponse>(
+          `${this.posBaseUrl}/recipes/updateRecipe/${item.id}`,
+          payload
+        )
+      : this.http.post<StandardResponse<ApiRecipeResponse> | ApiRecipeResponse>(
+          `${this.posBaseUrl}/recipes/createRecipe`,
+          payload
+        );
+
+    request$.subscribe({
+      next: response => {
+        const responseData = (response as StandardResponse<ApiRecipeResponse>)?.data || response;
+        const saved = responseData?.id ? this.mapRecipe(responseData) : item;
+        this.recipes.update(list => isUpdate ? list.map(existing => existing.id === saved.id ? saved : existing) : [saved, ...list]);
+        this.loadRecipes();
+        this.addAudit(isUpdate ? 'Recipe updated' : 'Recipe created', 'Recipes', saved.recipeName);
+      },
+      error: error => {
+        const errMsg = error?.error?.message || error?.message || (isUpdate ? 'Failed to update recipe' : 'Failed to create recipe');
+        this.snackBar.open(errMsg, 'Close', { duration: 5000, horizontalPosition: 'end', verticalPosition: 'top' });
+        this.addAudit(isUpdate ? 'Recipe update failed' : 'Recipe create failed', 'Recipes', errMsg);
+      }
+    });
   }
 
   deleteRecipe(id: number): void {
     const recipe = this.recipes().find(r => r.id === id);
-    this.recipes.update(list => list.filter(r => r.id !== id));
-    if (recipe) this.addAudit('Recipe deleted', 'Recipes', recipe.recipeName);
+    this.http.delete(`${this.posBaseUrl}/recipes/deleteRecipe/${id}`).subscribe({
+      next: () => {
+        this.recipes.update(list => list.filter(r => r.id !== id));
+        if (recipe) this.addAudit('Recipe deleted', 'Recipes', recipe.recipeName);
+      },
+      error: error => {
+        const errMsg = error?.error?.message || error?.message || 'Failed to delete recipe';
+        this.snackBar.open(errMsg, 'Close', { duration: 5000, horizontalPosition: 'end', verticalPosition: 'top' });
+      }
+    });
   }
 
   getBillByOrderId(orderId: number): Observable<PosBill | null> {
@@ -2011,6 +1959,52 @@ export class PosService {
     return apiLine;
   }
 
+  private mapIngredient(item: ApiKitchenIngredientResponse): IngredientMaster {
+    const conversionFactor = Number(item.purchaseConversionFactor || 1);
+    const costPerPurchaseUnit = Number(item.costPerPurchaseUnit || 0);
+    const costPerBaseUnit = conversionFactor > 0 ? Number((costPerPurchaseUnit / conversionFactor).toFixed(4)) : 0;
+
+    return {
+      id: Number(item.id || 0),
+      code: item.ingredientCode || `ING-${String(item.id || 1).padStart(3, '0')}`,
+      name: item.ingredientName || '',
+      category: this.normalizeCategory(item.categoryName || (item as any).category || 'Dairy'),
+      baseUnit: item.baseUnitName || 'GRAM',
+      purchaseUnit: item.purchaseUnitName || 'KG',
+      conversionFactor,
+      yieldPercentage: Number(item.usableYieldPercent || 100),
+      costPerPurchaseUnit,
+      costPerBaseUnit,
+      currentStock: Number(item.currentStockLevel || 0),
+      reorderLevel: Number(item.reorderThresholdLevel || 0),
+      reorderQuantity: Number(item.reorderQuantity || 0),
+      storageType: (item.storageTypeName || 'CHILLED') as StorageType,
+      supplierName: item.preferredSupplier || '',
+      isActive: true,
+      categoryId: item.categoryId,
+      baseUnitId: item.baseUnitId,
+      purchaseUnitId: item.purchaseUnitId,
+      storageTypeId: item.storageTypeId
+    };
+  }
+
+  private toApiIngredientRequest(item: IngredientMaster): ApiKitchenIngredientRequest {
+    return {
+      ingredientName: item.name,
+      categoryId: item.categoryId || 1,
+      baseUnitId: item.baseUnitId || 1,
+      purchaseUnitId: item.purchaseUnitId || 1,
+      purchaseConversionFactor: Number(item.conversionFactor || 1),
+      usableYieldPercent: Number(item.yieldPercentage || 100),
+      costPerPurchaseUnit: Number(item.costPerPurchaseUnit || 0),
+      currentStockLevel: Number(item.currentStock || 0),
+      reorderThresholdLevel: Number(item.reorderLevel || 0),
+      reorderQuantity: Number(item.reorderQuantity || 0),
+      storageTypeId: item.storageTypeId || 1,
+      preferredSupplier: item.supplierName || ''
+    };
+  }
+
   private mapBill(item: ApiBill): PosBill {
     let modes: string[] = ['Cash'];
     if (Array.isArray(item.paymentModes)) {
@@ -2154,6 +2148,85 @@ export class PosService {
     const image = String(value || '').trim();
     if (!image || image.startsWith('http') || image.startsWith('data:image/')) return image;
     return `data:image/png;base64,${image}`;
+  }
+
+  private mapRecipe(item: ApiRecipeResponse): RecipeMaster {
+    const ingredients = (item.ingredients || []).map(ing => this.mapRecipeIngredient(ing));
+    const menuItem = this.menuItems().find(m => m.id === Number(item.menuItemId));
+    const sellingPrice = Number(item.sellingPrice ?? menuItem?.price ?? 0);
+    const totalPortionCost = Number(item.portionCost ?? item.totalPortionCost ?? ingredients.reduce((sum, i) => sum + i.lineCost, 0));
+    const foodCostPercent = sellingPrice > 0 ? Number(((totalPortionCost / sellingPrice) * 100).toFixed(1)) : Number(item.foodCostPercent || 0);
+    const grossMarginPercent = sellingPrice > 0 ? Number((((sellingPrice - totalPortionCost) / sellingPrice) * 100).toFixed(1)) : Number(item.grossMarginPercent || 0);
+
+    return {
+      id: Number(item.id || 0),
+      menuItemId: Number(item.menuItemId || menuItem?.id || 0),
+      recipeCode: `RCP-${String(item.id || 1).padStart(3, '0')}`,
+      recipeName: item.recipeName || (menuItem ? `${menuItem.name} Recipe` : 'Dish Recipe'),
+      portionSize: Number(item.portionSize || 1),
+      portionUnit: item.portionUnit || 'PLATE',
+      prepTimeMins: Number(item.prepTimeMins || 15),
+      ingredients,
+      totalPortionCost,
+      sellingPrice,
+      foodCostPercent,
+      grossMarginPercent,
+      instructions: item.cookingInstructions || '',
+      isActive: true
+    };
+  }
+
+  private mapRecipeIngredient(ing: ApiRecipeIngredientResponse): RecipeIngredient {
+    const ingMaster = this.ingredients().find(i => i.id === Number(ing.ingredientId));
+    const netQuantity = Number(ing.netQty || 0);
+    const wastePercent = Number(ing.prepWastePercent || 0);
+    const unitCost = Number(ing.costPerBaseUnit ?? ingMaster?.costPerBaseUnit ?? 0);
+    const grossQuantity = Number(ing.grossQty ?? (wastePercent < 100 ? netQuantity / (1 - wastePercent / 100) : netQuantity));
+    const lineCost = Number(ing.lineCost ?? (grossQuantity * unitCost));
+
+    return {
+      id: ing.id ? Number(ing.id) : undefined,
+      ingredientId: Number(ing.ingredientId || 0),
+      ingredientCode: ing.ingredientCode || ingMaster?.code || `ING-${ing.ingredientId}`,
+      ingredientName: ing.ingredientName || ingMaster?.name || 'Raw Ingredient',
+      category: this.normalizeCategory((ing as any).categoryName || (ing as any).category || ingMaster?.category || 'Dairy'),
+      netQuantity,
+      unit: ing.unitName || ingMaster?.baseUnit || 'GRAM',
+      wastePercent,
+      grossQuantity,
+      unitCost,
+      lineCost
+    };
+  }
+
+  normalizeCategory(cat?: string): IngredientCategory {
+    if (!cat) return 'Dairy';
+    const upper = String(cat).trim().toUpperCase();
+    if (upper.startsWith('SPICE') || upper.includes('CONDIN') || upper.includes('CONDIMENT')) return 'Spices & Condiments';
+    if (upper.startsWith('POULTRY') || upper.includes('MEAT')) return 'Poultry & Meat';
+    if (upper.startsWith('PRODUCE') || upper.includes('VEG')) return 'Produce';
+    if (upper.startsWith('OIL') || upper.includes('GHEE')) return 'Oils & Ghee';
+    if (upper.startsWith('DRY') || upper.includes('GROCERY')) return 'Dry Grocery';
+    if (upper.startsWith('BEV') || upper.includes('DRINK')) return 'Beverage Raw';
+    if (upper.startsWith('DAIRY') || upper.includes('MILK')) return 'Dairy';
+    return cat as IngredientCategory;
+  }
+
+  private toApiRecipeRequest(item: RecipeMaster): ApiRecipeRequest {
+    return {
+      menuItemId: Number(item.menuItemId),
+      recipeName: item.recipeName,
+      portionSize: Number(item.portionSize || 1),
+      portionUnit: item.portionUnit || 'PLATE',
+      prepTimeMins: Number(item.prepTimeMins || 15),
+      cookingInstructions: item.instructions || '',
+      ingredients: (item.ingredients || []).map(ing => ({
+        id: ing.id ? Number(ing.id) : undefined,
+        ingredientId: Number(ing.ingredientId),
+        netQty: Number(ing.netQuantity || 0),
+        prepWastePercent: Number(ing.wastePercent || 0)
+      }))
+    };
   }
 
   private commonMastersData(response: ApiCommonMaster[] | ApiListResponse<ApiCommonMaster> | StandardResponse<ApiCommonMaster[]> | null): ApiCommonMaster[] {

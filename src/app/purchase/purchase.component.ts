@@ -227,15 +227,99 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     { id: 112, code: 'ING-012', name: 'Cashew Nuts (Whole W320)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 820, taxRate: 12, description: 'Whole premium cashew nuts', hsnCode: '0801', reorderLevel: 3, parLevel: 5, isActive: true }
   ]);
 
+  kitchenIngredientsPage = signal<number>(0);
+  kitchenIngredientsTotalPages = signal<number>(1);
+  kitchenIngredientsLoading = signal<boolean>(false);
+  kitchenIngredients = signal<MasterInventoryItem[]>([]);
+
+  loadKitchenIngredients(page: number = 0, size: number = 20, append: boolean = false): void {
+    if (this.kitchenIngredientsLoading()) return;
+    this.kitchenIngredientsLoading.set(true);
+
+    this.purchaseService.getKitchenIngredients(page, size).subscribe({
+      next: (response) => {
+        this.kitchenIngredientsLoading.set(false);
+        let rawItems: any[] = [];
+        let totalPages = 1;
+        let currentPage = page;
+
+        if (response && response.data) {
+          const d = response.data;
+          rawItems = Array.isArray(d.ingredients) ? d.ingredients : Array.isArray(d.content) ? d.content : Array.isArray(d) ? d : [];
+          totalPages = d.totalPages ?? 1;
+          currentPage = d.currentPage ?? page;
+        } else if (response && Array.isArray(response.ingredients)) {
+          rawItems = response.ingredients;
+        } else if (Array.isArray(response)) {
+          rawItems = response;
+        }
+
+        const mapped: MasterInventoryItem[] = rawItems.map(item => ({
+          id: Number(item.id || 0),
+          code: item.ingredientCode || item.code || `ING-${String(item.id || 1).padStart(3, '0')}`,
+          name: item.ingredientName || item.name || 'Raw Ingredient',
+          category: 'Kitchen Raw Material',
+          unit: item.purchaseUnitName || item.baseUnitName || item.purchaseUnit || item.baseUnit || 'Kg',
+          unitCost: Number(item.costPerPurchaseUnit ?? item.costPerBaseUnit ?? item.unitCost ?? 0),
+          taxRate: 5,
+          description: `${item.ingredientName || item.name || 'Ingredient'} (${item.categoryName || 'Kitchen Raw'})`,
+          reorderLevel: Number(item.reorderThresholdLevel || 0),
+          parLevel: Number(item.reorderQuantity || 0),
+          isActive: true
+        }));
+
+        this.kitchenIngredientsPage.set(currentPage);
+        this.kitchenIngredientsTotalPages.set(totalPages);
+
+        if (append) {
+          this.kitchenIngredients.update(existing => {
+            const existingIds = new Set(existing.map(i => i.id));
+            const newItems = mapped.filter(i => !existingIds.has(i.id));
+            return [...existing, ...newItems];
+          });
+        } else {
+          this.kitchenIngredients.set(mapped);
+        }
+      },
+      error: (err) => {
+        this.kitchenIngredientsLoading.set(false);
+        console.warn('[Purchase] Unable to load kitchen raw ingredients from API:', err);
+      }
+    });
+  }
+
+  nextKitchenIngredientsPage(): void {
+    if (this.kitchenIngredientsPage() < this.kitchenIngredientsTotalPages() - 1) {
+      this.loadKitchenIngredients(this.kitchenIngredientsPage() + 1, 20);
+    }
+  }
+
+  prevKitchenIngredientsPage(): void {
+    if (this.kitchenIngredientsPage() > 0) {
+      this.loadKitchenIngredients(this.kitchenIngredientsPage() - 1, 20);
+    }
+  }
+
   readonly availablePoMasterItems = computed(() => {
     const scope = this.poDraft().itemCategoryScope || 'ALL';
     const items = this.masterItems();
+    const apiKitchen = this.kitchenIngredients();
 
     if (scope === 'HOTEL_GENERAL') {
       return items.filter(item => !item.category.toLowerCase().includes('kitchen') && item.code.indexOf('ING-') !== 0);
     }
     if (scope === 'KITCHEN_INGREDIENTS') {
+      if (apiKitchen.length) {
+        const apiIds = new Set(apiKitchen.map(k => k.id));
+        const mockKitchen = items.filter(i => (i.category.toLowerCase().includes('kitchen') || i.code.indexOf('ING-') === 0) && !apiIds.has(i.id));
+        return [...apiKitchen, ...mockKitchen];
+      }
       return items.filter(item => item.category.toLowerCase().includes('kitchen') || item.code.indexOf('ING-') === 0);
+    }
+    if (apiKitchen.length) {
+      const apiIds = new Set(apiKitchen.map(k => k.id));
+      const nonKitchen = items.filter(i => !apiIds.has(i.id));
+      return [...apiKitchen, ...nonKitchen];
     }
     return items;
   });
@@ -1324,6 +1408,9 @@ export class PurchaseComponent implements OnInit, OnDestroy {
         const terms = this.optionById(this.paymentTerms(), Number(value));
         next.paymentTerms = terms?.value || '';
       }
+      if (field === 'itemCategoryScope' && value === 'KITCHEN_INGREDIENTS') {
+        this.loadKitchenIngredients(0, 20);
+      }
       return next;
     });
     this.poTouchedFields.update(touched => ({ ...touched, [field]: true }));
@@ -1375,8 +1462,82 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     });
   }
 
+  activePoItemDropdownIndex = signal<number | null>(null);
+  poDropdownStyle = signal<{ top: string; left: string; width: string }>({ top: '0px', left: '0px', width: '310px' });
+  poItemSearchQuery = signal<string>('');
+
+  togglePoItemDropdown(index: number, event?: Event): void {
+    if (event) event.stopPropagation();
+    if (this.activePoItemDropdownIndex() === index) {
+      this.activePoItemDropdownIndex.set(null);
+    } else {
+      if (this.poDraft().itemCategoryScope === 'KITCHEN_INGREDIENTS' && !this.kitchenIngredients().length && !this.kitchenIngredientsLoading()) {
+        this.loadKitchenIngredients(0, 30);
+      }
+      this.activePoItemDropdownIndex.set(index);
+      this.poItemSearchQuery.set('');
+
+      const rawTarget = event?.target as HTMLElement;
+      const target = rawTarget?.closest('.po-item-dropdown-trigger') as HTMLElement || (event?.currentTarget as HTMLElement) || rawTarget;
+      if (target) {
+        const rect = target.getBoundingClientRect();
+        const dropdownHeight = 240;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+
+        let top: number;
+        if (spaceBelow >= 160 || spaceBelow >= spaceAbove) {
+          top = rect.bottom + 4;
+        } else {
+          top = Math.max(10, rect.top - dropdownHeight - 4);
+        }
+
+        const dropdownWidth = Math.max(310, rect.width);
+        const left = Math.min(rect.left, window.innerWidth - dropdownWidth - 16);
+
+        this.poDropdownStyle.set({
+          top: `${top}px`,
+          left: `${Math.max(10, left)}px`,
+          width: `${dropdownWidth}px`
+        });
+      }
+    }
+  }
+
+  closePoItemDropdown(): void {
+    this.activePoItemDropdownIndex.set(null);
+  }
+
+  selectPoItemForLine(lineIndex: number, item: MasterInventoryItem | null): void {
+    this.onPoItemSelect(lineIndex, item ? item.id : null);
+    this.closePoItemDropdown();
+  }
+
+  getSelectedPoItemLabel(itemId?: number): string {
+    if (!itemId) return '-- Choose Item --';
+    const item = this.availablePoMasterItems().find(i => i.id === Number(itemId));
+    return item ? `${item.name} (${item.code}) • ${item.category}` : `Item #${itemId}`;
+  }
+
+  getFilteredPoItems(items: MasterInventoryItem[]): MasterInventoryItem[] {
+    const q = this.poItemSearchQuery().trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(i => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q) || i.category.toLowerCase().includes(q));
+  }
+
+  onPoItemDropdownScroll(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (!target) return;
+    const nearBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 25;
+    if (nearBottom && this.poDraft().itemCategoryScope === 'KITCHEN_INGREDIENTS') {
+      if (!this.kitchenIngredientsLoading() && this.kitchenIngredientsPage() < this.kitchenIngredientsTotalPages() - 1) {
+        this.loadKitchenIngredients(this.kitchenIngredientsPage() + 1, 30, true);
+      }
+    }
+  }
+
   onPoItemSelect(index: number, itemId: number | null): void {
-    const item = this.masterItems().find(mi => mi.id === itemId);
+    const item = this.availablePoMasterItems().find(mi => mi.id === itemId);
     this.poDraft.update(draft => {
       const lineItems = draft.lineItems.map((line, i) => {
         if (i !== index) return line;

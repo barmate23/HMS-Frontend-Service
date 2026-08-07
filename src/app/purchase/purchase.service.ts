@@ -217,6 +217,12 @@ export class PurchaseService {
   private readonly inventoryBase = '/api/hmsService/v1/inventory';
   private readonly commonBase = '/api/hmsService/v1/common';
   private readonly userBase = '/api/hmsUserService/v1';
+  private readonly posBase = '/api/hmsService/v1/pos';
+
+  getKitchenIngredients(page: number = 0, size: number = 20): Observable<any> {
+    const params = { page: String(page), size: String(size) };
+    return this.http.get<any>(`${this.posBase}/ingredients/getAllIngredients`, { params });
+  }
 
   getSuppliers(): Observable<SupplierPayload[]> {
     return this.http

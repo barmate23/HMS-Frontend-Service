@@ -592,7 +592,7 @@ button {
 
 .po-table .table-head,
 .po-table .table-row {
-  grid-template-columns: 90px minmax(160px, 1.2fr) 110px 60px 95px 95px 120px 130px;
+  grid-template-columns: 120px minmax(180px, 1.4fr) 130px 70px 110px 110px 140px;
 }
 
 .inward-table .table-head,

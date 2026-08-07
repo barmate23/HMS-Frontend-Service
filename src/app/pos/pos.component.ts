@@ -1096,6 +1096,33 @@ export class PosComponent implements OnInit, OnDestroy {
     return index;
   }
 
+  getCategoryLabel(category?: string): string {
+    if (!category) return 'Dairy';
+    const upper = String(category).trim().toUpperCase();
+    if (upper.includes('SPICE') || upper.includes('COND') || upper.includes('MASALA')) {
+      return 'Spices & Condiments';
+    }
+    if (upper.includes('POULTRY') || upper.includes('MEAT') || upper.includes('CHICKEN') || upper.includes('MUTTON')) {
+      return 'Poultry & Meat';
+    }
+    if (upper.includes('PRODUCE') || upper.includes('VEG') || upper.includes('FRUIT')) {
+      return 'Produce';
+    }
+    if (upper.includes('OIL') || upper.includes('GHEE') || upper.includes('FAT')) {
+      return 'Oils & Ghee';
+    }
+    if (upper.includes('DRY') || upper.includes('GROCERY') || upper.includes('GRAIN')) {
+      return 'Dry Grocery';
+    }
+    if (upper.includes('BEV') || upper.includes('DRINK') || upper.includes('JUICE')) {
+      return 'Beverage Raw';
+    }
+    if (upper.includes('DAIRY') || upper.includes('MILK') || upper.includes('CHEESE') || upper.includes('PANEER')) {
+      return 'Dairy';
+    }
+    return category;
+  }
+
   activeRowDropdownIndex = signal<number | null>(null);
   dropdownStyle = signal<{ top: string; left: string; width: string }>({ top: '0px', left: '0px', width: '290px' });
 

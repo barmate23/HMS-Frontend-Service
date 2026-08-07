@@ -187,12 +187,12 @@
       </div>
     </header>
     <div class="simple-table po-table">
-      <div class="table-head"><span>PO No.</span><span>Supplier</span><span>Department</span><span>Items</span><span>Expected</span><span>Amount</span><span>Status</span><span>Actions</span></div>
+      <div class="table-head"><span>PO No.</span><span>Supplier</span><span>Department</span><span>Items</span><span>Expected</span><span>Amount</span><span>Actions</span></div>
       <div class="table-row empty-row" *ngIf="poLoading()"><span>Loading purchase orders...</span></div>
       <div class="table-row empty-row" *ngIf="!poLoading() && poError()"><span>{{ poError() }}</span></div>
       <div class="table-row empty-row" *ngIf="!poLoading() && !poError() && !filteredOrders().length"><span>No purchase orders found.</span></div>
       <div class="table-row" *ngFor="let order of filteredOrders()">
-        <strong>{{ order.id }}</strong><span>{{ order.supplier }}</span><span>{{ order.department }}</span><span>{{ order.items }}</span><span>{{ order.expectedOn }}</span><b>{{ formatINR(order.amount) }}</b><em [class]="order.status.toLowerCase().replace(' ', '-')">{{ order.status }}</em>
+        <strong>{{ order.id }}</strong><span>{{ order.supplier }}</span><span>{{ order.department }}</span><span>{{ order.items }}</span><span>{{ order.expectedOn }}</span><b>{{ formatINR(order.amount) }}</b>
         <span class="row-actions">
           <button type="button" title="View PO" (click)="viewPurchaseOrder(order)"><span class="material-icons-round">visibility</span></button>
           <button type="button" title="Print PO" (click)="printPurchaseOrder(order)"><span class="material-icons-round">print</span></button>
@@ -357,7 +357,7 @@
               </button>
             </div>
             
-            <div class="po-lines-table-container">
+            <div class="po-lines-table-container" (scroll)="closePoItemDropdown()">
               <table class="po-lines-table">
                 <thead>
                   <tr>
@@ -376,11 +376,93 @@
                 <tbody>
                   <tr *ngFor="let line of poDraft().lineItems; let i = index; trackBy: trackByIndex">
                     <td class="row-num">{{ i + 1 }}</td>
-                    <td>
-                      <select class="line-input" [ngModel]="line.itemId || null" (ngModelChange)="onPoItemSelect(i, $event)">
-                        <option [ngValue]="null">-- Choose Item --</option>
-                        <option *ngFor="let item of availablePoMasterItems()" [ngValue]="item.id">{{ item.name }} ({{ item.code }}) • {{ item.category }}</option>
-                      </select>
+                    <td style="position:relative;">
+                      <div class="po-item-dropdown-trigger"
+                           (click)="togglePoItemDropdown(i, $event)"
+                           style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;font-size:11px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;cursor:pointer;user-select:none;font-weight:600;color:#0f172a;min-width:210px;box-shadow:0 1px 2px rgba(0,0,0,0.03);">
+                        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px;">
+                          {{ getSelectedPoItemLabel(line.itemId) }}
+                        </span>
+                        <span class="material-icons-round" style="font-size:16px;color:#64748b;margin-left:4px;">
+                          {{ activePoItemDropdownIndex() === i ? 'arrow_drop_up' : 'arrow_drop_down' }}
+                        </span>
+                      </div>
+
+                      <!-- Invisible Backdrop overlay to catch click outside -->
+                      <div *ngIf="activePoItemDropdownIndex() === i"
+                           (click)="closePoItemDropdown()"
+                           style="position:fixed;inset:0;z-index:99999998;background:transparent;"></div>
+
+                      <!-- Fixed Position Floating Searchable & Scrollable Popover Overlay -->
+                      <div *ngIf="activePoItemDropdownIndex() === i"
+                           (click)="$event.stopPropagation()"
+                           [ngStyle]="{
+                             'position': 'fixed',
+                             'top': poDropdownStyle().top,
+                             'left': poDropdownStyle().left,
+                             'width': poDropdownStyle().width,
+                             'z-index': '99999999',
+                             'background': '#ffffff',
+                             'border': '1px solid #cbd5e1',
+                             'border-radius': '8px',
+                             'box-shadow': '0 12px 35px rgba(0,0,0,0.25)',
+                             'padding': '8px',
+                             'display': 'flex',
+                             'flex-direction': 'column',
+                             'gap': '6px'
+                           }">
+                        
+                        <!-- Search Box Header -->
+                        <div style="display:flex;align-items:center;gap:4px;">
+                          <div style="position:relative;flex:1;display:flex;align-items:center;">
+                            <span class="material-icons-round" style="position:absolute;left:6px;font-size:14px;color:#94a3b8;">search</span>
+                            <input type="text"
+                                   [ngModel]="poItemSearchQuery()"
+                                   (ngModelChange)="poItemSearchQuery.set($event)"
+                                   placeholder="Type item name or code..."
+                                   autofocus
+                                   style="width:100%;padding:5px 6px 5px 24px;font-size:11px;border:1px solid #cbd5e1;border-radius:4px;outline:none;">
+                          </div>
+                          <button type="button" (click)="closePoItemDropdown()" style="border:none;background:none;cursor:pointer;color:#64748b;padding:2px;display:flex;align-items:center;" title="Close">
+                            <span class="material-icons-round" style="font-size:16px;">close</span>
+                          </button>
+                        </div>
+
+                        <!-- Scrollable Items List with Infinite Scroll -->
+                        <div (scroll)="onPoItemDropdownScroll($event)"
+                             style="max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;border:1px solid #e2e8f0;border-radius:4px;padding:2px;background:#f8fafc;scrollbar-width:thin;scrollbar-color:#94a3b8 #f1f5f9;">
+                          
+                          <!-- Option for Clear/Select None -->
+                          <div (click)="selectPoItemForLine(i, null)"
+                               style="padding:6px 8px;font-size:11px;border-radius:4px;cursor:pointer;color:#64748b;background:#fff;border:1px solid #f1f5f9;">
+                            <em>-- Choose Item --</em>
+                          </div>
+
+                          <!-- Item Rows -->
+                          <div *ngFor="let item of getFilteredPoItems(availablePoMasterItems())"
+                               (click)="selectPoItemForLine(i, item)"
+                               class="dropdown-item-row"
+                               style="padding:6px 8px;font-size:11px;border-radius:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background 0.12s ease;background:#fff;border:1px solid #f1f5f9;">
+                            <div style="display:flex;flex-direction:column;max-width:210px;">
+                              <strong style="color:#0f172a;font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.name }}</strong>
+                              <small style="color:#64748b;font-size:9.5px;">{{ item.code }} • {{ item.category }}</small>
+                            </div>
+                            <span style="font-weight:700;color:var(--primary-color, #0f3d3e);white-space:nowrap;font-size:10px;margin-left:4px;">
+                              ₹{{ item.unitCost }}/{{ item.unit }}
+                            </span>
+                          </div>
+
+                          <div *ngIf="!getFilteredPoItems(availablePoMasterItems()).length && !kitchenIngredientsLoading()"
+                               style="padding:10px;text-align:center;font-size:10.5px;color:#94a3b8;">
+                            No matching items found
+                          </div>
+
+                          <div *ngIf="kitchenIngredientsLoading()"
+                               style="padding:8px;text-align:center;font-size:10.5px;color:var(--primary-color, #0f3d3e);font-weight:600;display:flex;align-items:center;justify-content:center;gap:4px;">
+                            <span class="material-icons-round spinning" style="font-size:13px;">sync</span> Loading ingredients...
+                          </div>
+                        </div>
+                      </div>
                       <small class="error-text" *ngIf="poFieldError('line-' + i + '-itemName')">Required</small>
                     </td>
                     <td>

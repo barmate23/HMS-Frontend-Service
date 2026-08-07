@@ -203,6 +203,12 @@ export class InventoryService {
   private readonly itemConfigBase = '/api/hmsService/v1/inventory/item-configs';
   private readonly purchaseRequestBase = '/api/hmsService/v1/inventory/purchase-requests';
   private readonly dashboardBase = '/api/hmsService/v1/inventory/dashboard';
+  private readonly posBase = '/api/hmsService/v1/pos';
+
+  getKitchenIngredients(page: number = 0, size: number = 50): Observable<any> {
+    const params = { page: String(page), size: String(size) };
+    return this.http.get<any>(`${this.posBase}/ingredients/getAllIngredients`, { params });
+  }
 
   getInventoryDashboard(): Observable<InventoryDashboardData | null> {
     return this.http

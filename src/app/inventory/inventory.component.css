@@ -589,7 +589,7 @@ button {
 
 .kitchen-stock-table .table-head,
 .kitchen-stock-table .table-row {
-  grid-template-columns: 85px minmax(160px, 1.3fr) 140px 65px 145px 100px 90px 90px 95px 75px 120px 65px;
+  grid-template-columns: 80px minmax(150px, 1.2fr) 130px 55px 135px 95px 85px 85px 90px 105px 60px;
 }
 
 .minibar-table .table-head,

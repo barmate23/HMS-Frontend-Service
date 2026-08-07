@@ -524,7 +524,7 @@
                 <tr *ngFor="let ing of filteredIngredients()">
                   <td><code>{{ ing.code }}</code></td>
                   <td><strong>{{ ing.name }}</strong></td>
-                  <td><span class="soft-pill">{{ ing.category }}</span></td>
+                  <td><span class="soft-pill">{{ getCategoryLabel(ing.category) }}</span></td>
                   <td>
                     <strong [style.color]="ing.currentStock <= ing.reorderLevel ? 'var(--danger-color)' : 'var(--text-color)'">
                       {{ ing.currentStock | number:'1.0-0' }} {{ ing.baseUnit }}
@@ -1304,7 +1304,7 @@
                        style="padding:6px 8px;font-size:11px;border-radius:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background 0.12s ease;background:#fff;border:1px solid var(--surface-100);">
                     <div style="display:flex;flex-direction:column;max-width:170px;">
                       <strong style="color:#0f172a;font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ ing.name }}</strong>
-                      <small style="color:var(--surface-500);font-size:9.5px;">{{ ing.code }} • {{ ing.category }}</small>
+                      <small style="color:var(--surface-500);font-size:9.5px;">{{ ing.code }} • {{ getCategoryLabel(ing.category) }}</small>
                     </div>
                     <span style="font-weight:700;color:var(--primary-color);white-space:nowrap;font-size:10px;margin-left:4px;">
                       ₹{{ ing.costPerBaseUnit }}/{{ ing.baseUnit }}
@@ -1438,7 +1438,7 @@
               <tr *ngFor="let ing of selectedRecipeForView()?.ingredients">
                 <td><code>{{ ing.ingredientCode }}</code></td>
                 <td><strong>{{ ing.ingredientName }}</strong></td>
-                <td style="min-width: 155px; white-space: nowrap;"><span class="soft-pill" style="white-space: nowrap; max-width: none; flex-shrink: 0; font-size: 9.5px; padding: 4px 10px;">{{ pos.normalizeCategory(ing.category) }}</span></td>
+                <td style="min-width: 155px; white-space: nowrap;"><span class="soft-pill" style="white-space: nowrap; max-width: none; flex-shrink: 0; font-size: 9.5px; padding: 4px 10px;">{{ getCategoryLabel(ing.category) }}</span></td>
                 <td>{{ ing.netQuantity }} {{ ing.unit }}</td>
                 <td>{{ ing.wastePercent }}%</td>
                 <td>{{ ing.grossQuantity | number:'1.1-2' }} {{ ing.unit }}</td>

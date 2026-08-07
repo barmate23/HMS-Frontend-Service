@@ -216,6 +216,10 @@ export class InventoryComponent implements OnInit, OnDestroy {
   kitchenCategoryFilter = signal('ALL');
   kitchenStorageFilter = signal('ALL');
 
+  kitchenIngredientsPage = signal<number>(0);
+  kitchenIngredientsTotalPages = signal<number>(1);
+  kitchenIngredientsLoading = signal<boolean>(false);
+
   readonly kitchenStockItems = signal<KitchenIngredientStock[]>([
     {
       id: 1, code: 'ING-001', name: 'Paneer (Cottage Cheese)', category: 'Dairy', store: 'Central Kitchen Store',
@@ -291,6 +295,132 @@ export class InventoryComponent implements OnInit, OnDestroy {
     }
   ]);
 
+  loadKitchenIngredients(page: number = 0, size: number = 50, append: boolean = false): void {
+    if (this.kitchenIngredientsLoading()) return;
+    this.kitchenIngredientsLoading.set(true);
+
+    this.inventoryService.getKitchenIngredients(page, size).subscribe({
+      next: (response) => {
+        this.kitchenIngredientsLoading.set(false);
+        let rawItems: any[] = [];
+        let totalPages = 1;
+        let currentPage = page;
+
+        if (response && response.data) {
+          const d = response.data;
+          rawItems = Array.isArray(d.ingredients) ? d.ingredients : Array.isArray(d.content) ? d.content : Array.isArray(d) ? d : [];
+          totalPages = d.totalPages ?? 1;
+          currentPage = d.currentPage ?? page;
+        } else if (response && Array.isArray(response.ingredients)) {
+          rawItems = response.ingredients;
+        } else if (Array.isArray(response)) {
+          rawItems = response;
+        }
+
+        const mapped: KitchenIngredientStock[] = rawItems.map((item, idx) => {
+          const onHand = Number(item.currentStockLevel ?? item.currentStock ?? item.onHand ?? 5000);
+          const reorderLevel = Number(item.reorderThresholdLevel ?? item.reorderLevel ?? 2000);
+          const conversionFactor = Number(item.purchaseConversionFactor ?? item.conversionFactor ?? 1000);
+          const costPerPurchaseUnit = Number(item.costPerPurchaseUnit ?? item.unitCost ?? 0);
+          const costPerBaseUnit = Number(item.costPerBaseUnit ?? (conversionFactor > 0 ? costPerPurchaseUnit / conversionFactor : 0));
+          const totalValue = Number((onHand * costPerBaseUnit).toFixed(2));
+          
+          let status: 'OK' | 'LOW' | 'CRITICAL' = 'OK';
+          if (onHand <= 0) status = 'CRITICAL';
+          else if (onHand <= reorderLevel) status = 'LOW';
+
+          return {
+            id: Number(item.id || idx + 1),
+            code: item.ingredientCode || item.code || `ING-${String(item.id || idx + 1).padStart(3, '0')}`,
+            name: item.ingredientName || item.name || 'Raw Ingredient',
+            category: this.normalizeCategoryName(item.categoryName || item.category || 'Dairy'),
+            store: this.normalizeStoreName(item.storageTypeName || item.store),
+            baseUnit: item.baseUnitName || item.baseUnit || 'GRAM',
+            purchaseUnit: item.purchaseUnitName || item.purchaseUnit || 'KG',
+            conversionFactor: conversionFactor > 0 ? conversionFactor : 1000,
+            yieldPercent: Number(item.usableYieldPercent || 95),
+            onHand,
+            reorderLevel,
+            reorderQuantity: Number(item.reorderQuantity || 10000),
+            costPerBaseUnit: Number(costPerBaseUnit.toFixed(4)),
+            costPerPurchaseUnit,
+            totalValue,
+            storageType: this.normalizeStorageType(item.storageTypeName || item.storageType || 'CHILLED'),
+            supplierName: item.preferredSupplier || item.supplierName || 'Kitchen Supplier',
+            lastRestocked: 'Recent',
+            status
+          };
+        });
+
+        this.kitchenIngredientsPage.set(currentPage);
+        this.kitchenIngredientsTotalPages.set(totalPages);
+
+        if (append) {
+          this.kitchenStockItems.update(existing => {
+            const existingIds = new Set(existing.map(i => i.id));
+            const newItems = mapped.filter(i => !existingIds.has(i.id));
+            return [...existing, ...newItems];
+          });
+        } else if (mapped.length > 0) {
+          this.kitchenStockItems.set(mapped);
+        }
+      },
+      error: (err) => {
+        this.kitchenIngredientsLoading.set(false);
+        console.warn('[Inventory] Unable to load kitchen ingredients from API:', err);
+      }
+    });
+  }
+
+  nextKitchenIngredientsPage(): void {
+    if (this.kitchenIngredientsPage() < this.kitchenIngredientsTotalPages() - 1) {
+      this.loadKitchenIngredients(this.kitchenIngredientsPage() + 1, 50);
+    }
+  }
+
+  prevKitchenIngredientsPage(): void {
+    if (this.kitchenIngredientsPage() > 0) {
+      this.loadKitchenIngredients(this.kitchenIngredientsPage() - 1, 50);
+    }
+  }
+
+  private normalizeCategoryName(category?: string): string {
+    const raw = String(category || '').trim();
+    if (!raw) return 'General';
+    const upper = raw.toUpperCase();
+    if (upper.includes('SPICE') || upper.includes('COND')) return 'Spices & Condiments';
+    if (upper.includes('PROD') || upper.includes('VEG')) return 'Produce';
+    if (upper.includes('DAIRY')) return 'Dairy';
+    if (upper.includes('MEAT') || upper.includes('POULTRY')) return 'Poultry & Meat';
+    if (upper.includes('OIL') || upper.includes('GHEE')) return 'Oils & Ghee';
+    if (upper.includes('GROC') || upper.includes('DRY')) return 'Dry Grocery';
+    return raw;
+  }
+
+  private normalizeStorageType(storage?: string): string {
+    const raw = String(storage || '').trim();
+    if (!raw) return 'Dry Storage';
+    const upper = raw.toUpperCase();
+    if (upper.includes('CHILL')) return 'Chilled';
+    if (upper.includes('FREEZ') || upper.includes('FROZ')) return 'Frozen';
+    if (upper.includes('DRY')) return 'Dry Storage';
+    if (upper.includes('ROOM')) return 'Room Temp';
+    if (upper.includes('DAILY')) return 'Daily Store';
+    return raw;
+  }
+
+  private normalizeStoreName(store?: string): string {
+    const raw = String(store || '').trim();
+    if (!raw) return 'Central Kitchen Store';
+    const upper = raw.toUpperCase();
+    if (upper.includes('DRY')) return 'Dry Grocery Store';
+    if (upper.includes('CHILL') || upper.includes('COLD')) return 'Cold Room / Chilled Store';
+    if (upper.includes('FREEZ') || upper.includes('FROZ')) return 'Deep Freezer';
+    if (upper.includes('SPICE')) return 'Spices Store';
+    if (upper.includes('DAIRY') || upper.includes('CENTRAL')) return 'Central Kitchen Store';
+    return raw;
+  }
+
   readonly kitchenCategories = computed(() => ['ALL', ...Array.from(new Set(this.kitchenStockItems().map(item => item.category)))]);
   readonly kitchenStorageTypes = computed(() => ['ALL', ...Array.from(new Set(this.kitchenStockItems().map(item => item.storageType)))]);
 
@@ -340,6 +470,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
     this.loadStoreIssues();
     this.loadPrStatuses();
     this.loadDashboard();
+    this.loadKitchenIngredients(0, 50);
     this.routerSub = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(event => this.updateTabFromUrl((event as NavigationEnd).urlAfterRedirects));

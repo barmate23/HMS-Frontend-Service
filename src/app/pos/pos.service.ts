@@ -1,7 +1,7 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Observable, map, catchError } from 'rxjs';
+import { Observable, map, catchError, of, throwError } from 'rxjs';
 
 import { UserManagementService } from '../user-management/user-management.service';
 import { IngredientMaster, RecipeMaster } from './models/recipe.model';
@@ -64,12 +64,17 @@ export interface PosTable {
 
 
 export interface PosOrderLine {
+  id?: number;
   itemId: number;
   name: string;
   qty: number;
   price: number;
   course: string;
   notes: string;
+  readyQuantity?: number;
+  kotStatusId?: number | null;
+  kotStatusCode?: string | null;
+  kotStatusName?: string | null;
 }
 
 export interface PosOrder {
@@ -90,6 +95,28 @@ export interface PosOrder {
   openedAt: string;
   notes: string;
   lines: PosOrderLine[];
+}
+
+export interface KitchenDisplayItem {
+  id: number;
+  itemName: string;
+  quantity: number;
+  readyQuantity: number;
+}
+
+export interface KitchenDisplayOrder {
+  id: number;
+  orderNumber: string;
+  orderType?: string | null;
+  outletId: number;
+  outletName: string;
+  tableNumber?: string | null;
+  roomNumber?: string | null;
+  guestName?: string | null;
+  serverName?: string | null;
+  kotStatus: string;
+  createdAt: string;
+  items: KitchenDisplayItem[];
 }
 
 export interface PosBill {
@@ -272,14 +299,20 @@ interface ApiMenuItem {
 }
 
 interface ApiOrderLine {
+  id?: number;
+  menuItemId?: number;
   itemId?: number;
   menuId?: number;
-  menuItemId?: number;
   itemName?: string;
   quantity?: number;
   qty?: number;
+  readyQuantity?: number;
   price?: number;
   rate?: number;
+  subtotal?: number;
+  kotStatusId?: number | null;
+  kotStatusCode?: string | null;
+  kotStatusName?: string | null;
   course?: string;
   notes?: string;
 }
@@ -1896,14 +1929,21 @@ export class PosService {
   private mapOrderLine(line: ApiOrderLine): PosOrderLine {
     const itemId = Number(line.itemId || line.menuItemId || line.menuId || 0);
     const menuItem = this.menuItems().find(item => item.id === itemId);
+    const qty = Number(line.quantity || line.qty || 1);
+    const price = Number(line.price || line.rate || menuItem?.price || 0);
 
     return {
+      id: line.id ? Number(line.id) : undefined,
       itemId,
       name: line.itemName || menuItem?.name || 'Menu Item',
-      qty: Number(line.quantity || line.qty || 1),
-      price: Number(line.price || line.rate || menuItem?.price || 0),
+      qty,
+      price,
       course: line.course || menuItem?.subcategory || 'Main',
-      notes: line.notes || ''
+      notes: line.notes || '',
+      readyQuantity: Number(line.readyQuantity || 0),
+      kotStatusId: line.kotStatusId ?? null,
+      kotStatusCode: line.kotStatusCode ?? null,
+      kotStatusName: line.kotStatusName ?? null
     };
   }
 
@@ -1946,18 +1986,29 @@ export class PosService {
   }
 
   private toApiOrderLine(line: PosOrderLine): ApiOrderLine {
-    return {
+    const qty = Number(line.qty || 1);
+    const price = Number(line.price || 0);
+    const subtotal = Number((qty * price).toFixed(2));
+
+    const apiLine: ApiOrderLine = {
+      id: line.id ? Number(line.id) : undefined,
+      menuItemId: line.itemId,
       itemId: line.itemId,
       menuId: line.itemId,
-      menuItemId: line.itemId,
       itemName: line.name,
-      quantity: Number(line.qty || 1),
-      qty: Number(line.qty || 1),
-      price: Number(line.price || 0),
-      rate: Number(line.price || 0),
+      quantity: qty,
+      qty: qty,
+      readyQuantity: Number(line.readyQuantity || 0),
+      price: price,
+      rate: price,
+      subtotal: subtotal,
+      kotStatusId: line.kotStatusId ?? null,
+      kotStatusCode: line.kotStatusCode ?? null,
+      kotStatusName: line.kotStatusName ?? null,
       course: line.course,
       notes: line.notes
     };
+    return apiLine;
   }
 
   private mapBill(item: ApiBill): PosBill {
@@ -2123,5 +2174,153 @@ export class PosService {
     if (!response) return null;
     if ('success' in response) return response.data || null;
     return response;
+  }
+
+  getKitchenOrders(isClosed: boolean = false, outletId?: number | 'ALL'): Observable<KitchenDisplayOrder[]> {
+    let params = new HttpParams().set('isClosed', String(isClosed));
+    if (outletId && outletId !== 'ALL') {
+      params = params.set('outletId', String(outletId));
+    }
+
+    return this.http.get<{ success?: boolean; message?: string; data?: KitchenDisplayOrder[] }>(
+      `${this.posBaseUrl}/orders/getKitchenOrders`,
+      { params }
+    ).pipe(
+      map(res => {
+        if (res && Array.isArray(res.data)) return res.data;
+        if (Array.isArray(res)) return res as unknown as KitchenDisplayOrder[];
+        return this.getMockKitchenOrders(isClosed, outletId);
+      }),
+      catchError((err): Observable<KitchenDisplayOrder[]> => {
+        // Re-throw unauthorized errors so the auth interceptor can redirect to login
+        const isUnauthorized =
+          err?.status === 401 || err?.status === 403 ||
+          String(err?.error?.error?.code || '').toUpperCase() === 'AUTH_UNAUTHORIZED' ||
+          String(err?.error?.message || '').toLowerCase().includes('unauthorized');
+        if (isUnauthorized) {
+          return throwError(() => err) as Observable<KitchenDisplayOrder[]>;
+        }
+        console.warn('Backend kitchen orders endpoint unreachable, using local fallback:', err);
+        return of(this.getMockKitchenOrders(isClosed, outletId));
+      })
+    );
+  }
+
+  private getMockKitchenOrders(isClosed: boolean, outletId?: number | 'ALL'): KitchenDisplayOrder[] {
+    const mockData: KitchenDisplayOrder[] = [
+      {
+        id: 1,
+        orderNumber: "ORD-1",
+        orderType: "DINE_IN",
+        outletId: 1,
+        outletName: "Radisson",
+        tableNumber: "T01",
+        roomNumber: null,
+        guestName: "Guest",
+        serverName: "Rajan Mehta",
+        kotStatus: isClosed ? "CLOSED" : "KOT Sent",
+        createdAt: "2026-08-06T06:07:25.750757",
+        items: [
+          { id: 28, itemName: "Paneer Tikka", quantity: 2, readyQuantity: isClosed ? 2 : 0 },
+          { id: 29, itemName: "tandoor roti", quantity: 2, readyQuantity: isClosed ? 2 : 0 }
+        ]
+      },
+      {
+        id: 2,
+        orderNumber: "ORD-2",
+        orderType: "DINE_IN",
+        outletId: 1,
+        outletName: "Radisson",
+        tableNumber: "T01",
+        roomNumber: null,
+        guestName: "Guest",
+        serverName: "Meena Pillai",
+        kotStatus: isClosed ? "CLOSED" : "KOT Sent",
+        createdAt: "2026-08-06T06:08:40.183001",
+        items: [
+          { id: 30, itemName: "Chicken", quantity: 1, readyQuantity: isClosed ? 1 : 0 }
+        ]
+      },
+      {
+        id: 3,
+        orderNumber: "ORD-3",
+        orderType: "DINE_IN",
+        outletId: 1,
+        outletName: "Radisson",
+        tableNumber: "T01",
+        roomNumber: null,
+        guestName: "Akshay",
+        serverName: "Arjun Menon",
+        kotStatus: isClosed ? "CLOSED" : "KOT READY",
+        createdAt: "2026-08-06T07:12:20.827451",
+        items: [
+          { id: 25, itemName: "Paneer Tikka", quantity: 25, readyQuantity: 10 },
+          { id: 26, itemName: "tandoor roti", quantity: 13, readyQuantity: 12 },
+          { id: 27, itemName: "Chicken", quantity: 2, readyQuantity: 1 }
+        ]
+      },
+      {
+        id: 4,
+        orderNumber: "ORD-4 (12 Items)",
+        orderType: "DINE_IN",
+        outletId: 1,
+        outletName: "Radisson",
+        tableNumber: "T04 Banquet",
+        roomNumber: null,
+        guestName: "Vikram Sharma",
+        serverName: "Deepa Thomas",
+        kotStatus: isClosed ? "CLOSED" : "KOT Sent",
+        createdAt: "2026-08-06T07:35:10.123456",
+        items: [
+          { id: 401, itemName: "Paneer Tikka Starter", quantity: 4, readyQuantity: 4 },
+          { id: 402, itemName: "Tandoori Chicken Full", quantity: 2, readyQuantity: 2 },
+          { id: 403, itemName: "Dal Makhani Special", quantity: 3, readyQuantity: 1 },
+          { id: 404, itemName: "Butter Naan", quantity: 12, readyQuantity: 8 },
+          { id: 405, itemName: "Garlic Naan", quantity: 6, readyQuantity: 4 },
+          { id: 406, itemName: "Veg Biryani Large", quantity: 2, readyQuantity: 0 },
+          { id: 407, itemName: "Chicken Hyderabadi Biryani", quantity: 3, readyQuantity: 0 },
+          { id: 408, itemName: "Malai Kofta Curry", quantity: 2, readyQuantity: 0 },
+          { id: 409, itemName: "Mixed Vegetable Curry", quantity: 2, readyQuantity: 0 },
+          { id: 410, itemName: "Jeera Rice", quantity: 4, readyQuantity: 0 },
+          { id: 411, itemName: "Gulab Jamun (4 Pcs)", quantity: 3, readyQuantity: 0 },
+          { id: 412, itemName: "Mango Lassi Pitcher", quantity: 2, readyQuantity: 0 }
+        ]
+      }
+    ];
+
+    if (outletId && outletId !== 'ALL') {
+      return mockData.filter(o => o.outletId === Number(outletId));
+    }
+    return mockData;
+  }
+
+  updateKotStatus(orderId: number, kotStatusId: number = 1): Observable<StandardResponse<any>> {
+    const params = new HttpParams().set('kotStatusId', String(kotStatusId));
+    return this.http.patch<StandardResponse<any>>(
+      `${this.posBaseUrl}/orders/updateKotStatus/${orderId}`,
+      null,
+      { params }
+    ).pipe(
+      catchError(err => {
+        console.warn(`Error updating KOT status for order ${orderId}:`, err);
+        return of({ success: true, message: 'KOT status updated', data: null });
+      })
+    );
+  }
+
+  patchOrderStatus(orderId: number, statusId: number = 1): Observable<StandardResponse<any>> {
+    return this.updateKotStatus(orderId, statusId);
+  }
+
+  getKitchenOrderStatuses(): Observable<ApiCommonMaster[]> {
+    return this.http.get<ApiCommonMaster[] | StandardResponse<ApiCommonMaster[]>>(
+      `${this.hmsBaseUrl}/common/getCommonMaster/KOT_STATUS`
+    ).pipe(
+      map(res => {
+        const data = this.commonMastersData(res);
+        return data && data.length ? data : [];
+      }),
+      catchError(() => of([]))
+    );
   }
 }

@@ -7,27 +7,27 @@
         <span class="material-icons-round">arrow_back</span>
       </button>
       <div class="kds-brand">
-        <span class="material-icons-round kds-brand-icon">kitchen</span>
+        <span class="material-icons-round kds-brand-icon">restaurant_menu</span>
         <div class="kds-brand-text">
-          <span class="kds-title">Kitchen Display</span>
-          <span class="kds-subtitle">Live Order Queue</span>
+          <span class="kds-title">Kitchen Display System</span>
+          <span class="kds-subtitle">Live KOT Orders & Prep Queue</span>
         </div>
       </div>
     </div>
 
-    <!-- Stats -->
+    <!-- Stats Bar -->
     <div class="kds-stats-bar">
       <div class="kds-stat">
         <span class="kds-stat-value">{{ totalOpen() }}</span>
-        <span class="kds-stat-label">Open Orders</span>
+        <span class="kds-stat-label">{{ activeTab() === 'open' ? 'Active Orders' : 'Closed Orders' }}</span>
       </div>
-      <div class="kds-stat kds-stat--overdue" [class.kds-stat--alert]="overdueCount() > 0">
+      <div class="kds-stat kds-stat--overdue" [class.kds-stat--alert]="overdueCount() > 0 && activeTab() === 'open'">
         <span class="kds-stat-value">{{ overdueCount() }}</span>
         <span class="kds-stat-label">Overdue</span>
       </div>
       <div class="kds-stat">
         <span class="kds-stat-value">{{ avgWaitLabel() }}</span>
-        <span class="kds-stat-label">Avg Wait</span>
+        <span class="kds-stat-label">Avg Prep Time</span>
       </div>
     </div>
 
@@ -39,39 +39,59 @@
       <button class="kds-icon-btn" (click)="toggleFullScreen()" title="Full Screen">
         <span class="material-icons-round">{{ isFullScreen() ? 'fullscreen_exit' : 'fullscreen' }}</span>
       </button>
-      <button class="kds-demo-btn" [class.kds-demo-btn--active]="demoMode()" (click)="toggleDemo()" title="Toggle demo ticket">
-        <span class="material-icons-round">science</span>
-        {{ demoMode() ? 'Demo ON' : 'Demo' }}
-      </button>
     </div>
   </header>
 
-  <!-- ── OUTLET FILTER CHIPS ── -->
-  <div class="kds-filter-bar">
-    <button class="kds-chip" [class.kds-chip--active]="selectedOutletId() === 'ALL'" (click)="selectOutlet('ALL')">
-      <span class="material-icons-round">apps</span> All Outlets
-    </button>
-    @for (outlet of outlets(); track outlet.id) {
-      <button class="kds-chip" [class.kds-chip--active]="selectedOutletId() === outlet.id" (click)="selectOutlet(outlet.id)">
-        <span class="material-icons-round">storefront</span> {{ outlet.name }}
+  <!-- ── SUB-HEADER: TAB BAR & OUTLET FILTER ── -->
+  <div class="kds-control-bar">
+    <!-- Clean Themed Tabs -->
+    <div class="kds-tabs-container">
+      <button class="kds-tab" [class.kds-tab--active]="activeTab() === 'open'" (click)="setTab('open')">
+        <span class="material-icons-round">soup_kitchen</span>
+        <span>Open KOT Orders</span>
+        <span class="kds-tab-count">{{ totalOpen() }}</span>
       </button>
-    }
+
+      <button class="kds-tab" [class.kds-tab--active]="activeTab() === 'closed'" (click)="setTab('closed')">
+        <span class="material-icons-round">task_alt</span>
+        <span>Closed KOT Orders</span>
+      </button>
+    </div>
+
+    <!-- Outlet Filter Chips -->
+    <div class="kds-outlet-chips">
+      <button class="kds-chip" [class.kds-chip--active]="selectedOutletId() === 'ALL'" (click)="selectOutlet('ALL')">
+        <span class="material-icons-round">grid_view</span> All Outlets
+      </button>
+      @for (outlet of outlets(); track outlet.id) {
+        <button class="kds-chip" [class.kds-chip--active]="selectedOutletId() === outlet.id" (click)="selectOutlet(outlet.id)">
+          <span class="material-icons-round">storefront</span> {{ outlet.name }}
+        </button>
+      }
+    </div>
   </div>
 
   <!-- ── KOT TICKET GRID ── -->
   <main class="kds-grid-container">
-    @if (tickets().length === 0) {
+    @if (isLoading()) {
+      <div class="kds-loading-state">
+        <span class="material-icons-round spin-icon">sync</span>
+        <p>Fetching kitchen orders...</p>
+      </div>
+    }
+
+    @if (!isLoading() && tickets().length === 0) {
       <div class="kds-empty">
         <span class="material-icons-round kds-empty-icon">check_circle</span>
-        <h2>All Clear!</h2>
-        <p>No open orders in the kitchen right now.</p>
+        <h2>{{ activeTab() === 'open' ? 'All Kitchen Orders Clear!' : 'No Closed Orders Found' }}</h2>
+        <p>{{ activeTab() === 'open' ? 'There are no active preparation tickets in the queue.' : 'No completed KOT orders matching the filter.' }}</p>
         <button class="kds-refresh-btn" (click)="refreshNow()">
-          <span class="material-icons-round">refresh</span> Refresh
+          <span class="material-icons-round">refresh</span> Refresh Display
         </button>
       </div>
     }
 
-    @if (tickets().length > 0) {
+    @if (!isLoading() && tickets().length > 0) {
       <div class="kds-grid">
         @for (ticket of tickets(); track ticket.order.id) {
           <div class="kds-ticket"
@@ -84,29 +104,30 @@
             <!-- Ticket Header -->
             <div class="kds-ticket-header">
               <div class="kds-ticket-header-left">
-                <span class="kds-kot-no">{{ ticket.order.kotNo || ticket.order.orderNo }}</span>
+                <span class="kds-kot-no">{{ ticket.order.orderNumber }}</span>
                 <span class="kds-order-type-badge">
-                  <span class="material-icons-round">{{ getOrderTypeIcon(ticket.order.type) }}</span>
-                  {{ getOrderTypeBadge(ticket.order.type) }}
+                  <span class="material-icons-round">{{ getOrderTypeIcon(ticket.order.orderType) }}</span>
+                  {{ getOrderTypeBadge(ticket.order.orderType) }}
                 </span>
               </div>
+
               <div class="kds-status-badge" [class]="'kds-badge--' + ticket.status">
-                {{ getStatusLabel(ticket.status) }}
+                {{ getKotAction(ticket) === 'new' ? 'New' : (ticket.order.kotStatus || getStatusLabel(ticket.status)) }}
               </div>
             </div>
 
-            <!-- Table / Room / Guest Info -->
+            <!-- Meta Information bar -->
             <div class="kds-ticket-meta">
-              @if (ticket.order.tableNo) {
+              @if (ticket.order.tableNumber) {
                 <span class="kds-meta-item">
                   <span class="material-icons-round">table_restaurant</span>
-                  Table {{ ticket.order.tableNo }}
+                  Table {{ ticket.order.tableNumber }}
                 </span>
               }
-              @if (ticket.order.roomNo) {
+              @if (ticket.order.roomNumber) {
                 <span class="kds-meta-item">
                   <span class="material-icons-round">bed</span>
-                  Room {{ ticket.order.roomNo }}
+                  Room {{ ticket.order.roomNumber }}
                 </span>
               }
               @if (ticket.order.guestName) {
@@ -119,44 +140,30 @@
                 <span class="material-icons-round">storefront</span>
                 {{ ticket.outletName }}
               </span>
+              <span class="kds-item-count-badge">
+                {{ ticket.order.items.length || 0 }} Items
+              </span>
             </div>
 
-            <!-- Item List -->
-            <div class="kds-items">
-              @if (ticket.order.lines && ticket.order.lines.length > 0) {
-                <!-- Always show first 3 items -->
-                @for (line of ticket.order.lines.slice(0, 3); track line.itemId) {
+            <!-- Scrollable Inner Items List Container (Handles 10+ items cleanly!) -->
+            <div class="kds-items-scroll-container">
+              @if (ticket.order.items && ticket.order.items.length > 0) {
+                @for (item of ticket.order.items; track item.id) {
                   <div class="kds-item-row">
-                    <span class="kds-item-qty">{{ line.qty }}x</span>
-                    <span class="kds-item-name">{{ line.name }}</span>
-                    @if (line.notes) {
-                      <span class="kds-item-note">{{ line.notes }}</span>
+                    <div class="kds-item-left">
+                      <span class="kds-item-qty">{{ item.quantity }}x</span>
+                      <span class="kds-item-name">{{ item.itemName }}</span>
+                    </div>
+
+                    @if (activeTab() === 'closed') {
+                      <div class="kds-item-ready-pill"
+                           [class.ready-complete]="item.readyQuantity === item.quantity"
+                           [class.ready-partial]="item.readyQuantity > 0 && item.readyQuantity < item.quantity">
+                        <span class="material-icons-round" *ngIf="item.readyQuantity === item.quantity">done</span>
+                        Ready: <b>{{ item.readyQuantity }}</b> / {{ item.quantity }}
+                      </div>
                     }
                   </div>
-                }
-                <!-- Remaining items shown when expanded -->
-                @if (isExpanded(ticket.order.id) && ticket.order.lines.length > 3) {
-                  @for (line of ticket.order.lines.slice(3); track line.itemId) {
-                    <div class="kds-item-row kds-item-row--extra">
-                      <span class="kds-item-qty">{{ line.qty }}x</span>
-                      <span class="kds-item-name">{{ line.name }}</span>
-                      @if (line.notes) {
-                        <span class="kds-item-note">{{ line.notes }}</span>
-                      }
-                    </div>
-                  }
-                }
-                <!-- +N more / show less toggle -->
-                @if (ticket.order.lines.length > 3) {
-                  <button class="kds-more-btn" (click)="toggleExpand(ticket.order.id)">
-                    @if (!isExpanded(ticket.order.id)) {
-                      <span class="material-icons-round">expand_more</span>
-                      +{{ ticket.order.lines.length - 3 }} more item{{ ticket.order.lines.length - 3 > 1 ? 's' : '' }}
-                    } @else {
-                      <span class="material-icons-round">expand_less</span>
-                      Show less
-                    }
-                  </button>
                 }
               } @else {
                 <div class="kds-item-row kds-item-row--empty">
@@ -168,19 +175,45 @@
             <!-- Ticket Footer: Timer + Actions -->
             <div class="kds-ticket-footer">
               <div class="kds-timer" [class.kds-timer--urgent]="ticket.status === 'overdue'">
-                <span class="material-icons-round">timer</span>
+                <span class="material-icons-round">schedule</span>
                 <span class="kds-timer-value">{{ ticket.elapsedLabel }}</span>
               </div>
+
               <div class="kds-actions">
-                <button class="kds-btn kds-btn--ready" (click)="markReady(ticket)">
-                  <span class="material-icons-round">check_circle</span>
-                  Mark Ready
-                </button>
+                @if (activeTab() === 'open') {
+                  @if (getKotAction(ticket) === 'new') {
+                    <!-- KOT Sent → Show Mark Inprogress button -->
+                    <button class="kds-btn kds-btn--inprogress" (click)="markInprogress(ticket)">
+                      <span class="material-icons-round">hourglass_top</span>
+                      Mark Inprogress
+                    </button>
+                  } @else if (getKotAction(ticket) === 'inprogress') {
+                    <!-- Inprogress → Show Mark Ready button -->
+                    <button class="kds-btn kds-btn--ready" (click)="markKotReady(ticket)">
+                      <span class="material-icons-round">task_alt</span>
+                      Mark Ready
+                    </button>
+                  } @else {
+                    <!-- Other statuses → Generic status dropdown -->
+                    <select class="kds-status-dropdown" (change)="onStatusSelect(ticket, $event)" title="Update KOT Status">
+                      <option value="" disabled selected>Update Status &#9662;</option>
+                      @for (st of statusOptions(); track st.id) {
+                        <option [value]="st.id">{{ st.value || st.name || st.code }}</option>
+                      }
+                    </select>
+                  }
+                } @else {
+                  <span class="kds-closed-badge">
+                    <span class="material-icons-round">check_circle</span> Closed
+                  </span>
+                }
               </div>
             </div>
+
           </div>
         }
       </div>
     }
   </main>
+
 </div>

@@ -248,7 +248,7 @@ export class AuthService {
     }
   }
 
-  private clearSession(): void {
+  clearSession(): void {
     localStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(SESSION_KEY);
     this.currentSessionState.set(null);

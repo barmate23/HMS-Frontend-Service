@@ -706,8 +706,9 @@ export class PosComponent implements OnInit, OnDestroy {
 
   currentBillStatus = computed(() => {
     const current = this.currentBill().status || '';
+    // Default to 'Paid' for new bills with no status
+    if (!current) return 'Paid';
     const available = this.availableBillStatuses();
-    if (!current) return available[0] || 'Open';
     const matched = available.find(s => s.toLowerCase() === current.toLowerCase());
     return matched || current;
   });

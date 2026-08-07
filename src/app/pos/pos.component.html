@@ -890,11 +890,12 @@
               </div>
               <div class="ci-input-group">
                 <label>Bill Status</label>
-                <select [ngModel]="currentBillStatus()" (ngModelChange)="updateBillStatus($event)">
+                <select [ngModel]="currentBillStatus()" disabled style="opacity:0.7;cursor:not-allowed;">
                   <option *ngFor="let status of availableBillStatuses()" [value]="status">{{ status }}</option>
                   <option *ngIf="currentBill().status && !availableBillStatuses().includes(currentBillStatus())" [value]="currentBill().status">
                     {{ currentBill().status }}
                   </option>
+                  <option *ngIf="!availableBillStatuses().includes('Paid')" value="Paid">Paid</option>
                 </select>
               </div>
 

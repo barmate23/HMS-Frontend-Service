@@ -2,12 +2,12 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { PosOrder, PosOutlet, PosService } from '../pos.service';
+import { KitchenDisplayOrder, PosOutlet, PosService } from '../pos.service';
 
 type KdsStatus = 'new' | 'in-progress' | 'overdue' | 'ready';
 
 interface KdsTicket {
-  order: PosOrder;
+  order: KitchenDisplayOrder;
   outletName: string;
   elapsedSeconds: number;
   elapsedLabel: string;
@@ -27,80 +27,35 @@ export class KdsComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
 
   private timerInterval?: ReturnType<typeof setInterval>;
-  private refreshInterval?: ReturnType<typeof setInterval>;
 
+  readonly activeTab = signal<'open' | 'closed'>('open');
   readonly selectedOutletId = signal<number | 'ALL'>('ALL');
-  readonly markedReadyIds = signal<Set<number>>(new Set());
-  readonly expandedIds = signal<Set<number>>(new Set());
+  readonly kitchenOrders = signal<KitchenDisplayOrder[]>([]);
+  readonly statusOptions = signal<any[]>([]);
+  readonly isLoading = signal<boolean>(false);
   readonly now = signal<Date>(new Date());
   readonly isFullScreen = signal(false);
-  readonly demoMode = signal(false);
 
   readonly outlets = computed<PosOutlet[]>(() => this.pos.outlets());
 
   readonly tickets = computed<KdsTicket[]>(() => {
     const nowMs = this.now().getTime();
-    const readyIds = this.markedReadyIds();
-    const outletFilter = this.selectedOutletId();
     const outletMap = new Map(this.pos.outlets().map(o => [o.id, o.name]));
 
-    const tickets: KdsTicket[] = this.pos.orders()
-      .filter(order => {
-        if (['BILLED', 'CANCELLED', 'SERVED'].includes(order.status)) return false;
-        if (readyIds.has(order.id)) return false;
-        if (outletFilter !== 'ALL' && order.outletId !== Number(outletFilter)) return false;
-        return true;
-      })
-      .map(order => {
-        const openedAt = this.parseOrderTime(order.openedAt);
-        const elapsedSeconds = openedAt ? Math.floor((nowMs - openedAt.getTime()) / 1000) : 0;
-        const status = this.getStatus(elapsedSeconds, order.status);
-        return {
-          order,
-          outletName: outletMap.get(order.outletId) || 'Unknown Outlet',
-          elapsedSeconds,
-          elapsedLabel: this.formatElapsed(elapsedSeconds),
-          status,
-          isFlashing: status === 'overdue'
-        };
-      })
-      .sort((a, b) => b.elapsedSeconds - a.elapsedSeconds);
+    return this.kitchenOrders().map(order => {
+      const openedAt = this.parseOrderTime(order.createdAt);
+      const elapsedSeconds = openedAt ? Math.max(0, Math.floor((nowMs - openedAt.getTime()) / 1000)) : 0;
+      const status = this.getStatus(elapsedSeconds, order.kotStatus);
 
-    // Inject demo ticket when demoMode is on
-    if (this.demoMode()) {
-      const demoTicket: KdsTicket = {
-        order: {
-          id: -1,
-          outletId: 1,
-          orderNo: 'ORD-DEMO',
-          kotNo: 'KOT-DEMO',
-          type: 'TABLE',
-          tableNo: 'TBL-0009',
-          roomNo: '',
-          guestName: 'Demo Guest',
-          server: 'Demo',
-          status: 'KOT_SENT',
-          openedAt: new Date(nowMs - 7 * 60 * 1000).toISOString(),
-          notes: 'Demo order',
-          lines: [
-            { itemId: 101, name: 'Paneer Tikka',    qty: 2, price: 350, course: 'Starter',  notes: 'Extra spicy' },
-            { itemId: 102, name: 'Dal Makhani',     qty: 1, price: 280, course: 'Main',     notes: '' },
-            { itemId: 103, name: 'Butter Naan',     qty: 4, price: 60,  course: 'Main',     notes: 'No butter' },
-            { itemId: 104, name: 'Chicken Biryani', qty: 1, price: 450, course: 'Main',     notes: '' },
-            { itemId: 105, name: 'Mango Lassi',     qty: 2, price: 120, course: 'Beverage', notes: 'Less sugar' },
-            { itemId: 106, name: 'Gulab Jamun',     qty: 3, price: 80,  course: 'Dessert',  notes: '' },
-          ]
-        },
-        outletName: 'Grand Palace Hotel (DEMO)',
-        elapsedSeconds: 7 * 60 + 23,
-        elapsedLabel: '7m 23s',
-        status: 'in-progress',
-        isFlashing: false
+      return {
+        order,
+        outletName: order.outletName || outletMap.get(order.outletId) || 'Main Kitchen Outlet',
+        elapsedSeconds,
+        elapsedLabel: this.formatElapsed(elapsedSeconds),
+        status,
+        isFlashing: status === 'overdue' && this.activeTab() === 'open'
       };
-      tickets.unshift(demoTicket);
-    }
-
-    return tickets;
+    }).sort((a, b) => b.elapsedSeconds - a.elapsedSeconds);
   });
 
   readonly totalOpen = computed(() => this.tickets().length);
@@ -114,39 +69,100 @@ export class KdsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.pos.loadOutlets();
-    this.pos.loadOrders();
+    this.loadKitchenOrders();
+    this.pos.getKitchenOrderStatuses().subscribe(statuses => {
+      this.statusOptions.set(statuses || []);
+    });
     this.timerInterval = setInterval(() => { this.now.set(new Date()); }, 1000);
-    this.refreshInterval = setInterval(() => { this.pos.loadOrders(); }, 15000);
   }
 
   ngOnDestroy(): void {
     if (this.timerInterval) clearInterval(this.timerInterval);
-    if (this.refreshInterval) clearInterval(this.refreshInterval);
   }
 
-  selectOutlet(outletId: number | 'ALL'): void { this.selectedOutletId.set(outletId); }
+  loadKitchenOrders(): void {
+    this.isLoading.set(true);
+    const isClosed = this.activeTab() === 'closed';
+    const outletId = this.selectedOutletId();
 
-  markReady(ticket: KdsTicket): void {
-    this.markedReadyIds.update(set => { const next = new Set(set); next.add(ticket.order.id); return next; });
-    this.pos.saveOrder({ ...ticket.order, status: 'SERVED' });
-  }
-
-  refreshNow(): void { this.pos.loadOrders(); this.now.set(new Date()); }
-
-  goBack(): void { this.router.navigate(['/pos/dashboard']); }
-
-  toggleDemo(): void { this.demoMode.update(v => !v); }
-
-  isExpanded(orderId: number): boolean {
-    return this.expandedIds().has(orderId);
-  }
-
-  toggleExpand(orderId: number): void {
-    this.expandedIds.update(set => {
-      const next = new Set(set);
-      if (next.has(orderId)) { next.delete(orderId); } else { next.add(orderId); }
-      return next;
+    this.pos.getKitchenOrders(isClosed, outletId).subscribe({
+      next: (orders) => {
+        this.kitchenOrders.set(orders || []);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.isLoading.set(false);
+      }
     });
+  }
+
+  setTab(tab: 'open' | 'closed'): void {
+    if (this.activeTab() === tab) return;
+    this.activeTab.set(tab);
+    this.loadKitchenOrders();
+  }
+
+  selectOutlet(outletId: number | 'ALL'): void {
+    this.selectedOutletId.set(outletId);
+    this.loadKitchenOrders();
+  }
+
+  markReady(ticket: KdsTicket, statusId: number): void {
+    this.pos.patchOrderStatus(ticket.order.id, statusId).subscribe({
+      next: () => {
+        this.loadKitchenOrders();
+      },
+      error: (err) => {
+        console.error('Failed to update order status:', err);
+        this.loadKitchenOrders();
+      }
+    });
+  }
+
+  /** Returns 'new' when kotStatus is KOT Sent, 'inprogress' when Inprogress, else 'other' */
+  getKotAction(ticket: KdsTicket): 'new' | 'inprogress' | 'other' {
+    const s = (ticket.order.kotStatus || '').toLowerCase().trim();
+    if (s === 'kot sent') return 'new';
+    if (s === 'inprogress' || s === 'in progress' || s === 'in-progress') return 'inprogress';
+    return 'other';
+  }
+
+  /** Find status id by matching value name (case-insensitive) from statusOptions */
+  private findStatusId(name: string): number {
+    const opts = this.statusOptions();
+    const match = opts.find(o =>
+      (o.value || o.name || o.code || '').toLowerCase().includes(name.toLowerCase())
+    );
+    return match ? Number(match.id) : 0;
+  }
+
+  markInprogress(ticket: KdsTicket): void {
+    const statusId = this.findStatusId('inprogress') || this.findStatusId('in progress') || this.findStatusId('progress');
+    if (!statusId) { console.warn('Inprogress status not found in options'); return; }
+    this.markReady(ticket, statusId);
+  }
+
+  markKotReady(ticket: KdsTicket): void {
+    const statusId = this.findStatusId('mark ready') || this.findStatusId('ready');
+    if (!statusId) { console.warn('Mark Ready status not found in options'); return; }
+    this.markReady(ticket, statusId);
+  }
+
+  onStatusSelect(ticket: KdsTicket, event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const statusId = Number(target.value);
+    if (statusId) {
+      this.markReady(ticket, statusId);
+    }
+  }
+
+  refreshNow(): void {
+    this.loadKitchenOrders();
+    this.now.set(new Date());
+  }
+
+  goBack(): void {
+    this.router.navigate(['/pos/dashboard']);
   }
 
   toggleFullScreen(): void {
@@ -163,8 +179,12 @@ export class KdsComponent implements OnInit, OnDestroy {
     return isNaN(parsed.getTime()) ? new Date() : parsed;
   }
 
-  private getStatus(elapsedSeconds: number, orderStatus: string): KdsStatus {
-    if (orderStatus === 'SERVED' || orderStatus === 'READY') return 'ready';
+  private getStatus(elapsedSeconds: number, kotStatus: string): KdsStatus {
+    const s = (kotStatus || '').toLowerCase().trim();
+    if (s === 'kot ready' || s === 'closed' || s === 'served') return 'ready';
+    if (s === 'inprogress' || s === 'in progress' || s === 'in-progress') return 'in-progress';
+    if (s === 'kot sent' || s === 'new') return 'new';
+    // Fallback to time-based for unknown statuses
     if (elapsedSeconds > 15 * 60) return 'overdue';
     if (elapsedSeconds > 5 * 60) return 'in-progress';
     return 'new';
@@ -183,15 +203,19 @@ export class KdsComponent implements OnInit, OnDestroy {
     return map[status];
   }
 
-  getOrderTypeBadge(type: string): string {
-    const map: Record<string, string> = { 'TABLE': 'Table', 'ROOM': 'Room', 'TAKEAWAY': 'Takeaway' };
-    return map[type] || type;
+  getOrderTypeBadge(type: string | undefined | null): string {
+    if (!type) return 'Table';
+    const map: Record<string, string> = { 'TABLE': 'Table', 'DINE_IN': 'Table', 'ROOM': 'Room', 'ROOM_SERVICE': 'Room', 'TAKEAWAY': 'Takeaway' };
+    return map[type.toUpperCase()] || type;
   }
 
-  getOrderTypeIcon(type: string): string {
-    const map: Record<string, string> = { 'TABLE': 'table_restaurant', 'ROOM': 'bed', 'TAKEAWAY': 'takeout_dining' };
-    return map[type] || 'restaurant';
+  getOrderTypeIcon(type: string | undefined | null): string {
+    if (!type) return 'table_restaurant';
+    const map: Record<string, string> = { 'TABLE': 'table_restaurant', 'DINE_IN': 'table_restaurant', 'ROOM': 'bed', 'ROOM_SERVICE': 'bed', 'TAKEAWAY': 'takeout_dining' };
+    return map[type.toUpperCase()] || 'restaurant';
   }
 
-  trackById(_: number, ticket: KdsTicket): number { return ticket.order.id; }
+  trackById(_: number, ticket: KdsTicket): number {
+    return ticket.order.id;
+  }
 }

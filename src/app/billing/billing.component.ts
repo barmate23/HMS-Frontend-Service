@@ -38,6 +38,8 @@ interface VendorBillDraft {
 interface VendorBillLineDraft {
   itemId?: number;
   itemCode: string;
+  itemName?: string;
+  unit?: string;
   invoiceQty: number | null;
 }
 
@@ -316,10 +318,13 @@ export class BillingComponent implements OnInit, OnDestroy {
   ]);
 
   mockItemConfigs = signal<VendorBillItem[]>([
-    { code: 'HK-CHEM-007', name: 'Floor Cleaner', unit: 'Ltr', category: 'Cleaning Chemical' },
-    { code: 'LND-DET-003', name: 'Laundry Detergent', unit: 'Kg', category: 'Laundry Consumable' },
-    { code: 'HK-AMN-014', name: 'Dental Kit', unit: 'Pcs', category: 'Guest Amenities' },
-    { code: 'FB-DRY-012', name: 'Coffee Sachet', unit: 'Pcs', category: 'F&B Supplies' }
+    { id: 1, code: 'HK-CHEM-007', name: 'Floor Cleaner', unit: 'Ltr', category: 'Cleaning Chemical' },
+    { id: 2, code: 'LND-DET-003', name: 'Laundry Detergent', unit: 'Kg', category: 'Laundry Consumable' },
+    { id: 3, code: 'HK-AMN-014', name: 'Dental Kit', unit: 'Pcs', category: 'Guest Amenities' },
+    { id: 4, code: 'FB-DRY-012', name: 'Coffee Sachet', unit: 'Pcs', category: 'F&B Supplies' },
+    { id: 101, code: 'ING-001', name: 'Paneer', unit: 'Kg', category: 'Kitchen Raw Material' },
+    { id: 102, code: 'ING-002', name: 'Haldi', unit: 'Kg', category: 'Kitchen Raw Material' },
+    { id: 103, code: 'ING-003', name: 'Mirchi', unit: 'Kg', category: 'Kitchen Raw Material' }
   ]);
 
   mockPurchaseOrders = signal<MiniPurchaseOrder[]>([
@@ -1160,6 +1165,28 @@ export class BillingComponent implements OnInit, OnDestroy {
           next.totalAmount = po.totalAmount;
           next.netAmount = po.netAmount;
           next.lines = po.lines.map(line => ({ ...line }));
+
+          if (po.sourceLines && po.sourceLines.length) {
+            const currentConfigs = this.mockItemConfigs();
+            const missingLines: VendorBillItem[] = [];
+            po.sourceLines.forEach(line => {
+              const code = String(line.itemCode || '').trim();
+              const name = String(line.itemName || '').trim();
+              if (code && !currentConfigs.some(c => c.code === code)) {
+                missingLines.push({
+                  id: line.itemId ? Number(line.itemId) : undefined,
+                  code,
+                  name: name || code,
+                  unit: 'Kg',
+                  category: 'Kitchen Raw Material',
+                  unitCost: Number(line.rate || 0)
+                });
+              }
+            });
+            if (missingLines.length) {
+              this.mockItemConfigs.update(items => [...items, ...missingLines]);
+            }
+          }
         }
       }
       return next;
@@ -1184,12 +1211,25 @@ export class BillingComponent implements OnInit, OnDestroy {
   updateBillLine<K extends keyof VendorBillLineDraft>(index: number, field: K, value: VendorBillLineDraft[K]): void {
     this.billDraft.update(draft => ({
       ...draft,
-      lines: draft.lines.map((line, i) => i === index ? { ...line, [field]: value } : line)
+      lines: draft.lines.map((line, i) => {
+        if (i !== index) return line;
+        const updated = { ...line, [field]: value };
+        if (field === 'itemCode') {
+          const config = this.mockItemConfigs().find(c => c.code === value);
+          if (config) {
+            updated.itemId = config.id;
+            updated.itemName = config.name;
+            updated.unit = config.unit;
+          }
+        }
+        return updated;
+      })
     }));
     this.billTouchedFields.update(touched => ({ ...touched, [`line-${index}-${field}`]: true }));
   }
 
-  itemUnit(itemCode: string): string {
+  itemUnit(itemCode: string, line?: VendorBillLineDraft): string {
+    if (line && line.unit) return line.unit;
     return this.mockItemConfigs().find(item => item.code === itemCode)?.unit || '-';
   }
 
@@ -1301,13 +1341,13 @@ export class BillingComponent implements OnInit, OnDestroy {
     const linePayloads = draft.lines.map(line => {
       const item = this.mockItemConfigs().find(config => config.code === line.itemCode);
       const poLine = order?.sourceLines?.find(source =>
-        Number(source.itemId) === Number(item?.id) || source.itemCode === line.itemCode
+        (source.itemId && item?.id && Number(source.itemId) === Number(item.id)) || source.itemCode === line.itemCode
       );
       const quantity = Number(line.invoiceQty || 0);
       const rate = Number(poLine?.rate ?? item?.unitCost ?? 0);
       return {
-        itemId: item?.id,
-        itemName: item?.name || line.itemCode,
+        itemId: item?.id || poLine?.itemId,
+        itemName: item?.name || poLine?.itemName || line.itemCode,
         receivedQuantity: quantity,
         rate,
         totalAmount: Math.round(quantity * rate * 100) / 100
@@ -1366,7 +1406,35 @@ export class BillingComponent implements OnInit, OnDestroy {
     this.purchaseService.getPurchaseOrders().subscribe({
       next: orders => {
         const mapped = orders.map(order => this.mapVendorBillPurchaseOrder(order)).filter(order => order.recordId && order.id);
-        if (mapped.length) this.mockPurchaseOrders.set(mapped);
+        if (mapped.length) {
+          this.mockPurchaseOrders.set(mapped);
+
+          const extraPoItems: VendorBillItem[] = [];
+          orders.forEach(order => {
+            (order.lines || []).forEach(line => {
+              const code = String(line.itemCode || '').trim();
+              const name = String(line.itemName || '').trim();
+              if (code && name) {
+                extraPoItems.push({
+                  id: line.itemId ? Number(line.itemId) : undefined,
+                  code,
+                  name,
+                  unit: 'Kg',
+                  category: 'PO Item',
+                  unitCost: Number(line.rate || 0)
+                });
+              }
+            });
+          });
+
+          if (extraPoItems.length) {
+            this.mockItemConfigs.update(current => {
+              const existingCodes = new Set(current.map(c => c.code));
+              const toAdd = extraPoItems.filter(i => !existingCodes.has(i.code));
+              return [...current, ...toAdd];
+            });
+          }
+        }
       },
       error: () => {}
     });
@@ -1374,19 +1442,52 @@ export class BillingComponent implements OnInit, OnDestroy {
       next: items => {
         const mapped = items.map(item => this.mapVendorBillItem(item)).filter(item => item.id && item.code);
         if (mapped.length) {
-          this.mockItemConfigs.set(mapped);
+          this.mockItemConfigs.update(current => {
+            const existingCodes = new Set(current.map(c => c.code));
+            const toAdd = mapped.filter(i => !existingCodes.has(i.code));
+            return [...current, ...toAdd];
+          });
           this.vendorBills.update(bills => bills.map(bill => ({
             ...bill,
-            lines: bill.lines.map(line => this.patchItemMetadata(line, mapped))
+            lines: bill.lines.map(line => this.patchItemMetadata(line, this.mockItemConfigs()))
           })));
           this.inwardReceipts.update(grns => grns.map(grn => ({
             ...grn,
-            lines: grn.lines.map(line => this.patchItemMetadata(line, mapped))
+            lines: grn.lines.map(line => this.patchItemMetadata(line, this.mockItemConfigs()))
           })));
           this.grnDraft.update(draft => ({
             ...draft,
-            lines: draft.lines.map(line => this.patchItemMetadata(line, mapped))
+            lines: draft.lines.map(line => this.patchItemMetadata(line, this.mockItemConfigs()))
           }));
+        }
+      },
+      error: () => {}
+    });
+    this.purchaseService.getKitchenIngredients(0, 100).subscribe({
+      next: response => {
+        let rawItems: any[] = [];
+        if (response && response.data) {
+          const d = response.data;
+          rawItems = Array.isArray(d.ingredients) ? d.ingredients : Array.isArray(d.content) ? d.content : Array.isArray(d) ? d : [];
+        } else if (response && Array.isArray(response.ingredients)) {
+          rawItems = response.ingredients;
+        } else if (Array.isArray(response)) {
+          rawItems = response;
+        }
+        const mappedKitchen: VendorBillItem[] = rawItems.map(item => ({
+          id: Number(item.id || 0),
+          code: item.ingredientCode || item.code || `ING-${String(item.id || 1).padStart(3, '0')}`,
+          name: item.ingredientName || item.name || 'Raw Ingredient',
+          unit: item.purchaseUnitName || item.baseUnitName || item.purchaseUnit || item.baseUnit || 'Kg',
+          category: 'Kitchen Raw Material',
+          unitCost: Number(item.costPerPurchaseUnit ?? item.costPerBaseUnit ?? item.unitCost ?? 0)
+        }));
+        if (mappedKitchen.length) {
+          this.mockItemConfigs.update(current => {
+            const existingCodes = new Set(current.map(c => c.code));
+            const toAdd = mappedKitchen.filter(k => !existingCodes.has(k.code));
+            return [...current, ...toAdd];
+          });
         }
       },
       error: () => {}
@@ -1507,7 +1608,10 @@ export class BillingComponent implements OnInit, OnDestroy {
       totalAmount: Number(input.totalAmount || sourceLines.reduce((sum, line) => sum + Number(line.totalAmount || 0), 0)),
       netAmount: Math.round(netAmount * 100) / 100,
       lines: sourceLines.map(line => ({
+        itemId: line.itemId ? Number(line.itemId) : undefined,
         itemCode: String(line.itemCode || '').trim(),
+        itemName: String(line.itemName || '').trim(),
+        unit: String((line as any).uom || (line as any).unit || (line as any).uomName || 'Pcs').trim(),
         invoiceQty: Number(line.quantity || 0)
       })),
       sourceLines
@@ -1542,7 +1646,7 @@ export class BillingComponent implements OnInit, OnDestroy {
 
   emptyGrnDraft(): GrnDraft {
     return {
-      id: '',
+      id: `GRN-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
       supplier: '',
       poNo: '',
       billNo: '',
@@ -1623,8 +1727,9 @@ export class BillingComponent implements OnInit, OnDestroy {
 
   validateGrnDraft(draft: GrnDraft): Array<{ field: string; message: string }> {
     const errors: Array<{ field: string; message: string }> = [];
-    if (!draft.id.trim()) errors.push({ field: 'id', message: 'GRN number is required.' });
-    else if (!this.selectedGrn() && this.inwardReceipts().some(g => g.id.trim().toLowerCase() === draft.id.trim().toLowerCase())) errors.push({ field: 'id', message: 'GRN number already exists.' });
+    if (!draft.id.trim()) {
+      draft.id = `GRN-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
     if (!draft.billNo.trim()) errors.push({ field: 'billNo', message: 'Vendor Bill reference is required.' });
     if (!draft.receivedBy.trim()) errors.push({ field: 'receivedBy', message: 'Received by name is required.' });
     if (!draft.receivedOn) errors.push({ field: 'receivedOn', message: 'Received date is required.' });

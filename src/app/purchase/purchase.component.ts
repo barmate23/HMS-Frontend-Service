@@ -96,7 +96,8 @@ interface PurchaseOrder {
   subtotal: number;
   taxTotal: number;
   notes?: string;
-  itemCategoryScope?: 'ALL' | 'HOTEL_GENERAL' | 'KITCHEN_INGREDIENTS';
+  purchaseItemCategoryId?: number;
+  itemCategoryScope?: string;
   lineItems: PurchaseOrderItem[];
 }
 
@@ -117,7 +118,8 @@ interface PurchaseOrderDraft {
   referenceNo: string;
   shippingCharges: number;
   notes: string;
-  itemCategoryScope?: 'ALL' | 'HOTEL_GENERAL' | 'KITCHEN_INGREDIENTS';
+  purchaseItemCategoryId?: number;
+  itemCategoryScope?: string;
   lineItems: PurchaseOrderItem[];
   subtotal: number;
   taxTotal: number;
@@ -192,6 +194,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
   deliveryStores = signal<PurchaseMasterOption[]>([]);
   paymentTerms = signal<PurchaseMasterOption[]>([]);
   supplierStatuses = signal<PurchaseMasterOption[]>([]);
+  itemCategoryScopes = signal<PurchaseMasterOption[]>([]);
   supplierLoading = signal(false);
   poLoading = signal(false);
   poSaving = signal(false);
@@ -301,14 +304,14 @@ export class PurchaseComponent implements OnInit, OnDestroy {
   }
 
   readonly availablePoMasterItems = computed(() => {
-    const scope = this.poDraft().itemCategoryScope || 'ALL';
+    const scope = (this.poDraft().itemCategoryScope || 'ALL').toUpperCase();
     const items = this.masterItems();
     const apiKitchen = this.kitchenIngredients();
 
-    if (scope === 'HOTEL_GENERAL') {
+    if (scope === 'HOTEL_GENERAL' || scope.includes('HOTEL') || scope.includes('GENERAL')) {
       return items.filter(item => !item.category.toLowerCase().includes('kitchen') && item.code.indexOf('ING-') !== 0);
     }
-    if (scope === 'KITCHEN_INGREDIENTS') {
+    if (scope === 'KITCHEN_INGREDIENTS' || scope.includes('KITCHEN') || scope.includes('INGREDIENT')) {
       if (apiKitchen.length) {
         const apiIds = new Set(apiKitchen.map(k => k.id));
         const mockKitchen = items.filter(i => (i.category.toLowerCase().includes('kitchen') || i.code.indexOf('ING-') === 0) && !apiIds.has(i.id));
@@ -1092,6 +1095,8 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       subtotal: Math.round(subtotal * 100) / 100,
       taxTotal: Math.round(taxTotal * 100) / 100,
       notes: String(input.poNote || '').trim(),
+      purchaseItemCategoryId: input.purchaseItemCategoryId ? Number(input.purchaseItemCategoryId) : undefined,
+      itemCategoryScope: this.optionById(this.itemCategoryScopes(), input.purchaseItemCategoryId)?.code || input.purchaseItemCategoryName || 'ALL',
       lineItems: lines
     };
   }
@@ -1110,6 +1115,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     const paymentTerms = this.optionById(this.paymentTerms(), draft.paymentTermsId);
     const department = this.optionById(this.departments(), draft.departmentId);
     const deliveryStore = this.optionById(this.deliveryStores(), draft.deliveryStoreId);
+    const itemCategoryOption = this.optionById(this.itemCategoryScopes(), draft.purchaseItemCategoryId);
     return {
       id: existing?.recordId,
       poNumber: draft.poNumber.trim(),
@@ -1124,6 +1130,8 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       deliveryStoreName: deliveryStore?.value || draft.deliveryLocation.trim(),
       paymentTermsId: draft.paymentTermsId,
       paymentTermsName: paymentTerms?.value || draft.paymentTerms.trim(),
+      purchaseItemCategoryId: draft.purchaseItemCategoryId,
+      purchaseItemCategoryName: itemCategoryOption?.value,
       requestedBy: draft.requestedBy.trim(),
       itemCount: draft.lineItems.length,
       poNote: draft.notes.trim() || undefined,
@@ -1162,7 +1170,8 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       categories: this.purchaseService.getCommonMaster('SUPPLIER_CATEGORY'),
       terms: this.purchaseService.getCommonMaster('PAYMENT_TERMS'),
       deliveryStores: this.purchaseService.getCommonMaster('DELIVERY_STORE'),
-      statuses: this.purchaseService.getCommonMaster('SUPPLIER_STATUS')
+      statuses: this.purchaseService.getCommonMaster('SUPPLIER_STATUS'),
+      itemCategoryScopes: this.purchaseService.getCommonMaster('PURCHASE_ITEM_CATEGORY')
     }).subscribe({
       next: response => {
         this.departments.set(response.departments);
@@ -1170,6 +1179,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
         this.paymentTerms.set(response.terms);
         this.deliveryStores.set(response.deliveryStores);
         this.supplierStatuses.set(response.statuses);
+        this.itemCategoryScopes.set(response.itemCategoryScopes);
         this.loadSuppliers();
       },
       error: () => {
@@ -1178,6 +1188,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
         this.paymentTerms.set([]);
         this.deliveryStores.set([]);
         this.supplierStatuses.set([]);
+        this.itemCategoryScopes.set([]);
         this.loadSuppliers();
       }
     });
@@ -1325,6 +1336,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
 
   emptyPoDraft(): PurchaseOrderDraft {
     const today = new Date().toISOString().substring(0, 10);
+    const defaultOption = this.itemCategoryScopes()[0];
     return {
       poNumber: `PO-${new Date().getFullYear()}-${String(this.purchaseOrders ? this.purchaseOrders().length + 1001 : 1001)}`,
       supplier: '',
@@ -1340,6 +1352,8 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       referenceNo: '',
       shippingCharges: 0,
       notes: '',
+      purchaseItemCategoryId: defaultOption?.id,
+      itemCategoryScope: defaultOption?.code || 'ALL',
       lineItems: [this.defaultPoLineItem()],
       subtotal: 0,
       taxTotal: 0,
@@ -1361,6 +1375,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
   }
 
   draftFromPo(order: PurchaseOrder): PurchaseOrderDraft {
+    const scopeOption = this.optionById(this.itemCategoryScopes(), order.purchaseItemCategoryId);
     return {
       id: order.id,
       poNumber: order.id,
@@ -1378,6 +1393,8 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       referenceNo: order.referenceNo || '',
       shippingCharges: order.shippingCharges,
       notes: order.notes || '',
+      purchaseItemCategoryId: order.purchaseItemCategoryId,
+      itemCategoryScope: scopeOption?.code || order.itemCategoryScope || (this.itemCategoryScopes().length ? this.itemCategoryScopes()[0].code : 'ALL'),
       lineItems: order.lineItems.map(item => ({ ...item })),
       subtotal: order.subtotal,
       taxTotal: order.taxTotal,
@@ -1408,8 +1425,19 @@ export class PurchaseComponent implements OnInit, OnDestroy {
         const terms = this.optionById(this.paymentTerms(), Number(value));
         next.paymentTerms = terms?.value || '';
       }
-      if (field === 'itemCategoryScope' && value === 'KITCHEN_INGREDIENTS') {
-        this.loadKitchenIngredients(0, 20);
+      if (field === 'purchaseItemCategoryId') {
+        const option = this.optionById(this.itemCategoryScopes(), Number(value));
+        next.itemCategoryScope = option?.code || option?.value || '';
+        const valStr = (option?.code || option?.value || '').toUpperCase();
+        if (valStr.includes('KITCHEN') || valStr.includes('INGREDIENT')) {
+          this.loadKitchenIngredients(0, 20);
+        }
+      }
+      if (field === 'itemCategoryScope' && value) {
+        const valStr = String(value).toUpperCase();
+        if (valStr === 'KITCHEN_INGREDIENTS' || valStr.includes('KITCHEN') || valStr.includes('INGREDIENT')) {
+          this.loadKitchenIngredients(0, 20);
+        }
       }
       return next;
     });
@@ -1471,7 +1499,8 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     if (this.activePoItemDropdownIndex() === index) {
       this.activePoItemDropdownIndex.set(null);
     } else {
-      if (this.poDraft().itemCategoryScope === 'KITCHEN_INGREDIENTS' && !this.kitchenIngredients().length && !this.kitchenIngredientsLoading()) {
+      const scopeStr = String(this.poDraft().itemCategoryScope || '').toUpperCase();
+      if ((scopeStr === 'KITCHEN_INGREDIENTS' || scopeStr.includes('KITCHEN') || scopeStr.includes('INGREDIENT')) && !this.kitchenIngredients().length && !this.kitchenIngredientsLoading()) {
         this.loadKitchenIngredients(0, 30);
       }
       this.activePoItemDropdownIndex.set(index);
@@ -1529,7 +1558,8 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     const target = event.target as HTMLElement;
     if (!target) return;
     const nearBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 25;
-    if (nearBottom && this.poDraft().itemCategoryScope === 'KITCHEN_INGREDIENTS') {
+    const scopeStr = String(this.poDraft().itemCategoryScope || '').toUpperCase();
+    if (nearBottom && (scopeStr === 'KITCHEN_INGREDIENTS' || scopeStr.includes('KITCHEN') || scopeStr.includes('INGREDIENT'))) {
       if (!this.kitchenIngredientsLoading() && this.kitchenIngredientsPage() < this.kitchenIngredientsTotalPages() - 1) {
         this.loadKitchenIngredients(this.kitchenIngredientsPage() + 1, 30, true);
       }

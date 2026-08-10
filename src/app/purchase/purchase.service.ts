@@ -72,6 +72,8 @@ export interface PurchaseOrderPayload {
   deliveryStoreName?: string;
   paymentTermsId?: number;
   paymentTermsName?: string;
+  purchaseItemCategoryId?: number;
+  purchaseItemCategoryName?: string;
   requestedBy: string;
   itemCount?: number;
   poNote?: string;

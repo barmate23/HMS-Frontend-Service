@@ -602,11 +602,6 @@
             </div>
             <div class="form-grid grn-receipt-grid">
               <label>
-                <span>GRN Number *</span>
-                <input [ngModel]="grnDraft().id" (ngModelChange)="updateGrnDraft('id', $event)" (blur)="markGrnFieldAsTouched('id')" placeholder="e.g. GRN-3303" [disabled]="selectedGrn() !== null">
-                <small>{{ grnFieldError('id') }}</small>
-              </label>
-              <label>
                 <span>Received By *</span>
                 <input [ngModel]="grnDraft().receivedBy" (ngModelChange)="updateGrnDraft('receivedBy', $event)" (blur)="markGrnFieldAsTouched('receivedBy')" placeholder="Store keeper name">
                 <small>{{ grnFieldError('receivedBy') }}</small>
@@ -752,7 +747,7 @@
                 </select>
                 <small>{{ billFieldError('line-' + i + '-itemCode') }}</small>
               </label>
-              <span class="line-unit">{{ itemUnit(line.itemCode) }}</span>
+              <span class="line-unit">{{ itemUnit(line.itemCode, line) }}</span>
               <label>
                 <input type="number" min="1" [ngModel]="line.invoiceQty" (ngModelChange)="updateBillLine(i, 'invoiceQty', +$event || null)" placeholder="Qty">
                 <small>{{ billFieldError('line-' + i + '-invoiceQty') }}</small>

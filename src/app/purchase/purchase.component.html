@@ -339,10 +339,16 @@
 
               <label>
                 <span>Item Category Scope</span>
-                <select [ngModel]="poDraft().itemCategoryScope || 'ALL'" (ngModelChange)="updatePoDraft('itemCategoryScope', $event)">
-                  <option value="ALL">All Items (General & Kitchen)</option>
-                  <option value="HOTEL_GENERAL">Hotel Daily Consumption (Towels, Linen, Amenities, Detergents)</option>
-                  <option value="KITCHEN_INGREDIENTS">Kitchen Raw Ingredients (Paneer, Vegetables, Meat, Spices, Oils)</option>
+                <select [ngModel]="poDraft().purchaseItemCategoryId" (ngModelChange)="updatePoDraft('purchaseItemCategoryId', +$event || undefined)">
+                  <ng-container *ngIf="itemCategoryScopes().length; else fallbackScopeOptions">
+                    <option [ngValue]="undefined">Select Item Category Scope</option>
+                    <option *ngFor="let option of itemCategoryScopes()" [ngValue]="option.id">{{ option.value }}</option>
+                  </ng-container>
+                  <ng-template #fallbackScopeOptions>
+                    <option [ngValue]="undefined">All Items (General & Kitchen)</option>
+                    <option value="HOTEL_GENERAL">Hotel Daily Consumption (Towels, Linen, Amenities, Detergents)</option>
+                    <option value="KITCHEN_INGREDIENTS">Kitchen Raw Ingredients (Paneer, Vegetables, Meat, Spices, Oils)</option>
+                  </ng-template>
                 </select>
               </label>
             </div>

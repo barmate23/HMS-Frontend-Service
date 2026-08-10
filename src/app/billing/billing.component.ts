@@ -1339,15 +1339,17 @@ export class BillingComponent implements OnInit, OnDestroy {
     }
 
     const linePayloads = draft.lines.map(line => {
-      const item = this.mockItemConfigs().find(config => config.code === line.itemCode);
       const poLine = order?.sourceLines?.find(source =>
-        (source.itemId && item?.id && Number(source.itemId) === Number(item.id)) || source.itemCode === line.itemCode
+        (line.itemId && source.itemId && Number(source.itemId) === Number(line.itemId)) ||
+        source.itemCode === line.itemCode
       );
+      const item = this.mockItemConfigs().find(config => config.code === line.itemCode);
+      const resolvedItemId = line.itemId || poLine?.itemId || item?.id;
       const quantity = Number(line.invoiceQty || 0);
       const rate = Number(poLine?.rate ?? item?.unitCost ?? 0);
       return {
-        itemId: item?.id || poLine?.itemId,
-        itemName: item?.name || poLine?.itemName || line.itemCode,
+        itemId: resolvedItemId ? Number(resolvedItemId) : undefined,
+        itemName: line.itemName || poLine?.itemName || item?.name || line.itemCode,
         receivedQuantity: quantity,
         rate,
         totalAmount: Math.round(quantity * rate * 100) / 100

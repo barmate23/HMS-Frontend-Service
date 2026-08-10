@@ -598,6 +598,17 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     }));
   });
 
+  fetchNextPoNumber(): void {
+    this.purchaseService.generatePurchaseOrderNumber().subscribe({
+      next: (poNo) => {
+        if (poNo && poNo.trim()) {
+          this.poDraft.update(draft => ({ ...draft, poNumber: poNo.trim() }));
+        }
+      },
+      error: () => {}
+    });
+  }
+
   createPoForItem(item: any): void {
     const draft = this.emptyPoDraft();
     const targetStock = item.parLevel || (item.reorderLevel * 2);
@@ -621,6 +632,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     this.poFormSubmitted.set(false);
     this.poTouchedFields.set({});
     this.selectedPurchaseOrder.set(null);
+    this.fetchNextPoNumber();
     this.createModal.set('po');
   }
 
@@ -643,6 +655,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       this.poDraft.set(this.emptyPoDraft());
       this.poFormSubmitted.set(false);
       this.poTouchedFields.set({});
+      this.fetchNextPoNumber();
     }
 
     if (type === 'item') {

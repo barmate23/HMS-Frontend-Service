@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 import {
@@ -215,11 +216,12 @@ interface PaymentDraft {
 @Component({
   selector: 'app-billing',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatSnackBarModule],
   templateUrl: './billing.component.html',
   styleUrls: ['./billing.component.css']
 })
 export class BillingComponent implements OnInit, OnDestroy {
+  private readonly snackBar = inject(MatSnackBar);
   private routerSub?: Subscription;
 
   activeTab = signal<BillingTab>('folios');
@@ -1321,9 +1323,16 @@ export class BillingComponent implements OnInit, OnDestroy {
         this.billSaving.set(false);
         this.closeBillingModal();
       },
-      error: error => {
+      error: () => {
         this.billSaving.set(false);
-        this.billSaveError.set(error?.error?.message || 'Unable to create vendor bill. Please verify the selected supplier, purchase order, and items.');
+        const errMsg = 'Failed to create vendor bill, please contact administrator.';
+        this.billSaveError.set(errMsg);
+        this.snackBar.open(errMsg, 'Close', {
+          duration: 5000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top',
+          panelClass: ['snackbar-error']
+        });
       }
     });
   }
@@ -1334,7 +1343,14 @@ export class BillingComponent implements OnInit, OnDestroy {
     const supplierId = supplier?.id || existing?.supplierId;
     const purchaseOrderId = order?.recordId || existing?.purchaseOrderId;
     if (!supplierId || !purchaseOrderId) {
-      this.billSaveError.set('Supplier or purchase order data is not available from the server. Please refresh and try again.');
+      const errMsg = 'Failed to create vendor bill, please contact administrator.';
+      this.billSaveError.set(errMsg);
+      this.snackBar.open(errMsg, 'Close', {
+        duration: 5000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+        panelClass: ['snackbar-error']
+      });
       return null;
     }
 
@@ -1357,7 +1373,14 @@ export class BillingComponent implements OnInit, OnDestroy {
     });
 
     if (linePayloads.some(line => !line.itemId)) {
-      this.billSaveError.set('One or more invoice items are not available from Item Config. Please refresh and select them again.');
+      const errMsg = 'Failed to create vendor bill, please contact administrator.';
+      this.billSaveError.set(errMsg);
+      this.snackBar.open(errMsg, 'Close', {
+        duration: 5000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+        panelClass: ['snackbar-error']
+      });
       return null;
     }
 
@@ -1774,7 +1797,14 @@ export class BillingComponent implements OnInit, OnDestroy {
       lines
     };
     if (!bill) {
-      this.grnSaveError.set('The selected vendor bill is not available. Please refresh and select it again.');
+      const errMsg = 'Failed to create GRN, please contact administrator.';
+      this.grnSaveError.set(errMsg);
+      this.snackBar.open(errMsg, 'Close', {
+        duration: 5000,
+        horizontalPosition: 'end',
+        verticalPosition: 'top',
+        panelClass: ['snackbar-error']
+      });
       return;
     }
 
@@ -1822,9 +1852,16 @@ export class BillingComponent implements OnInit, OnDestroy {
         this.grnSaving.set(false);
         this.closeBillingModal();
       },
-      error: error => {
+      error: () => {
         this.grnSaving.set(false);
-        this.grnSaveError.set(error?.error?.message || 'Unable to save GRN. Please verify the entered details and try again.');
+        const errMsg = 'Failed to create GRN, please contact administrator.';
+        this.grnSaveError.set(errMsg);
+        this.snackBar.open(errMsg, 'Close', {
+          duration: 5000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top',
+          panelClass: ['snackbar-error']
+        });
       }
     });
   }

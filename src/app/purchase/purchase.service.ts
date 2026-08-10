@@ -262,6 +262,29 @@ export class PurchaseService {
       .pipe(map(response => this.listData(response)));
   }
 
+  generatePurchaseOrderNumber(): Observable<string> {
+    return this.http
+      .get<string | StandardResponse<string>>(`${this.purchaseBase}/orders/generatePurchaseOrderNumber`, { responseType: 'text' as 'json' })
+      .pipe(
+        map(response => {
+          if (!response) return '';
+          if (typeof response === 'string') {
+            try {
+              const parsed = JSON.parse(response);
+              if (typeof parsed === 'string') return parsed.trim();
+              if (typeof parsed === 'object' && parsed) {
+                return String(parsed.data || parsed.poNumber || parsed.message || response).trim();
+              }
+            } catch {
+              return response.trim();
+            }
+          }
+          const res = response as StandardResponse<string>;
+          return String(res?.data || (response as any)?.poNumber || response).trim();
+        })
+      );
+  }
+
   getPurchaseOrderById(id: number): Observable<PurchaseOrderPayload | null> {
     return this.http
       .get<PurchaseOrderPayload | StandardResponse<PurchaseOrderPayload>>(`${this.purchaseBase}/orders/getPurchaseOrderById/${id}`)

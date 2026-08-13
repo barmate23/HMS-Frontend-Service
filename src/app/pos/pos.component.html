@@ -31,7 +31,6 @@
       </div>
 
       <select class="filter-select" *ngIf="activeTab() !== 'outlets' && activeTab() !== 'billing'" [ngModel]="outletFilter()" (ngModelChange)="onOutletFilterChange($event)">
-        <option value="ALL">All Outlets</option>
         <option *ngFor="let outlet of pos.outlets()" [value]="outlet.id">{{ outlet.name }}</option>
       </select>
 
@@ -350,7 +349,7 @@
               <td>{{ billBreakdown(bill).discountPercent }}%<span class="subline" *ngIf="billBreakdown(bill).discountAmount">₹{{ billBreakdown(bill).discountAmount | number:'1.0-0' }}</span><span class="subline" *ngIf="bill.compReason">Comp: {{ bill.compReason }}</span></td>
               <td>{{ bill.paymentModes.join(', ') }}</td>
               <td><span class="status-badge" [class]="bill.status.toLowerCase()">{{ bill.status }}</span></td>
-              <td><div class="action-buttons"><button class="btn-icon check" [class.frozen]="!bill.isRoomOrder || bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')" [disabled]="!bill.isRoomOrder || bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')" [title]="!bill.isRoomOrder ? 'Room posting disabled for non-room orders' : ((bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')) ? 'Already posted to room folio' : 'Post to Folio')" (click)="pos.postBillToRoom(bill.id)"><span class="material-icons-round">bed</span></button><button class="btn-icon edit" (click)="openEdit('bill', bill)"><span class="material-icons-round">edit</span></button><button class="btn-icon delete" (click)="voidBill(bill)"><span class="material-icons-round">block</span></button></div></td>
+              <td><div class="action-buttons"><button class="btn-icon check" [class.frozen]="!bill.isRoomOrder || bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')" [disabled]="!bill.isRoomOrder || bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')" [title]="!bill.isRoomOrder ? 'Room posting disabled for non-room orders' : ((bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')) ? 'Already posted to room folio' : 'Post to Folio')" (click)="pos.postBillToRoom(bill.id)"><span class="material-icons-round">bed</span></button><button class="btn-icon view" (click)="openViewBill(bill)" title="View Bill Details"><span class="material-icons-round">visibility</span></button><button class="btn-icon delete" (click)="voidBill(bill)" title="Void Bill"><span class="material-icons-round">block</span></button></div></td>
 
 
 
@@ -1453,6 +1452,116 @@
 
     <div class="ci-footer" style="padding:12px 20px;">
       <button class="btn-primary" (click)="closeRecipeDetails()"><span class="material-icons-round">check</span>Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     VIEW BILL DETAILS MODAL
+     ================================================================ -->
+<div class="modal-overlay" *ngIf="isViewBillModalOpen()" (click)="closeViewBillModal()">
+  <div class="view-bill-modal" (click)="$event.stopPropagation()">
+    
+    <div class="view-bill-header">
+      <div class="vb-title-group">
+        <div class="vb-title-row">
+          <span class="material-icons-round vb-icon">receipt_long</span>
+          <h2>Bill Details</h2>
+          <span class="mono-text large">{{ selectedBillForView()?.billNo }}</span>
+          <span class="status-badge" [ngClass]="selectedBillForView()?.status?.toLowerCase() || 'open'">
+            {{ selectedBillForView()?.status }}
+          </span>
+        </div>
+        <p class="vb-subtitle" *ngIf="selectedBillForView()?.createdAt">
+          Date: <b>{{ selectedBillForView()?.createdAt | date:'medium' }}</b>
+        </p>
+      </div>
+      <div class="vb-header-actions">
+        <button class="btn-secondary print-btn" (click)="printBillReceipt()" title="Print Receipt">
+          <span class="material-icons-round">print</span> Print
+        </button>
+        <button class="vb-close" (click)="closeViewBillModal()">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="view-bill-body" *ngIf="selectedBillForView() as bill">
+      <div *ngIf="isLoadingViewBill()" class="vb-loading">
+        <span class="material-icons-round spin">sync</span> Loading bill details...
+      </div>
+
+      <!-- Quick Details Grid -->
+      <div class="vb-info-grid">
+        <div class="vb-info-card">
+          <span class="vb-label">Guest Name</span>
+          <strong>{{ bill.guestName || 'Walk-in Guest' }}</strong>
+        </div>
+        <div class="vb-info-card">
+          <span class="vb-label">Order Reference</span>
+          <strong>{{ bill.orderRef || ('ORD-' + bill.orderId) }}</strong>
+        </div>
+        <div class="vb-info-card">
+          <span class="vb-label">Order Source / Table</span>
+          <strong>{{ bill.orderType === 'ROOM' ? ('Room ' + bill.roomNo) : bill.orderType === 'TAKEAWAY' ? 'Takeaway' : ('Table ' + (bill.tableNo || '-')) }}</strong>
+        </div>
+        <div class="vb-info-card">
+          <span class="vb-label">Payment Method</span>
+          <strong>{{ bill.paymentModes.join(', ') || 'Cash' }}</strong>
+        </div>
+        <div class="vb-info-card">
+          <span class="vb-label">Room Posting Status</span>
+          <strong [class.text-success]="bill.postedToFolio" [class.text-warning]="!bill.postedToFolio">
+            {{ bill.postedToFolio ? 'Posted to Room Folio' : 'Not Posted' }}
+          </strong>
+        </div>
+      </div>
+
+      <!-- Financial Summary Breakdown Card -->
+      <div class="vb-financial-card">
+        <div class="vb-financial-title">
+          <span class="material-icons-round">account_balance_wallet</span>
+          <span>Financial Summary</span>
+        </div>
+        <div class="vb-fin-rows">
+          <div class="vb-fin-row">
+            <span>Gross Amount (Subtotal)</span>
+            <strong>₹{{ bill.subtotal | number:'1.2-2' }}</strong>
+          </div>
+          <div class="vb-fin-row" *ngIf="bill.discount">
+            <span>Discount</span>
+            <strong class="text-danger">- ₹{{ bill.discount | number:'1.2-2' }}</strong>
+          </div>
+          <div class="vb-fin-row">
+            <span>GST Tax ({{ bill.tax }}%)</span>
+            <strong>₹{{ (bill.taxAmount || 0) | number:'1.2-2' }}</strong>
+          </div>
+          <div class="vb-fin-row total-row">
+            <span>Total Net Amount</span>
+            <strong class="total-val">₹{{ billBreakdown(bill).total | number:'1.2-2' }}</strong>
+          </div>
+          <div class="vb-fin-row">
+            <span>Paid Amount</span>
+            <strong class="text-success">₹{{ bill.paid | number:'1.2-2' }}</strong>
+          </div>
+          <div class="vb-fin-row" *ngIf="billBreakdown(bill).due > 0">
+            <span>Balance Due</span>
+            <strong class="text-warning">₹{{ billBreakdown(bill).due | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="vb-notes" *ngIf="bill.notes">
+        <span class="vb-label">Notes / Special Instructions</span>
+        <p>{{ bill.notes }}</p>
+      </div>
+    </div>
+
+    <div class="view-bill-footer">
+      <button class="btn-secondary" (click)="closeViewBillModal()">Close</button>
+      <button class="btn-primary" (click)="printBillReceipt()">
+        <span class="material-icons-round">print</span> Print Receipt
+      </button>
     </div>
   </div>
 </div>

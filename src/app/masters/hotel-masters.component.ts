@@ -57,6 +57,7 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   formSubmitted = signal(false);
   touchedFields = signal<Record<string, boolean>>({});
   formErrors = signal<ValidationErrors>({});
+  modalErrorMessage = signal<string | null>(null);
 
   // Helper form state for Rooms tab: selected Hotel to filter Floor & RoomType
   selectedHotelIdForRoomForm = signal<number | null>(null);
@@ -249,18 +250,18 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   // --- Dropdown Filtering for Room Form ---
   floorsForSelectedHotel = computed(() => {
     const hotelId = this.selectedHotelIdForRoomForm();
-    if (hotelId === null) return [];
-    return this.mastersService.floors().filter(f => f.hotelId === hotelId && f.isActive);
+    if (hotelId === null || hotelId === undefined) return [];
+    return this.mastersService.floors().filter(f => Number(f.hotelId) === Number(hotelId) && (f.isActive === undefined || f.isActive || (f.isActive as any) === 'true'));
   });
 
   roomTypesForSelectedHotel = computed(() => {
     const hotelId = this.selectedHotelIdForRoomForm();
-    if (hotelId === null) return [];
-    return this.mastersService.roomTypes().filter(rt => rt.hotelId === hotelId && rt.isActive);
+    if (hotelId === null || hotelId === undefined) return [];
+    return this.mastersService.roomTypes().filter(rt => Number(rt.hotelId) === Number(hotelId) && (rt.isActive === undefined || rt.isActive || (rt.isActive as any) === 'true'));
   });
 
-  onHotelChangeInRoomForm(hotelIdStr: string) {
-    const hotelId = hotelIdStr ? Number(hotelIdStr) : null;
+  onHotelChangeInRoomForm(hotelIdInput: any) {
+    const hotelId = hotelIdInput !== null && hotelIdInput !== undefined ? Number(hotelIdInput) : null;
     this.selectedHotelIdForRoomForm.set(hotelId);
     // Reset Floor & RoomType selections when hotel changes
     this.currentRoom.update(r => ({ ...r, floorId: undefined, typeId: undefined }));
@@ -268,9 +269,47 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     this.validateForm('rooms', false);
   }
 
+  get modalTitle(): string {
+    const isCreate = this.modalMode() === 'create';
+    const tab = this.activeTab();
+    if (tab === 'hotels') return isCreate ? 'Add New Property' : 'Edit Hotel Property';
+    if (tab === 'floors') return isCreate ? 'Create Building Floor' : 'Edit Floor';
+    if (tab === 'room-types') return isCreate ? 'Create Room Type' : 'Edit Room Type';
+    if (tab === 'rooms') return isCreate ? 'Create Room' : 'Edit Room';
+    if (tab === 'rate-plans') return isCreate ? 'Create Rate Plan' : 'Edit Rate Plan';
+    if (tab === 'gst-config') return isCreate ? 'Create GST Config' : 'Edit GST Config';
+    return isCreate ? 'Create Entity' : 'Edit Entity';
+  }
+
+  get modalSubtitle(): string {
+    const isCreate = this.modalMode() === 'create';
+    const tab = this.activeTab();
+    if (tab === 'hotels') return isCreate ? 'Register a new hotel unit' : `Update settings for H-${this.currentHotel().id || ''}`;
+    if (tab === 'floors') return isCreate ? 'Define a new floor level' : `Update settings for F-${this.currentFloor().id || ''}`;
+    if (tab === 'room-types') return isCreate ? 'Define a new room category' : `Update category RT-${this.currentRoomType().id || ''}`;
+    if (tab === 'rooms') return isCreate ? 'Define a new room unit' : `Update room R-${this.currentRoom().id || ''}`;
+    if (tab === 'rate-plans') return isCreate ? 'Define a reusable pricing rule' : `Update pricing rule RP-${this.currentRatePlan().id || ''}`;
+    if (tab === 'gst-config') return isCreate ? 'Configure tax rule' : `Update GST rule GST-${this.currentGst().id || ''}`;
+    return '';
+  }
+
+  get modalSubmitText(): string {
+    if (this.isSaving()) return 'Saving...';
+    const isCreate = this.modalMode() === 'create';
+    const tab = this.activeTab();
+    if (tab === 'hotels') return isCreate ? 'Create Property' : 'Save Changes';
+    if (tab === 'floors') return isCreate ? 'Create Floor' : 'Save Changes';
+    if (tab === 'room-types') return isCreate ? 'Create Room Type' : 'Save Changes';
+    if (tab === 'rooms') return isCreate ? 'Create Room' : 'Save Changes';
+    if (tab === 'rate-plans') return isCreate ? 'Create Rate Plan' : 'Save Changes';
+    if (tab === 'gst-config') return isCreate ? 'Create GST Rule' : 'Save Changes';
+    return isCreate ? 'Create' : 'Save Changes';
+  }
+
   // --- Modal Open/Close ---
   openCreateModal() {
     this.resetValidation();
+    this.modalErrorMessage.set(null);
     this.modalMode.set('create');
     const tab = this.activeTab();
     if (tab === 'hotels') {
@@ -281,16 +320,16 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
         address: '',
         city: '',
         state: '',
-        country: '',
-        zipCode: '',
+        country: 'India',
+        zipCode: '400001',
         totalRooms: 10,
         isActive: true
       });
       this.isHotelModalOpen.set(true);
     } else if (tab === 'floors') {
-      const activeHotels = this.mastersService.hotels().filter(h => h.isActive);
+      const activeHotels = this.mastersService.hotels().filter(h => h.isActive === undefined || h.isActive || (h.isActive as any) === 'true');
       this.currentFloor.set({
-        hotelId: activeHotels.length > 0 ? activeHotels[0].id : undefined,
+        hotelId: activeHotels.length > 0 ? Number(activeHotels[0].id) : undefined,
         floorNumber: '',
         noOfRooms: 10,
         telephone: '',
@@ -298,9 +337,9 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       });
       this.isFloorModalOpen.set(true);
     } else if (tab === 'room-types') {
-      const activeHotels = this.mastersService.hotels().filter(h => h.isActive);
+      const activeHotels = this.mastersService.hotels().filter(h => h.isActive === undefined || h.isActive || (h.isActive as any) === 'true');
       this.currentRoomType.set({
-        hotelId: activeHotels.length > 0 ? activeHotels[0].id : undefined,
+        hotelId: activeHotels.length > 0 ? Number(activeHotels[0].id) : undefined,
         name: '',
         capacity: 2,
         basePricePerNight: 100.0,
@@ -310,17 +349,21 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       });
       this.isRoomTypeModalOpen.set(true);
     } else if (tab === 'rooms') {
-      const activeHotels = this.mastersService.hotels().filter(h => h.isActive);
-      const defaultHotelId = activeHotels.length > 0 ? activeHotels[0].id : null;
+      const activeHotels = this.mastersService.hotels();
+      const defaultHotelId = activeHotels.length > 0 ? Number(activeHotels[0].id) : null;
       this.selectedHotelIdForRoomForm.set(defaultHotelId);
       
-      const floors = defaultHotelId ? this.mastersService.floors().filter(f => f.hotelId === defaultHotelId && f.isActive) : [];
-      const types = defaultHotelId ? this.mastersService.roomTypes().filter(rt => rt.hotelId === defaultHotelId && rt.isActive) : [];
+      const floors = defaultHotelId !== null 
+        ? this.mastersService.floors().filter(f => Number(f.hotelId) === defaultHotelId) 
+        : [];
+      const types = defaultHotelId !== null 
+        ? this.mastersService.roomTypes().filter(rt => Number(rt.hotelId) === defaultHotelId) 
+        : [];
 
       this.currentRoom.set({
         roomNumber: '',
-        floorId: floors.length > 0 ? floors[0].id : undefined,
-        typeId: types.length > 0 ? types[0].id : undefined,
+        floorId: floors.length > 0 ? Number(floors[0].id) : undefined,
+        typeId: types.length > 0 ? Number(types[0].id) : undefined,
         status: 'VACANT',
         maxOccupancy: 2,
         telephone: '',
@@ -353,25 +396,41 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
 
   openEditModal(item: any) {
     this.resetValidation();
+    this.modalErrorMessage.set(null);
     this.modalMode.set('edit');
     const tab = this.activeTab();
     if (tab === 'hotels') {
-      this.currentHotel.set({ ...item });
+      this.currentHotel.set({
+        country: 'India',
+        zipCode: '400001',
+        totalRooms: 10,
+        ...item
+      });
       this.isHotelModalOpen.set(true);
     } else if (tab === 'floors') {
-      this.currentFloor.set({ ...item });
+      this.currentFloor.set({ ...item, hotelId: item.hotelId ? Number(item.hotelId) : undefined });
       this.isFloorModalOpen.set(true);
     } else if (tab === 'room-types') {
-      this.currentRoomType.set({ ...item });
+      this.currentRoomType.set({ ...item, hotelId: item.hotelId ? Number(item.hotelId) : undefined });
       this.isRoomTypeModalOpen.set(true);
     } else if (tab === 'rooms') {
       const room = item as Room;
-      this.currentRoom.set({ ...room });
+      const floorId = room.floorId ? Number(room.floorId) : undefined;
+      const typeId = room.typeId ? Number(room.typeId) : (room.roomTypeId ? Number(room.roomTypeId) : undefined);
+      
+      this.currentRoom.set({
+        ...room,
+        floorId,
+        typeId
+      });
       
       // Determine hotelId from the floor
-      const floor = this.mastersService.floorsMap().get(room.floorId);
+      const floor = this.mastersService.floors().find(f => Number(f.id) === Number(floorId));
       if (floor) {
-        this.selectedHotelIdForRoomForm.set(floor.hotelId);
+        this.selectedHotelIdForRoomForm.set(Number(floor.hotelId));
+      } else {
+        const activeHotels = this.mastersService.hotels();
+        this.selectedHotelIdForRoomForm.set(activeHotels.length > 0 ? Number(activeHotels[0].id) : null);
       }
       this.isRoomModalOpen.set(true);
     } else if (tab === 'rate-plans') {
@@ -392,6 +451,7 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     if (tab === 'rate-plans') this.isRatePlanModalOpen.set(false);
     if (tab === 'gst-config') this.isGstModalOpen.set(false);
     this.resetValidation();
+    this.modalErrorMessage.set(null);
     document.body.style.overflow = '';
   }
 
@@ -464,7 +524,12 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     const name = (h.name || '').trim();
     const email = (h.email || '').trim();
     const phone = (h.phone || '').trim();
-    const zipCode = (h.zipCode || '').trim();
+    const address = (h.address || '').trim();
+    const city = (h.city || '').trim();
+    const state = (h.state || '').trim();
+    const country = (h.country || 'India').trim();
+    const zipCode = (h.zipCode || '400001').trim();
+    const totalRooms = h.totalRooms ?? 10;
 
     if (!name) errors['name'] = 'Hotel name is required.';
     else if (name.length < 2) errors['name'] = 'Enter a valid hotel name.';
@@ -477,20 +542,19 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     if (!phone) errors['phone'] = 'Phone number is required.';
     else if (!this.isValidPhone(phone)) errors['phone'] = 'Enter a valid phone number.';
 
-    if (!(h.address || '').trim()) errors['address'] = 'Street address is required.';
-    if (!(h.city || '').trim()) errors['city'] = 'City is required.';
-    else if (!this.isValidPlaceName(h.city || '')) errors['city'] = 'Enter a valid city name.';
+    if (!address) errors['address'] = 'Street address is required.';
+    if (!city) errors['city'] = 'City is required.';
+    else if (!this.isValidPlaceName(city)) errors['city'] = 'Enter a valid city name.';
 
-    if (!(h.state || '').trim()) errors['state'] = 'State or region is required.';
-    else if (!this.isValidPlaceName(h.state || '')) errors['state'] = 'Enter a valid state or region.';
+    if (!state) errors['state'] = 'State or region is required.';
+    else if (!this.isValidPlaceName(state)) errors['state'] = 'Enter a valid state or region.';
 
-    if (!(h.country || '').trim()) errors['country'] = 'Country is required.';
-    else if (!this.isValidPlaceName(h.country || '')) errors['country'] = 'Enter a valid country.';
+    if (!country) errors['country'] = 'Country is required.';
+    else if (!this.isValidPlaceName(country)) errors['country'] = 'Enter a valid country.';
 
     if (!zipCode) errors['zipCode'] = 'Zip code is required.';
-    else if (!/^[A-Za-z0-9 -]{4,10}$/.test(zipCode)) errors['zipCode'] = 'Enter a valid zip/post code.';
 
-    if (!this.isPositiveInteger(h.totalRooms)) errors['totalRooms'] = 'Total rooms must be at least 1.';
+    if (!this.isPositiveInteger(totalRooms)) errors['totalRooms'] = 'Total rooms must be at least 1.';
 
     return errors;
   }
@@ -602,7 +666,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   }
 
   private isValidPlaceName(value: string): boolean {
-    return /^[A-Za-z][A-Za-z .'-]*$/.test(value.trim());
+    if (!value || !value.trim()) return false;
+    return /^[A-Za-z0-9][A-Za-z0-9 .,'-]*$/.test(value.trim());
   }
 
   private isPositiveInteger(value: any): boolean {
@@ -631,12 +696,39 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
 
   // --- Save Operations ---
   saveHotel() {
-    if (!this.validateForm('hotels')) return;
-    const hotel = this.currentHotel();
+    this.modalErrorMessage.set(null);
+    this.markHotelFieldsTouched();
+    if (!this.validateForm('hotels')) {
+      const firstError = Object.values(this.formErrors())[0];
+      this.modalErrorMessage.set(firstError || 'Please fill in all required fields.');
+      return;
+    }
+    const hotel = {
+      ...this.currentHotel(),
+      country: (this.currentHotel().country || 'India').trim(),
+      zipCode: (this.currentHotel().zipCode || '400001').trim(),
+      totalRooms: Number(this.currentHotel().totalRooms || 10)
+    };
     this.isSaving.set(true);
     this.mastersService.saveHotel(hotel).subscribe({
-      next: () => { this.isSaving.set(false); this.closeModal('hotels'); },
-      error: (err) => { this.isSaving.set(false); alert('Error saving hotel: ' + (err?.message || 'Unknown error')); }
+      next: () => {
+        this.isSaving.set(false);
+        this.modalErrorMessage.set(null);
+        this.closeModal('hotels');
+      },
+      error: (err) => {
+        this.isSaving.set(false);
+        const msg = err?.error?.message || err?.error?.error?.message || err?.message || 'Error saving hotel property.';
+        this.modalErrorMessage.set(msg);
+      }
+    });
+  }
+
+  private markHotelFieldsTouched() {
+    this.formSubmitted.set(true);
+    this.touchedFields.set({
+      name: true, email: true, phone: true, address: true,
+      city: true, state: true, country: true, zipCode: true, totalRooms: true
     });
   }
 

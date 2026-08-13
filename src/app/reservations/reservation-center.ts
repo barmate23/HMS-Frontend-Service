@@ -9,6 +9,7 @@ import { filter } from 'rxjs/operators';
 
 interface Reservation {
   id: string;
+  confirmationNumber?: string;
   guestName: string;
   guestEmail: string;
   guestPhone: string;
@@ -560,6 +561,7 @@ export class ReservationCenter implements OnInit, OnDestroy {
 
     return {
       id: String(item.id ?? item.bookingId ?? item.reservationId ?? ''),
+      confirmationNumber: item.confirmationNumber || item.bookingRef || item.reservationRef || '',
       guestName,
       guestEmail: guest.email || item.guestEmail || item.email || '',
       guestPhone: guest.phone || item.guestPhone || item.phone || item.guestContact || '',
@@ -799,6 +801,11 @@ export class ReservationCenter implements OnInit, OnDestroy {
     }
     
     return [];
+  }
+
+  detailConfirmationNumber(details: any): string {
+    if (!details) return '-';
+    return details.confirmationNumber || details.bookingRef || details.reservationRef || (details.id ? 'RES-' + details.id : '-');
   }
 
   detailRoomMeta(room: any): string {

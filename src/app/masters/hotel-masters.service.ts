@@ -187,6 +187,15 @@ export class HotelMastersService {
     this.loadAll();
   }
 
+  private extractArray<T>(data: any): T[] {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (data.content && Array.isArray(data.content)) return data.content;
+    if (data.items && Array.isArray(data.items)) return data.items;
+    if (typeof data === 'object') return [data as T];
+    return [];
+  }
+
   /** Load all entities concurrently from the backend */
   loadAll(searchText: string = '') {
     this.isLoading.set(true);
@@ -210,20 +219,20 @@ export class HotelMastersService {
       )
     }).subscribe({
       next: (results) => {
-        if (results.hotels.success) this._hotels.set(results.hotels.data ?? []);
-        if (results.floors.success) this._floors.set(results.floors.data ?? []);
-        if (results.roomTypes.success) this._roomTypes.set(results.roomTypes.data ?? []);
-        if (results.ratePlans.success) this._ratePlans.set(results.ratePlans.data ?? []);
-        if (results.gstConfigs.success) {
-          const configs = (results.gstConfigs.data ?? []).map(g => ({
+        if (results.hotels?.success) this._hotels.set(this.extractArray<Hotel>(results.hotels.data));
+        if (results.floors?.success) this._floors.set(this.extractArray<Floor>(results.floors.data));
+        if (results.roomTypes?.success) this._roomTypes.set(this.extractArray<RoomType>(results.roomTypes.data));
+        if (results.ratePlans?.success) this._ratePlans.set(this.extractArray<RatePlan>(results.ratePlans.data));
+        if (results.gstConfigs?.success) {
+          const configs = this.extractArray<GstConfig>(results.gstConfigs.data).map(g => ({
             ...g,
             igstRate: g.igstRate !== undefined ? g.igstRate : ((g.cgstRate || 0) + (g.sgstRate || 0))
           }));
           this._gstConfigs.set(configs);
         }
-        if (results.rooms.success) {
+        if (results.rooms?.success) {
           // Normalise: backend uses roomTypeId, UI also needs typeId alias, map status correctly to stop UI break
-          const rooms = (results.rooms.data ?? []).map((r: any) => ({ 
+          const rooms = this.extractArray<Room>(results.rooms.data).map((r: any) => ({ 
             ...r, 
             typeId: r.roomTypeId,
             status: r.statusValue ? r.statusValue.toUpperCase() : 'VACANT'
@@ -244,16 +253,16 @@ export class HotelMastersService {
 
   saveHotel(hotel: Partial<Hotel>): Observable<Hotel> {
     const payload: HotelRequest = {
-      name: hotel.name!,
-      email: hotel.email!,
-      phone: hotel.phone,
-      address: hotel.address,
-      city: hotel.city,
-      state: hotel.state,
-      country: hotel.country,
-      zipCode: hotel.zipCode,
-      totalRooms: hotel.totalRooms,
-      currency: hotel.currency
+      name: (hotel.name || '').trim(),
+      email: (hotel.email || '').trim(),
+      phone: (hotel.phone || '').trim(),
+      address: (hotel.address || '').trim(),
+      city: (hotel.city || '').trim(),
+      state: (hotel.state || '').trim(),
+      country: (hotel.country || 'India').trim(),
+      zipCode: (hotel.zipCode || '400001').trim(),
+      totalRooms: Number(hotel.totalRooms || 10),
+      currency: hotel.currency || 'INR'
     };
 
     const req$ = hotel.id
@@ -261,13 +270,21 @@ export class HotelMastersService {
       : this.http.post<StandardResponse<Hotel>>(`${this.baseUrl}/hotels/createHotel`, payload);
 
     return req$.pipe(
-      map(res => res.data),
-      tap(saved => {
-        if (hotel.id) {
-          this._hotels.update(list => list.map(h => h.id === saved.id ? { ...h, ...saved } : h));
-        } else {
-          this._hotels.update(list => [saved, ...list]);
+      map(res => {
+        if (res && (res as any).success === false) {
+          throw new Error(res.message || 'Failed to save hotel property');
         }
+        return res.data || (res as any);
+      }),
+      tap(saved => {
+        if (saved && saved.id) {
+          if (hotel.id) {
+            this._hotels.update(list => list.map(h => h.id === saved.id ? { ...h, ...saved } : h));
+          } else {
+            this._hotels.update(list => [saved, ...list]);
+          }
+        }
+        this.loadAll();
       }),
       catchError(err => { console.error('saveHotel error', err); return throwError(() => err); })
     );
@@ -358,12 +375,12 @@ export class HotelMastersService {
 
   saveRoom(room: Partial<Room>): Observable<Room> {
     const payload: RoomRequest = {
-      roomNumber: room.roomNumber!,
-      floorId: room.floorId!,
-      roomTypeId: room.typeId ?? room.roomTypeId!,
-      status: room.status!,
-      maxOccupancy: room.maxOccupancy,
-      telephone: room.telephone
+      roomNumber: (room.roomNumber || '').trim(),
+      floorId: Number(room.floorId!),
+      roomTypeId: Number(room.typeId ?? room.roomTypeId!),
+      status: room.status || 'VACANT',
+      maxOccupancy: Number(room.maxOccupancy || 2),
+      telephone: room.telephone || ''
     };
 
     const req$ = room.id
@@ -371,13 +388,25 @@ export class HotelMastersService {
       : this.http.post<StandardResponse<Room>>(`${this.baseUrl}/rooms/createRoom`, payload);
 
     return req$.pipe(
-      map(res => ({ ...res.data, typeId: res.data.roomTypeId })),
+      map(res => {
+        const item = res?.data || res || {};
+        return {
+          ...item,
+          id: item.id ? Number(item.id) : (room.id ? Number(room.id) : Date.now()),
+          floorId: item.floorId ? Number(item.floorId) : Number(room.floorId),
+          roomTypeId: item.roomTypeId ? Number(item.roomTypeId) : Number(room.typeId),
+          typeId: item.roomTypeId ? Number(item.roomTypeId) : Number(room.typeId ?? room.roomTypeId)
+        };
+      }),
       tap(saved => {
-        if (room.id) {
-          this._rooms.update(list => list.map(r => r.id === saved.id ? { ...r, ...saved } : r));
-        } else {
-          this._rooms.update(list => [saved, ...list]);
+        if (saved && saved.id) {
+          if (room.id) {
+            this._rooms.update(list => list.map(r => Number(r.id) === Number(saved.id) ? { ...r, ...saved } : r));
+          } else {
+            this._rooms.update(list => [saved, ...list.filter(r => Number(r.id) !== Number(saved.id))]);
+          }
         }
+        this.loadAll();
       }),
       catchError(err => { console.error('saveRoom error', err); return throwError(() => err); })
     );

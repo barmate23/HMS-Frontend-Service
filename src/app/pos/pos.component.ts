@@ -80,7 +80,7 @@ export class PosComponent implements OnInit, OnDestroy {
 
   activeTab = signal<PosTab>('outlets');
   search = signal('');
-  outletFilter = signal<number | 'ALL'>('ALL');
+  outletFilter = signal<number | 'ALL'>(this.pos.selectedOutletId());
   statusFilter = signal<string>('ALL');
   modalKind = signal<ModalKind>('outlet');
   modalMode = signal<ModalMode>('create');
@@ -185,6 +185,10 @@ export class PosComponent implements OnInit, OnDestroy {
 
   selectedRecipeForView = signal<RecipeMaster | null>(null);
   isRecipeViewModalOpen = signal<boolean>(false);
+
+  selectedBillForView = signal<PosBill | null>(null);
+  isViewBillModalOpen = signal<boolean>(false);
+  isLoadingViewBill = signal<boolean>(false);
 
   activeIngredientDropdownIndex = signal<number | null>(null);
   ingredientSearchQuery = signal<string>('');
@@ -564,7 +568,7 @@ export class PosComponent implements OnInit, OnDestroy {
     const outlet = this.outletFilter();
     const status = this.statusFilter();
     return this.pos.menuItems().filter(item => {
-      const matchOutlet = outlet === 'ALL' || item.outletId === Number(outlet);
+      const matchOutlet = String(outlet) === 'ALL' || item.outletId === Number(outlet);
       const matchStatus = status === 'ALL' || (status === 'AVAILABLE' ? item.available : !item.available);
       const matchQuery = !q || item.name.toLowerCase().includes(q) || item.category.toLowerCase().includes(q) || item.subcategory.toLowerCase().includes(q);
       return matchOutlet && matchStatus && matchQuery;
@@ -576,7 +580,7 @@ export class PosComponent implements OnInit, OnDestroy {
     const outlet = this.outletFilter();
     const status = this.statusFilter();
     return this.pos.orders().filter(order => {
-      const matchOutlet = outlet === 'ALL' || order.outletId === Number(outlet);
+      const matchOutlet = String(outlet) === 'ALL' || order.outletId === Number(outlet);
       const matchStatus = status === 'ALL' || order.status === status;
       const matchQuery = !q || order.orderNo.toLowerCase().includes(q) || (order.tableNo || '').toLowerCase().includes(q) || (order.roomNo || '').toLowerCase().includes(q) || (order.guestName || '').toLowerCase().includes(q) || order.server.toLowerCase().includes(q);
       return matchOutlet && matchStatus && matchQuery;
@@ -597,7 +601,7 @@ export class PosComponent implements OnInit, OnDestroy {
     const q = this.search().toLowerCase().trim();
     const outlet = this.outletFilter();
     return this.pos.tables().filter(table => {
-      const matchOutlet = outlet === 'ALL' || table.outletId === Number(outlet);
+      const matchOutlet = String(outlet) === 'ALL' || table.outletId === Number(outlet);
       const matchQuery = !q ||
         table.number.toLowerCase().includes(q) ||
         table.section.toLowerCase().includes(q) ||
@@ -609,11 +613,14 @@ export class PosComponent implements OnInit, OnDestroy {
   });
 
   onOutletFilterChange(val: any): void {
-    const newFilter = val === 'ALL' ? 'ALL' : Number(val);
-    this.outletFilter.set(newFilter);
-    const outletIdParam = newFilter === 'ALL' ? undefined : Number(newFilter);
-    this.pos.loadTables(outletIdParam);
-    this.pos.loadMenuItems(outletIdParam);
+    const newFilter = Number(val);
+    if (newFilter && !isNaN(newFilter)) {
+      this.outletFilter.set(newFilter);
+      this.pos.setSelectedOutletId(newFilter);
+      this.pos.loadTables(newFilter);
+      this.pos.loadMenuItems(newFilter);
+      this.pos.loadOrders(newFilter);
+    }
   }
 
 
@@ -790,7 +797,7 @@ export class PosComponent implements OnInit, OnDestroy {
       this.currentOrder.set({ outletId, type: 'TABLE', tableNo: table?.number || '', roomNo: '', guestName: '', server: 'Unassigned', status: this.pos.orderStatuses()[0] || 'OPEN', notes: '', lines: [] });
     }
     if (kind === 'bill') {
-      const outletId = this.outletFilter() !== 'ALL' ? Number(this.outletFilter()) : this.defaultOutletId();
+      const outletId = String(this.outletFilter()) !== 'ALL' ? Number(this.outletFilter()) : this.defaultOutletId();
       this.selectedBillOutletId.set(outletId);
       this.currentBill.set({
         orderId: 0,
@@ -1031,6 +1038,37 @@ export class PosComponent implements OnInit, OnDestroy {
     this.selectedRecipeForView.set(null);
     this.isRecipeViewModalOpen.set(false);
     if (!this.isModalOpen() && !this.isDiningActionOpen()) document.body.style.overflow = '';
+  }
+
+  openViewBill(bill: PosBill): void {
+    this.isLoadingViewBill.set(true);
+    this.selectedBillForView.set(bill);
+    this.isViewBillModalOpen.set(true);
+    document.body.style.overflow = 'hidden';
+
+    this.pos.getBillById(bill.id).subscribe({
+      next: fullBill => {
+        this.isLoadingViewBill.set(false);
+        if (fullBill) {
+          this.selectedBillForView.set(fullBill);
+        }
+      },
+      error: () => {
+        this.isLoadingViewBill.set(false);
+      }
+    });
+  }
+
+  closeViewBillModal(): void {
+    this.selectedBillForView.set(null);
+    this.isViewBillModalOpen.set(false);
+    if (!this.isModalOpen() && !this.isDiningActionOpen() && !this.isRecipeViewModalOpen()) {
+      document.body.style.overflow = '';
+    }
+  }
+
+  printBillReceipt(): void {
+    window.print();
   }
 
   onRecipeMenuItemChange(menuItemId: number): void {
@@ -1615,7 +1653,7 @@ export class PosComponent implements OnInit, OnDestroy {
     const form = this.diningForm();
     const action = this.diningAction();
     if (action === 'RESET') {
-      const outletId = this.outletFilter() === 'ALL' ? this.pos.outlets()[0]?.id : Number(this.outletFilter());
+      const outletId = String(this.outletFilter()) === 'ALL' ? this.pos.outlets()[0]?.id : Number(this.outletFilter());
       this.pos.resetPaidTables(outletId);
       this.selectedTable.set(null);
       this.closeDiningAction();
@@ -2130,7 +2168,7 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   private defaultOutletId(): number {
-    return this.outletFilter() === 'ALL' ? this.pos.outlets()[0]?.id || 1 : Number(this.outletFilter());
+    return String(this.outletFilter()) === 'ALL' ? this.pos.outlets()[0]?.id || 1 : Number(this.outletFilter());
   }
 
   private roomServiceOutletId(): number {
@@ -2259,12 +2297,13 @@ export class PosComponent implements OnInit, OnDestroy {
 
 
   private reloadTabApis(tab: PosTab): void {
-    const outletIdParam = this.outletFilter() === 'ALL' ? undefined : Number(this.outletFilter());
+    const outletId = Number(this.pos.selectedOutletId() || 1);
+    this.outletFilter.set(outletId);
 
     switch (tab) {
       case 'dashboard':
         this.pos.loadOutlets();
-        this.pos.loadOrders(outletIdParam);
+        this.pos.loadOrders(outletId);
         this.pos.loadBills();
         break;
 
@@ -2273,23 +2312,23 @@ export class PosComponent implements OnInit, OnDestroy {
         break;
 
       case 'dining':
-        this.pos.loadTables(outletIdParam);
-        this.pos.loadOrders(outletIdParam);
+        this.pos.loadTables(outletId);
+        this.pos.loadOrders(outletId);
         break;
 
       case 'orders':
-        this.pos.loadOrders(outletIdParam);
-        this.pos.loadMenuItems(outletIdParam);
-        this.pos.loadTables(outletIdParam);
+        this.pos.loadOrders(outletId);
+        this.pos.loadMenuItems(outletId);
+        this.pos.loadTables(outletId);
         break;
 
       case 'billing':
         this.pos.loadBills(this.statusFilter(), 0, this.pos.billsPageSize());
-        this.loadOpenOrdersForBill(outletIdParam || this.defaultOutletId());
+        this.loadOpenOrdersForBill(outletId);
         break;
 
       case 'menu':
-        this.pos.loadMenuItems(outletIdParam);
+        this.pos.loadMenuItems(outletId);
         this.pos.loadMenuCategories();
         this.pos.loadMenuSubcategories();
         break;
@@ -2302,7 +2341,7 @@ export class PosComponent implements OnInit, OnDestroy {
 
       default:
         this.pos.loadOutlets();
-        this.pos.loadOrders(outletIdParam);
+        this.pos.loadOrders(outletId);
         this.pos.loadBills();
         break;
     }

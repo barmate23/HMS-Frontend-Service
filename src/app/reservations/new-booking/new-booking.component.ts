@@ -169,7 +169,7 @@ export class NewBookingComponent implements OnInit {
   viewMode = signal<'list' | 'map'>('list');
   selectedRoomType = signal<string>('ALL');
   selectedRooms = signal<Room[]>([]);
-  selectedPlan = signal<string>('EP');
+  selectedPlan = signal<string>('');
   selectedFloor = signal<number>(1);
   mapModalOpen = signal(false);
   modalHoveredRoom = signal<Room | null>(null);
@@ -455,10 +455,6 @@ export class NewBookingComponent implements OnInit {
           .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 
         this.ratePlans = plans.map(plan => this.mapApiRatePlan(plan));
-        if (!this.isEditMode() && this.ratePlans.length > 0 && !this.ratePlans.some(plan => plan.id === this.selectedPlan())) {
-          this.selectedPlan.set(this.ratePlans[0].id);
-        }
-
         this.dataRevision.update(value => value + 1);
         this.isRatePlanLoading.set(false);
       },
@@ -857,6 +853,7 @@ export class NewBookingComponent implements OnInit {
 
   planExtraPrice = computed(() => {
     const plan = this.selectedPlanDetails();
+    if (!plan) return 0;
     const count = this.selectedRooms().length || 1;
     return (plan.extra * count) * this.nights();
   });
@@ -864,11 +861,12 @@ export class NewBookingComponent implements OnInit {
   totalPrice = computed(() => {
     const rooms = this.selectedRooms();
     const plan = this.selectedPlanDetails();
+    const extraPerRoom = plan ? plan.extra : 0;
     if (rooms.length === 0) {
-      return (5000 + (plan?.extra ?? 0)) * this.nights();
+      return (5000 + extraPerRoom) * this.nights();
     }
     const baseSum = rooms.reduce((sum, r) => sum + r.rate, 0);
-    const extraSum = (plan?.extra ?? 0) * rooms.length;
+    const extraSum = extraPerRoom * rooms.length;
     return (baseSum + extraSum) * this.nights();
   });
 
@@ -885,14 +883,9 @@ export class NewBookingComponent implements OnInit {
 
   selectedPlanDetails = computed(() => {
     this.dataRevision();
-    return this.ratePlans.find(p => p.id === this.selectedPlan()) ?? this.ratePlans[0] ?? {
-      id: '',
-      shortLabel: '',
-      label: 'Rate Plan',
-      desc: 'Room Rate Only',
-      extra: 0,
-      icon: 'bed'
-    };
+    const planId = this.selectedPlan();
+    if (!planId) return null;
+    return this.ratePlans.find(p => p.id === planId) ?? null;
   });
 
   roomTaxRate = computed(() => {
@@ -929,7 +922,13 @@ export class NewBookingComponent implements OnInit {
   setViewMode(mode: 'list' | 'map') { this.viewMode.set(mode); }
   selectRoomType(id: string) { this.selectedRoomType.set(id); }
   selectRoom(room: Room) { this.toggleRoomSelection(room); }
-  selectPlan(id: string) { this.selectedPlan.set(id); }
+  selectPlan(id: string) {
+    if (this.selectedPlan() === id) {
+      this.selectedPlan.set('');
+    } else {
+      this.selectedPlan.set(id);
+    }
+  }
   selectFloor(num: number) {
     this.selectedFloor.set(num);
   }
@@ -1312,7 +1311,7 @@ export class NewBookingComponent implements OnInit {
       case 'room':
         return this.selectedRooms().length > 0 ? '' : 'Please select at least one available room.';
       case 'plan':
-        return this.selectedPlan() ? '' : 'Please select a rate plan.';
+        return '';
       default:
         return '';
     }
@@ -1452,7 +1451,7 @@ export class NewBookingComponent implements OnInit {
       numberOfChildren: this.numberOfChildren(),
       reservationStatus: status,
       roomIds: roomIds,
-      ratePlanId: Number(this.selectedPlan()),
+      ratePlanId: this.selectedPlan() ? Number(this.selectedPlan()) : (this.ratePlans[0]?.id ? Number(this.ratePlans[0].id) : 1),
       billingName: this.guestData().fullName,
       billingAddress: [this.guestData().address1, this.guestData().address2, this.guestData().city, this.guestData().state, this.guestData().zip]
         .filter(Boolean)

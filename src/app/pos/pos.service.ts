@@ -122,6 +122,7 @@ export interface KitchenDisplayOrder {
 export interface PosBill {
   id: number;
   orderId: number;
+  orderRef?: string;
   billNo: string;
   orderType?: OrderType;
   tableId?: number | null;
@@ -145,6 +146,7 @@ export interface PosBill {
   folioPostingId?: number | null;
   isRoomOrder?: boolean;
   notes?: string;
+  createdAt?: string;
 }
 
 export interface PosShift {
@@ -860,20 +862,46 @@ export class PosService {
 
 
 
+  readonly selectedOutletId = signal<number>(this.getInitialOutletId());
+
+  private getInitialOutletId(): number {
+    const saved = localStorage.getItem('hms_pos_selected_outlet_id');
+    if (saved && !isNaN(Number(saved)) && Number(saved) > 0) {
+      return Number(saved);
+    }
+    return 1;
+  }
+
+  setSelectedOutletId(id: number): void {
+    const numId = Number(id);
+    if (numId && !isNaN(numId) && numId > 0) {
+      this.selectedOutletId.set(numId);
+      localStorage.setItem('hms_pos_selected_outlet_id', String(numId));
+    }
+  }
+
   loadOutlets(): void {
     this.http.get<ApiOutlet[] | ApiListResponse<ApiOutlet> | StandardResponse<ApiOutlet[]>>(`${this.posBaseUrl}/outlets/getAllOutlets`).subscribe({
-      next: response => this.outlets.set(this.listData(response).map(item => this.mapOutlet(item))),
+      next: response => {
+        const list = this.listData(response).map(item => this.mapOutlet(item));
+        this.outlets.set(list);
+        if (list.length > 0) {
+          const currentSelected = this.selectedOutletId();
+          if (!list.some(o => o.id === currentSelected)) {
+            this.setSelectedOutletId(list[0].id);
+          }
+        }
+      },
       error: error => this.addAudit('Unable to load outlets from API', 'Outlets', error?.error?.message || error?.message || 'API error')
     });
   }
 
   loadTables(outletId?: number): void {
-    const url = outletId
-      ? `${this.posBaseUrl}/tables/getAllTables?outletId=${outletId}`
-      : `${this.posBaseUrl}/tables/getAllTables`;
+    const targetOutletId = Number(outletId || this.selectedOutletId() || 1);
+    const url = `${this.posBaseUrl}/tables/getAllTables?outletId=${targetOutletId}`;
     this.http.get<ApiDiningTable[] | ApiListResponse<ApiDiningTable> | StandardResponse<ApiDiningTable[]>>(url).subscribe({
       next: response => {
-        const loadedTables = this.listData(response).map(item => this.mapTable(item));
+        const loadedTables = this.listData(response).map(item => this.mapTable(item, targetOutletId));
         this.tables.set(loadedTables);
       },
       error: error => this.addAudit('Unable to load dining tables from API', 'Table Dining', error?.error?.message || error?.message || 'API error')
@@ -881,12 +909,11 @@ export class PosService {
   }
 
   loadMenuItems(outletId?: number): void {
-    const url = outletId
-      ? `${this.posBaseUrl}/menu/getAllMenu?outletId=${outletId}`
-      : `${this.posBaseUrl}/menu/getAllMenu`;
+    const targetOutletId = Number(outletId || this.selectedOutletId() || 1);
+    const url = `${this.posBaseUrl}/menu/getAllMenu?outletId=${targetOutletId}`;
     this.http.get<ApiMenuItem[] | ApiListResponse<ApiMenuItem> | StandardResponse<ApiMenuItem[]>>(url).subscribe({
       next: response => {
-        const menuItems = this.listData(response).map(item => this.mapMenuItem(item));
+        const menuItems = this.listData(response).map(item => this.mapMenuItem(item, targetOutletId));
         this.menuItems.set(menuItems);
       },
       error: error => this.addAudit('Unable to load menu from API', 'Menu', error?.error?.message || error?.message || 'API error')
@@ -894,12 +921,11 @@ export class PosService {
   }
 
   loadOrders(outletId?: number): void {
-    const url = outletId
-      ? `${this.posBaseUrl}/orders/getAllOrders?outletId=${outletId}`
-      : `${this.posBaseUrl}/orders/getAllOrders`;
+    const targetOutletId = Number(outletId || this.selectedOutletId() || 1);
+    const url = `${this.posBaseUrl}/orders/getAllOrders?outletId=${targetOutletId}`;
     this.http.get<ApiOrder[] | ApiListResponse<ApiOrder> | StandardResponse<ApiOrder[]>>(url).subscribe({
       next: response => {
-        const loadedOrders = this.listData(response).map(item => this.mapOrder(item));
+        const loadedOrders = this.listData(response).map(item => this.mapOrder(item, targetOutletId));
         this.orders.set(loadedOrders);
       },
       error: error => this.addAudit('Unable to load orders from API', 'Orders', error?.error?.message || error?.message || 'API error')
@@ -1745,7 +1771,7 @@ export class PosService {
     };
   }
 
-  private mapTable(item: ApiDiningTable): PosTable {
+  private mapTable(item: ApiDiningTable, fallbackOutletId?: number): PosTable {
     const rawStatus = String(item.statusName || 'AVAILABLE').toUpperCase();
     const mappedStatus: TableStatus =
       rawStatus === 'OCCUPIED' ? 'OCCUPIED' :
@@ -1759,7 +1785,7 @@ export class PosService {
 
     return {
       id: Number(item.id),
-      outletId: Number(item.outletId || this.outlets()[0]?.id || 1),
+      outletId: Number(item.outletId || fallbackOutletId || this.outlets()[0]?.id || 1),
       number: item.tableNumber || `T${item.id}`,
       section: item.sectionName || '',
       status: mappedStatus,
@@ -1800,10 +1826,10 @@ export class PosService {
     };
   }
 
-  private mapMenuItem(item: ApiMenuItem): PosMenuItem {
+  private mapMenuItem(item: ApiMenuItem, fallbackOutletId?: number): PosMenuItem {
     return {
       id: Number(item.id),
-      outletId: Number(item.outletId || this.outlets()[0]?.id || 1),
+      outletId: Number(item.outletId || fallbackOutletId || this.outlets()[0]?.id || 1),
       name: item.itemName || 'Menu Item',
       category: item.categoryName || 'Food',
       subcategory: item.subcategoryName || '',
@@ -1849,13 +1875,13 @@ export class PosService {
     };
   }
 
-  private mapOrder(item: ApiOrder): PosOrder {
+  private mapOrder(item: ApiOrder, fallbackOutletId?: number): PosOrder {
     const lines = item.orderLines || item.lines || item.items || [];
     const type = item.orderType || item.type || (item.roomNo || item.roomNumber ? 'ROOM' : 'TABLE');
 
     return {
       id: Number(item.id),
-      outletId: Number(item.outletId || this.outlets()[0]?.id || 1),
+      outletId: Number(item.outletId || fallbackOutletId || this.outlets()[0]?.id || 1),
       orderNo: item.orderNo || item.orderNumber || `ORD-${item.id}`,
       type,
       floorId: item.floorId || null,
@@ -2040,6 +2066,7 @@ export class PosService {
     return {
       id: Number(item.id),
       orderId: Number(item.orderId || 0),
+      orderRef: item.orderRef || (item.orderId ? `ORD-${item.orderId}` : ''),
       billNo,
       orderType,
       tableId: item.tableId ? Number(item.tableId) : null,
@@ -2062,7 +2089,8 @@ export class PosService {
       postedToFolio: item.postToFolio ?? item.postedToFolio ?? item.isPostedToFolio ?? false,
       folioPostingId: item.folioPostingId ? Number(item.folioPostingId) : null,
       isRoomOrder: item.isRoomOrder ?? (orderType === 'ROOM'),
-      notes: item.notes || ''
+      notes: item.notes || '',
+      createdAt: (item as any).createdAt || ''
     };
   }
 

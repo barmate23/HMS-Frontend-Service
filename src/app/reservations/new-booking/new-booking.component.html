@@ -400,9 +400,9 @@
           </div>
 
           <!-- Plan pill -->
-          <div class="plan-info-pill" *ngIf="selectedPlan()">
+          <div class="plan-info-pill" *ngIf="selectedPlanDetails() as plan">
             <span class="material-icons-round">restaurant_menu</span>
-            <span><strong>{{ selectedPlanDetails().shortLabel }}</strong> — {{ selectedPlanDetails().desc }}</span>
+            <span><strong>{{ plan.shortLabel }}</strong> — {{ plan.desc }}</span>
           </div>
 
           <div class="summary-body">
@@ -412,9 +412,9 @@
               <span>Rooms{{ selectedRooms().length > 0 ? ' (' + selectedRooms().length + ')' : '' }} ({{ nights() }} Night{{ nights() !== 1 ? 's' : '' }})</span>
               <span>{{ formatINR(totalRoomBasePrice()) }}</span>
             </div>
-            <div class="summary-line" *ngIf="selectedPlanDetails().extra > 0">
-              <span>{{ selectedPlanDetails().shortLabel }} Plan Add-on ({{ selectedRooms().length || 1 }} Room{{ (selectedRooms().length || 1) !== 1 ? 's' : '' }})</span>
-              <span>{{ formatINR(planExtraPrice()) }}</span>
+            <div class="summary-line" *ngIf="selectedPlanDetails() as plan">
+              <span *ngIf="plan.extra !== 0">{{ plan.shortLabel }} Plan Add-on ({{ selectedRooms().length || 1 }} Room{{ (selectedRooms().length || 1) !== 1 ? 's' : '' }})</span>
+              <span *ngIf="plan.extra !== 0">{{ formatINR(planExtraPrice()) }}</span>
             </div>
             <div class="summary-line">
               <span>Taxes &amp; Fees ({{ roomTaxRate() }}%)</span>
@@ -613,13 +613,15 @@
             <span class="fdp-rate-label">Base Rate / Night</span>
             <span class="fdp-rate-value">{{ formatINR(modalActiveRoom()!.rate) }}</span>
           </div>
-          <div class="fdp-plan-note" *ngIf="selectedPlanDetails().extra > 0">
-            <span class="material-icons-round">add_circle_outline</span>
-            {{ selectedPlanDetails().shortLabel }} Plan: +{{ formatINR(selectedPlanDetails().extra) }}/night
+          <div class="fdp-plan-note" *ngIf="selectedPlanDetails() as plan">
+            <div *ngIf="plan.extra > 0">
+              <span class="material-icons-round">add_circle_outline</span>
+              {{ plan.shortLabel }} Plan: +{{ formatINR(plan.extra) }}/night
+            </div>
           </div>
           <div class="fdp-total" *ngIf="modalActiveRoom()!.status === 'Available'">
             <span>Est. Total ({{ nights() }} night{{ nights() !== 1 ? 's' : '' }})</span>
-            <span class="fdp-total-val">{{ formatINR((modalActiveRoom()!.rate + selectedPlanDetails().extra) * nights()) }}</span>
+            <span class="fdp-total-val">{{ formatINR((modalActiveRoom()!.rate + (selectedPlanDetails()?.extra || 0)) * nights()) }}</span>
           </div>
 
           <button class="fdp-select-btn selected"

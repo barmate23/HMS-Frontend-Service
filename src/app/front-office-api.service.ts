@@ -13,29 +13,89 @@ export interface ApiResponse<T> {
   };
 }
 
+export interface ArrivalBookingItem {
+  bookingId: number;
+  bookingRef: string;
+  confirmationNumber?: string;
+  guestName: string;
+  guestIsVip?: boolean;
+  numberOfNights?: number;
+  roomTypeName?: string;
+  eta?: string;
+  balance?: number;
+  baseAmount?: number;
+  totalAmount?: number;
+  paidAmount?: number;
+  gstPercent?: number;
+  amountExcludingGst?: number;
+  taxAmount?: number;
+  gstAmount?: number;
+  bookingStatus: string;
+  checkInDate: string;
+  checkOutDate: string;
+  roomNumber?: string;
+  roomId?: number;
+}
+
+export interface ArrivalReservationItem {
+  reservationId: number;
+  reservationRef: string;
+  confirmationNumber?: string;
+  guestName: string;
+  guestIsVip?: boolean;
+  numberOfNights?: number;
+  checkInDate: string;
+  checkOutDate: string;
+  eta?: string;
+  totalBalance?: number;
+  totalBaseAmount?: number;
+  baseAmount?: number;
+  totalAmount?: number;
+  paidAmount?: number;
+  gstPercent?: number;
+  amountExcludingGst?: number;
+  gstAmount?: number;
+  taxAmount?: number;
+  overallStatus?: string;
+  numberOfRooms?: number;
+  bookings: ArrivalBookingItem[];
+}
+
 export interface ArrivalApiItem {
   bookingId: number;
   bookingRef: string;
+  confirmationNumber?: string;
   guestName: string;
   guestIsVip: boolean;
   numberOfNights: number;
   roomTypeName: string;
   eta: string;
   balance: number;
+  baseAmount?: number;
+  totalAmount?: number;
+  totalBaseAmount?: number;
+  paidAmount?: number;
   gstPercent?: number;
+  amountExcludingGst?: number;
   taxAmount?: number;
+  gstAmount?: number;
   taxationAmount?: number;
   bookingStatus: string;
   checkInDate: string;
   checkOutDate: string;
   roomNumber?: string;
+  roomId?: number;
 }
 
 export interface ArrivalApiData {
-  arrivals: ArrivalApiItem[];
-  pendingArrivalsCount: number;
-  checkedInCount: number;
-  totalExpectedCount: number;
+  reservations?: ArrivalReservationItem[];
+  arrivals?: ArrivalApiItem[];
+  pendingArrivalsCount?: number;
+  checkedInCount?: number;
+  totalExpectedCount?: number;
+  pendingDeparturesCount?: number;
+  checkedOutCount?: number;
+  totalDeparturesCount?: number;
 }
 
 export interface GuestApiItem {
@@ -69,9 +129,14 @@ export interface GuestRequest {
   isVip?: boolean;
 }
 
-export interface CheckInRequest {
+export interface CheckInBookingItem {
   bookingId: number;
-  roomId: number;
+  roomId?: number;
+}
+
+export interface CheckInRequest {
+  reservationId?: number;
+  bookings: CheckInBookingItem[];
   idVerification: string;
   paymentMethod: string;
   amountToSettle: number;
@@ -191,11 +256,11 @@ export class FrontOfficeApiService {
 
   constructor(private readonly http: HttpClient) {}
 
-  getArrivals(searchText = '', checkout = false): Observable<ApiResponse<ArrivalApiData>> {
+  getArrivals(searchText = '', checkout = false, page = 0, size = 10): Observable<ApiResponse<ArrivalApiData>> {
     let params = new HttpParams()
       .set('checkout', String(checkout))
-      .set('page', '0')
-      .set('size', '50');
+      .set('page', String(page))
+      .set('size', String(size));
 
     if (searchText.trim()) {
       params = params.set('searchText', searchText.trim());

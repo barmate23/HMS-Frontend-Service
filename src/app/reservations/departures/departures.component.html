@@ -50,7 +50,11 @@
       <div class="card-header">
         <h2 class="card-title">Departure List</h2>
         <div class="header-actions">
-          <select class="filter-select"><option>All Status</option><option>Pending</option><option>Checked Out</option></select>
+          <select class="filter-select" [(ngModel)]="statusFilter">
+            <option value="ALL">All Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Checked Out">Checked Out</option>
+          </select>
         </div>
       </div>
       
@@ -64,7 +68,6 @@
               <th>ROOM NO</th>
               <th>ROOM TYPE</th>
               <th>ETD</th>
-              <th>BALANCE</th>
               <th>TAX (GST)</th>
               <th>TOTAL AMOUNT</th>
               <th>STATUS</th>
@@ -72,7 +75,7 @@
             </tr>
           </thead>
           <tbody *ngIf="!isLoading">
-            <tr *ngFor="let guest of departures" [class.is-checked-in]="guest.status === 'Checked Out'">
+            <tr *ngFor="let guest of filteredDepartures" [class.is-checked-in]="guest.status === 'Checked Out'">
               <td>
                 <div class="guest-info">
                   <div class="avatar">{{ guest.name.charAt(0) }}</div>
@@ -94,19 +97,14 @@
                 </div>
               </td>
               <td>
-                <span class="amount-due">
-                  ₹{{ guest.balance }}
-                </span>
-              </td>
-              <td>
                 <div class="tax-cell">
                   <span class="tax-badge">{{ guest.gstPercent }}% GST</span>
-                  <span class="tax-amount">₹{{ guest.taxAmount }}</span>
+                  <span class="tax-amount">₹{{ guest.taxAmount | number:'1.2-2' }}</span>
                 </div>
               </td>
               <td>
                 <strong class="total-payable-val" [class.paid]="guest.totalWithTax === 0">
-                  {{ guest.totalWithTax === 0 ? 'Fully Paid' : ('₹' + guest.totalWithTax) }}
+                  {{ guest.totalWithTax === 0 ? 'Fully Paid' : ('₹' + (guest.totalWithTax | number:'1.2-2')) }}
                 </strong>
               </td>
               <td>
@@ -123,8 +121,8 @@
                 </button>
               </td>
             </tr>
-            <tr *ngIf="departures.length === 0">
-              <td colspan="9" style="text-align: center; padding: 40px; color: var(--surface-500);">No departures found.</td>
+            <tr *ngIf="filteredDepartures.length === 0">
+              <td colspan="8" style="text-align: center; padding: 40px; color: var(--surface-500);">No departures found.</td>
             </tr>
           </tbody>
         </table>

@@ -634,18 +634,23 @@
     
     <div class="ci-header">
       <div class="ci-title">
-        <span class="material-icons-round">{{ modalMode() === 'create' ? 'domain_add' : 'domain' }}</span>
+        <span class="material-icons-round" style="color: #38bdf8 !important; font-size: 26px !important;">domain</span>
         <div>
-          <h2>{{ modalMode() === 'create' ? 'Add New Property' : 'Edit Hotel Property' }}</h2>
-          <p>{{ modalMode() === 'create' ? 'Register a new hotel unit' : 'Update settings for H-' + currentHotel().id }}</p>
+          <h2 style="color: #ffffff !important; font-size: 16px !important; font-weight: 800 !important; margin: 0 0 2px 0 !important; display: block !important;">{{ modalTitle }}</h2>
+          <p style="color: #e2e8f0 !important; font-size: 11px !important; margin: 0 !important; display: block !important;">{{ modalSubtitle }}</p>
         </div>
       </div>
       <button class="ci-close" (click)="closeModal('hotels')">
-        <span class="material-icons-round">close</span>
+        <span class="material-icons-round" style="color: #ffffff !important;">close</span>
       </button>
     </div>
 
     <div class="ci-body">
+      <div class="ci-error-banner" *ngIf="modalErrorMessage()">
+        <span class="material-icons-round">error_outline</span>
+        <span>{{ modalErrorMessage() }}</span>
+      </div>
+
       <div class="form-section-title">Property Profile</div>
       
       <div class="ci-input-group">
@@ -721,10 +726,10 @@
 
     <div class="ci-footer">
       <button class="ci-btn-cancel" (click)="closeModal('hotels')" [disabled]="isSaving()">Cancel</button>
-      <button class="ci-btn-confirm" (click)="saveHotel()" [disabled]="isSaving()">
-        <span class="material-icons-round spin" *ngIf="isSaving()">sync</span>
-        <span class="material-icons-round" *ngIf="!isSaving()">save</span>
-        {{ isSaving() ? 'Saving...' : (modalMode() === 'create' ? 'Create Hotel' : 'Save Changes') }}
+      <button class="ci-btn-confirm" (click)="saveHotel()" [disabled]="isSaving()" style="background-color: #0284c7 !important;">
+        <span class="material-icons-round spin" *ngIf="isSaving()" style="color: #ffffff !important;">sync</span>
+        <span class="material-icons-round" *ngIf="!isSaving()" style="color: #ffffff !important;">save</span>
+        <span style="color: #ffffff !important; font-weight: 700 !important; font-size: 13px !important; display: inline-block !important;">{{ modalSubmitText }}</span>
       </button>
     </div>
 
@@ -739,14 +744,14 @@
     
     <div class="ci-header">
       <div class="ci-title">
-        <span class="material-icons-round">sell</span>
+        <span class="material-icons-round" style="color: #38bdf8 !important; font-size: 26px !important;">sell</span>
         <div>
-          <h2>{{ modalMode() === 'create' ? 'Create Rate Plan' : 'Edit Rate Plan' }}</h2>
-          <p>{{ modalMode() === 'create' ? 'Define a reusable pricing rule' : 'Update pricing rule RP-' + currentRatePlan().id }}</p>
+          <h2 style="color: #ffffff !important; font-size: 16px !important; font-weight: 800 !important; margin: 0 0 2px 0 !important; display: block !important;">{{ modalTitle }}</h2>
+          <p style="color: #e2e8f0 !important; font-size: 11px !important; margin: 0 !important; display: block !important;">{{ modalSubtitle }}</p>
         </div>
       </div>
       <button class="ci-close" (click)="closeModal('rate-plans')">
-        <span class="material-icons-round">close</span>
+        <span class="material-icons-round" style="color: #ffffff !important;">close</span>
       </button>
     </div>
 
@@ -783,10 +788,10 @@
 
     <div class="ci-footer">
       <button class="ci-btn-cancel" (click)="closeModal('rate-plans')" [disabled]="isSaving()">Cancel</button>
-      <button class="ci-btn-confirm" (click)="saveRatePlan()" [disabled]="isSaving()">
-        <span class="material-icons-round spin" *ngIf="isSaving()">sync</span>
-        <span class="material-icons-round" *ngIf="!isSaving()">save</span>
-        {{ isSaving() ? 'Saving...' : (modalMode() === 'create' ? 'Create Rate Plan' : 'Save Changes') }}
+      <button class="ci-btn-confirm" (click)="saveRatePlan()" [disabled]="isSaving()" style="background-color: #0284c7 !important;">
+        <span class="material-icons-round spin" *ngIf="isSaving()" style="color: #ffffff !important;">sync</span>
+        <span class="material-icons-round" *ngIf="!isSaving()" style="color: #ffffff !important;">save</span>
+        <span style="color: #ffffff !important; font-weight: 700 !important; font-size: 13px !important; display: inline-block !important;">{{ modalSubmitText }}</span>
       </button>
     </div>
 
@@ -801,14 +806,14 @@
     
     <div class="ci-header">
       <div class="ci-title">
-        <span class="material-icons-round">layers</span>
+        <span class="material-icons-round" style="color: #38bdf8 !important; font-size: 26px !important;">layers</span>
         <div>
-          <h2>{{ modalMode() === 'create' ? 'Add New Floor' : 'Edit Floor Configuration' }}</h2>
-          <p>{{ modalMode() === 'create' ? 'Setup new physical floor layout' : 'Update settings for F-' + currentFloor().id }}</p>
+          <h2 style="color: #ffffff !important; font-size: 16px !important; font-weight: 800 !important; margin: 0 0 2px 0 !important; display: block !important;">{{ modalTitle }}</h2>
+          <p style="color: #e2e8f0 !important; font-size: 11px !important; margin: 0 !important; display: block !important;">{{ modalSubtitle }}</p>
         </div>
       </div>
       <button class="ci-close" (click)="closeModal('floors')">
-        <span class="material-icons-round">close</span>
+        <span class="material-icons-round" style="color: #ffffff !important;">close</span>
       </button>
     </div>
 
@@ -856,10 +861,10 @@
 
     <div class="ci-footer">
       <button class="ci-btn-cancel" (click)="closeModal('floors')" [disabled]="isSaving()">Cancel</button>
-      <button class="ci-btn-confirm" (click)="saveFloor()" [disabled]="isSaving()">
-        <span class="material-icons-round spin" *ngIf="isSaving()">sync</span>
-        <span class="material-icons-round" *ngIf="!isSaving()">save</span>
-        {{ isSaving() ? 'Saving...' : (modalMode() === 'create' ? 'Create Floor' : 'Save Changes') }}
+      <button class="ci-btn-confirm" (click)="saveFloor()" [disabled]="isSaving()" style="background-color: #0284c7 !important;">
+        <span class="material-icons-round spin" *ngIf="isSaving()" style="color: #ffffff !important;">sync</span>
+        <span class="material-icons-round" *ngIf="!isSaving()" style="color: #ffffff !important;">save</span>
+        <span style="color: #ffffff !important; font-weight: 700 !important; font-size: 13px !important; display: inline-block !important;">{{ modalSubmitText }}</span>
       </button>
     </div>
 
@@ -874,14 +879,14 @@
     
     <div class="ci-header">
       <div class="ci-title">
-        <span class="material-icons-round">bed</span>
+        <span class="material-icons-round" style="color: #38bdf8 !important; font-size: 26px !important;">bed</span>
         <div>
-          <h2>{{ modalMode() === 'create' ? 'Create Room Type' : 'Edit Room Category' }}</h2>
-          <p>{{ modalMode() === 'create' ? 'Establish a new room category and rate structure' : 'Update category details' }}</p>
+          <h2 style="color: #ffffff !important; font-size: 16px !important; font-weight: 800 !important; margin: 0 0 2px 0 !important; display: block !important;">{{ modalTitle }}</h2>
+          <p style="color: #e2e8f0 !important; font-size: 11px !important; margin: 0 !important; display: block !important;">{{ modalSubtitle }}</p>
         </div>
       </div>
       <button class="ci-close" (click)="closeModal('room-types')">
-        <span class="material-icons-round">close</span>
+        <span class="material-icons-round" style="color: #ffffff !important;">close</span>
       </button>
     </div>
 
@@ -945,10 +950,10 @@
 
     <div class="ci-footer">
       <button class="ci-btn-cancel" (click)="closeModal('room-types')" [disabled]="isSaving()">Cancel</button>
-      <button class="ci-btn-confirm" (click)="saveRoomType()" [disabled]="isSaving()">
-        <span class="material-icons-round spin" *ngIf="isSaving()">sync</span>
-        <span class="material-icons-round" *ngIf="!isSaving()">save</span>
-        {{ isSaving() ? 'Saving...' : (modalMode() === 'create' ? 'Save Category' : 'Save Changes') }}
+      <button class="ci-btn-confirm" (click)="saveRoomType()" [disabled]="isSaving()" style="background-color: #0284c7 !important;">
+        <span class="material-icons-round spin" *ngIf="isSaving()" style="color: #ffffff !important;">sync</span>
+        <span class="material-icons-round" *ngIf="!isSaving()" style="color: #ffffff !important;">save</span>
+        <span style="color: #ffffff !important; font-weight: 700 !important; font-size: 13px !important; display: inline-block !important;">{{ modalSubmitText }}</span>
       </button>
     </div>
 
@@ -963,14 +968,14 @@
     
     <div class="ci-header">
       <div class="ci-title">
-        <span class="material-icons-round">meeting_room</span>
+        <span class="material-icons-round" style="color: #38bdf8 !important; font-size: 26px !important;">meeting_room</span>
         <div>
-          <h2>{{ modalMode() === 'create' ? 'Add Room' : 'Edit Room Settings' }}</h2>
-          <p>{{ modalMode() === 'create' ? 'Assign a new room to a floor unit' : 'Update configuration for Room #' + currentRoom().roomNumber }}</p>
+          <h2 style="color: #ffffff !important; font-size: 16px !important; font-weight: 800 !important; margin: 0 0 2px 0 !important; display: block !important;">{{ modalTitle }}</h2>
+          <p style="color: #e2e8f0 !important; font-size: 11px !important; margin: 0 !important; display: block !important;">{{ modalSubtitle }}</p>
         </div>
       </div>
       <button class="ci-close" (click)="closeModal('rooms')">
-        <span class="material-icons-round">close</span>
+        <span class="material-icons-round" style="color: #ffffff !important;">close</span>
       </button>
     </div>
 
@@ -986,7 +991,7 @@
           [disabled]="modalMode() === 'edit'"
           [class.invalid]="shouldShowError('hotelId')"
         >
-          <option *ngFor="let h of mastersService.hotels()" [value]="h.id" [disabled]="!h.isActive">
+          <option *ngFor="let h of mastersService.hotels()" [ngValue]="h.id" [disabled]="!h.isActive">
             {{ h.name }} {{ !h.isActive ? '(Inactive)' : '' }}
           </option>
         </select>
@@ -999,7 +1004,7 @@
           <label>Assign to Floor *</label>
           <select [(ngModel)]="currentRoom().floorId" (blur)="markFieldTouched('floorId')" [class.invalid]="shouldShowError('floorId')">
             <option *ngIf="floorsForSelectedHotel().length === 0" disabled>No floors available. Create a floor first!</option>
-            <option *ngFor="let f of floorsForSelectedHotel()" [value]="f.id">
+            <option *ngFor="let f of floorsForSelectedHotel()" [ngValue]="f.id">
               {{ f.floorNumber }}
             </option>
           </select>
@@ -1010,7 +1015,7 @@
           <label>Room Category (Type) *</label>
           <select [(ngModel)]="currentRoom().typeId" (blur)="markFieldTouched('typeId')" [class.invalid]="shouldShowError('typeId')">
             <option *ngIf="roomTypesForSelectedHotel().length === 0" disabled>No types available. Create a type first!</option>
-            <option *ngFor="let rt of roomTypesForSelectedHotel()" [value]="rt.id">
+            <option *ngFor="let rt of roomTypesForSelectedHotel()" [ngValue]="rt.id">
               {{ rt.name }} (₹{{ rt.basePricePerNight }}/nt)
             </option>
           </select>
@@ -1064,10 +1069,10 @@
 
     <div class="ci-footer">
       <button class="ci-btn-cancel" (click)="closeModal('rooms')" [disabled]="isSaving()">Cancel</button>
-      <button class="ci-btn-confirm" (click)="saveRoom()" [disabled]="isSaving()">
-        <span class="material-icons-round spin" *ngIf="isSaving()">sync</span>
-        <span class="material-icons-round" *ngIf="!isSaving()">save</span>
-        {{ isSaving() ? 'Saving...' : (modalMode() === 'create' ? 'Create Room' : 'Save Changes') }}
+      <button class="ci-btn-confirm" (click)="saveRoom()" [disabled]="isSaving()" style="background-color: #0284c7 !important;">
+        <span class="material-icons-round spin" *ngIf="isSaving()" style="color: #ffffff !important;">sync</span>
+        <span class="material-icons-round" *ngIf="!isSaving()" style="color: #ffffff !important;">save</span>
+        <span style="color: #ffffff !important; font-weight: 700 !important; font-size: 13px !important; display: inline-block !important;">{{ modalSubmitText }}</span>
       </button>
     </div>
 
@@ -1082,14 +1087,14 @@
     
     <div class="ci-header">
       <div class="ci-title">
-        <span class="material-icons-round">receipt_long</span>
+        <span class="material-icons-round" style="color: #38bdf8 !important; font-size: 26px !important;">receipt_long</span>
         <div>
-          <h2>{{ modalMode() === 'create' ? 'Create GST Rule' : 'Edit GST Rule' }}</h2>
-          <p>{{ modalMode() === 'create' ? 'Define a new service tax percentage' : 'Update tax settings for GST-' + currentGst().id }}</p>
+          <h2 style="color: #ffffff !important; font-size: 16px !important; font-weight: 800 !important; margin: 0 0 2px 0 !important; display: block !important;">{{ modalTitle }}</h2>
+          <p style="color: #e2e8f0 !important; font-size: 11px !important; margin: 0 !important; display: block !important;">{{ modalSubtitle }}</p>
         </div>
       </div>
       <button class="ci-close" (click)="closeModal('gst-config')">
-        <span class="material-icons-round">close</span>
+        <span class="material-icons-round" style="color: #ffffff !important;">close</span>
       </button>
     </div>
 
@@ -1160,10 +1165,10 @@
 
     <div class="ci-footer">
       <button class="ci-btn-cancel" (click)="closeModal('gst-config')" [disabled]="isSaving()">Cancel</button>
-      <button class="ci-btn-confirm" (click)="saveGst()" [disabled]="isSaving()">
-        <span class="material-icons-round spin" *ngIf="isSaving()">sync</span>
-        <span class="material-icons-round" *ngIf="!isSaving()">save</span>
-        {{ isSaving() ? 'Saving...' : (modalMode() === 'create' ? 'Create Rule' : 'Save Changes') }}
+      <button class="ci-btn-confirm" (click)="saveGst()" [disabled]="isSaving()" style="background-color: #0284c7 !important;">
+        <span class="material-icons-round spin" *ngIf="isSaving()" style="color: #ffffff !important;">sync</span>
+        <span class="material-icons-round" *ngIf="!isSaving()" style="color: #ffffff !important;">save</span>
+        <span style="color: #ffffff !important; font-weight: 700 !important; font-size: 13px !important; display: inline-block !important;">{{ modalSubmitText }}</span>
       </button>
     </div>
 

@@ -10,9 +10,9 @@
     <div class="nav-right">
       <div class="search-box">
         <span class="material-icons-round">search</span>
-        <input type="text" placeholder="Search guests or booking ref..." [(ngModel)]="searchQuery" (keyup.enter)="loadArrivals()">
+        <input type="text" placeholder="Search guests, reservation or room..." [(ngModel)]="searchQuery" (keyup.enter)="loadArrivals(0)">
       </div>
-      <button class="btn-outline" (click)="loadArrivals()">
+      <button class="btn-outline" (click)="loadArrivals(0)" title="Refresh Arrivals">
         <span class="material-icons-round">refresh</span>
       </button>
     </div>
@@ -50,84 +50,247 @@
       <div class="card-header">
         <h2 class="card-title">Arrival List</h2>
         <div class="header-actions">
-          <select class="filter-select"><option>All Status</option><option>Pending</option><option>Checked In</option></select>
+          <select class="filter-select" [(ngModel)]="statusFilter">
+            <option value="ALL">All Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Partially Checked In">Partially Checked In</option>
+            <option value="Checked In">Checked In</option>
+          </select>
         </div>
       </div>
       
       <div class="table-container">
-        <div *ngIf="isLoading" style="padding: 24px; color: var(--surface-500);">Loading arrivals...</div>
-        <div *ngIf="errorMessage" style="padding: 16px 24px; color: #be123c;">{{ errorMessage }}</div>
-        <table class="premium-table">
+        <div *ngIf="isLoading" class="loading-state">
+          <span class="material-icons-round spin">sync</span> Loading arrivals...
+        </div>
+        <div *ngIf="errorMessage" class="error-state">{{ errorMessage }}</div>
+        
+        <table class="premium-table" *ngIf="!isLoading">
           <thead>
             <tr>
               <th>GUEST NAME</th>
-              <th>BOOKING REF</th>
-              <th>ROOM TYPE</th>
+              <th>RESERVATION REF</th>
+              <th>ROOMS</th>
+              <th>CHECK-IN / OUT DATES</th>
               <th>ETA</th>
-              <th>BALANCE</th>
               <th>TAX (GST)</th>
               <th>TOTAL AMOUNT</th>
               <th>STATUS</th>
               <th>ACTION</th>
             </tr>
           </thead>
-          <tbody *ngIf="!isLoading">
-            <tr *ngFor="let guest of arrivals" [class.is-checked-in]="guest.status === 'Checked In'">
+          <tbody>
+            <tr *ngFor="let res of filteredReservations" [class.is-checked-in]="res.overallStatus === 'Checked In'">
               <td>
                 <div class="guest-info">
-                  <div class="avatar">{{ guest.name.charAt(0) }}</div>
+                  <div class="avatar">{{ res.guestName.charAt(0) }}</div>
                   <div class="name-block">
                     <div class="name-row">
-                      <span class="guest-name">{{ guest.name }}</span>
-                      <span class="vip-badge" *ngIf="guest.isVip">VIP</span>
+                      <span class="guest-name">{{ res.guestName }}</span>
+                      <span class="vip-badge" *ngIf="res.guestIsVip">VIP</span>
                     </div>
-                    <span class="nights">{{ guest.nights }} Night(s)</span>
+                    <span class="nights">{{ res.numberOfNights }} Night(s)</span>
                   </div>
                 </div>
               </td>
-              <td><span class="mono-text">{{ guest.bookingRef }}</span></td>
-              <td><span class="room-type">{{ guest.roomType }}</span></td>
+              <td><span class="mono-text">{{ res.reservationRef }}</span></td>
+              <td>
+                <span class="room-count-badge">
+                  <span class="material-icons-round">hotel</span>
+                  {{ res.numberOfRooms }} Room{{ res.numberOfRooms === 1 ? '' : 's' }}
+                </span>
+              </td>
+              <td>
+                <div class="dates-cell">
+                  <span class="checkin-date">{{ res.checkInDate }}</span>
+                  <span class="date-arrow">→</span>
+                  <span class="checkout-date">{{ res.checkOutDate }}</span>
+                </div>
+              </td>
               <td>
                 <div class="time-badge">
                   <span class="material-icons-round">schedule</span>
-                  {{ guest.expectedTime }}
+                  {{ res.eta }}
                 </div>
-              </td>
-              <td>
-                <span class="amount-due">
-                  ₹{{ guest.amountDue }}
-                </span>
               </td>
               <td>
                 <div class="tax-cell">
-                  <span class="tax-badge">{{ guest.gstPercent }}% GST</span>
-                  <span class="tax-amount">₹{{ guest.taxAmount }}</span>
+                  <span class="tax-badge">{{ res.gstPercent }}% GST</span>
+                  <span class="tax-amount">₹{{ res.taxAmount | number:'1.2-2' }}</span>
                 </div>
               </td>
               <td>
-                <strong class="total-payable-val" [class.paid]="guest.totalWithTax === 0">
-                  {{ guest.totalWithTax === 0 ? 'Fully Paid' : ('₹' + guest.totalWithTax) }}
+                <strong class="total-payable-val">
+                  ₹{{ res.totalAmount | number:'1.2-2' }}
                 </strong>
               </td>
               <td>
-                <span class="status-badge" [ngClass]="guest.status === 'Pending' ? 'pending' : 'checked-in'">
-                  {{ guest.status }}
+                <span class="status-badge" [ngClass]="{
+                  'pending': res.overallStatus === 'Pending',
+                  'partial': res.overallStatus === 'Partially Checked In',
+                  'checked-in': res.overallStatus === 'Checked In'
+                }">
+                  {{ res.overallStatus }}
                 </span>
               </td>
               <td>
-                <button class="btn-action checkin" *ngIf="guest.status === 'Pending'" (click)="checkIn(guest)">
-                  <span class="material-icons-round">login</span> Check-In
-                </button>
-                <button class="btn-action view" *ngIf="guest.status === 'Checked In'" (click)="openFolio(guest)">
-                  <span class="material-icons-round">visibility</span> View Folio
+                <button class="btn-action view" (click)="openViewModal(res)" title="View Room-wise Details & Check-In">
+                  <span class="material-icons-round">visibility</span> View
                 </button>
               </td>
             </tr>
-            <tr *ngIf="arrivals.length === 0">
-              <td colspan="9" style="text-align: center; padding: 40px; color: var(--surface-500);">No arrivals found.</td>
+            <tr *ngIf="filteredReservations.length === 0">
+              <td colspan="9" class="empty-state">No arrivals found matching the current criteria.</td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Pagination Footer -->
+      <div class="pagination-footer" *ngIf="totalRecords > 0">
+        <div class="pagination-info">
+          Showing <b>{{ (currentPage * pageSize) + 1 }}</b> to <b>{{ (currentPage + 1) * pageSize < totalRecords ? (currentPage + 1) * pageSize : totalRecords }}</b> of <b>{{ totalRecords }}</b> reservations
+        </div>
+        <div class="pagination-controls">
+          <label class="page-size-label">
+            <span>Rows:</span>
+            <select [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+              <option [value]="10">10</option>
+              <option [value]="20">20</option>
+              <option [value]="50">50</option>
+            </select>
+          </label>
+          <button class="pg-btn" [disabled]="currentPage === 0" (click)="onPageChange(currentPage - 1)">
+            <span class="material-icons-round">chevron_left</span> Prev
+          </button>
+          <span class="page-indicator">Page {{ currentPage + 1 }} of {{ totalPages }}</span>
+          <button class="pg-btn" [disabled]="currentPage >= totalPages - 1" (click)="onPageChange(currentPage + 1)">
+            Next <span class="material-icons-round">chevron_right</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ================================================================
+     ROOM-WISE DETAILS VIEW MODAL
+     ================================================================ -->
+<div class="modal-overlay" *ngIf="viewModalOpen" (click)="closeViewModal()">
+  <div class="view-modal" (click)="$event.stopPropagation()">
+    
+    <div class="view-modal-header">
+      <div class="vm-title-group">
+        <div class="vm-title-row">
+          <span class="material-icons-round vm-icon">meeting_room</span>
+          <h2>Room-wise Details</h2>
+          <span class="mono-text large">{{ selectedReservation?.reservationRef }}</span>
+        </div>
+        <p class="vm-subtitle">
+          Guest: <b>{{ selectedReservation?.guestName }}</b> | Dates: <b>{{ selectedReservation?.checkInDate }}</b> to <b>{{ selectedReservation?.checkOutDate }}</b> ({{ selectedReservation?.numberOfNights }} Nights)
+        </p>
+      </div>
+      <button class="vm-close" (click)="closeViewModal()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="view-modal-body" *ngIf="selectedReservation">
+      
+      <!-- Summary Bar inside Modal -->
+      <div class="vm-summary-bar">
+        <div class="vm-sum-item">
+          <span>Total Rooms</span>
+          <strong>{{ selectedReservation.numberOfRooms }}</strong>
+        </div>
+        <div class="vm-sum-item">
+          <span>Checked In</span>
+          <strong class="text-success">{{ selectedReservation.bookings.length - getSelectedPendingRooms().length }} / {{ selectedReservation.numberOfRooms }}</strong>
+        </div>
+        <div class="vm-sum-item">
+          <span>Pending Check-In</span>
+          <strong class="text-warning">{{ selectedReservation.bookings.length > 0 ? (selectedReservation.bookings.length - (selectedReservation.bookings.length - getSelectedPendingRooms().length)) : 0 }}</strong>
+        </div>
+        <div class="vm-sum-item">
+          <span>Total Balance</span>
+          <strong class="text-primary">₹{{ selectedReservation.totalAmount | number:'1.2-2' }}</strong>
+        </div>
+      </div>
+
+      <!-- Bookings Table -->
+      <div class="vm-table-container">
+        <table class="premium-table vm-table">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">
+                <input type="checkbox" [checked]="isAllPendingSelected()" (change)="toggleSelectAllPending($any($event.target).checked)" title="Select all pending rooms">
+              </th>
+              <th>BOOKING REF</th>
+              <th>ROOM NO.</th>
+              <th>ROOM TYPE</th>
+              <th>ETA</th>
+              <th>TAX (GST)</th>
+              <th>TOTAL WITH TAX</th>
+              <th>STATUS</th>
+              <th>ACTION</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let room of selectedReservation.bookings" [class.is-checked-in]="room.bookingStatus === 'Checked In'">
+              <td style="text-align: center;">
+                <input type="checkbox" [(ngModel)]="room.selected" [disabled]="room.bookingStatus === 'Checked In'">
+              </td>
+              <td><span class="mono-text">{{ room.bookingRef }}</span></td>
+              <td>
+                <span class="room-number-pill" [class.unassigned]="room.roomNumber === '-'">
+                  <span class="material-icons-round">door_front</span>
+                  {{ room.roomNumber }}
+                </span>
+              </td>
+              <td><span class="room-type">{{ room.roomTypeName }}</span></td>
+              <td>
+                <span class="time-badge"><span class="material-icons-round">schedule</span> {{ room.eta }}</span>
+              </td>
+              <td>
+                <div class="tax-cell">
+                  <span class="tax-badge">{{ room.gstPercent }}% GST</span>
+                  <span class="tax-amount">₹{{ room.taxAmount | number:'1.2-2' }}</span>
+                </div>
+              </td>
+              <td><strong>₹{{ room.totalWithTax | number:'1.2-2' }}</strong></td>
+              <td>
+                <span class="status-badge" [ngClass]="room.bookingStatus === 'Pending' ? 'pending' : 'checked-in'">
+                  {{ room.bookingStatus }}
+                </span>
+              </td>
+              <td>
+                <button class="btn-action checkin" *ngIf="room.bookingStatus === 'Pending'" (click)="openCheckInModalForBooking(room)">
+                  <span class="material-icons-round">login</span> Check-In
+                </button>
+                <span *ngIf="room.bookingStatus === 'Checked In'" class="checked-in-text">
+                  <span class="material-icons-round">check_circle</span> Checked In
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- Modal Footer with Bulk Action -->
+    <div class="view-modal-footer" *ngIf="selectedReservation">
+      <div class="bulk-info">
+        <span class="material-icons-round">checklist</span>
+        <span><b>{{ getSelectedPendingRooms().length }}</b> room(s) selected for bulk check-in</span>
+      </div>
+      <div class="vm-footer-actions">
+        <button type="button" class="btn-secondary" (click)="closeViewModal()">Close</button>
+        <button type="button" class="btn-primary" [disabled]="getSelectedPendingRooms().length === 0" (click)="openBulkCheckInModal()">
+          <span class="material-icons-round">login</span> Check-In Selected Rooms ({{ getSelectedPendingRooms().length }})
+        </button>
       </div>
     </div>
 
@@ -135,7 +298,7 @@
 </div>
 
 <!-- ================================================================
-     CHECK-IN MODAL
+     CHECK-IN CONFIRMATION MODAL
      ================================================================ -->
 <div class="modal-overlay" *ngIf="checkInModalOpen" (click)="closeCheckInModal()">
   <div class="ci-modal" (click)="$event.stopPropagation()">
@@ -144,8 +307,8 @@
       <div class="ci-title">
         <span class="material-icons-round">login</span>
         <div>
-          <h2>Complete Check-In</h2>
-          <p>{{ selectedGuestForCheckIn?.bookingRef }}</p>
+          <h2>{{ isBulkCheckIn ? 'Bulk Room Check-In' : 'Complete Room Check-In' }}</h2>
+          <p>{{ isBulkCheckIn ? (selectedBookingsForCheckIn.length + ' rooms selected') : selectedBookingsForCheckIn[0]?.bookingRef }}</p>
         </div>
       </div>
       <button class="ci-close" (click)="closeCheckInModal()">
@@ -153,80 +316,59 @@
       </button>
     </div>
 
-    <div class="ci-body" *ngIf="selectedGuestForCheckIn">
+    <div class="ci-body" *ngIf="selectedBookingsForCheckIn.length > 0">
       
-      <!-- Guest Info Summary -->
+      <!-- Error Message Banner -->
+      <div class="ci-error-banner" *ngIf="errorMessage">
+        <span class="material-icons-round">error_outline</span>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <!-- Guest & Room Summary -->
       <div class="ci-guest-summary">
-        <div class="ci-avatar">{{ selectedGuestForCheckIn.name.charAt(0) }}</div>
+        <div class="ci-avatar">{{ selectedBookingsForCheckIn[0].guestName.charAt(0) }}</div>
         <div class="ci-summary-details">
-          <h3>{{ selectedGuestForCheckIn.name }} <span class="vip-badge" *ngIf="selectedGuestForCheckIn.isVip">VIP</span></h3>
-          <p><span class="material-icons-round" style="font-size:12px;vertical-align:middle;margin-right:4px;">phone</span>{{ selectedGuestForCheckIn.phone }}</p>
+          <h3>{{ selectedBookingsForCheckIn[0].guestName }} <span class="vip-badge" *ngIf="selectedBookingsForCheckIn[0].guestIsVip">VIP</span></h3>
+          <p>Checking in {{ selectedBookingsForCheckIn.length }} room booking(s)</p>
         </div>
       </div>
 
-      <!-- Detailed Booking Info -->
-      <div class="ci-booking-details">
-        <div class="bd-item">
-          <span>Check-in Date</span>
-          <strong>{{ selectedGuestForCheckIn.checkInDate }}</strong>
-        </div>
-        <div class="bd-item">
-          <span>Expected Arrival</span>
-          <strong>{{ selectedGuestForCheckIn.expectedTime }}</strong>
-        </div>
-        <div class="bd-item">
-          <span>Nights</span>
-          <strong>{{ selectedGuestForCheckIn.nights }} Night(s)</strong>
-        </div>
-        <div class="bd-item">
-          <span>Room Type</span>
-          <strong>{{ selectedGuestForCheckIn.roomType }} ({{ selectedGuestForCheckIn.roomTypeId }})</strong>
-        </div>
-        <div class="bd-item">
-          <span>Occupancy</span>
-          <strong>{{ selectedGuestForCheckIn.pax }}</strong>
-        </div>
-        <div class="bd-item">
-          <span>Rate Plan</span>
-          <strong>{{ selectedGuestForCheckIn.plan }}</strong>
-        </div>
-        <div class="bd-item">
-          <span>Source</span>
-          <strong>{{ selectedGuestForCheckIn.source }}</strong>
-        </div>
-        <div class="bd-item">
-          <span>Total Est. Bill</span>
-          <strong>₹{{ selectedGuestForCheckIn.totalAmount }}</strong>
+      <!-- Room list preview for bulk check in -->
+      <div class="ci-rooms-preview">
+        <div class="ci-room-chip" *ngFor="let room of selectedBookingsForCheckIn">
+          <span class="material-icons-round">meeting_room</span>
+          <b>{{ room.bookingRef }}</b> : {{ room.roomTypeName }} (Room {{ room.roomNumber }}) - ₹{{ (room.totalWithTax || room.balance) | number:'1.2-2' }}
         </div>
       </div>
 
       <div class="ci-form-grid mt-3">
-        <!-- Room Assignment -->
-        <div class="ci-input-group">
+        <!-- Room Assignment for single check in -->
+        <div class="ci-input-group" *ngIf="!isBulkCheckIn">
           <label>Assign Room Number *</label>
           <div class="ci-input-icon">
             <span class="material-icons-round">meeting_room</span>
-            <input type="text" [(ngModel)]="assignedRoomNumber" placeholder="e.g. 204">
+            <input type="text" [(ngModel)]="assignedRoomNumber" placeholder="e.g. 101">
           </div>
         </div>
 
-        <!-- Identity verification placeholder -->
+        <!-- Identity verification -->
         <div class="ci-input-group">
           <label>ID Verification</label>
           <select [(ngModel)]="idVerification">
             <option>Passport Verified</option>
             <option>Aadhar Card Verified</option>
+            <option>Driving License Verified</option>
             <option>Pending Verification</option>
           </select>
         </div>
       </div>
 
       <!-- Payment / Balance Section -->
-      <div class="ci-balance-section" *ngIf="selectedGuestForCheckIn.amountDue > 0">
+      <div class="ci-balance-section mt-3">
         <div class="ci-balance-header">
           <span class="material-icons-round">account_balance_wallet</span>
-          <span>Balance Due at Check-In</span>
-          <strong>₹{{ selectedGuestForCheckIn.amountDue }}</strong>
+          <span>Total Balance Due at Check-In</span>
+          <strong>₹{{ amountToSettle | number:'1.2-2' }}</strong>
         </div>
         
         <div class="ci-form-grid mt-3">
@@ -241,108 +383,19 @@
           </div>
           <div class="ci-input-group">
             <label>Amount to Settle</label>
-            <input type="number" [(ngModel)]="amountToSettle" name="amountToSettle" placeholder="Enter advance amount">
+            <input type="number" [(ngModel)]="amountToSettle" name="amountToSettle" placeholder="Enter amount to settle">
           </div>
         </div>
       </div>
       
-      <div class="ci-balance-section fully-paid" *ngIf="selectedGuestForCheckIn.amountDue === 0">
-        <span class="material-icons-round">check_circle</span>
-        <span>Booking is Fully Paid</span>
-      </div>
-
     </div>
 
     <div class="ci-footer">
-      <button class="ci-btn-cancel" (click)="closeCheckInModal()">Cancel</button>
-      <button class="ci-btn-confirm" (click)="confirmCheckIn()" [disabled]="!assignedRoomNumber">
-        <span class="material-icons-round">how_to_reg</span> Complete Check-In
-      </button>
-    </div>
-
-  </div>
-</div>
-
-<!-- ================================================================
-     VIEW FOLIO MODAL
-     ================================================================ -->
-<div class="modal-overlay" *ngIf="folioModalOpen" (click)="closeFolio()">
-  <div class="ci-modal folio-modal" (click)="$event.stopPropagation()">
-    
-    <div class="ci-header folio-header">
-      <div class="ci-title">
-        <span class="material-icons-round">receipt_long</span>
-        <div>
-          <h2>Guest Folio</h2>
-          <p>{{ selectedGuestForFolio?.bookingRef }}</p>
-        </div>
-      </div>
-      <button class="ci-close" (click)="closeFolio()">
-        <span class="material-icons-round">close</span>
-      </button>
-    </div>
-
-    <div class="ci-body" *ngIf="selectedGuestForFolio">
-      
-      <!-- Guest Info Summary -->
-      <div class="ci-guest-summary folio-guest-summary">
-        <div class="ci-avatar">{{ selectedGuestForFolio.name.charAt(0) }}</div>
-        <div class="ci-summary-details">
-          <h3>{{ selectedGuestForFolio.name }} <span class="vip-badge" *ngIf="selectedGuestForFolio.isVip">VIP</span></h3>
-          <p><span class="material-icons-round" style="font-size:12px;vertical-align:middle;margin-right:4px;">phone</span>{{ selectedGuestForFolio.phone || '+1 555-0198' }}</p>
-        </div>
-        <div class="folio-room-badge">
-          <span>ROOM</span>
-          <strong>{{ selectedGuestForFolio.id === '2' ? '104' : (selectedGuestForFolio.id === '5' ? '204' : 'TBD') }}</strong>
-        </div>
-      </div>
-
-      <!-- Ledger / Billing Table -->
-      <div class="folio-ledger">
-        <div class="ledger-header">
-          <span>Date</span>
-          <span>Description</span>
-          <span style="text-align:right">Charges</span>
-          <span style="text-align:right">Payments</span>
-        </div>
-        <div class="ledger-body">
-          <div class="ledger-row">
-            <span>{{ selectedGuestForFolio.checkInDate }}</span>
-            <span>Room Charge ({{ selectedGuestForFolio.roomType }})</span>
-            <span style="text-align:right">₹{{ selectedGuestForFolio.amountDue }}</span>
-            <span style="text-align:right">-</span>
-          </div>
-          <div class="ledger-row">
-            <span>{{ selectedGuestForFolio.checkInDate }}</span>
-            <span>GST ({{ selectedGuestForFolio.gstPercent }}%)</span>
-            <span style="text-align:right">₹{{ selectedGuestForFolio.taxAmount }}</span>
-            <span style="text-align:right">-</span>
-          </div>
-          <div class="ledger-row payment">
-            <span>{{ selectedGuestForFolio.checkInDate }}</span>
-            <span>Advance Payment (Credit Card)</span>
-            <span style="text-align:right">-</span>
-            <span style="text-align:right">₹{{ selectedGuestForFolio.totalWithTax }}</span>
-          </div>
-        </div>
-        <div class="ledger-footer">
-          <div class="ledger-total">
-            <span>Total Charges: <strong>₹{{ selectedGuestForFolio.totalWithTax }}</strong></span>
-            <span>Total Payments: <strong>₹{{ selectedGuestForFolio.totalWithTax }}</strong></span>
-          </div>
-          <div class="ledger-balance">
-            <span>Current Balance</span>
-            <strong class="paid">₹0</strong>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="ci-footer">
-      <button class="ci-btn-cancel" (click)="closeFolio()">Close</button>
-      <button class="ci-btn-confirm" style="background: var(--surface-800);">
-        <span class="material-icons-round">print</span> Print Folio
+      <button class="ci-btn-cancel" (click)="closeCheckInModal()" [disabled]="isCheckingIn">Cancel</button>
+      <button class="ci-btn-confirm" (click)="confirmCheckIn()" [disabled]="isCheckingIn">
+        <span class="material-icons-round" *ngIf="!isCheckingIn">check_circle</span>
+        <span class="material-icons-round spin" *ngIf="isCheckingIn">sync</span>
+        {{ isCheckingIn ? 'Processing Check-In...' : 'Confirm Check-In (' + selectedBookingsForCheckIn.length + ' Rooms)' }}
       </button>
     </div>
 

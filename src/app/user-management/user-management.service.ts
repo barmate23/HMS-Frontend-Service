@@ -302,6 +302,15 @@ export class UserManagementService {
     this.apiError.set(null);
   }
 
+  private extractArray<T = any>(data: any): T[] {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (data.content && Array.isArray(data.content)) return data.content;
+    if (data.items && Array.isArray(data.items)) return data.items;
+    if (typeof data === 'object') return [data as T];
+    return [];
+  }
+
   loadAll(): void {
     this.isLoading.set(true);
     this.apiError.set(null);
@@ -322,14 +331,14 @@ export class UserManagementService {
       audit: this.http.get<StandardResponse<ApiAuditLog[]>>(`${this.userBaseUrl}/audit-logs/getAllAuditLogs`).pipe(catchError(() => of(null)))
     }).subscribe({
       next: ({ hotels, floors, departments, modules, roles, users, shifts, audit }) => {
-        if (hotels?.success && hotels.data?.length) this.setProperties(hotels.data);
-        if (floors?.success && floors.data?.length) this.setFloors(floors.data);
-        if (departments?.success) this.setDepartments(departments.data || []);
-        if (modules?.success && modules.data?.length) this.setModules(modules.data);
-        if (roles?.success) this.roles.set((roles.data || []).map(role => this.mapRole(role)));
-        if (shifts?.success && Array.isArray(shifts.data)) this.setShifts(shifts.data);
-        if (users?.success) this.users.set((users.data || []).map(user => this.mapUser(user)));
-        if (audit?.success) this.activity.set((audit.data || []).map(log => this.mapAudit(log)));
+        if (hotels?.success) this.setProperties(this.extractArray(hotels.data));
+        if (floors?.success) this.setFloors(this.extractArray(floors.data));
+        if (departments?.success) this.setDepartments(this.extractArray(departments.data));
+        if (modules?.success) this.setModules(this.extractArray(modules.data));
+        if (roles?.success) this.roles.set(this.extractArray(roles.data).map(role => this.mapRole(role)));
+        if (shifts?.success) this.setShifts(this.extractArray(shifts.data));
+        if (users?.success) this.users.set(this.extractArray(users.data).map(user => this.mapUser(user)));
+        if (audit?.success) this.activity.set(this.extractArray(audit.data).map(log => this.mapAudit(log)));
         this.isLoading.set(false);
       },
       error: err => {

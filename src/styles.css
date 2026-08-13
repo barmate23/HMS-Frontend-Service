@@ -153,3 +153,33 @@ h1, h2, h3, h4, h5, h6, th, strong, b, .card-title, .section-title, .section-sub
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
+
+/* Global Snackbar Notifications Styling */
+.mat-mdc-snack-bar-container.snackbar-error {
+  --mdc-snackbar-container-color: #dc2626 !important;
+  --mdc-snack-bar-button-color: #ffffff !important;
+  --mat-mdc-snack-bar-button-color: #ffffff !important;
+  color: #ffffff !important;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.4);
+}
+
+.mat-mdc-snack-bar-container.snackbar-success {
+  --mdc-snackbar-container-color: #16a34a !important;
+  --mdc-snack-bar-button-color: #ffffff !important;
+  --mat-mdc-snack-bar-button-color: #ffffff !important;
+  color: #ffffff !important;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(22, 163, 74, 0.4);
+}
+
+/* Ensure CDK overlay container (MatSnackBar) sits above all custom modal overlays (z-index 2000+) */
+.cdk-overlay-container {
+  z-index: 999999 !important;
+}
+
+

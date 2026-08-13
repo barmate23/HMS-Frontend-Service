@@ -91,9 +91,16 @@ export class DeparturesComponent implements OnInit, OnDestroy {
     this.routerSub?.unsubscribe();
   }
 
+  statusFilter = 'ALL';
+
   get pendingDepartures() { return this.pendingCount; }
   get checkedOut() { return this.checkedOutCount; }
   get totalDepartures() { return this.totalCount || this.departures.length; }
+
+  get filteredDepartures(): DepartureGuest[] {
+    if (this.statusFilter === 'ALL') return this.departures;
+    return this.departures.filter(d => d.status === this.statusFilter);
+  }
 
   get totalOutstanding(): number {
     if (!this.selectedGuestForCheckOut) return 0;
@@ -106,10 +113,11 @@ export class DeparturesComponent implements OnInit, OnDestroy {
     this.api.getArrivals(this.searchQuery, true).subscribe({
       next: response => {
         const data = response.data;
-        this.departures = (data?.arrivals || []).map(item => this.mapDeparture(item));
-        this.pendingCount = data?.pendingArrivalsCount ?? this.departures.filter(d => d.status === 'Pending').length;
-        this.checkedOutCount = data?.checkedInCount ?? this.departures.filter(d => d.status === 'Checked Out').length;
-        this.totalCount = data?.totalExpectedCount ?? this.departures.length;
+        const items = this.extractDepartureItems(data);
+        this.departures = items.map(item => this.mapDeparture(item));
+        this.pendingCount = data?.pendingArrivalsCount ?? data?.pendingDeparturesCount ?? this.departures.filter(d => d.status === 'Pending').length;
+        this.checkedOutCount = data?.checkedInCount ?? data?.checkedOutCount ?? this.departures.filter(d => d.status === 'Checked Out').length;
+        this.totalCount = data?.totalExpectedCount ?? data?.totalDeparturesCount ?? this.departures.length;
         this.isLoading = false;
       },
       error: () => {
@@ -117,6 +125,53 @@ export class DeparturesComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       }
     });
+  }
+
+  private extractDepartureItems(data: any): any[] {
+    if (!data) return [];
+
+    if (Array.isArray(data.reservations) && data.reservations.length > 0) {
+      const flattened: any[] = [];
+      data.reservations.forEach((res: any) => {
+        const bookings = Array.isArray(res.bookings) ? res.bookings : [];
+        if (bookings.length > 0) {
+          bookings.forEach((b: any) => {
+            flattened.push({
+              ...b,
+              reservationId: res.reservationId,
+              reservationRef: res.reservationRef,
+              confirmationNumber: res.confirmationNumber || b.bookingRef,
+              guestName: b.guestName || res.guestName || 'Guest',
+              guestIsVip: b.guestIsVip ?? res.guestIsVip ?? false,
+              eta: b.eta || res.eta || '11:00:00',
+              numberOfNights: b.numberOfNights || res.numberOfNights || 0
+            });
+          });
+        } else {
+          flattened.push({
+            bookingId: res.reservationId,
+            bookingRef: res.confirmationNumber || res.reservationRef,
+            guestName: res.guestName || 'Guest',
+            guestIsVip: !!res.guestIsVip,
+            numberOfNights: res.numberOfNights || 0,
+            roomTypeName: 'Room',
+            eta: res.eta || '11:00:00',
+            balance: Number(res.totalBalance || 0),
+            gstPercent: Number(res.gstPercent ?? 18),
+            bookingStatus: res.overallStatus || 'Pending',
+            checkInDate: res.checkInDate,
+            checkOutDate: res.checkOutDate,
+            roomNumber: '-'
+          });
+        }
+      });
+      return flattened;
+    }
+
+    if (Array.isArray(data.departures)) return data.departures;
+    if (Array.isArray(data.arrivals)) return data.arrivals;
+
+    return [];
   }
 
   openCheckOutModal(guest: DepartureGuest) {
@@ -203,37 +258,76 @@ export class DeparturesComponent implements OnInit, OnDestroy {
     document.body.style.overflow = '';
   }
 
-  private mapDeparture(item: ArrivalApiItem): DepartureGuest {
-    const normalizedStatus = (item.bookingStatus || '').replace(/[^A-Za-z]/g, '').toUpperCase();
+  private mapDeparture(item: any): DepartureGuest {
+    const normalizedStatus = (item.bookingStatus || item.status || '').replace(/[^A-Za-z]/g, '').toUpperCase();
     const checkedOut = normalizedStatus === 'CHECKEDOUT';
-    const balance = Number(item.balance || 0);
-    const gstPercent = Number(item.gstPercent ?? 0);
-    const taxAmount = Number(item.taxAmount ?? item.taxationAmount ?? ((balance * gstPercent) / 100));
-    const totalWithTax = balance + taxAmount;
+
+    const amounts = parseAmountDetails(
+      item.balance ?? item.totalBalance ?? item.totalAmount,
+      item.amountExcludingGst ?? item.baseAmount ?? item.totalBaseAmount,
+      item.gstPercent,
+      item.taxAmount ?? item.taxationAmount ?? item.gstAmount
+    );
 
     return {
-      id: String(item.bookingId),
-      bookingId: item.bookingId,
-      name: item.guestName || 'Guest',
-      phone: '',
-      bookingRef: item.bookingRef,
-      roomType: item.roomTypeName || 'Room',
+      id: String(item.bookingId || item.id || ''),
+      bookingId: Number(item.bookingId || item.id || 0),
+      name: item.guestName || item.name || 'Guest',
+      phone: item.guestPhone || item.phone || '',
+      bookingRef: item.confirmationNumber || item.bookingRef || item.reservationRef || `BK-${item.bookingId || item.id}`,
+      roomType: item.roomTypeName || item.roomType || 'Room',
       roomNumber: item.roomNumber || '-',
       roomTypeId: item.roomTypeName || '-',
-      plan: '-',
+      plan: item.ratePlanName || '-',
       pax: '-',
-      checkInDate: item.checkInDate,
-      checkOutDate: item.checkOutDate,
+      checkInDate: item.checkInDate || '',
+      checkOutDate: item.checkOutDate || '',
       nights: item.numberOfNights || 0,
-      expectedTime: item.eta || '-',
+      expectedTime: item.eta || '11:00:00',
       source: '-',
       status: checkedOut ? 'Checked Out' : 'Pending',
       isVip: !!item.guestIsVip,
-      balance: balance,
-      gstPercent: gstPercent,
-      taxAmount: taxAmount,
-      totalWithTax: totalWithTax,
-      totalAmount: totalWithTax
+      balance: amounts.baseAmount,
+      gstPercent: amounts.gstPercent,
+      taxAmount: amounts.taxAmount,
+      totalWithTax: amounts.totalAmount,
+      totalAmount: amounts.totalAmount
     };
   }
+}
+
+function parseAmountDetails(totalOrBalance?: number, amountExcludingGst?: number, gstPct = 18, rawTaxAmount?: number) {
+  const totalInput = Number(totalOrBalance || 0);
+  const baseInput = (amountExcludingGst !== undefined && amountExcludingGst !== null) ? Number(amountExcludingGst) : undefined;
+  const gstPercent = Number(gstPct ?? 18);
+
+  let baseAmount: number;
+  let taxAmount: number;
+  let totalAmount: number;
+
+  if (baseInput !== undefined && baseInput > 0) {
+    baseAmount = baseInput;
+    if (totalInput > 0) {
+      totalAmount = totalInput;
+      taxAmount = Math.round((totalAmount - baseAmount) * 100) / 100;
+    } else {
+      taxAmount = Math.round((baseAmount * (gstPercent / 100)) * 100) / 100;
+      totalAmount = Math.round((baseAmount + taxAmount) * 100) / 100;
+    }
+  } else if (rawTaxAmount !== undefined && rawTaxAmount !== null && rawTaxAmount > 0) {
+    taxAmount = Number(rawTaxAmount);
+    totalAmount = totalInput > 0 ? totalInput : Math.round((taxAmount / (gstPercent / 100)) * 100) / 100 + taxAmount;
+    baseAmount = Math.round((totalAmount - taxAmount) * 100) / 100;
+  } else {
+    totalAmount = totalInput;
+    baseAmount = Math.round((totalAmount / (1 + gstPercent / 100)) * 100) / 100;
+    taxAmount = Math.round((totalAmount - baseAmount) * 100) / 100;
+  }
+
+  return {
+    baseAmount: Math.round(baseAmount * 100) / 100,
+    taxAmount: Math.round(taxAmount * 100) / 100,
+    totalAmount: Math.round(totalAmount * 100) / 100,
+    gstPercent
+  };
 }

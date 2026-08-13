@@ -40,8 +40,40 @@ interface DepartureGuest {
 })
 export class DeparturesComponent implements OnInit, OnDestroy {
   currentDate = new Date();
+  selectedDate: string = new Date().toISOString().split('T')[0];
   searchQuery = '';
   departures: DepartureGuest[] = [];
+
+  get isTodaySelected(): boolean {
+    const todayStr = new Date().toISOString().split('T')[0];
+    return this.selectedDate === todayStr;
+  }
+
+  get selectedDateFormattedLabel(): string {
+    if (!this.selectedDate) return '';
+    const todayStr = new Date().toISOString().split('T')[0];
+    const parts = this.selectedDate.split('-');
+    if (parts.length !== 3) return this.selectedDate;
+    const year = Number(parts[0]);
+    const month = Number(parts[1]) - 1;
+    const day = Number(parts[2]);
+    const d = new Date(year, month, day);
+    const formatted = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    if (this.selectedDate === todayStr) {
+      return `Today's Departures • ${formatted}`;
+    }
+    return formatted;
+  }
+
+  onDateChange() {
+    this.loadDepartures();
+  }
+
+  selectTodayDate() {
+    this.selectedDate = new Date().toISOString().split('T')[0];
+    this.loadDepartures();
+  }
+
   pendingCount = 0;
   checkedOutCount = 0;
   totalCount = 0;
@@ -110,7 +142,7 @@ export class DeparturesComponent implements OnInit, OnDestroy {
   loadDepartures() {
     this.isLoading = true;
     this.errorMessage = '';
-    this.api.getArrivals(this.searchQuery, true).subscribe({
+    this.api.getArrivals(this.selectedDate, this.searchQuery, true).subscribe({
       next: response => {
         const data = response.data;
         const items = this.extractDepartureItems(data);

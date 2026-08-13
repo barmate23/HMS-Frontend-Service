@@ -54,7 +54,58 @@
 .nav-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+}
+
+.date-picker-box {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-50);
+  border: 1px solid var(--surface-200);
+  border-radius: 4px;
+  padding: 3px 8px;
+  transition: all 0.2s;
+}
+
+.date-picker-box:focus-within {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-light);
+  background: white;
+}
+
+.date-picker-box .material-icons-round {
+  color: var(--primary-color);
+  font-size: 14px;
+}
+
+.date-picker-box input[type="date"] {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--surface-800);
+  font-family: var(--font-poppins);
+  cursor: pointer;
+}
+
+.date-picker-box .btn-today-chip {
+  background: var(--accent-light);
+  color: var(--accent-color);
+  border: none;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-poppins);
+}
+
+.date-picker-box .btn-today-chip:hover {
+  background: var(--accent-color);
+  color: white;
 }
 
 .search-box {

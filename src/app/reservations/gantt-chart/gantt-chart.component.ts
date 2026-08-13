@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
-import { FrontOfficeApiService, GanttChartItem } from '../../front-office-api.service';
+import { FrontOfficeApiService, GanttChartItem, GanttChartData, GanttSummary } from '../../front-office-api.service';
 import { HotelMastersService, Floor, Room } from '../../masters/hotel-masters.service';
 
 interface GanttRow extends GanttChartItem {
@@ -42,6 +42,12 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
   todayLinePct: number | null = null;
   hoveredRoomId: number | null = null;
   pinnedRoomId: number | null = null;
+
+  // Summary stats from API
+  summaryTotalBookings = 0;
+  summaryOccupiedRooms = 0;
+  summaryCheckedIn = 0;
+
   private syncingScroll = false;
 
   @ViewChild('timelineHeaderEl') timelineHeaderEl?: ElementRef<HTMLDivElement>;
@@ -95,15 +101,15 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get totalBookings(): number {
-    return this.bookings.length;
+    return this.summaryTotalBookings;
   }
 
   get occupiedRooms(): number {
-    return this.roomLanes.filter(l => l.bookings.length > 0).length;
+    return this.summaryOccupiedRooms;
   }
 
   get checkedInBookings(): number {
-    return this.bookings.filter(r => this.normalizeStatus(r.status) === 'CHECKEDIN').length;
+    return this.summaryCheckedIn;
   }
 
   get timelineWidthPx(): number {
@@ -124,15 +130,34 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
     this.errorMessage = '';
     this.api.getGanttChartData(this.startDate, this.endDate).subscribe({
       next: response => {
+        const ganttData = response.data as GanttChartData;
+        const bookingsArr: GanttChartItem[] = ganttData?.bookings || (response.data as any) || [];
+        const summary: GanttSummary | undefined = ganttData?.summary;
+
         this.dateColumns = this.buildDateColumns(this.startDate, this.endDate);
-        this.bookings = (response.data || []).map(item => this.toGanttRow(item));
+        this.bookings = bookingsArr.map(item => this.toGanttRow(item));
         this.rebuildLanes();
         this.updateTodayFocusPosition();
+
+        // Patch summary stats from API
+        if (summary) {
+          this.summaryTotalBookings = summary.totalBookings ?? this.bookings.length;
+          this.summaryOccupiedRooms = summary.occupiedRooms ?? this.roomLanes.filter(l => l.bookings.length > 0).length;
+          this.summaryCheckedIn = summary.checkedIn ?? 0;
+        } else {
+          this.summaryTotalBookings = this.bookings.length;
+          this.summaryOccupiedRooms = this.roomLanes.filter(l => l.bookings.length > 0).length;
+          this.summaryCheckedIn = 0;
+        }
+
         this.isLoading = false;
       },
       error: () => {
         this.errorMessage = 'Unable to load Gantt chart data.';
         this.bookings = [];
+        this.summaryTotalBookings = 0;
+        this.summaryOccupiedRooms = 0;
+        this.summaryCheckedIn = 0;
         this.dateColumns = this.buildDateColumns(this.startDate, this.endDate);
         this.rebuildLanes();
         this.updateTodayFocusPosition();

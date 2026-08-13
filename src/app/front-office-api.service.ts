@@ -182,6 +182,17 @@ export interface GanttChartItem {
   color?: string;
 }
 
+export interface GanttSummary {
+  totalBookings: number;
+  occupiedRooms: number;
+  checkedIn: number;
+}
+
+export interface GanttChartData {
+  summary: GanttSummary;
+  bookings: GanttChartItem[];
+}
+
 export interface FrontOfficeDashboardSummary {
   totalRooms: number;
   totalBookings: number;
@@ -256,12 +267,15 @@ export class FrontOfficeApiService {
 
   constructor(private readonly http: HttpClient) {}
 
-  getArrivals(searchText = '', checkout = false, page = 0, size = 10): Observable<ApiResponse<ArrivalApiData>> {
+  getArrivals(date?: string, searchText = '', checkout = false, page = 0, size = 10): Observable<ApiResponse<ArrivalApiData>> {
     let params = new HttpParams()
       .set('checkout', String(checkout))
       .set('page', String(page))
       .set('size', String(size));
 
+    if (date && date.trim()) {
+      params = params.set('date', date.trim());
+    }
     if (searchText.trim()) {
       params = params.set('searchText', searchText.trim());
     }
@@ -281,11 +295,11 @@ export class FrontOfficeApiService {
     return this.http.post<ApiResponse<unknown>>(`${this.frontOfficeBaseUrl}/frontOffice/checkout`, payload);
   }
 
-  getGanttChartData(startDate: string, endDate: string): Observable<ApiResponse<GanttChartItem[]>> {
+  getGanttChartData(startDate: string, endDate: string): Observable<ApiResponse<GanttChartData>> {
     const params = new HttpParams()
       .set('startDate', startDate)
       .set('endDate', endDate);
-    return this.http.get<ApiResponse<GanttChartItem[]>>(`${this.frontOfficeBaseUrl}/frontOffice/getGanttChartData`, { params });
+    return this.http.get<ApiResponse<GanttChartData>>(`${this.frontOfficeBaseUrl}/frontOffice/getGanttChartData`, { params });
   }
 
   getFrontOfficeDashboard(date?: string): Observable<ApiResponse<FrontOfficeDashboardData>> {

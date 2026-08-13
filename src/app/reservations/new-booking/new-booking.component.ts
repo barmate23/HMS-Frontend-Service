@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
+import { AddressService } from '../../address.service';
 
 export interface Room {
   id: string; number: string; type: string; typeShort: string; typeId: string;
@@ -156,9 +157,55 @@ export class NewBookingComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  readonly addressService = inject(AddressService);
   private readonly frontOfficeBaseUrl = '/api/frontOfficeService/v1';
   private readonly masterBaseUrl = '/api/masterService/v1';
   readonly todayIso = this.toDateInputValue(new Date());
+
+  // Address Dropdown Signals & Cascade Helpers
+  addressCountries = computed(() => this.addressService.countries());
+  addressStates = computed(() => {
+    const selectedCountryName = this.guestData().country;
+    const country = this.addressService.countries().find(c => (c.name || '').toLowerCase() === (selectedCountryName || '').toLowerCase());
+    if (country && country.id) {
+      const filtered = this.addressService.states().filter(s => Number(s.countryId) === Number(country.id));
+      if (filtered.length > 0) return filtered;
+    }
+    return this.addressService.states();
+  });
+  addressCities = computed(() => {
+    const selectedStateName = this.guestData().state;
+    const state = this.addressService.states().find(s => (s.name || '').toLowerCase() === (selectedStateName || '').toLowerCase());
+    if (state && state.id) {
+      const filtered = this.addressService.cities().filter(c => Number(c.stateId) === Number(state.id));
+      if (filtered.length > 0) return filtered;
+    }
+    return this.addressService.cities();
+  });
+
+  onCountryChange(countryName: string) {
+    this.updateGuestField('country', countryName);
+    const country = this.addressService.countries().find(c => (c.name || '').toLowerCase() === (countryName || '').toLowerCase());
+    if (country && country.id) {
+      this.addressService.loadStates(country.id).subscribe();
+    } else {
+      this.addressService.loadStates().subscribe();
+    }
+  }
+
+  onStateChange(stateName: string) {
+    this.updateGuestField('state', stateName);
+    const state = this.addressService.states().find(s => (s.name || '').toLowerCase() === (stateName || '').toLowerCase());
+    if (state && state.id) {
+      this.addressService.loadCities(state.id).subscribe();
+    } else {
+      this.addressService.loadCities().subscribe();
+    }
+  }
+
+  onCityChange(cityName: string) {
+    this.updateGuestField('city', cityName);
+  }
 
   checkIn = signal('');
   checkOut = signal('');
@@ -318,6 +365,11 @@ export class NewBookingComponent implements OnInit {
     this.loadRoomInventory();
     this.loadRatePlans();
     this.loadGstRules();
+    
+    // Load Address API dropdown data
+    this.addressService.loadCountries().subscribe();
+    this.addressService.loadStates().subscribe();
+    this.addressService.loadCities().subscribe();
   }
 
   loadGstRules() {
@@ -847,24 +899,22 @@ export class NewBookingComponent implements OnInit {
 
   totalRoomBasePrice = computed(() => {
     const rooms = this.selectedRooms();
-    if (rooms.length === 0) return 5000 * this.nights();
+    if (rooms.length === 0) return 0;
     return rooms.reduce((sum, r) => sum + r.rate, 0) * this.nights();
   });
 
   planExtraPrice = computed(() => {
     const plan = this.selectedPlanDetails();
-    if (!plan) return 0;
-    const count = this.selectedRooms().length || 1;
+    if (!plan || this.selectedRooms().length === 0) return 0;
+    const count = this.selectedRooms().length;
     return (plan.extra * count) * this.nights();
   });
 
   totalPrice = computed(() => {
     const rooms = this.selectedRooms();
+    if (rooms.length === 0) return 0;
     const plan = this.selectedPlanDetails();
     const extraPerRoom = plan ? plan.extra : 0;
-    if (rooms.length === 0) {
-      return (5000 + extraPerRoom) * this.nights();
-    }
     const baseSum = rooms.reduce((sum, r) => sum + r.rate, 0);
     const extraSum = extraPerRoom * rooms.length;
     return (baseSum + extraSum) * this.nights();

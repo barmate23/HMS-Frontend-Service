@@ -18,15 +18,18 @@ export interface Hotel {
   totalRooms: number;
   currency?: string;
   logoUrl?: string;
+  logo?: string;
   bannerUrl?: string;
   gstin?: string;
   fssaiNo?: string;
   checkInTime?: string;
   checkOutTime?: string;
   starRating?: number;
+  starRatingCategory?: string;
   tagline?: string;
   websiteUrl?: string;
   receptionPhone?: string;
+  receptionDeskPhone?: string;
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
@@ -57,6 +60,13 @@ export interface RoomType {
   isActive: boolean;
 }
 
+export interface RoomPhoto {
+  id?: number;
+  fileName?: string;
+  fileType?: string;
+  photoData: string;
+}
+
 export interface Room {
   id: number;
   roomNumber: string;
@@ -72,6 +82,8 @@ export interface Room {
   telephone: string;
   imageUrl?: string;
   imageUrls?: string[];
+  photos?: RoomPhoto[];
+  photoDataList?: string[];
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
@@ -102,6 +114,7 @@ export interface GstConfig {
 }
 
 export interface HotelRequest {
+  id?: number;
   name: string;
   email: string;
   phone?: string;
@@ -113,18 +126,22 @@ export interface HotelRequest {
   totalRooms?: number;
   currency?: string;
   logoUrl?: string;
+  logo?: string;
   bannerUrl?: string;
   gstin?: string;
   fssaiNo?: string;
   checkInTime?: string;
   checkOutTime?: string;
   starRating?: number;
+  starRatingCategory?: string;
   tagline?: string;
   websiteUrl?: string;
   receptionPhone?: string;
+  receptionDeskPhone?: string;
 }
 
 export interface FloorRequest {
+  id?: number;
   hotelId: number;
   floorNumber: string;
   noOfRooms?: number;
@@ -132,6 +149,7 @@ export interface FloorRequest {
 }
 
 export interface RoomTypeRequest {
+  id?: number;
   hotelId: number;
   name: string;
   capacity?: number;
@@ -142,14 +160,16 @@ export interface RoomTypeRequest {
 }
 
 export interface RoomRequest {
+  id?: number;
   roomNumber: string;
   floorId: number;
   roomTypeId: number;
-  status: string;
+  statusId?: number;
+  hkStatusId?: number;
+  status?: string;
   maxOccupancy?: number;
   telephone?: string;
-  imageUrl?: string;
-  imageUrls?: string[];
+  photos?: RoomPhoto[];
 }
 
 export interface RatePlanRequest {
@@ -167,16 +187,6 @@ interface StandardResponse<T = any> {
 
 // ─── Service ───────────────────────────────────────────────────────────────────
 
-const defaultGstConfigs: GstConfig[] = [
-  { id: 1, serviceCategory: 'Room', hsnSacCode: '9963', cgstRate: 6, sgstRate: 6, igstRate: 12, description: 'GST rate for Room accommodation Services.', isActive: true },
-  { id: 2, serviceCategory: 'Food', hsnSacCode: '9963', cgstRate: 2.5, sgstRate: 2.5, igstRate: 5, description: 'GST rate for Restaurant and Food service supply.', isActive: true },
-  { id: 3, serviceCategory: 'Beverages', hsnSacCode: '2202', cgstRate: 9, sgstRate: 9, igstRate: 18, description: 'GST rate for Aerated / carbonated and other beverages.', isActive: true },
-  { id: 4, serviceCategory: 'Laundry', hsnSacCode: '9987', cgstRate: 9, sgstRate: 9, igstRate: 18, description: 'GST rate for laundry, dry cleaning, and cleaning services.', isActive: true },
-  { id: 5, serviceCategory: 'Spa', hsnSacCode: '9997', cgstRate: 9, sgstRate: 9, igstRate: 18, description: 'GST rate for beauty parlour and spa treatments.', isActive: true },
-  { id: 6, serviceCategory: 'Gym', hsnSacCode: '9997', cgstRate: 9, sgstRate: 9, igstRate: 18, description: 'GST rate for gym membership and fitness services.', isActive: true },
-  { id: 7, serviceCategory: 'Other Service', hsnSacCode: '9999', cgstRate: 9, sgstRate: 9, igstRate: 18, description: 'Standard rate for other miscellaneous service charges.', isActive: true }
-];
-
 @Injectable({ providedIn: 'root' })
 export class HotelMastersService {
   private readonly http = inject(HttpClient);
@@ -193,6 +203,17 @@ export class HotelMastersService {
   // Loading / error signals
   isLoading = signal(false);
   loadError = signal<string | null>(null);
+
+  // Room Pagination signals
+  private _roomsPage = signal<number>(0);
+  private _roomsTotalPages = signal<number>(1);
+  private _roomsTotalElements = signal<number>(0);
+  private _roomsPageSize = signal<number>(5);
+
+  public readonly roomsPage = this._roomsPage.asReadonly();
+  public readonly roomsTotalPages = this._roomsTotalPages.asReadonly();
+  public readonly roomsTotalElements = this._roomsTotalElements.asReadonly();
+  public readonly roomsPageSize = this._roomsPageSize.asReadonly();
 
   // Read-only public signals
   public readonly hotels = this._hotels.asReadonly();
@@ -220,6 +241,32 @@ export class HotelMastersService {
     return [];
   }
 
+  /** Load paginated rooms */
+  loadRooms(page: number = 0, size: number = 5, searchText: string = '') {
+    this._roomsPage.set(page);
+    this._roomsPageSize.set(size);
+    const searchStr = searchText ? `&searchText=${encodeURIComponent(searchText)}` : '';
+    this.http.get<any>(`${this.baseUrl}/rooms/getAllRooms?page=${page}&size=${size}${searchStr}`).subscribe({
+      next: (res: any) => {
+        const rawData = res?.data;
+        const roomsArray = this.extractArray<Room>(rawData).map((r: any) => ({
+          ...r,
+          typeId: r.roomTypeId,
+          status: r.statusValue ? r.statusValue.toUpperCase() : 'VACANT'
+        }));
+        this._rooms.set(roomsArray);
+
+        // Pagination info is inside res.metadata
+        const meta = res?.metadata;
+        if (meta) {
+          this._roomsTotalPages.set(Math.max(1, Number(meta.totalPages) || 1));
+          this._roomsTotalElements.set(Number(meta.totalRecords) || roomsArray.length);
+        }
+      },
+      error: (err) => console.error('[HotelMastersService] loadRooms error:', err)
+    });
+  }
+
   /** Load all entities concurrently from the backend */
   loadAll(searchText: string = '') {
     this.isLoading.set(true);
@@ -231,15 +278,10 @@ export class HotelMastersService {
       hotels: this.http.get<StandardResponse<Hotel[]>>(`${this.baseUrl}/hotels/getAllHotels?page=0&size=500${searchStr}`),
       floors: this.http.get<StandardResponse<Floor[]>>(`${this.baseUrl}/floors/getAllFloors?page=0&size=500${searchStr}`),
       roomTypes: this.http.get<StandardResponse<RoomType[]>>(`${this.baseUrl}/roomTypes/getAllRoomTypes?page=0&size=500${searchStr}`),
-      rooms: this.http.get<StandardResponse<Room[]>>(`${this.baseUrl}/rooms/getAllRooms?page=0&size=500${searchStr}`),
+      rooms: this.http.get<StandardResponse<Room[]>>(`${this.baseUrl}/rooms/getAllRooms?page=0&size=5${searchStr}`),
       ratePlans: this.http.get<StandardResponse<RatePlan[]>>(`${this.baseUrl}/ratePlans/getAllRatePlans?page=0&size=500${searchStr}`),
       gstConfigs: this.http.get<StandardResponse<GstConfig[]>>(`${this.baseUrl}/gstRules/getAllGstRules?page=0&size=500`).pipe(
-        catchError(() => {
-          const local = localStorage.getItem('hms-gst-config');
-          const data = local ? JSON.parse(local) : defaultGstConfigs;
-          localStorage.setItem('hms-gst-config', JSON.stringify(data));
-          return of({ success: true, message: 'Local storage fallback', data } as StandardResponse<GstConfig[]>);
-        })
+        catchError(() => of({ success: true, message: '', data: [] } as StandardResponse<GstConfig[]>))
       )
     }).subscribe({
       next: (results) => {
@@ -254,14 +296,23 @@ export class HotelMastersService {
           }));
           this._gstConfigs.set(configs);
         }
-        if (results.rooms?.success) {
-          // Normalise: backend uses roomTypeId, UI also needs typeId alias, map status correctly to stop UI break
-          const rooms = this.extractArray<Room>(results.rooms.data).map((r: any) => ({ 
+        if (results.rooms) {
+          const res = results.rooms as any;
+          const rawData = res.data;
+          const roomsArray = this.extractArray<Room>(rawData).map((r: any) => ({ 
             ...r, 
             typeId: r.roomTypeId,
             status: r.statusValue ? r.statusValue.toUpperCase() : 'VACANT'
           }));
-          this._rooms.set(rooms);
+          this._rooms.set(roomsArray);
+          this._roomsPage.set(0);
+
+          // Pagination info is inside res.metadata
+          const meta = res.metadata;
+          if (meta) {
+            this._roomsTotalPages.set(Math.max(1, Number(meta.totalPages) || 1));
+            this._roomsTotalElements.set(Number(meta.totalRecords) || roomsArray.length);
+          }
         }
         this.isLoading.set(false);
       },
@@ -276,7 +327,14 @@ export class HotelMastersService {
   // ─── Hotels CRUD ─────────────────────────────────────────────────────────────
 
   saveHotel(hotel: Partial<Hotel>): Observable<Hotel> {
+    const rawLogo = hotel.logo || hotel.logoUrl || '';
+    const logoByteArray = rawLogo.includes(',') ? rawLogo.split(',')[1] : rawLogo;
+
+    const starRatingNum = Number(hotel.starRating || 3);
+    const starCategory = hotel.starRatingCategory || `${starRatingNum} Star`;
+
     const payload: HotelRequest = {
+      ...(hotel.id ? { id: Number(hotel.id) } : {}),
       name: (hotel.name || '').trim(),
       email: (hotel.email || '').trim(),
       phone: (hotel.phone || '').trim(),
@@ -287,16 +345,19 @@ export class HotelMastersService {
       zipCode: (hotel.zipCode || '400001').trim(),
       totalRooms: Number(hotel.totalRooms || 10),
       currency: hotel.currency || 'INR',
-      logoUrl: hotel.logoUrl || '',
+      logoUrl: logoByteArray,
+      logo: logoByteArray,
       bannerUrl: hotel.bannerUrl || '',
       gstin: (hotel.gstin || '').trim(),
       fssaiNo: (hotel.fssaiNo || '').trim(),
       checkInTime: hotel.checkInTime || '12:00',
       checkOutTime: hotel.checkOutTime || '11:00',
-      starRating: Number(hotel.starRating || 3),
+      starRating: starRatingNum,
+      starRatingCategory: starCategory,
       tagline: (hotel.tagline || '').trim(),
       websiteUrl: (hotel.websiteUrl || '').trim(),
-      receptionPhone: (hotel.receptionPhone || '').trim()
+      receptionPhone: (hotel.receptionPhone || hotel.receptionDeskPhone || '').trim(),
+      receptionDeskPhone: (hotel.receptionDeskPhone || hotel.receptionPhone || '').trim()
     };
 
     const req$ = hotel.id
@@ -407,19 +468,96 @@ export class HotelMastersService {
 
   // ─── Rooms CRUD ──────────────────────────────────────────────────────────────
 
+  getRoomById(id: number): Observable<Room> {
+    return this.http.get<StandardResponse<Room>>(`${this.baseUrl}/rooms/getRoomById/${id}`).pipe(
+      map(res => {
+        const item = res?.data || res || {};
+        
+        let imageUrls: string[] = [];
+        if (item.photos && Array.isArray(item.photos) && item.photos.length > 0) {
+          imageUrls = item.photos.map((p: any) => {
+            const dataStr = p.photoData || p.data || (typeof p === 'string' ? p : '');
+            if (!dataStr) return '';
+            if (dataStr.startsWith('data:') || dataStr.startsWith('http')) return dataStr;
+            const type = p.fileType || 'image/jpeg';
+            return `data:${type};base64,${dataStr}`;
+          }).filter(Boolean);
+        } else if (item.photoDataList && Array.isArray(item.photoDataList) && item.photoDataList.length > 0) {
+          imageUrls = item.photoDataList.map((dataStr: string) => {
+            if (!dataStr) return '';
+            if (dataStr.startsWith('data:') || dataStr.startsWith('http')) return dataStr;
+            return `data:image/jpeg;base64,${dataStr}`;
+          }).filter(Boolean);
+        } else if (item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0) {
+          imageUrls = item.imageUrls.map((dataStr: string) => {
+            if (!dataStr) return '';
+            if (dataStr.startsWith('data:') || dataStr.startsWith('http')) return dataStr;
+            return `data:image/jpeg;base64,${dataStr}`;
+          }).filter(Boolean);
+        } else if (item.imageUrl) {
+          const dataStr = item.imageUrl;
+          if (dataStr.startsWith('data:') || dataStr.startsWith('http')) {
+            imageUrls = [dataStr];
+          } else {
+            imageUrls = [`data:image/jpeg;base64,${dataStr}`];
+          }
+        }
+
+        const floorId = item.floorId ? Number(item.floorId) : undefined;
+        const typeId = item.roomTypeId ? Number(item.roomTypeId) : (item.typeId ? Number(item.typeId) : undefined);
+
+        return {
+          ...item,
+          id: Number(item.id || id),
+          roomNumber: item.roomNumber || '',
+          floorId,
+          roomTypeId: typeId,
+          typeId,
+          status: item.status || item.statusValue || 'VACANT',
+          statusId: item.statusId,
+          hkStatusId: item.hkStatusId,
+          maxOccupancy: Number(item.maxOccupancy || 2),
+          telephone: item.telephone || '',
+          imageUrl: imageUrls.length > 0 ? imageUrls[0] : '',
+          imageUrls: imageUrls
+        } as Room;
+      }),
+      catchError(err => {
+        console.error('getRoomById error', err);
+        return throwError(() => err);
+      })
+    );
+  }
+
   saveRoom(room: Partial<Room>): Observable<Room> {
-    const imageUrls = room.imageUrls || (room.imageUrl ? [room.imageUrl] : []);
-    const primaryImage = room.imageUrl || (imageUrls.length > 0 ? imageUrls[0] : '');
+    const rawImageUrls = room.imageUrls || (room.imageUrl ? [room.imageUrl] : []);
+    const cleanImageUrls = rawImageUrls.map(imgStr => imgStr.includes(',') ? imgStr.split(',')[1] : imgStr);
+    const primaryCleanImage = cleanImageUrls.length > 0 ? cleanImageUrls[0] : '';
+
+    const photos: RoomPhoto[] = rawImageUrls.map((imgStr, idx) => {
+      const base64Bytes = imgStr.includes(',') ? imgStr.split(',')[1] : imgStr;
+      let fileType = 'image/jpeg';
+      if (imgStr.startsWith('data:image/png')) fileType = 'image/png';
+      else if (imgStr.startsWith('data:image/webp')) fileType = 'image/webp';
+
+      return {
+        fileName: `room_photo_${idx + 1}.${fileType.split('/')[1] || 'jpg'}`,
+        fileType: fileType,
+        photoData: base64Bytes
+      };
+    });
 
     const payload: RoomRequest = {
+      ...(room.id ? { id: Number(room.id) } : {}),
       roomNumber: (room.roomNumber || '').trim(),
       floorId: Number(room.floorId!),
       roomTypeId: Number(room.typeId ?? room.roomTypeId!),
       status: room.status || 'VACANT',
+      statusId: room.statusId || (room.status === 'OCCUPIED' ? 2 : 1),
+      hkStatusId: room.hkStatusId || 1,
       maxOccupancy: Number(room.maxOccupancy || 2),
       telephone: room.telephone || '',
-      imageUrl: primaryImage,
-      imageUrls: imageUrls
+      photos: photos
     };
 
     const req$ = room.id
@@ -429,14 +567,14 @@ export class HotelMastersService {
     return req$.pipe(
       map(res => {
         const item = res?.data || res || {};
-        const itemImageUrls = item.imageUrls || (item.imageUrl ? [item.imageUrl] : imageUrls);
+        const itemImageUrls = item.imageUrls || (item.imageUrl ? [item.imageUrl] : rawImageUrls);
         return {
           ...item,
           id: item.id ? Number(item.id) : (room.id ? Number(room.id) : Date.now()),
           floorId: item.floorId ? Number(item.floorId) : Number(room.floorId),
           roomTypeId: item.roomTypeId ? Number(item.roomTypeId) : Number(room.typeId),
           typeId: item.roomTypeId ? Number(item.roomTypeId) : Number(room.typeId ?? room.roomTypeId),
-          imageUrl: item.imageUrl || primaryImage,
+          imageUrl: item.imageUrl || primaryCleanImage,
           imageUrls: itemImageUrls
         };
       }),

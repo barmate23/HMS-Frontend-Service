@@ -21,7 +21,7 @@
     <button type="button" (click)="loadDashboard()">Retry</button>
   </div>
 
-  <div class="kpi-grid">
+  <div class="kpi-grid" *ngIf="dashboard() && !isLoading()">
     <article class="kpi-card total">
       <span class="material-icons-round">hotel</span>
       <div><strong>{{ summary().totalRooms }}</strong><small>Total Rooms</small></div>
@@ -38,9 +38,9 @@
       <span class="material-icons-round">bed</span>
       <div><strong>{{ summary().occupiedRooms }}</strong><small>Occupied</small></div>
     </article>
-    <article class="kpi-card blocked">
-      <span class="material-icons-round">block</span>
-      <div><strong>{{ summary().blockedRooms }}</strong><small>Blocked</small></div>
+    <article class="kpi-card booking">
+      <span class="material-icons-round">event_available</span>
+      <div><strong>{{ summary().bookedRooms }}</strong><small>Booked</small></div>
     </article>
     <article class="kpi-card maintenance">
       <span class="material-icons-round">build_circle</span>
@@ -48,7 +48,7 @@
     </article>
   </div>
 
-  <section class="floor-board">
+  <section class="floor-board" *ngIf="dashboard() && !isLoading()">
     <header>
       <div>
         <h2>Floor Wise Room Map</h2>

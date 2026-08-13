@@ -59,8 +59,9 @@
               </div>
               <div class="input-group">
                 <label>Country</label>
-                <select [ngModel]="guestData().country" (ngModelChange)="updateGuestField('country', $event)">
-                  <option>India</option><option>USA</option>
+                <select [ngModel]="guestData().country" (ngModelChange)="onCountryChange($event)">
+                  <option value="">Select Country</option>
+                  <option *ngFor="let c of addressCountries()" [value]="c.name">{{ c.name }}</option>
                 </select>
               </div>
             </div>
@@ -69,8 +70,14 @@
               <div class="address-grid">
                 <input type="text" placeholder="Address Line 1" class="span-2" [ngModel]="guestData().address1" (ngModelChange)="updateGuestField('address1', $event)">
                 <input type="text" placeholder="Address Line 2" class="span-2" [ngModel]="guestData().address2" (ngModelChange)="updateGuestField('address2', $event)">
-                <input type="text" placeholder="City" [ngModel]="guestData().city" (ngModelChange)="updateGuestField('city', $event)">
-                <input type="text" placeholder="State" [ngModel]="guestData().state" (ngModelChange)="updateGuestField('state', $event)">
+                <select [ngModel]="guestData().state" (ngModelChange)="onStateChange($event)">
+                  <option value="">Select State</option>
+                  <option *ngFor="let s of addressStates()" [value]="s.name">{{ s.name }}</option>
+                </select>
+                <select [ngModel]="guestData().city" (ngModelChange)="onCityChange($event)">
+                  <option value="">Select City</option>
+                  <option *ngFor="let ct of addressCities()" [value]="ct.name">{{ ct.name }}</option>
+                </select>
                 <input type="text" placeholder="Post Code" inputmode="numeric" maxlength="10" [ngModel]="guestData().zip" (ngModelChange)="updateGuestField('zip', $event)" (blur)="markFieldTouched('zip')" [class.invalid]="shouldShowError('zip')">
                 <span class="field-error address-error" *ngIf="shouldShowError('zip')">{{ validationMessage('zip') }}</span>
               </div>
@@ -375,7 +382,9 @@
           <div class="summary-hero">
             <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800" alt="Hotel Room">
             <div class="hero-overlay">
-              <span class="status-badge">AVAILABLE</span>
+              <span class="status-badge" [style.background]="selectedRooms().length > 0 ? '#059669' : '#64748b'">
+                {{ selectedRooms().length > 0 ? 'SELECTED' : 'NO ROOM SELECTED' }}
+              </span>
               <div class="hero-text">
                 <h3>{{ getSelectedRoomsText() }}</h3>
                 <p>{{ nights() }} Night{{ nights() !== 1 ? 's' : '' }} &bull; {{ selectedRooms().length > 0 ? selectedRooms().length + ' Room' + (selectedRooms().length > 1 ? 's' : '') + ' selected' : 'Choose from map or list' }}</p>
@@ -413,8 +422,8 @@
               <span>{{ formatINR(totalRoomBasePrice()) }}</span>
             </div>
             <div class="summary-line" *ngIf="selectedPlanDetails() as plan">
-              <span *ngIf="plan.extra !== 0">{{ plan.shortLabel }} Plan Add-on ({{ selectedRooms().length || 1 }} Room{{ (selectedRooms().length || 1) !== 1 ? 's' : '' }})</span>
-              <span *ngIf="plan.extra !== 0">{{ formatINR(planExtraPrice()) }}</span>
+              <span *ngIf="plan.extra !== 0 && selectedRooms().length > 0">{{ plan.shortLabel }} Plan Add-on ({{ selectedRooms().length }} Room{{ selectedRooms().length !== 1 ? 's' : '' }})</span>
+              <span *ngIf="plan.extra !== 0 && selectedRooms().length > 0">{{ formatINR(planExtraPrice()) }}</span>
             </div>
             <div class="summary-line">
               <span>Taxes &amp; Fees ({{ roomTaxRate() }}%)</span>

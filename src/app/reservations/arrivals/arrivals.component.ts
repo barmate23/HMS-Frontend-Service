@@ -62,8 +62,39 @@ export interface ArrivalReservationGroup {
 })
 export class ArrivalsComponent implements OnInit, OnDestroy {
   currentDate = new Date();
+  selectedDate: string = new Date().toISOString().split('T')[0];
   searchQuery = '';
   statusFilter: 'ALL' | 'Pending' | 'Partially Checked In' | 'Checked In' = 'ALL';
+
+  get isTodaySelected(): boolean {
+    const todayStr = new Date().toISOString().split('T')[0];
+    return this.selectedDate === todayStr;
+  }
+
+  get selectedDateFormattedLabel(): string {
+    if (!this.selectedDate) return '';
+    const todayStr = new Date().toISOString().split('T')[0];
+    const parts = this.selectedDate.split('-');
+    if (parts.length !== 3) return this.selectedDate;
+    const year = Number(parts[0]);
+    const month = Number(parts[1]) - 1;
+    const day = Number(parts[2]);
+    const d = new Date(year, month, day);
+    const formatted = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    if (this.selectedDate === todayStr) {
+      return `Today's Arrivals • ${formatted}`;
+    }
+    return formatted;
+  }
+
+  onDateChange() {
+    this.loadArrivals(0);
+  }
+
+  selectTodayDate() {
+    this.selectedDate = new Date().toISOString().split('T')[0];
+    this.loadArrivals(0);
+  }
 
   reservations: ArrivalReservationGroup[] = [];
   pendingCount = 0;
@@ -148,7 +179,7 @@ export class ArrivalsComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.currentPage = page;
 
-    this.api.getArrivals(this.searchQuery, false, this.currentPage, this.pageSize).subscribe({
+    this.api.getArrivals(this.selectedDate, this.searchQuery, false, this.currentPage, this.pageSize).subscribe({
       next: response => {
         const data = response.data;
         const meta = response.metadata;
@@ -225,6 +256,16 @@ export class ArrivalsComponent implements OnInit, OnDestroy {
   getSelectedPendingRooms(): ArrivalRoomBooking[] {
     if (!this.selectedReservation) return [];
     return this.selectedReservation.bookings.filter(b => b.bookingStatus !== 'Checked In' && b.selected);
+  }
+
+  getCheckedInRoomsCount(): number {
+    if (!this.selectedReservation || !this.selectedReservation.bookings) return 0;
+    return this.selectedReservation.bookings.filter(b => b.bookingStatus === 'Checked In').length;
+  }
+
+  getPendingCheckInRoomsCount(): number {
+    if (!this.selectedReservation || !this.selectedReservation.bookings) return 0;
+    return this.selectedReservation.bookings.filter(b => b.bookingStatus !== 'Checked In').length;
   }
 
   toggleSelectAllPending(checked: boolean) {

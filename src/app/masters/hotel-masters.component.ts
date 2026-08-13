@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { HotelMastersService, Hotel, Floor, RoomType, Room, RatePlan, GstConfig } from './hotel-masters.service';
+import { AddressService } from '../address.service';
 
 type MasterTab = 'hotels' | 'floors' | 'room-types' | 'rooms' | 'rate-plans' | 'gst-config';
 type ValidationErrors = Partial<Record<string, string>>;
@@ -19,6 +20,7 @@ type ValidationErrors = Partial<Record<string, string>>;
 })
 export class HotelMastersComponent implements OnInit, OnDestroy {
   public readonly mastersService = inject(HotelMastersService);
+  public readonly addressService = inject(AddressService);
   private readonly router = inject(Router);
   private routerSub?: Subscription;
   private searchDebounceTimer: any;
@@ -59,8 +61,56 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   formErrors = signal<ValidationErrors>({});
   modalErrorMessage = signal<string | null>(null);
 
+  // Gallery loading state for Edit Room modal
+  roomPhotosLoading = signal(false);
+
   // Helper form state for Rooms tab: selected Hotel to filter Floor & RoomType
   selectedHotelIdForRoomForm = signal<number | null>(null);
+
+  // Address Dropdown Signals & Cascade Helpers
+  addressCountries = computed(() => this.addressService.countries());
+  addressStates = computed(() => {
+    const selectedCountryName = this.currentHotel().country;
+    const country = this.addressService.countries().find(c => (c.name || '').toLowerCase() === (selectedCountryName || '').toLowerCase());
+    if (country && country.id) {
+      const filtered = this.addressService.states().filter(s => Number(s.countryId) === Number(country.id));
+      if (filtered.length > 0) return filtered;
+    }
+    return this.addressService.states();
+  });
+  addressCities = computed(() => {
+    const selectedStateName = this.currentHotel().state;
+    const state = this.addressService.states().find(s => (s.name || '').toLowerCase() === (selectedStateName || '').toLowerCase());
+    if (state && state.id) {
+      const filtered = this.addressService.cities().filter(c => Number(c.stateId) === Number(state.id));
+      if (filtered.length > 0) return filtered;
+    }
+    return this.addressService.cities();
+  });
+
+  onHotelCountryChange(countryName: string) {
+    this.currentHotel.update(h => ({ ...h, country: countryName }));
+    const country = this.addressService.countries().find(c => (c.name || '').toLowerCase() === (countryName || '').toLowerCase());
+    if (country && country.id) {
+      this.addressService.loadStates(country.id).subscribe();
+    } else {
+      this.addressService.loadStates().subscribe();
+    }
+  }
+
+  onHotelStateChange(stateName: string) {
+    this.currentHotel.update(h => ({ ...h, state: stateName }));
+    const state = this.addressService.states().find(s => (s.name || '').toLowerCase() === (stateName || '').toLowerCase());
+    if (state && state.id) {
+      this.addressService.loadCities(state.id).subscribe();
+    } else {
+      this.addressService.loadCities().subscribe();
+    }
+  }
+
+  onHotelCityChange(cityName: string) {
+    this.currentHotel.update(h => ({ ...h, city: cityName }));
+  }
 
   ngOnInit() {
     this.updateTabFromUrl(this.router.url);
@@ -69,6 +119,11 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     ).subscribe((event: any) => {
       this.updateTabFromUrl(event.urlAfterRedirects || event.url);
     });
+
+    // Load Address API dropdown data
+    this.addressService.loadCountries().subscribe();
+    this.addressService.loadStates().subscribe();
+    this.addressService.loadCities().subscribe();
   }
 
   ngOnDestroy() {
@@ -211,7 +266,60 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     );
   });
 
+  // --- Pagination Helpers for Rooms ---
+  get roomsPageArray(): number[] {
+    const total = this.mastersService.roomsTotalPages();
+    return Array.from({ length: total }, (_, i) => i);
+  }
+
+  nextRoomsPage() {
+    const current = this.mastersService.roomsPage();
+    const total = this.mastersService.roomsTotalPages();
+    if (current < total - 1) {
+      this.mastersService.loadRooms(current + 1, 5, this.searchQuery());
+    }
+  }
+
+  prevRoomsPage() {
+    const current = this.mastersService.roomsPage();
+    if (current > 0) {
+      this.mastersService.loadRooms(current - 1, 5, this.searchQuery());
+    }
+  }
+
+  goToRoomsPage(page: number) {
+    this.mastersService.loadRooms(page, 5, this.searchQuery());
+  }
+
+  get roomsRangeMin(): number {
+    if (this.mastersService.roomsTotalElements() === 0) return 0;
+    return (this.mastersService.roomsPage() * 5) + 1;
+  }
+
+  get roomsRangeMax(): number {
+    const max = (this.mastersService.roomsPage() + 1) * 5;
+    const total = this.mastersService.roomsTotalElements();
+    return Math.min(max, total || max);
+  }
+
   // --- Dynamic Mappings ---
+  getHotelLogoSrc(hotel: Hotel): string {
+    if (!hotel) return '';
+    if (hotel.logoUrl) {
+      if (hotel.logoUrl.startsWith('http') || hotel.logoUrl.startsWith('data:')) {
+        return hotel.logoUrl;
+      }
+      return `data:image/png;base64,${hotel.logoUrl}`;
+    }
+    if (hotel.logo) {
+      if (hotel.logo.startsWith('http') || hotel.logo.startsWith('data:')) {
+        return hotel.logo;
+      }
+      return `data:image/png;base64,${hotel.logo}`;
+    }
+    return '';
+  }
+
   getHotelName(hotelId?: number): string {
     if (!hotelId) return 'N/A';
     return this.mastersService.hotelsMap().get(hotelId)?.name || `Hotel #${hotelId}`;
@@ -313,14 +421,15 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       const reader = new FileReader();
       reader.onload = (e: ProgressEvent<FileReader>) => {
         const result = e.target?.result as string;
-        this.currentHotel.update(h => ({ ...h, logoUrl: result }));
+        const base64Bytes = result.includes(',') ? result.split(',')[1] : result;
+        this.currentHotel.update(h => ({ ...h, logoUrl: result, logo: base64Bytes }));
       };
       reader.readAsDataURL(file);
     }
   }
 
   removeLogo(): void {
-    this.currentHotel.update(h => ({ ...h, logoUrl: '' }));
+    this.currentHotel.update(h => ({ ...h, logoUrl: '', logo: '' }));
   }
 
   onRoomPhotosSelected(event: Event): void {
@@ -475,14 +584,17 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
         totalRooms: 10,
         currency: 'INR',
         starRating: item.starRating || 3,
+        starRatingCategory: item.starRatingCategory || `${item.starRating || 3} Star`,
         checkInTime: item.checkInTime || '12:00',
         checkOutTime: item.checkOutTime || '11:00',
-        logoUrl: item.logoUrl || '',
+        logoUrl: item.logoUrl || (item.logo ? `data:image/png;base64,${item.logo}` : ''),
+        logo: item.logo || '',
         gstin: item.gstin || '',
         fssaiNo: item.fssaiNo || '',
         tagline: item.tagline || '',
         websiteUrl: item.websiteUrl || '',
-        receptionPhone: item.receptionPhone || '',
+        receptionPhone: item.receptionPhone || item.receptionDeskPhone || '',
+        receptionDeskPhone: item.receptionDeskPhone || item.receptionPhone || '',
         ...item
       });
       this.isHotelModalOpen.set(true);
@@ -515,6 +627,36 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
         this.selectedHotelIdForRoomForm.set(activeHotels.length > 0 ? Number(activeHotels[0].id) : null);
       }
       this.isRoomModalOpen.set(true);
+
+      // Fetch fresh room details & photos from getRoomById API
+      if (room.id) {
+        this.roomPhotosLoading.set(true);
+        this.mastersService.getRoomById(Number(room.id)).subscribe({
+          next: (freshRoom) => {
+            if (freshRoom) {
+              const freshFloorId = freshRoom.floorId ? Number(freshRoom.floorId) : floorId;
+              const freshTypeId = freshRoom.typeId ? Number(freshRoom.typeId) : typeId;
+              
+              this.currentRoom.set({
+                ...this.currentRoom(),
+                ...freshRoom,
+                floorId: freshFloorId,
+                typeId: freshTypeId
+              });
+
+              const freshFloor = this.mastersService.floors().find(f => Number(f.id) === Number(freshFloorId));
+              if (freshFloor) {
+                this.selectedHotelIdForRoomForm.set(Number(freshFloor.hotelId));
+              }
+            }
+            this.roomPhotosLoading.set(false);
+          },
+          error: (err) => {
+            console.error('Error fetching room details:', err);
+            this.roomPhotosLoading.set(false);
+          }
+        });
+      }
     } else if (tab === 'rate-plans') {
       this.currentRatePlan.set({ ...item });
       this.isRatePlanModalOpen.set(true);

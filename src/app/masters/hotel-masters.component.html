@@ -117,10 +117,9 @@
               <td><span class="mono-text">H-{{ hotel.id }}</span></td>
               <td>
                 <div class="hotel-info">
-                  <div class="avatar-box" *ngIf="!hotel.logoUrl">
+                  <div class="avatar-box">
                     <span class="material-icons-round">domain</span>
                   </div>
-                  <img [src]="hotel.logoUrl" class="hotel-logo-thumb" *ngIf="hotel.logoUrl" alt="Logo">
                   <div class="name-block">
                     <div class="name-row">
                       <span class="entity-name">{{ hotel.name }}</span>
@@ -391,13 +390,7 @@
             <tr *ngFor="let room of filteredRooms()" [class.inactive-row]="!room.isActive">
               <td><span class="mono-text">RM-{{ room.id }}</span></td>
               <td>
-                <div class="room-number-box" style="display: flex; align-items: center; gap: 8px;">
-                  <div style="position: relative; display: inline-flex;" *ngIf="room.imageUrl || (room.imageUrls && room.imageUrls.length > 0)">
-                    <img [src]="room.imageUrl || room.imageUrls![0]" class="hotel-logo-thumb" alt="Room Photo" style="border-radius: 6px;">
-                    <span class="photo-count-badge" *ngIf="room.imageUrls && room.imageUrls.length > 1">
-                      +{{ room.imageUrls.length - 1 }}
-                    </span>
-                  </div>
+                <div class="room-number-box">
                   <span class="room-pill">{{ room.roomNumber }}</span>
                 </div>
               </td>
@@ -464,6 +457,48 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- ROOMS PAGINATION FOOTER -->
+      <div class="card-footer pagination-footer">
+        <div class="pagination-info">
+          Showing <strong>{{ roomsRangeMin }}</strong> – <strong>{{ roomsRangeMax }}</strong> of <strong>{{ mastersService.roomsTotalElements() || filteredRooms().length }}</strong> Rooms
+        </div>
+        <div class="pagination-controls">
+          <button 
+            type="button"
+            class="btn-page-nav" 
+            [disabled]="mastersService.roomsPage() === 0" 
+            (click)="prevRoomsPage()" 
+            title="Previous Page"
+          >
+            <span class="material-icons-round">chevron_left</span>
+            <span>Previous</span>
+          </button>
+          
+          <div class="page-numbers">
+            <button 
+              type="button"
+              *ngFor="let p of roomsPageArray" 
+              class="btn-page-num" 
+              [class.active]="p === mastersService.roomsPage()" 
+              (click)="goToRoomsPage(p)"
+            >
+              {{ p + 1 }}
+            </button>
+          </div>
+
+          <button 
+            type="button"
+            class="btn-page-nav" 
+            [disabled]="mastersService.roomsPage() >= mastersService.roomsTotalPages() - 1" 
+            (click)="nextRoomsPage()" 
+            title="Next Page"
+          >
+            <span>Next</span>
+            <span class="material-icons-round">chevron_right</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -768,21 +803,30 @@
 
       <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
-          <label>City *</label>
-          <input type="text" [(ngModel)]="currentHotel().city" (blur)="markFieldTouched('city')" [class.invalid]="shouldShowError('city')" placeholder="Miami Beach">
-          <span class="field-error" *ngIf="shouldShowError('city')">{{ validationMessage('city') }}</span>
+          <label>State / Region *</label>
+          <select [ngModel]="currentHotel().state" (ngModelChange)="onHotelStateChange($event)" (blur)="markFieldTouched('state')" [class.invalid]="shouldShowError('state')">
+            <option value="">Select State</option>
+            <option *ngFor="let s of addressStates()" [value]="s.name">{{ s.name }}</option>
+          </select>
+          <span class="field-error" *ngIf="shouldShowError('state')">{{ validationMessage('state') }}</span>
         </div>
         <div class="ci-input-group">
-          <label>State / Region *</label>
-          <input type="text" [(ngModel)]="currentHotel().state" (blur)="markFieldTouched('state')" [class.invalid]="shouldShowError('state')" placeholder="Florida">
-          <span class="field-error" *ngIf="shouldShowError('state')">{{ validationMessage('state') }}</span>
+          <label>City *</label>
+          <select [ngModel]="currentHotel().city" (ngModelChange)="onHotelCityChange($event)" (blur)="markFieldTouched('city')" [class.invalid]="shouldShowError('city')">
+            <option value="">Select City</option>
+            <option *ngFor="let c of addressCities()" [value]="c.name">{{ c.name }}</option>
+          </select>
+          <span class="field-error" *ngIf="shouldShowError('city')">{{ validationMessage('city') }}</span>
         </div>
       </div>
 
       <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
           <label>Country *</label>
-          <input type="text" [(ngModel)]="currentHotel().country" (blur)="markFieldTouched('country')" [class.invalid]="shouldShowError('country')" placeholder="India">
+          <select [ngModel]="currentHotel().country" (ngModelChange)="onHotelCountryChange($event)" (blur)="markFieldTouched('country')" [class.invalid]="shouldShowError('country')">
+            <option value="">Select Country</option>
+            <option *ngFor="let cnt of addressCountries()" [value]="cnt.name">{{ cnt.name }}</option>
+          </select>
           <span class="field-error" *ngIf="shouldShowError('country')">{{ validationMessage('country') }}</span>
         </div>
         <div class="ci-input-group">
@@ -1171,9 +1215,16 @@
       <div class="form-section-title mt-4">Room Photo Gallery & Media</div>
       
       <div class="room-gallery-container mb-3">
-        <div class="room-gallery-grid" *ngIf="(currentRoom().imageUrls?.length || 0) > 0">
+
+        <!-- Loading skeleton while getRoomById is fetching -->
+        <div class="gallery-loading-row" *ngIf="roomPhotosLoading()">
+          <div class="gallery-skeleton" *ngFor="let s of [1,2,3]"></div>
+          <span class="gallery-loading-text">Loading photos…</span>
+        </div>
+
+        <div class="room-gallery-grid" *ngIf="!roomPhotosLoading() && (currentRoom().imageUrls?.length || 0) > 0">
           <div class="gallery-item" *ngFor="let photo of currentRoom().imageUrls; let idx = index">
-            <img [src]="photo" class="gallery-thumb" alt="Room Photo {{ idx + 1 }}">
+            <img [src]="photo" class="gallery-thumb" alt="Room Photo {{ idx + 1 }}" loading="lazy" decoding="async">
             <span class="primary-tag" *ngIf="idx === 0">Primary</span>
             <button type="button" class="btn-remove-thumb" (click)="removeRoomPhotoAtIndex(idx)" title="Delete Photo">
               <span class="material-icons-round">close</span>

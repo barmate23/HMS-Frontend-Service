@@ -377,6 +377,16 @@
   justify-content: center;
 }
 
+.hotel-logo-thumb {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--surface-200);
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
 .avatar-box .material-icons-round {
   font-size: 18px;
 }
@@ -1426,6 +1436,128 @@
   padding: 1px 5px;
   border-radius: 8px;
   border: 1.5px solid white;
+}
+
+/* Pagination Footer */
+.pagination-footer {
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--surface-200);
+  background: #ffffff;
+}
+
+.pagination-info {
+  font-size: 11.5px;
+  color: var(--surface-600);
+  font-family: var(--font-poppins);
+}
+
+.pagination-info strong {
+  color: var(--primary-color);
+  font-weight: 700;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-page-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: var(--font-poppins);
+  color: var(--surface-700);
+  background: var(--surface-50);
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-page-nav:hover:not(:disabled) {
+  background: var(--primary-light);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-page-nav:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-page-nav .material-icons-round {
+  font-size: 16px;
+}
+
+.btn-page-num {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: var(--font-poppins);
+  color: var(--surface-700);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-page-num:hover:not(.active) {
+  background: var(--surface-100);
+}
+
+.btn-page-num.active {
+  background: var(--primary-color);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* Gallery Photo Skeleton Loader */
+.gallery-loading-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0 4px;
+  flex-wrap: wrap;
+}
+
+.gallery-skeleton {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.gallery-loading-text {
+  font-size: 11px;
+  color: var(--surface-500);
+  font-style: italic;
+  font-family: var(--font-poppins);
 }
 
 

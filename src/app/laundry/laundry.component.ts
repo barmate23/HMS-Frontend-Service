@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 import {
+  ActiveReservationDetails,
   LaundryCatalogueItem,
   LaundryDashboardActivity,
   LinenDispatch,
@@ -77,6 +78,64 @@ export class LaundryComponent implements OnInit, OnDestroy {
   linenDraft = signal<Partial<LinenDispatch>>({});
   vendorDraft = signal<Partial<LinenVendor>>({});
   linenVendors = signal<LinenVendor[]>([]);
+  activeReservation = signal<ActiveReservationDetails | null>(null);
+  isReservationLoading = signal<boolean>(false);
+  isAddItemModalOpen = signal<boolean>(false);
+  isMultiDropdownOpen = signal<boolean>(false);
+  editingItemIndex = signal<number | null>(null);
+  modalSearchQuery = signal<string>('');
+
+  selectedModalItems = signal<Map<number, { catalogueId: number; itemName: string; category: string; quantity: number; serviceType: string; serviceTypes: string[]; unitPrice: number; notes: string }>>(new Map());
+
+  readonly modalFilteredItems = computed(() => {
+    const query = this.modalSearchQuery().trim().toLowerCase();
+    return this.laundry.catalogue().filter(item => item.active && (!query || item.itemName.toLowerCase().includes(query) || item.category.toLowerCase().includes(query)));
+  });
+
+  readonly modalSelectedCount = computed(() => {
+    return this.selectedModalItems().size;
+  });
+
+  readonly selectedDropdownSummaryText = computed(() => {
+    const map = this.selectedModalItems();
+    if (map.size === 0) return 'Select garments from dropdown...';
+    const names = Array.from(map.values()).map(item => item.itemName);
+    if (names.length <= 2) return `${names.join(', ')} (${map.size} selected)`;
+    return `${names.slice(0, 2).join(', ')} +${names.length - 2} more (${map.size} selected)`;
+  });
+
+  readonly addItemSubtotal = computed(() => {
+    let sum = 0;
+    this.selectedModalItems().forEach(item => {
+      sum += (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+    });
+    return sum;
+  });
+
+  readonly addItemTaxAmount = computed(() => {
+    return (this.addItemSubtotal() * (this.laundry.laundryGstRate() || 18)) / 100;
+  });
+
+  readonly addItemTotalAmount = computed(() => {
+    return this.addItemSubtotal() + this.addItemTaxAmount();
+  });
+
+  readonly activeGuestName = computed(() => {
+    const res = this.activeReservation();
+    return res?.guestName || '';
+  });
+
+  readonly activeCheckInDate = computed(() => {
+    const res = this.activeReservation();
+    if (!res?.checkInDate) return '';
+    return res.checkInDate.slice(0, 10);
+  });
+
+  readonly activeCheckOutDate = computed(() => {
+    const res = this.activeReservation();
+    if (!res?.checkOutDate) return '';
+    return res.checkOutDate.slice(0, 10);
+  });
 
   orderDraft = signal<Partial<LaundryOrder>>({
     serviceType: '',
@@ -182,8 +241,13 @@ export class LaundryComponent implements OnInit, OnDestroy {
     }
 
     const rooms = this.roomsForSelectedFloor();
-    if (!this.orderDraft().bookingId && rooms.length) {
-      this.setDraftBooking(rooms[0].bookingId);
+    if (rooms.length) {
+      const currentBookingId = this.orderDraft().bookingId;
+      if (!currentBookingId || !rooms.some(r => r.bookingId === Number(currentBookingId))) {
+        this.setDraftBooking(rooms[0].bookingId);
+      } else if (!this.activeReservation() && !this.isReservationLoading()) {
+        this.fetchReservationForRoom(Number(currentBookingId));
+      }
     }
 
     this.laundry.serviceCatalog();
@@ -238,6 +302,36 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
   readonly dashboardStats = computed(() => {
     return this.laundry.dashboardSummary();
+  });
+
+  readonly todayRevenueDetails = computed(() => {
+    const orders = this.laundry.orders().filter(order => this.laundry.isToday(order.createdAt));
+    let netBase = 0;
+    let totalTax = 0;
+    
+    if (orders.length > 0) {
+      orders.forEach(order => {
+        netBase += this.laundry.orderBaseAmount(order);
+        totalTax += this.laundry.orderTaxAmount(order);
+      });
+    } else {
+      const totalRev = this.dashboardStats().revenue;
+      const rate = this.laundry.laundryGstRate() || 18;
+      if (totalRev > 0) {
+        netBase = totalRev / (1 + rate / 100);
+        totalTax = totalRev - netBase;
+      }
+    }
+
+    const totalRevenue = netBase + totalTax;
+    const gstRate = this.laundry.laundryGstRate() || 18;
+
+    return {
+      netBase: Math.round(netBase * 100) / 100,
+      totalTax: Math.round(totalTax * 100) / 100,
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      gstRate
+    };
   });
 
   readonly activityFeed = computed(() => {
@@ -388,7 +482,8 @@ export class LaundryComponent implements OnInit, OnDestroy {
     const booking = this.laundry.activeBookings().find(item => item.bookingId === Number(this.orderDraft().bookingId)) || this.laundry.activeBookings()[0];
     if (!booking) return;
     this.selectedFloor.set(booking.floor);
-    this.orderDraft.update(draft => ({ ...draft, bookingId: booking.bookingId, room: booking.room, guest: booking.guest, plan: booking.plan }));
+    const guestName = this.activeGuestName() || booking.guest || '';
+    this.orderDraft.update(draft => ({ ...draft, bookingId: booking.bookingId, room: booking.room, guest: guestName, plan: booking.plan }));
   }
 
   setDraftFloor(floor: string): void {
@@ -397,9 +492,50 @@ export class LaundryComponent implements OnInit, OnDestroy {
     if (firstRoom) this.setDraftBooking(firstRoom.bookingId);
   }
 
+  fetchReservationForRoom(roomId: number): void {
+    const id = Number(roomId);
+    if (!id) {
+      this.activeReservation.set(null);
+      return;
+    }
+    this.isReservationLoading.set(true);
+    this.laundry.getActiveReservationByRoomId(id).subscribe({
+      next: (res) => {
+        this.activeReservation.set(res);
+        this.isReservationLoading.set(false);
+        if (res && res.guestName) {
+          this.orderDraft.update(draft => ({ ...draft, guest: res.guestName }));
+          this.clampOrderDatesToReservation();
+        }
+      },
+      error: () => {
+        this.isReservationLoading.set(false);
+        this.activeReservation.set(null);
+      }
+    });
+  }
+
   setDraftBooking(bookingId: number): void {
-    this.orderDraft.update(draft => ({ ...draft, bookingId: Number(bookingId) }));
+    const roomId = Number(bookingId);
+    this.orderDraft.update(draft => ({ ...draft, bookingId: roomId }));
     this.syncBookingToDraft();
+    this.fetchReservationForRoom(roomId);
+  }
+
+  clampOrderDatesToReservation(): void {
+    const checkIn = this.activeCheckInDate();
+    const checkOut = this.activeCheckOutDate();
+    if (!checkIn || !checkOut) return;
+
+    const pickupDate = this.dateInputValue(this.orderDraft().pickupAt);
+    const deliveryDate = this.dateInputValue(this.orderDraft().expectedDeliveryAt);
+
+    if (pickupDate && (pickupDate < checkIn || pickupDate > checkOut)) {
+      this.updateDraftDatePart('pickupAt', checkIn);
+    }
+    if (deliveryDate && (deliveryDate < checkIn || deliveryDate > checkOut)) {
+      this.updateDraftDatePart('expectedDeliveryAt', checkOut);
+    }
   }
 
   setDraftServiceTypes(serviceTypes: LaundryServiceType[]): void {
@@ -424,13 +560,181 @@ export class LaundryComponent implements OnInit, OnDestroy {
   }
 
   addOrderLine(): void {
-    const serviceTypes = this.normalizeSelectedServices(this.orderDraft().serviceTypes || [this.orderDraft().serviceType || this.laundry.serviceTypes[0] || '']);
-    const item = this.laundry.catalogue().find(value => value.active && this.laundry.priceForServices(value, serviceTypes) > 0);
-    if (!item) return;
-    this.orderDraft.update(draft => ({
-      ...draft,
-      lines: [...(draft.lines || []), { catalogueId: item.id, itemName: item.itemName, quantity: 1, unitPrice: this.laundry.priceForServices(item, serviceTypes), notes: '' }]
+    this.openAddItemModal();
+  }
+
+  toggleMultiDropdown(): void {
+    this.isMultiDropdownOpen.update(v => !v);
+  }
+
+  openAddItemModal(index?: number): void {
+    this.isMultiDropdownOpen.set(false);
+    const defaultServices = this.orderDraft().serviceTypes?.length ? this.orderDraft().serviceTypes! : [this.orderDraft().serviceType || this.laundry.serviceTypes[0] || 'Steam Iron'];
+    const newMap = new Map<number, { catalogueId: number; itemName: string; category: string; quantity: number; serviceType: string; serviceTypes: string[]; unitPrice: number; notes: string }>();
+
+    if (index !== undefined && this.orderDraft().lines?.[index]) {
+      const line = this.orderDraft().lines![index];
+      const item = this.laundry.catalogueMap().get(Number(line.catalogueId));
+      this.editingItemIndex.set(index);
+      const services = line.serviceTypes?.length ? line.serviceTypes : (line.serviceType ? [line.serviceType] : defaultServices);
+      const fixedUnitPrice = item ? this.laundry.priceForServices(item, services) : Number(line.unitPrice || 0);
+      newMap.set(Number(line.catalogueId), {
+        catalogueId: Number(line.catalogueId),
+        itemName: line.itemName,
+        category: item?.category || '',
+        quantity: Math.max(1, Number(line.quantity || 1)),
+        serviceType: services.join(', '),
+        serviceTypes: services,
+        unitPrice: fixedUnitPrice,
+        notes: line.notes || ''
+      });
+    } else {
+      this.editingItemIndex.set(null);
+    }
+
+    this.selectedModalItems.set(newMap);
+    this.isMultiDropdownOpen.set(newMap.size === 0);
+    this.isAddItemModalOpen.set(true);
+  }
+
+  isModalItemSelected(catalogueId: number): boolean {
+    return this.selectedModalItems().has(Number(catalogueId));
+  }
+
+  toggleModalItemSelection(item: LaundryCatalogueItem): void {
+    const id = Number(item.id);
+    const map = new Map(this.selectedModalItems());
+    if (map.has(id)) {
+      map.delete(id);
+    } else {
+      const services = this.orderDraft().serviceTypes?.length ? [...this.orderDraft().serviceTypes!] : [this.orderDraft().serviceType || this.laundry.serviceTypes[0] || 'Steam Iron'];
+      const fixedUnitPrice = this.laundry.priceForServices(item, services);
+      map.set(id, {
+        catalogueId: id,
+        itemName: item.itemName,
+        category: item.category,
+        quantity: 1,
+        serviceType: services.join(', '),
+        serviceTypes: services,
+        unitPrice: fixedUnitPrice,
+        notes: ''
+      });
+    }
+    this.selectedModalItems.set(map);
+  }
+
+  toggleModalItemServiceType(catalogueId: number, service: string): void {
+    const id = Number(catalogueId);
+    const map = new Map(this.selectedModalItems());
+    const existing = map.get(id);
+    if (existing) {
+      const current = existing.serviceTypes || [];
+      const exists = current.some(s => s.toLowerCase() === service.toLowerCase());
+      let next = exists
+        ? current.filter(s => s.toLowerCase() !== service.toLowerCase())
+        : [...current, service];
+
+      if (next.length === 0) next = [service]; // Ensure at least 1 service is selected
+
+      const item = this.laundry.catalogueMap().get(id);
+      const unitPrice = item ? this.laundry.priceForServices(item, next) : existing.unitPrice;
+      map.set(id, {
+        ...existing,
+        serviceTypes: next,
+        serviceType: next.join(', '),
+        unitPrice
+      });
+      this.selectedModalItems.set(map);
+    }
+  }
+
+  isModalItemServiceSelected(catalogueId: number, service: string): boolean {
+    const existing = this.selectedModalItems().get(Number(catalogueId));
+    if (!existing) return false;
+    return (existing.serviceTypes || []).some(s => s.toLowerCase() === service.toLowerCase());
+  }
+
+  updateModalItemQty(catalogueId: number, delta: number): void {
+    const id = Number(catalogueId);
+    const map = new Map(this.selectedModalItems());
+    const existing = map.get(id);
+    if (existing) {
+      const quantity = Math.max(1, existing.quantity + delta);
+      map.set(id, { ...existing, quantity });
+      this.selectedModalItems.set(map);
+    }
+  }
+
+  setModalItemQty(catalogueId: number, val: any): void {
+    const id = Number(catalogueId);
+    const map = new Map(this.selectedModalItems());
+    const existing = map.get(id);
+    if (existing) {
+      const quantity = Math.max(1, Number(val) || 1);
+      map.set(id, { ...existing, quantity });
+      this.selectedModalItems.set(map);
+    }
+  }
+
+  setModalItemNotes(catalogueId: number, notes: string): void {
+    const id = Number(catalogueId);
+    const map = new Map(this.selectedModalItems());
+    const existing = map.get(id);
+    if (existing) {
+      map.set(id, { ...existing, notes: notes || '' });
+      this.selectedModalItems.set(map);
+    }
+  }
+
+  saveItemFromModal(): void {
+    const selected = Array.from(this.selectedModalItems().values());
+    if (selected.length === 0) return;
+
+    const newLines: LaundryOrderLine[] = selected.map(item => ({
+      catalogueId: item.catalogueId,
+      itemName: item.itemName,
+      quantity: item.quantity,
+      serviceType: item.serviceType,
+      serviceTypes: item.serviceTypes,
+      unitPrice: item.unitPrice,
+      notes: item.notes
     }));
+
+    const index = this.editingItemIndex();
+    if (index !== null && index >= 0) {
+      this.orderDraft.update(d => ({
+        ...d,
+        lines: (d.lines || []).map((l, i) => i === index ? newLines[0] : l)
+      }));
+    } else {
+      this.orderDraft.update(d => {
+        const existingLines = d.lines || [];
+        const combined = [...existingLines];
+        newLines.forEach(line => {
+          const idx = combined.findIndex(l => Number(l.catalogueId) === Number(line.catalogueId) && line.catalogueId > 0);
+          if (idx >= 0) {
+            combined[idx] = {
+              ...combined[idx],
+              quantity: combined[idx].quantity + line.quantity,
+              notes: line.notes || combined[idx].notes
+            };
+          } else {
+            combined.push(line);
+          }
+        });
+        return { ...d, lines: combined };
+      });
+    }
+
+    this.isAddItemModalOpen.set(false);
+    this.isMultiDropdownOpen.set(false);
+    this.editingItemIndex.set(null);
+  }
+
+  closeAddItemModal(): void {
+    this.isAddItemModalOpen.set(false);
+    this.isMultiDropdownOpen.set(false);
+    this.editingItemIndex.set(null);
   }
 
   updateLineItem(index: number, catalogueId: number): void {
@@ -476,6 +780,24 @@ export class LaundryComponent implements OnInit, OnDestroy {
       ...draft,
       lines: (draft.lines || []).map((line, i) => i === index ? { ...line, quantity: Math.max(1, Number(quantity) || 1) } : line)
     }));
+  }
+
+  updateLineServiceType(index: number, serviceType: string): void {
+    this.orderDraft.update(draft => ({
+      ...draft,
+      lines: (draft.lines || []).map((line, i) => {
+        if (i !== index) return line;
+        const item = this.laundry.catalogueMap().get(Number(line.catalogueId));
+        const unitPrice = item ? this.laundry.priceForServices(item, [serviceType]) : line.unitPrice;
+        return { ...line, serviceType, unitPrice };
+      })
+    }));
+  }
+
+  getLineServiceType(line: LaundryOrderLine): string {
+    if (line.serviceType) return line.serviceType;
+    const services = this.normalizeSelectedServices(this.orderDraft().serviceTypes || []);
+    return services[0] || this.orderDraft().serviceType || this.laundry.serviceTypes[0] || 'Steam Iron';
   }
 
   updateLineNotes(index: number, notes: string): void {
@@ -1016,7 +1338,6 @@ export class LaundryComponent implements OnInit, OnDestroy {
   private updateTabFromUrl(url: string): void {
     const last = url.split('/').pop()?.split('?')[0] as LaundryTab;
     this.activeTab.set(['dashboard', 'create', 'orders', 'detail', 'catalogue', 'services'].includes(last) ? last : 'dashboard');
-    if (this.activeTab() === 'create' && !(this.orderDraft().lines || []).length) this.addOrderLine();
   }
 
 }

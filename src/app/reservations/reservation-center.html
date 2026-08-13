@@ -207,12 +207,6 @@
                 <button class="action-btn view" title="View Reservation" (click)="viewReservationDetails(res.id)">
                   <span class="material-icons-round">visibility</span>
                 </button>
-                <button class="action-btn edit" title="Edit Reservation" (click)="openEditReservation(res.id)" [disabled]="res.status === 'CANCELLED'">
-                  <span class="material-icons-round">edit</span>
-                </button>
-                <button class="action-btn checkin" title="Cancel Reservation" (click)="cancelReservation(res.id, res.guestName)" [disabled]="res.status === 'CANCELLED'">
-                  <span class="material-icons-round">block</span>
-                </button>
               </div>
             </td>
           </tr>
@@ -350,12 +344,7 @@
         </div>
       </div>
 
-      <div class="detail-inline-actions">
-        <button class="detail-edit-btn" type="button" (click)="openEditReservation(details.id)" [disabled]="detailStatus(details) === 'CANCELLED'">
-          <span class="material-icons-round">edit</span>
-          Edit Reservation
-        </button>
-      </div>
+
 
       <div class="detail-columns">
         <div class="detail-section">

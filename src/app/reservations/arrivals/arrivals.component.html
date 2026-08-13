@@ -3,11 +3,17 @@
   <nav class="sticky-nav">
     <div class="nav-left">
       <div class="title-group">
-        <span class="nav-title">Today's Arrivals</span>
-        <span class="nav-subtitle">{{ currentDate | date:'fullDate' }}</span>
+        <span class="nav-title">Arrivals &amp; Check-Ins</span>
+        <span class="nav-subtitle">{{ selectedDateFormattedLabel }}</span>
       </div>
     </div>
     <div class="nav-right">
+      <div class="date-picker-box">
+        <span class="material-icons-round">calendar_today</span>
+        <input type="date" [(ngModel)]="selectedDate" (change)="onDateChange()" title="Filter by Arrival Date">
+        <span class="btn-today-chip" *ngIf="isTodaySelected">Today</span>
+        <button type="button" class="btn-today-chip reset" *ngIf="!isTodaySelected" (click)="selectTodayDate()" title="Reset to Today">Reset</button>
+      </div>
       <div class="search-box">
         <span class="material-icons-round">search</span>
         <input type="text" placeholder="Search guests, reservation or room..." [(ngModel)]="searchQuery" (keyup.enter)="loadArrivals(0)">
@@ -207,11 +213,11 @@
         </div>
         <div class="vm-sum-item">
           <span>Checked In</span>
-          <strong class="text-success">{{ selectedReservation.bookings.length - getSelectedPendingRooms().length }} / {{ selectedReservation.numberOfRooms }}</strong>
+          <strong class="text-success">{{ getCheckedInRoomsCount() }} / {{ selectedReservation.numberOfRooms }}</strong>
         </div>
         <div class="vm-sum-item">
           <span>Pending Check-In</span>
-          <strong class="text-warning">{{ selectedReservation.bookings.length > 0 ? (selectedReservation.bookings.length - (selectedReservation.bookings.length - getSelectedPendingRooms().length)) : 0 }}</strong>
+          <strong class="text-warning">{{ getPendingCheckInRoomsCount() }}</strong>
         </div>
         <div class="vm-sum-item">
           <span>Total Balance</span>

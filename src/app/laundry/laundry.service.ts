@@ -18,6 +18,18 @@ export interface ActiveBooking {
   folioId: string;
 }
 
+export interface ActiveReservationDetails {
+  reservationId?: number;
+  reservationRef?: string;
+  roomId?: number;
+  roomNumber?: string;
+  guestName?: string;
+  checkInDate?: string;
+  checkOutDate?: string;
+  status?: string;
+  [key: string]: any;
+}
+
 export interface LaundryCatalogueItem {
   id: number;
   category: string;
@@ -45,6 +57,8 @@ export interface LaundryOrderLine {
   quantity: number;
   unitPrice: number;
   notes: string;
+  serviceType?: string;
+  serviceTypes?: string[];
 }
 
 export interface LaundryOrder {
@@ -387,6 +401,30 @@ export class LaundryService {
       },
       error: error => console.error('[Laundry] Failed to load hotel floors and rooms', error)
     });
+  }
+
+  getActiveReservationByRoomId(roomId: number): Observable<ActiveReservationDetails | null> {
+    const params = new HttpParams().set('roomId', roomId.toString());
+    return this.http.get<any>(`${this.hmsBase}/reservation/active`, { params }).pipe(
+      map(res => {
+        const data = res?.data || res;
+        if (!data || typeof data !== 'object') return null;
+        return {
+          reservationId: data.reservationId || data.id,
+          reservationRef: data.reservationRef || data.ref,
+          roomId: Number(data.roomId || roomId),
+          roomNumber: data.roomNumber || String(data.room || ''),
+          guestName: data.guestName || data.guest || data.fullName || '',
+          checkInDate: data.checkInDate || data.checkIn || data.startDate || '',
+          checkOutDate: data.checkOutDate || data.checkOut || data.endDate || '',
+          status: data.status || ''
+        } as ActiveReservationDetails;
+      }),
+      catchError(err => {
+        console.warn('[Laundry] Active reservation fetch failed for roomId', roomId, err);
+        return of(null);
+      })
+    );
   }
 
   loadPriceMasters(): void {
@@ -837,7 +875,7 @@ export class LaundryService {
     };
   }
 
-  private isToday(value?: string): boolean {
+  isToday(value?: string): boolean {
     if (!value) return false;
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;

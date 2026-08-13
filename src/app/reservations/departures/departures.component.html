@@ -3,11 +3,17 @@
   <nav class="sticky-nav">
     <div class="nav-left">
       <div class="title-group">
-        <span class="nav-title">Today's Departures</span>
-        <span class="nav-subtitle">{{ currentDate | date:'fullDate' }}</span>
+        <span class="nav-title">Departures &amp; Check-Outs</span>
+        <span class="nav-subtitle">{{ selectedDateFormattedLabel }}</span>
       </div>
     </div>
     <div class="nav-right">
+      <div class="date-picker-box">
+        <span class="material-icons-round">calendar_today</span>
+        <input type="date" [(ngModel)]="selectedDate" (change)="onDateChange()" title="Filter by Departure Date">
+        <span class="btn-today-chip" *ngIf="isTodaySelected">Today</span>
+        <button type="button" class="btn-today-chip reset" *ngIf="!isTodaySelected" (click)="selectTodayDate()" title="Reset to Today">Reset</button>
+      </div>
       <div class="search-box">
         <span class="material-icons-round">search</span>
         <input type="text" placeholder="Search guests or room no..." [(ngModel)]="searchQuery" (keyup.enter)="loadDepartures()">

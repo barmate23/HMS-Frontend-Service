@@ -170,16 +170,21 @@
               </div>
               <small class="field-hint" *ngIf="activeCheckInDate() && activeCheckOutDate()">Stay: {{ activeCheckInDate() }} to {{ activeCheckOutDate() }}</small>
             </label>
-            <label class="field full">
-              <span>Special Instructions</span>
-              <textarea rows="3" [(ngModel)]="orderDraft().notes" placeholder="Guest preferences, stain notes, delivery instructions..."></textarea>
-            </label>
           </div>
         </div>
 
         <div class="line-toolbar">
           <strong>Item Table</strong>
-          <button class="mini-add-btn" type="button" (click)="addOrderLine()"><span class="material-icons-round">add</span>Add Item</button>
+          <div class="toolbar-actions">
+            <button class="secondary-btn compact-toolbar-btn" type="button" *ngIf="(orderDraft().lines || []).length > 0" (click)="openOverallViewItemModal()">
+              <span class="material-icons-round">visibility</span>
+              View Items ({{ (orderDraft().lines || []).length }})
+            </button>
+            <button class="mini-add-btn" type="button" (click)="openOverallEditItemModal()">
+              <span class="material-icons-round">{{ (orderDraft().lines || []).length > 0 ? 'edit' : 'add' }}</span>
+              {{ (orderDraft().lines || []).length > 0 ? 'Edit Items' : 'Add Item' }}
+            </button>
+          </div>
         </div>
 
         <div class="table-container">
@@ -213,7 +218,6 @@
                 <td><input class="line-note-input" [ngModel]="line.notes" (ngModelChange)="updateLineNotes(i, $event)" placeholder="Per-item note"></td>
                 <td>
                   <div class="line-action-btns">
-                    <button class="btn-icon edit" type="button" title="Edit Item" (click)="openAddItemModal(i)"><span class="material-icons-round">edit</span></button>
                     <button class="btn-icon delete" type="button" title="Remove Line" (click)="removeLine(i)"><span class="material-icons-round">delete_outline</span></button>
                   </div>
                 </td>
@@ -919,9 +923,9 @@
     <section class="add-item-modal split-modal" role="dialog" aria-modal="true" aria-label="Add Laundry Items" (click)="$event.stopPropagation()">
       <div class="add-item-modal-head">
         <div>
-          <span class="modal-kicker">{{ editingItemIndex() !== null ? 'EDIT ITEM DETAILS' : 'ADD LAUNDRY ITEMS' }}</span>
-          <h2>{{ editingItemIndex() !== null ? 'Edit Selected Item' : 'Select Garments & Configure Services' }}</h2>
-          <p>Select garments on the left. Configure services, quantities, and instructions on the right.</p>
+          <span class="modal-kicker">{{ isViewOnlyModal() ? 'VIEW ITEM DETAILS' : (editingItemIndex() !== null ? 'EDIT ITEM DETAILS' : 'ADD LAUNDRY ITEMS') }}</span>
+          <h2>{{ isViewOnlyModal() ? 'Selected Garment & Service Details' : (editingItemIndex() !== null ? 'Edit Selected Item' : 'Select Garments & Configure Services') }}</h2>
+          <p>{{ isViewOnlyModal() ? 'Review the selected garment, configured services, quantity, and rates.' : 'Select garments on the left. Configure services, quantities, and instructions on the right.' }}</p>
         </div>
         <button class="modal-close-icon-btn" type="button" (click)="closeAddItemModal()">
           <span class="material-icons-round">close</span>
@@ -1017,28 +1021,21 @@
             <p>Select garments from the left catalog to configure services and quantities.</p>
           </div>
 
-          <!-- PRICING SUMMARY CARD -->
-          <div class="split-pricing-summary-card" *ngIf="modalSelectedCount() > 0">
-            <div class="summary-line">
-              <span>Subtotal ({{ modalSelectedCount() }} items)</span>
-              <strong>{{ money(addItemSubtotal()) }}</strong>
-            </div>
-            <div class="summary-line">
-              <span>GST Tax ({{ laundry.laundryGstRate() }}%)</span>
-              <strong class="tax-green">+{{ money(addItemTaxAmount()) }}</strong>
-            </div>
-            <div class="summary-divider"></div>
-            <div class="summary-line total-line">
-              <span>Combined Total Amount</span>
-              <strong class="total-green">{{ money(addItemTotalAmount()) }}</strong>
-            </div>
+          <!-- COMPACT TAXATION SUMMARY BAR AT BOTTOM OF RIGHT PANEL -->
+          <div class="split-pricing-summary-bar" *ngIf="modalSelectedCount() > 0">
+            <span class="sum-item">Subtotal: <strong>{{ money(addItemSubtotal()) }}</strong></span>
+            <span class="sum-item tax">GST ({{ laundry.laundryGstRate() }}%): <strong>+{{ money(addItemTaxAmount()) }}</strong></span>
+            <span class="sum-item total">Total: <strong>{{ money(addItemTotalAmount()) }}</strong></span>
           </div>
         </div>
       </div>
 
       <div class="add-item-modal-footer">
-        <button class="secondary-btn" type="button" (click)="closeAddItemModal()">Cancel</button>
-        <button class="confirm-btn" type="button" [disabled]="modalSelectedCount() === 0" (click)="saveItemFromModal()">
+        <button class="secondary-btn" type="button" (click)="closeAddItemModal()">{{ isViewOnlyModal() ? 'Close' : 'Cancel' }}</button>
+        <button class="secondary-btn" type="button" *ngIf="isViewOnlyModal()" (click)="switchToEditMode()">
+          <span class="material-icons-round">edit</span> Edit Selections
+        </button>
+        <button class="confirm-btn" type="button" *ngIf="!isViewOnlyModal()" [disabled]="modalSelectedCount() === 0" (click)="saveItemFromModal()">
           <span class="material-icons-round">check_circle</span>
           {{ editingItemIndex() !== null ? 'Update Item' : ('Add Selected Items (' + modalSelectedCount() + ')') }}
         </button>

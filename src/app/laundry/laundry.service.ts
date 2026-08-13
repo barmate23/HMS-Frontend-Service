@@ -194,17 +194,23 @@ interface ApiLaundryServiceCatalog {
 
 interface ApiLaundryOrderItem {
   id?: number;
+  hotelId?: number;
+  hotelName?: string;
   priceMasterId?: number;
   itemName?: string;
   category?: string;
   quantity?: number;
   unitPrice?: number;
   total?: number;
+  serviceType?: string;
+  serviceTypes?: string[];
   notes?: string;
 }
 
 interface ApiLaundryOrder {
   id?: number;
+  hotelId?: number;
+  hotelName?: string;
   orderId?: string;
   roomId?: number;
   roomNumber?: string;
@@ -958,28 +964,36 @@ export class LaundryService {
     };
   }
 
-  private mapOrderLine(item: ApiLaundryOrderItem, serviceType?: string): LaundryOrderLine {
+  private mapOrderLine(item: ApiLaundryOrderItem, defaultServiceType?: string): LaundryOrderLine {
     const catalogueItem = this.catalogue().find(value => value.id === Number(item.priceMasterId));
-    const services = this.normalizedServiceSelection(this.splitServiceDisplay(serviceType));
-    const patchedPrice = Number(item.unitPrice || 0) || (catalogueItem && services.length ? this.priceForServices(catalogueItem, services) : 0);
+    const itemServices = this.normalizedServiceSelection(
+      item.serviceTypes?.length
+        ? item.serviceTypes
+        : (item.serviceType ? this.splitServiceDisplay(item.serviceType) : this.splitServiceDisplay(defaultServiceType))
+    );
+    const patchedPrice = Number(item.unitPrice || 0) || (catalogueItem && itemServices.length ? this.priceForServices(catalogueItem, itemServices) : 0);
     return {
       catalogueId: Number(item.priceMasterId || catalogueItem?.id || 0),
       itemName: item.itemName || catalogueItem?.itemName || 'Laundry Item',
       quantity: Math.max(1, Number(item.quantity || 1)),
       unitPrice: Number(patchedPrice || 0),
+      serviceType: itemServices.join(', '),
+      serviceTypes: itemServices,
       notes: item.notes || ''
     };
   }
 
   private patchOrderLinePrice(line: LaundryOrderLine, serviceTypes: string[]): LaundryOrderLine {
     const catalogueItem = this.catalogueMap().get(Number(line.catalogueId));
-    const selectedServices = this.normalizedServiceSelection(serviceTypes);
+    const selectedServices = this.normalizedServiceSelection(line.serviceTypes?.length ? line.serviceTypes : serviceTypes);
     const resolvedPrice = Number(line.unitPrice || 0) || (catalogueItem ? this.priceForServices(catalogueItem, selectedServices) : 0);
     return {
       ...line,
       itemName: line.itemName || catalogueItem?.itemName || '',
       quantity: Math.max(1, Number(line.quantity || 1)),
-      unitPrice: Number(resolvedPrice || 0)
+      unitPrice: Number(resolvedPrice || 0),
+      serviceTypes: selectedServices,
+      serviceType: selectedServices.join(', ')
     };
   }
 
@@ -992,6 +1006,7 @@ export class LaundryService {
   }
 
   private toOrderPayload(order: LaundryOrder): ApiLaundryOrder {
+    const defaultServices = order.serviceTypes?.length ? order.serviceTypes : this.splitServiceDisplay(order.serviceType);
     return {
       id: order.id > 0 ? order.id : undefined,
       orderId: order.orderId,
@@ -999,8 +1014,8 @@ export class LaundryService {
       roomNumber: order.room,
       floorNumber: this.activeBookings().find(booking => booking.bookingId === order.bookingId)?.floor,
       guestName: order.guest,
-      serviceType: order.serviceType,
-      serviceTypes: order.serviceTypes,
+      serviceType: order.serviceType || defaultServices.join(', '),
+      serviceTypes: defaultServices,
       billingOption: order.billingMode,
       pickupDatetime: this.apiDateTime(order.pickupAt),
       expectedDelivery: this.apiDateTime(order.expectedDeliveryAt),
@@ -1008,15 +1023,22 @@ export class LaundryService {
       status: order.status,
       totalAmount: this.orderAmount(order),
       gstPercent: order.gstPercent !== null && order.gstPercent !== undefined ? Number(order.gstPercent) : Number(this.laundryGstRate() ?? 18),
-      items: order.lines.map(line => ({
-        priceMasterId: Number(line.catalogueId) > 0 ? Number(line.catalogueId) : undefined,
-        itemName: line.itemName,
-        category: this.catalogueMap().get(Number(line.catalogueId))?.category || '',
-        quantity: Math.max(1, Number(line.quantity || 1)),
-        unitPrice: Number(line.unitPrice || 0),
-        total: Number(line.quantity || 0) * Number(line.unitPrice || 0),
-        notes: line.notes || ''
-      }))
+      items: (order.lines || []).map(line => {
+        const itemServices = line.serviceTypes?.length ? line.serviceTypes : (line.serviceType ? this.splitServiceDisplay(line.serviceType) : defaultServices);
+        const unitPrice = Number(line.unitPrice || 0);
+        const qty = Math.max(1, Number(line.quantity || 1));
+        return {
+          priceMasterId: Number(line.catalogueId) > 0 ? Number(line.catalogueId) : undefined,
+          itemName: line.itemName,
+          category: this.catalogueMap().get(Number(line.catalogueId))?.category || '',
+          quantity: qty,
+          unitPrice: unitPrice,
+          total: qty * unitPrice,
+          serviceType: itemServices.join(', '),
+          serviceTypes: itemServices,
+          notes: line.notes || ''
+        };
+      })
     };
   }
 

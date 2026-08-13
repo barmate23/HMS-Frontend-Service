@@ -4270,45 +4270,64 @@
   font-size: 11.5px;
 }
 
-.split-pricing-summary-card {
-  padding: 8px 14px;
-  background: #F8FAFC;
-  border-top: 1px solid #E2E8F0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.summary-line {
+.split-pricing-summary-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  padding: 6px 12px;
+  background: #F8FAFC;
+  border-top: 1px solid #E2E8F0;
+  gap: 8px;
+}
+
+.sum-item {
+  font-size: 10.5px;
   color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.summary-line strong {
+.sum-item strong {
   color: #0F172A;
-  font-weight: 700;
+  font-weight: 800;
 }
 
-.summary-line .tax-green {
+.sum-item.tax strong {
   color: #059669;
 }
 
-.summary-divider {
-  height: 1px;
-  background: #E2E8F0;
-  margin: 2px 0;
-}
-
-.summary-line.total-line {
+.sum-item.total {
+  font-size: 11px;
   font-weight: 800;
   color: #0F172A;
 }
 
-.summary-line.total-line .total-green {
-  font-size: 14px;
+.sum-item.total strong {
+  font-size: 12.5px;
   font-weight: 900;
   color: #059669;
+}
+
+.line-action-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.compact-toolbar-btn {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 6px;
+  font-weight: 700;
 }

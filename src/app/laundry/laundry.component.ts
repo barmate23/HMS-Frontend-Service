@@ -84,6 +84,7 @@ export class LaundryComponent implements OnInit, OnDestroy {
   isMultiDropdownOpen = signal<boolean>(false);
   editingItemIndex = signal<number | null>(null);
   modalSearchQuery = signal<string>('');
+  isViewOnlyModal = signal<boolean>(false);
 
   selectedModalItems = signal<Map<number, { catalogueId: number; itemName: string; category: string; quantity: number; serviceType: string; serviceTypes: string[]; unitPrice: number; notes: string }>>(new Map());
 
@@ -568,6 +569,7 @@ export class LaundryComponent implements OnInit, OnDestroy {
   }
 
   openAddItemModal(index?: number): void {
+    this.isViewOnlyModal.set(false);
     this.isMultiDropdownOpen.set(false);
     const defaultServices = this.orderDraft().serviceTypes?.length ? this.orderDraft().serviceTypes! : [this.orderDraft().serviceType || this.laundry.serviceTypes[0] || 'Steam Iron'];
     const newMap = new Map<number, { catalogueId: number; itemName: string; category: string; quantity: number; serviceType: string; serviceTypes: string[]; unitPrice: number; notes: string }>();
@@ -595,6 +597,74 @@ export class LaundryComponent implements OnInit, OnDestroy {
     this.selectedModalItems.set(newMap);
     this.isMultiDropdownOpen.set(newMap.size === 0);
     this.isAddItemModalOpen.set(true);
+  }
+
+  openViewItemModal(index?: number): void {
+    this.openAddItemModal(index);
+    this.isViewOnlyModal.set(true);
+  }
+
+  openOverallViewItemModal(): void {
+    const map = new Map<number, { catalogueId: number; itemName: string; category: string; quantity: number; serviceType: string; serviceTypes: string[]; unitPrice: number; notes: string }>();
+    const defaultServices = this.orderDraft().serviceTypes?.length ? this.orderDraft().serviceTypes! : [this.orderDraft().serviceType || this.laundry.serviceTypes[0] || 'Steam Iron'];
+
+    (this.orderDraft().lines || []).forEach(line => {
+      const item = this.laundry.catalogueMap().get(Number(line.catalogueId));
+      const services = line.serviceTypes?.length ? line.serviceTypes : (line.serviceType ? [line.serviceType] : defaultServices);
+      const fixedUnitPrice = item ? this.laundry.priceForServices(item, services) : Number(line.unitPrice || 0);
+      map.set(Number(line.catalogueId), {
+        catalogueId: Number(line.catalogueId),
+        itemName: line.itemName,
+        category: item?.category || '',
+        quantity: Math.max(1, Number(line.quantity || 1)),
+        serviceType: services.join(', '),
+        serviceTypes: services,
+        unitPrice: fixedUnitPrice,
+        notes: line.notes || ''
+      });
+    });
+
+    this.selectedModalItems.set(map);
+    this.editingItemIndex.set(null);
+    this.isMultiDropdownOpen.set(false);
+    this.isViewOnlyModal.set(true);
+    this.isAddItemModalOpen.set(true);
+  }
+
+  openOverallEditItemModal(): void {
+    if ((this.orderDraft().lines || []).length === 0) {
+      this.openAddItemModal();
+      return;
+    }
+
+    const map = new Map<number, { catalogueId: number; itemName: string; category: string; quantity: number; serviceType: string; serviceTypes: string[]; unitPrice: number; notes: string }>();
+    const defaultServices = this.orderDraft().serviceTypes?.length ? this.orderDraft().serviceTypes! : [this.orderDraft().serviceType || this.laundry.serviceTypes[0] || 'Steam Iron'];
+
+    (this.orderDraft().lines || []).forEach(line => {
+      const item = this.laundry.catalogueMap().get(Number(line.catalogueId));
+      const services = line.serviceTypes?.length ? line.serviceTypes : (line.serviceType ? [line.serviceType] : defaultServices);
+      const fixedUnitPrice = item ? this.laundry.priceForServices(item, services) : Number(line.unitPrice || 0);
+      map.set(Number(line.catalogueId), {
+        catalogueId: Number(line.catalogueId),
+        itemName: line.itemName,
+        category: item?.category || '',
+        quantity: Math.max(1, Number(line.quantity || 1)),
+        serviceType: services.join(', '),
+        serviceTypes: services,
+        unitPrice: fixedUnitPrice,
+        notes: line.notes || ''
+      });
+    });
+
+    this.selectedModalItems.set(map);
+    this.editingItemIndex.set(null);
+    this.isMultiDropdownOpen.set(false);
+    this.isViewOnlyModal.set(false);
+    this.isAddItemModalOpen.set(true);
+  }
+
+  switchToEditMode(): void {
+    this.isViewOnlyModal.set(false);
   }
 
   isModalItemSelected(catalogueId: number): boolean {
@@ -688,7 +758,6 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
   saveItemFromModal(): void {
     const selected = Array.from(this.selectedModalItems().values());
-    if (selected.length === 0) return;
 
     const newLines: LaundryOrderLine[] = selected.map(item => ({
       catalogueId: item.catalogueId,
@@ -702,28 +771,18 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
     const index = this.editingItemIndex();
     if (index !== null && index >= 0) {
+      if (newLines.length > 0) {
+        this.orderDraft.update(d => ({
+          ...d,
+          lines: (d.lines || []).map((l, i) => i === index ? newLines[0] : l)
+        }));
+      }
+    } else {
+      // Overall modal selection replaces order lines directly
       this.orderDraft.update(d => ({
         ...d,
-        lines: (d.lines || []).map((l, i) => i === index ? newLines[0] : l)
+        lines: newLines
       }));
-    } else {
-      this.orderDraft.update(d => {
-        const existingLines = d.lines || [];
-        const combined = [...existingLines];
-        newLines.forEach(line => {
-          const idx = combined.findIndex(l => Number(l.catalogueId) === Number(line.catalogueId) && line.catalogueId > 0);
-          if (idx >= 0) {
-            combined[idx] = {
-              ...combined[idx],
-              quantity: combined[idx].quantity + line.quantity,
-              notes: line.notes || combined[idx].notes
-            };
-          } else {
-            combined.push(line);
-          }
-        });
-        return { ...d, lines: combined };
-      });
     }
 
     this.isAddItemModalOpen.set(false);

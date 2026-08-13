@@ -306,6 +306,63 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     return isCreate ? 'Create' : 'Save Changes';
   }
 
+  onLogoSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = (e: ProgressEvent<FileReader>) => {
+        const result = e.target?.result as string;
+        this.currentHotel.update(h => ({ ...h, logoUrl: result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  removeLogo(): void {
+    this.currentHotel.update(h => ({ ...h, logoUrl: '' }));
+  }
+
+  onRoomPhotosSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const files = Array.from(input.files);
+      const readPromises = files.map(file => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.readAsDataURL(file);
+        });
+      });
+
+      Promise.all(readPromises).then(newImages => {
+        this.currentRoom.update(r => {
+          const currentList = r.imageUrls || (r.imageUrl ? [r.imageUrl] : []);
+          const updatedList = [...currentList, ...newImages];
+          return {
+            ...r,
+            imageUrls: updatedList,
+            imageUrl: updatedList[0] || ''
+          };
+        });
+      });
+    }
+  }
+
+  removeRoomPhotoAtIndex(index: number): void {
+    this.currentRoom.update(r => {
+      const currentList = [...(r.imageUrls || (r.imageUrl ? [r.imageUrl] : []))];
+      if (index >= 0 && index < currentList.length) {
+        currentList.splice(index, 1);
+      }
+      return {
+        ...r,
+        imageUrls: currentList,
+        imageUrl: currentList.length > 0 ? currentList[0] : ''
+      };
+    });
+  }
+
   // --- Modal Open/Close ---
   openCreateModal() {
     this.resetValidation();
@@ -323,6 +380,16 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
         country: 'India',
         zipCode: '400001',
         totalRooms: 10,
+        currency: 'INR',
+        logoUrl: '',
+        starRating: 3,
+        checkInTime: '12:00',
+        checkOutTime: '11:00',
+        gstin: '',
+        fssaiNo: '',
+        tagline: '',
+        websiteUrl: '',
+        receptionPhone: '',
         isActive: true
       });
       this.isHotelModalOpen.set(true);
@@ -367,6 +434,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
         status: 'VACANT',
         maxOccupancy: 2,
         telephone: '',
+        imageUrl: '',
+        imageUrls: [],
         isActive: true
       });
       this.isRoomModalOpen.set(true);
@@ -404,6 +473,16 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
         country: 'India',
         zipCode: '400001',
         totalRooms: 10,
+        currency: 'INR',
+        starRating: item.starRating || 3,
+        checkInTime: item.checkInTime || '12:00',
+        checkOutTime: item.checkOutTime || '11:00',
+        logoUrl: item.logoUrl || '',
+        gstin: item.gstin || '',
+        fssaiNo: item.fssaiNo || '',
+        tagline: item.tagline || '',
+        websiteUrl: item.websiteUrl || '',
+        receptionPhone: item.receptionPhone || '',
         ...item
       });
       this.isHotelModalOpen.set(true);
@@ -418,10 +497,13 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       const floorId = room.floorId ? Number(room.floorId) : undefined;
       const typeId = room.typeId ? Number(room.typeId) : (room.roomTypeId ? Number(room.roomTypeId) : undefined);
       
+      const imageUrls = room.imageUrls || (room.imageUrl ? [room.imageUrl] : []);
       this.currentRoom.set({
         ...room,
         floorId,
-        typeId
+        typeId,
+        imageUrl: imageUrls.length > 0 ? imageUrls[0] : '',
+        imageUrls: imageUrls
       });
       
       // Determine hotelId from the floor

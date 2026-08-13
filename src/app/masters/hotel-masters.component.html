@@ -117,11 +117,20 @@
               <td><span class="mono-text">H-{{ hotel.id }}</span></td>
               <td>
                 <div class="hotel-info">
-                  <div class="avatar-box">
+                  <div class="avatar-box" *ngIf="!hotel.logoUrl">
                     <span class="material-icons-round">domain</span>
                   </div>
+                  <img [src]="hotel.logoUrl" class="hotel-logo-thumb" *ngIf="hotel.logoUrl" alt="Logo">
                   <div class="name-block">
-                    <span class="entity-name">{{ hotel.name }}</span>
+                    <div class="name-row">
+                      <span class="entity-name">{{ hotel.name }}</span>
+                      <span class="star-rating-pill" *ngIf="hotel.starRating">
+                        {{ hotel.starRating }} ★
+                      </span>
+                    </div>
+                    <span class="entity-sub" *ngIf="hotel.tagline">
+                      <em>"{{ hotel.tagline }}"</em>
+                    </span>
                     <span class="entity-sub">
                       <span class="material-icons-round">place</span>
                       {{ hotel.city }}, {{ hotel.state }}, {{ hotel.country }}
@@ -138,6 +147,10 @@
                   <span class="contact-item">
                     <span class="material-icons-round">phone</span>
                     {{ hotel.phone }}
+                  </span>
+                  <span class="contact-item tax-item" *ngIf="hotel.gstin">
+                    <span class="material-icons-round">receipt_long</span>
+                    GSTIN: {{ hotel.gstin }}
                   </span>
                 </div>
               </td>
@@ -159,9 +172,6 @@
                 <div class="action-buttons">
                   <button class="btn-icon edit" title="Edit Hotel" (click)="openEditModal(hotel)">
                     <span class="material-icons-round">edit</span>
-                  </button>
-                  <button class="btn-icon delete" title="Delete Hotel" (click)="deleteHotel(hotel.id, hotel.name, $event)">
-                    <span class="material-icons-round">delete_outline</span>
                   </button>
                 </div>
               </td>
@@ -381,7 +391,13 @@
             <tr *ngFor="let room of filteredRooms()" [class.inactive-row]="!room.isActive">
               <td><span class="mono-text">RM-{{ room.id }}</span></td>
               <td>
-                <div class="room-number-box">
+                <div class="room-number-box" style="display: flex; align-items: center; gap: 8px;">
+                  <div style="position: relative; display: inline-flex;" *ngIf="room.imageUrl || (room.imageUrls && room.imageUrls.length > 0)">
+                    <img [src]="room.imageUrl || room.imageUrls![0]" class="hotel-logo-thumb" alt="Room Photo" style="border-radius: 6px;">
+                    <span class="photo-count-badge" *ngIf="room.imageUrls && room.imageUrls.length > 1">
+                      +{{ room.imageUrls.length - 1 }}
+                    </span>
+                  </div>
                   <span class="room-pill">{{ room.roomNumber }}</span>
                 </div>
               </td>
@@ -651,7 +667,50 @@
         <span>{{ modalErrorMessage() }}</span>
       </div>
 
-      <div class="form-section-title">Property Profile</div>
+      <!-- PROPERTY BRANDING & LOGO -->
+      <div class="form-section-title">Property Branding & Logo</div>
+      
+      <div class="logo-upload-section mb-3">
+        <div class="logo-preview-box">
+          <img [src]="currentHotel().logoUrl" *ngIf="currentHotel().logoUrl" class="logo-preview-img" alt="Hotel Logo Preview">
+          <div class="logo-placeholder" *ngIf="!currentHotel().logoUrl">
+            <span class="material-icons-round">add_a_photo</span>
+            <span>No Logo</span>
+          </div>
+        </div>
+        <div class="logo-upload-controls">
+          <input type="file" #fileInput (change)="onLogoSelected($event)" accept="image/*" style="display: none;">
+          <button type="button" class="btn-upload-logo" (click)="fileInput.click()">
+            <span class="material-icons-round">cloud_upload</span>
+            {{ currentHotel().logoUrl ? 'Change Logo Image' : 'Upload Hotel Logo' }}
+          </button>
+          <button type="button" class="btn-remove-logo" *ngIf="currentHotel().logoUrl" (click)="removeLogo()">
+            <span class="material-icons-round">delete</span>
+            Remove
+          </button>
+          <span class="input-tip mt-1">Recommended: Square PNG/JPG logo (Max 2MB)</span>
+        </div>
+      </div>
+
+      <div class="ci-form-grid">
+        <div class="ci-input-group">
+          <label>Star Rating Category</label>
+          <select [(ngModel)]="currentHotel().starRating">
+            <option [ngValue]="1">1 Star</option>
+            <option [ngValue]="2">2 Star</option>
+            <option [ngValue]="3">3 Star (Standard)</option>
+            <option [ngValue]="4">4 Star (First Class)</option>
+            <option [ngValue]="5">5 Star (Luxury / Deluxe)</option>
+          </select>
+        </div>
+        <div class="ci-input-group">
+          <label>Property Tagline / Slogan</label>
+          <input type="text" [(ngModel)]="currentHotel().tagline" placeholder="e.g. Luxury Stay & Spa">
+        </div>
+      </div>
+
+      <!-- PROPERTY PROFILE -->
+      <div class="form-section-title mt-4">Property Profile</div>
       
       <div class="ci-input-group">
         <label>Hotel Name *</label>
@@ -661,17 +720,44 @@
 
       <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
-          <label>Email Address *</label>
+          <label>Primary Email Address *</label>
           <input type="email" [(ngModel)]="currentHotel().email" (blur)="markFieldTouched('email')" [class.invalid]="shouldShowError('email')" placeholder="e.g. contact@oasis.com">
           <span class="field-error" *ngIf="shouldShowError('email')">{{ validationMessage('email') }}</span>
         </div>
         <div class="ci-input-group">
-          <label>Phone Number *</label>
-          <input type="tel" [(ngModel)]="currentHotel().phone" (blur)="markFieldTouched('phone')" [class.invalid]="shouldShowError('phone')" placeholder="e.g. +1 305-555-0199">
+          <label>Main Phone Number *</label>
+          <input type="tel" [(ngModel)]="currentHotel().phone" (blur)="markFieldTouched('phone')" [class.invalid]="shouldShowError('phone')" placeholder="e.g. +91 9876543210">
           <span class="field-error" *ngIf="shouldShowError('phone')">{{ validationMessage('phone') }}</span>
         </div>
       </div>
 
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Reception Desk Phone</label>
+          <input type="text" [(ngModel)]="currentHotel().receptionPhone" placeholder="e.g. Ext 0 or Direct Line">
+        </div>
+        <div class="ci-input-group">
+          <label>Official Website URL</label>
+          <input type="text" [(ngModel)]="currentHotel().websiteUrl" placeholder="e.g. https://oasispalms.com">
+        </div>
+      </div>
+
+      <!-- TAXATION & LEGAL DETAILS -->
+      <div class="form-section-title mt-4">Taxation & Legal Information</div>
+      
+      <div class="ci-form-grid">
+        <div class="ci-input-group">
+          <label>GSTIN / Tax Reg. No.</label>
+          <input type="text" [(ngModel)]="currentHotel().gstin" placeholder="e.g. 27AAAAA0000A1Z5" style="text-transform: uppercase;">
+          <span class="input-tip">Printed on invoices & folios</span>
+        </div>
+        <div class="ci-input-group">
+          <label>FSSAI / Food License No.</label>
+          <input type="text" [(ngModel)]="currentHotel().fssaiNo" placeholder="e.g. 10019022009876">
+        </div>
+      </div>
+
+      <!-- ADDRESS DETAILS -->
       <div class="form-section-title mt-4">Address Details</div>
       
       <div class="ci-input-group">
@@ -696,22 +782,46 @@
       <div class="ci-form-grid mt-3">
         <div class="ci-input-group">
           <label>Country *</label>
-          <input type="text" [(ngModel)]="currentHotel().country" (blur)="markFieldTouched('country')" [class.invalid]="shouldShowError('country')" placeholder="USA">
+          <input type="text" [(ngModel)]="currentHotel().country" (blur)="markFieldTouched('country')" [class.invalid]="shouldShowError('country')" placeholder="India">
           <span class="field-error" *ngIf="shouldShowError('country')">{{ validationMessage('country') }}</span>
         </div>
         <div class="ci-input-group">
           <label>Zip Code *</label>
-          <input type="text" [(ngModel)]="currentHotel().zipCode" (blur)="markFieldTouched('zipCode')" [class.invalid]="shouldShowError('zipCode')" placeholder="33140">
+          <input type="text" [(ngModel)]="currentHotel().zipCode" (blur)="markFieldTouched('zipCode')" [class.invalid]="shouldShowError('zipCode')" placeholder="400001">
           <span class="field-error" *ngIf="shouldShowError('zipCode')">{{ validationMessage('zipCode') }}</span>
         </div>
       </div>
 
-      <div class="form-section-title mt-4">Capacity & Settings</div>
+      <!-- OPERATIONAL POLICIES & CAPACITY -->
+      <div class="form-section-title mt-4">Operational Policies & Capacity</div>
       
-      <div class="ci-input-group">
-        <label>Total Rooms *</label>
-        <input type="number" [(ngModel)]="currentHotel().totalRooms" (blur)="markFieldTouched('totalRooms')" [class.invalid]="shouldShowError('totalRooms')" placeholder="150" min="1">
-        <span class="field-error" *ngIf="shouldShowError('totalRooms')">{{ validationMessage('totalRooms') }}</span>
+      <div class="ci-form-grid">
+        <div class="ci-input-group">
+          <label>Standard Check-In Time</label>
+          <input type="text" [(ngModel)]="currentHotel().checkInTime" placeholder="12:00 PM">
+        </div>
+        <div class="ci-input-group">
+          <label>Standard Check-Out Time</label>
+          <input type="text" [(ngModel)]="currentHotel().checkOutTime" placeholder="11:00 AM">
+        </div>
+      </div>
+
+      <div class="ci-form-grid mt-3">
+        <div class="ci-input-group">
+          <label>Total Rooms *</label>
+          <input type="number" [(ngModel)]="currentHotel().totalRooms" (blur)="markFieldTouched('totalRooms')" [class.invalid]="shouldShowError('totalRooms')" placeholder="150" min="1">
+          <span class="field-error" *ngIf="shouldShowError('totalRooms')">{{ validationMessage('totalRooms') }}</span>
+        </div>
+        <div class="ci-input-group">
+          <label>Billing Currency</label>
+          <select [(ngModel)]="currentHotel().currency">
+            <option value="INR">INR (₹)</option>
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="GBP">GBP (£)</option>
+            <option value="AED">AED (Dh)</option>
+          </select>
+        </div>
       </div>
 
       <div class="ci-input-group mt-3">
@@ -1054,6 +1164,30 @@
           <label>Room Extension Phone</label>
           <input type="text" [(ngModel)]="currentRoom().telephone" (blur)="markFieldTouched('telephone')" [class.invalid]="shouldShowError('telephone')" placeholder="e.g. Ext 101">
           <span class="field-error" *ngIf="shouldShowError('telephone')">{{ validationMessage('telephone') }}</span>
+        </div>
+      </div>
+
+      <!-- MULTI-ROOM PHOTO GALLERY SECTION -->
+      <div class="form-section-title mt-4">Room Photo Gallery & Media</div>
+      
+      <div class="room-gallery-container mb-3">
+        <div class="room-gallery-grid" *ngIf="(currentRoom().imageUrls?.length || 0) > 0">
+          <div class="gallery-item" *ngFor="let photo of currentRoom().imageUrls; let idx = index">
+            <img [src]="photo" class="gallery-thumb" alt="Room Photo {{ idx + 1 }}">
+            <span class="primary-tag" *ngIf="idx === 0">Primary</span>
+            <button type="button" class="btn-remove-thumb" (click)="removeRoomPhotoAtIndex(idx)" title="Delete Photo">
+              <span class="material-icons-round">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="logo-upload-controls mt-2">
+          <input type="file" #roomFilesInput multiple (change)="onRoomPhotosSelected($event)" accept="image/*" style="display: none;">
+          <button type="button" class="btn-upload-logo" (click)="roomFilesInput.click()">
+            <span class="material-icons-round">add_photo_alternate</span>
+            {{ (currentRoom().imageUrls?.length || 0) > 0 ? 'Add More Room Photos' : 'Upload Room Photos' }}
+          </button>
+          <span class="input-tip mt-1">Select one or multiple interior photos (PNG/JPG) for this room unit</span>
         </div>
       </div>
 

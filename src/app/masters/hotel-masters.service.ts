@@ -17,6 +17,16 @@ export interface Hotel {
   zipCode: string;
   totalRooms: number;
   currency?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  gstin?: string;
+  fssaiNo?: string;
+  checkInTime?: string;
+  checkOutTime?: string;
+  starRating?: number;
+  tagline?: string;
+  websiteUrl?: string;
+  receptionPhone?: string;
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
@@ -60,6 +70,8 @@ export interface Room {
   status: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED' | 'CLEANING' | string;
   maxOccupancy: number;
   telephone: string;
+  imageUrl?: string;
+  imageUrls?: string[];
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
@@ -100,6 +112,16 @@ export interface HotelRequest {
   zipCode?: string;
   totalRooms?: number;
   currency?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  gstin?: string;
+  fssaiNo?: string;
+  checkInTime?: string;
+  checkOutTime?: string;
+  starRating?: number;
+  tagline?: string;
+  websiteUrl?: string;
+  receptionPhone?: string;
 }
 
 export interface FloorRequest {
@@ -126,6 +148,8 @@ export interface RoomRequest {
   status: string;
   maxOccupancy?: number;
   telephone?: string;
+  imageUrl?: string;
+  imageUrls?: string[];
 }
 
 export interface RatePlanRequest {
@@ -262,7 +286,17 @@ export class HotelMastersService {
       country: (hotel.country || 'India').trim(),
       zipCode: (hotel.zipCode || '400001').trim(),
       totalRooms: Number(hotel.totalRooms || 10),
-      currency: hotel.currency || 'INR'
+      currency: hotel.currency || 'INR',
+      logoUrl: hotel.logoUrl || '',
+      bannerUrl: hotel.bannerUrl || '',
+      gstin: (hotel.gstin || '').trim(),
+      fssaiNo: (hotel.fssaiNo || '').trim(),
+      checkInTime: hotel.checkInTime || '12:00',
+      checkOutTime: hotel.checkOutTime || '11:00',
+      starRating: Number(hotel.starRating || 3),
+      tagline: (hotel.tagline || '').trim(),
+      websiteUrl: (hotel.websiteUrl || '').trim(),
+      receptionPhone: (hotel.receptionPhone || '').trim()
     };
 
     const req$ = hotel.id
@@ -374,13 +408,18 @@ export class HotelMastersService {
   // ─── Rooms CRUD ──────────────────────────────────────────────────────────────
 
   saveRoom(room: Partial<Room>): Observable<Room> {
+    const imageUrls = room.imageUrls || (room.imageUrl ? [room.imageUrl] : []);
+    const primaryImage = room.imageUrl || (imageUrls.length > 0 ? imageUrls[0] : '');
+
     const payload: RoomRequest = {
       roomNumber: (room.roomNumber || '').trim(),
       floorId: Number(room.floorId!),
       roomTypeId: Number(room.typeId ?? room.roomTypeId!),
       status: room.status || 'VACANT',
       maxOccupancy: Number(room.maxOccupancy || 2),
-      telephone: room.telephone || ''
+      telephone: room.telephone || '',
+      imageUrl: primaryImage,
+      imageUrls: imageUrls
     };
 
     const req$ = room.id
@@ -390,12 +429,15 @@ export class HotelMastersService {
     return req$.pipe(
       map(res => {
         const item = res?.data || res || {};
+        const itemImageUrls = item.imageUrls || (item.imageUrl ? [item.imageUrl] : imageUrls);
         return {
           ...item,
           id: item.id ? Number(item.id) : (room.id ? Number(room.id) : Date.now()),
           floorId: item.floorId ? Number(item.floorId) : Number(room.floorId),
           roomTypeId: item.roomTypeId ? Number(item.roomTypeId) : Number(room.typeId),
-          typeId: item.roomTypeId ? Number(item.roomTypeId) : Number(room.typeId ?? room.roomTypeId)
+          typeId: item.roomTypeId ? Number(item.roomTypeId) : Number(room.typeId ?? room.roomTypeId),
+          imageUrl: item.imageUrl || primaryImage,
+          imageUrls: itemImageUrls
         };
       }),
       tap(saved => {

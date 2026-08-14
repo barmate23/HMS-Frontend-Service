@@ -105,14 +105,14 @@ export class PosComponent implements OnInit, OnDestroy {
   readonly isLoadingOrderRooms = signal<boolean>(false);
   readonly hasMoreOrderRooms = signal<boolean>(false);
   diningForm = signal<{ server: string; covers: number; secondaryTableId: number | null; floorId: number | null; roomId: number | null; roomNo: string; guestName: string; bookingTime: string; notes: string }>({
-    server: 'Arjun Menon',
+    server: '',
     covers: 2,
     secondaryTableId: null,
     floorId: null,
     roomId: null,
-    roomNo: '102',
-    guestName: 'Rajan Mehta',
-    bookingTime: 'Today, 08:00 PM',
+    roomNo: '',
+    guestName: '',
+    bookingTime: '',
     notes: ''
   });
   startOrderLines = signal<PosOrderLine[]>([]);
@@ -123,25 +123,18 @@ export class PosComponent implements OnInit, OnDestroy {
     offers: false
   });
   billingSetup = signal({
-    legalName: 'HMS Cloud Hospitality Pvt. Ltd.',
-    gstNumber: '27ABCDE1234F1Z5',
-    panNumber: 'ABCDE1234F',
+    legalName: '',
+    gstNumber: '',
+    panNumber: '',
     invoicePrefix: 'POS',
-    placeOfSupply: 'Maharashtra',
-    defaultTaxProfile: 'GST 5%',
+    placeOfSupply: '',
+    defaultTaxProfile: '',
     enableInclusiveTax: false,
     enableRoomPosting: true,
     enableOfferStacking: false
   });
-  taxRules = signal<TaxRule[]>([
-    { name: 'Restaurant Food GST', rate: 5, appliesTo: 'Restaurant dine-in and takeaway food', code: 'GST_FOOD_5', active: true },
-    { name: 'Bar Beverage GST', rate: 18, appliesTo: 'Alcoholic and premium beverage billing', code: 'GST_BEV_18', active: true },
-    { name: 'Service Charge', rate: 10, appliesTo: 'Optional hotel service charge before GST', code: 'SVC_10', active: false }
-  ]);
-  offerRules = signal<OfferRule[]>([
-    { code: 'WELCOME10', name: 'Welcome dining offer', type: 'Percentage', value: 10, validFrom: '2026-06-01', validTo: '2026-06-30', active: true },
-    { code: 'ROOMDINING', name: 'Room dining credit', type: 'Flat', value: 500, validFrom: '2026-06-01', validTo: '2026-07-15', active: false }
-  ]);
+  taxRules = signal<TaxRule[]>([]);
+  offerRules = signal<OfferRule[]>([]);
 
   ingredientCategoryFilter = signal<string>('ALL');
 

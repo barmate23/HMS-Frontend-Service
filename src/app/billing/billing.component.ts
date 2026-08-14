@@ -266,92 +266,15 @@ export class BillingComponent implements OnInit, OnDestroy {
     { id: 2, folioNo: 'FOL-1001', guest: 'Akshay Barmate', amount: 500, mode: 'Card', reason: 'Service recovery', status: 'Pending Approval' }
   ]);
 
-  inwardReceipts = signal<InwardReceipt[]>([
-    {
-      id: 'GRN-3301', poNo: 'PO-2410', billNo: 'INV-1002', supplier: 'CleanPro Hospitality Supplies', receivedBy: 'Store Keeper', receivedOn: '2026-06-15 11:20', items: 2, acceptedValue: 16000, variance: '1 item short', remarks: 'Remaining floor cleaner expected in the next delivery.',
-      lines: [
-        { itemCode: 'HK-CHEM-007', itemName: 'Floor Cleaner', unit: 'Ltr', invoiceQty: 24, receivedQty: 20 },
-        { itemCode: 'LND-DET-003', itemName: 'Laundry Detergent', unit: 'Kg', invoiceQty: 18, receivedQty: 18 }
-      ]
-    },
-    {
-      id: 'GRN-3302', poNo: 'PO-2411', billNo: 'INV-1003', supplier: 'FreshFoods Wholesale', receivedBy: 'Kitchen Mgr', receivedOn: '2026-06-15 09:30', items: 1, acceptedValue: 4000, variance: 'No variance', remarks: '',
-      lines: [
-        { itemCode: 'FB-DRY-012', itemName: 'Coffee Sachet', unit: 'Pcs', invoiceQty: 300, receivedQty: 300 }
-      ]
-    }
-  ]);
+  inwardReceipts = signal<InwardReceipt[]>([]);
 
-  vendorBills = signal<VendorBill[]>([
-    {
-      id: 'INV-1002',
-      supplier: 'CleanPro Hospitality Supplies',
-      poNo: 'PO-2410',
-      billDate: '2026-06-14',
-      dueDate: '2026-07-14',
-      totalAmount: 18880,
-      netAmount: 16000,
-      status: 'Pending',
-      grnNo: 'GRN-3301',
-      lines: [
-        { itemCode: 'HK-CHEM-007', itemName: 'Floor Cleaner', unit: 'Ltr', invoiceQty: 24 },
-        { itemCode: 'LND-DET-003', itemName: 'Laundry Detergent', unit: 'Kg', invoiceQty: 18 }
-      ]
-    },
-    {
-      id: 'INV-1003',
-      supplier: 'FreshFoods Wholesale',
-      poNo: 'PO-2411',
-      billDate: '2026-06-15',
-      dueDate: '2026-06-22',
-      totalAmount: 4250,
-      netAmount: 4000,
-      status: 'Approved',
-      grnNo: 'GRN-3302',
-      lines: [
-        { itemCode: 'FB-DRY-012', itemName: 'Coffee Sachet', unit: 'Pcs', invoiceQty: 300 }
-      ]
-    }
-  ]);
+  vendorBills = signal<VendorBill[]>([]);
 
-  mockSuppliers = signal<MiniSupplier[]>([
-    { id: 1, name: 'CleanPro Hospitality Supplies' },
-    { id: 2, name: 'FreshFoods Wholesale' }
-  ]);
+  mockSuppliers = signal<MiniSupplier[]>([]);
 
-  mockItemConfigs = signal<VendorBillItem[]>([
-    { id: 1, code: 'HK-CHEM-007', name: 'Floor Cleaner', unit: 'Ltr', category: 'Cleaning Chemical' },
-    { id: 2, code: 'LND-DET-003', name: 'Laundry Detergent', unit: 'Kg', category: 'Laundry Consumable' },
-    { id: 3, code: 'HK-AMN-014', name: 'Dental Kit', unit: 'Pcs', category: 'Guest Amenities' },
-    { id: 4, code: 'FB-DRY-012', name: 'Coffee Sachet', unit: 'Pcs', category: 'F&B Supplies' },
-    { id: 101, code: 'ING-001', name: 'Paneer', unit: 'Kg', category: 'Kitchen Raw Material' },
-    { id: 102, code: 'ING-002', name: 'Haldi', unit: 'Kg', category: 'Kitchen Raw Material' },
-    { id: 103, code: 'ING-003', name: 'Mirchi', unit: 'Kg', category: 'Kitchen Raw Material' }
-  ]);
+  mockItemConfigs = signal<VendorBillItem[]>([]);
 
-  mockPurchaseOrders = signal<MiniPurchaseOrder[]>([
-    {
-      id: 'PO-2410',
-      supplier: 'CleanPro Hospitality Supplies',
-      items: 2,
-      totalAmount: 18880,
-      netAmount: 16000,
-      lines: [
-        { itemCode: 'HK-CHEM-007', invoiceQty: 24 },
-        { itemCode: 'LND-DET-003', invoiceQty: 18 }
-      ]
-    },
-    {
-      id: 'PO-2411',
-      supplier: 'FreshFoods Wholesale',
-      items: 1,
-      totalAmount: 4250,
-      netAmount: 4000,
-      lines: [
-        { itemCode: 'FB-DRY-012', invoiceQty: 300 }
-      ]
-    }
-  ]);
+  mockPurchaseOrders = signal<MiniPurchaseOrder[]>([]);
 
   billDraft = signal<VendorBillDraft>(this.emptyBillDraft());
   billFormSubmitted = signal(false);
@@ -1525,26 +1448,26 @@ export class BillingComponent implements OnInit, OnDestroy {
 
   private loadVendorBills(): void {
     this.purchaseService.getVendorBills().subscribe({
-      next: bills => this.vendorBills.set(bills.map(bill => {
+      next: bills => this.vendorBills.set((bills || []).map(bill => {
         const mapped = this.mapVendorBill(bill);
         const grn = this.inwardReceipts().find(receipt => receipt.billNo === mapped.id);
         return grn ? { ...mapped, grnNo: grn.id } : mapped;
       })),
-      error: () => {}
+      error: () => this.vendorBills.set([])
     });
   }
 
   private loadGrns(): void {
     this.purchaseService.getGrns().subscribe({
       next: grns => {
-        const mapped = grns.map(grn => this.mapGrn(grn));
+        const mapped = (grns || []).map(grn => this.mapGrn(grn));
         this.inwardReceipts.set(mapped);
         this.vendorBills.update(bills => bills.map(bill => {
           const grn = mapped.find(receipt => receipt.billNo === bill.id);
           return grn ? { ...bill, grnNo: grn.id } : bill;
         }));
       },
-      error: () => {}
+      error: () => this.inwardReceipts.set([])
     });
   }
 

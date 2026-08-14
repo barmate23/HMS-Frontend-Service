@@ -134,6 +134,8 @@ export interface GrnPayload {
 
 export interface ItemConfigPayload {
   id?: number;
+  hotelId?: number;
+  hotelName?: string;
   itemCode: string;
   itemName: string;
   categoryId?: number;
@@ -145,6 +147,8 @@ export interface ItemConfigPayload {
   hsnSacCode?: string;
   reorderLevel?: number;
   maxStockLevel?: number;
+  minimumQty?: number;
+  maximumQty?: number;
   description?: string;
   isActive: boolean;
   createdAt?: string;

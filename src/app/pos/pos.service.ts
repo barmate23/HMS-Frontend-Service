@@ -524,17 +524,17 @@ export class PosService {
   private readonly snackBar = inject(MatSnackBar);
   private readonly posBaseUrl = '/api/hmsService/v1/pos';
   private readonly hmsBaseUrl = '/api/hmsService/v1';
-  private readonly defaultOutletTypes: OutletType[] = ['Restaurant', 'Bar', 'Cafe', 'Spa', 'Gift Shop', 'Room Service', 'Mini Bar'];
-  private readonly defaultShiftSchedules: string[] = ['09:00 AM - 09:00 PM', '07:00 AM - 11:00 PM', '05:00 PM - 01:00 AM', '24 Hours'];
-  private readonly defaultTableStatuses: TableStatus[] = ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'BILLED', 'MOPPING', 'DIRTY'];
-  private readonly defaultTableSections: string[] = ['Indoor', 'Patio', 'Lounge', 'Bar Counter'];
-  private readonly defaultMenuCategories: string[] = ['Food', 'Beverage', 'Retail', 'Room Service'];
-  private readonly defaultMenuSubcategories: string[] = ['Starter', 'Main Course', 'Dessert', 'Beverage', 'Room Service'];
-  private readonly defaultOrderStatuses: OrderStatus[] = ['OPEN', 'KOT_SENT', 'HELD', 'BILLED', 'CANCELLED'];
-  private readonly defaultBillStatuses: BillStatus[] = ['Open', 'Paid', 'Partial', 'Void'];
-  private readonly defaultPaymentModes: PaymentMode[] = ['Cash', 'Card', 'UPI', 'Room Charge', 'City Ledger', 'Voucher'];
-  private readonly defaultVoidReasons: string[] = ['Void marked by supervisor', 'Guest complaint', 'Wrong item billed', 'Manager approval'];
-  private readonly defaultUsers = ['Rajan Mehta', 'Meena Pillai', 'Arjun Menon', 'Deepa Thomas', 'Outlet Manager'];
+  private readonly defaultOutletTypes: OutletType[] = [];
+  private readonly defaultShiftSchedules: string[] = [];
+  private readonly defaultTableStatuses: TableStatus[] = [];
+  private readonly defaultTableSections: string[] = [];
+  private readonly defaultMenuCategories: string[] = [];
+  private readonly defaultMenuSubcategories: string[] = [];
+  private readonly defaultOrderStatuses: OrderStatus[] = [];
+  private readonly defaultBillStatuses: BillStatus[] = [];
+  private readonly defaultPaymentModes: PaymentMode[] = [];
+  private readonly defaultVoidReasons: string[] = [];
+  private readonly defaultUsers: string[] = [];
 
   readonly outletTypes = signal<OutletType[]>(this.defaultOutletTypes);
   readonly outletTypeMasters = signal<ApiCommonMaster[]>([]);
@@ -565,7 +565,7 @@ export class PosService {
       .filter((user: any) => user?.status === 'ACTIVE')
       .map((user: any) => user?.fullName)
       .filter(Boolean);
-    return names.length ? names : this.defaultUsers;
+    return names;
   });
 
   readonly outlets = signal<PosOutlet[]>([]);
@@ -587,12 +587,7 @@ export class PosService {
   readonly ingredientsTotalPages = signal<number>(1);
   readonly ingredientsLoading = signal<boolean>(false);
   readonly recipes = signal<RecipeMaster[]>([]);
-  readonly gstRules = signal<ApiGstRule[]>([
-    { id: 1, serviceCategory: 'Room', cgstRate: 9, sgstRate: 9, igstRate: 18, isActive: true },
-    { id: 2, serviceCategory: 'Food', cgstRate: 2.5, sgstRate: 2.5, igstRate: 5, isActive: true },
-    { id: 3, serviceCategory: 'Laundry', cgstRate: 9, sgstRate: 9, igstRate: 18, isActive: true },
-    { id: 5, serviceCategory: 'Beverages', cgstRate: 9, sgstRate: 9, igstRate: 18, isActive: true }
-  ]);
+  readonly gstRules = signal<ApiGstRule[]>([]);
 
   readonly outletMap = computed(() => new Map(this.outlets().map(outlet => [outlet.id, outlet])));
 
@@ -1007,11 +1002,7 @@ export class PosService {
             return [...existing, ...newItems];
           });
         } else {
-          this.ingredients.update(existing => {
-            const fetchedIds = new Set(mapped.map(m => m.id));
-            const preserved = existing.filter(e => !fetchedIds.has(e.id));
-            return [...preserved, ...mapped];
-          });
+          this.ingredients.set(mapped);
         }
       },
       error: error => {
@@ -2290,7 +2281,7 @@ export class PosService {
       map(res => {
         if (res && Array.isArray(res.data)) return res.data;
         if (Array.isArray(res)) return res as unknown as KitchenDisplayOrder[];
-        return this.getMockKitchenOrders(isClosed, outletId);
+        return [];
       }),
       catchError((err): Observable<KitchenDisplayOrder[]> => {
         // Re-throw unauthorized errors so the auth interceptor can redirect to login
@@ -2301,8 +2292,8 @@ export class PosService {
         if (isUnauthorized) {
           return throwError(() => err) as Observable<KitchenDisplayOrder[]>;
         }
-        console.warn('Backend kitchen orders endpoint unreachable, using local fallback:', err);
-        return of(this.getMockKitchenOrders(isClosed, outletId));
+        console.warn('Backend kitchen orders endpoint error:', err);
+        return of([]);
       })
     );
   }

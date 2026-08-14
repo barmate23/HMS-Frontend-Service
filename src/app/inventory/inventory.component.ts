@@ -504,14 +504,7 @@ export class InventoryComponent implements OnInit, OnDestroy {
   });
 
   readonly requestItemOptions = computed(() => {
-    const configured = this.issueItems();
-    if (configured.length) return configured;
-    return [
-      { id: 'HK-LIN-001', code: 'HK-LIN-001', name: 'Bath Towel', unit: 'Pcs', uomId: '', rate: 0 },
-      { id: 'HK-AMN-014', code: 'HK-AMN-014', name: 'Dental Kit', unit: 'Pcs', uomId: '', rate: 0 },
-      { id: 'LND-DET-003', code: 'LND-DET-003', name: 'Laundry Detergent', unit: 'Kg', uomId: '', rate: 0 },
-      { id: 'HK-CHEM-007', code: 'HK-CHEM-007', name: 'Floor Cleaner', unit: 'Ltr', uomId: '', rate: 0 }
-    ];
+    return this.issueItems();
   });
 
   readonly filteredRequests = computed(() => {

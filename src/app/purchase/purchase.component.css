@@ -546,14 +546,13 @@ button {
 .supplier-table .table-head,
 .supplier-table .table-row {
   grid-template-columns:
-    minmax(92px, 0.55fr)
-    minmax(240px, 1.55fr)
-    minmax(170px, 0.95fr)
-    minmax(220px, 1.25fr)
-    minmax(86px, 0.5fr)
-    minmax(112px, 0.65fr)
-    minmax(90px, 0.5fr)
-    minmax(112px, 0.6fr);
+    minmax(80px, 0.5fr)
+    minmax(200px, 1.4fr)
+    minmax(150px, 0.95fr)
+    minmax(200px, 1.25fr)
+    minmax(80px, 0.5fr)
+    minmax(80px, 0.5fr)
+    minmax(140px, 0.8fr);
 }
 
 .supplier-table .table-head > span,
@@ -565,19 +564,19 @@ button {
 
 .supplier-table .table-head > span:nth-child(5),
 .supplier-table .table-head > span:nth-child(6),
-.supplier-table .table-head > span:nth-child(7),
-.supplier-table .table-head > span:nth-child(8),
 .supplier-table .table-row > span:nth-child(5),
-.supplier-table .table-row > b:nth-child(6),
-.supplier-table .table-row > em:nth-child(7),
-.supplier-table .table-row > .row-actions {
+.supplier-table .table-row > em:nth-child(6) {
   justify-self: start;
   white-space: nowrap;
 }
 
-.supplier-table .table-head > span:nth-child(8),
+.supplier-table .table-head > span:last-child,
 .supplier-table .table-row > .row-actions {
-  justify-self: end;
+  justify-self: center;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .supplier-table .empty-row {

@@ -505,6 +505,7 @@
           <button type="button" title="Delete GRN" (click)="grnPendingDelete.set(receipt)"><span class="material-icons-round">delete</span></button>
         </span>
       </div>
+      <div class="empty-state" *ngIf="!inwardReceipts().length">No GRN records available.</div>
     </div>
   </section>
 
@@ -540,6 +541,7 @@
           <button type="button" title="Delete bill" (click)="vendorBillPendingDelete.set(bill)"><span class="material-icons-round">delete</span></button>
         </span>
       </div>
+      <div class="empty-state" *ngIf="!filteredBills().length">No vendor bills available.</div>
     </div>
   </section>
 

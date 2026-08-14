@@ -152,7 +152,9 @@ interface ItemDraft {
   id?: number;
   code: string;
   name: string;
+  categoryId?: number;
   category: string;
+  uomId?: number;
   unit: string;
   unitCost: number | null;
   taxRate: number | null;
@@ -195,6 +197,8 @@ export class PurchaseComponent implements OnInit, OnDestroy {
   paymentTerms = signal<PurchaseMasterOption[]>([]);
   supplierStatuses = signal<PurchaseMasterOption[]>([]);
   itemCategoryScopes = signal<PurchaseMasterOption[]>([]);
+  itemCategories = signal<PurchaseMasterOption[]>([]);
+  uomOptions = signal<PurchaseMasterOption[]>([]);
   supplierLoading = signal(false);
   poLoading = signal(false);
   poSaving = signal(false);
@@ -203,32 +207,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
 
   readonly suppliers = signal<Supplier[]>([]);
 
-  masterItems = signal<MasterInventoryItem[]>([
-    // Hotel Operations & Daily Consumption Items
-    { id: 1, code: 'HK-LIN-001', name: 'Bath Towel', category: 'Housekeeping Linen', unit: 'Pcs', unitCost: 200, taxRate: 12, description: 'Standard guest bath towel', hsnCode: '6302', reorderLevel: 50, parLevel: 140, isActive: true },
-    { id: 2, code: 'HK-AMN-014', name: 'Dental Kit', category: 'Guest Amenities', unit: 'Pcs', unitCost: 15, taxRate: 18, description: 'Toothbrush and paste kit', hsnCode: '9603', reorderLevel: 200, parLevel: 500, isActive: true },
-    { id: 3, code: 'LND-DET-003', name: 'Laundry Detergent', category: 'Laundry Consumable', unit: 'Kg', unitCost: 80, taxRate: 18, description: 'Commercial grade detergent', hsnCode: '3402', reorderLevel: 30, parLevel: 70, isActive: true },
-    { id: 4, code: 'MB-BEV-009', name: 'Soda Can', category: 'Minibar', unit: 'Can', unitCost: 25, taxRate: 28, description: '330ml carbonated beverage', hsnCode: '2202', reorderLevel: 100, parLevel: 250, isActive: true },
-    { id: 5, code: 'HK-CHEM-007', name: 'Floor Cleaner', category: 'Cleaning Chemical', unit: 'Ltr', unitCost: 110, taxRate: 18, description: 'Multi-surface floor cleaner', hsnCode: '3402', reorderLevel: 20, parLevel: 45, isActive: true },
-    { id: 6, code: 'FB-DRY-012', name: 'Coffee Sachet', category: 'Guest Amenities', unit: 'Pcs', unitCost: 6, taxRate: 5, description: 'Instant coffee sachet 4g', hsnCode: '2101', reorderLevel: 500, parLevel: 1200, isActive: true },
-    { id: 7, code: 'HK-LIN-002', name: 'Bed Sheet (Double)', category: 'Housekeeping Linen', unit: 'Pcs', unitCost: 400, taxRate: 12, description: 'Cotton double bed sheet', hsnCode: '6302', reorderLevel: 40, parLevel: 100, isActive: true },
-    { id: 8, code: 'HK-LIN-003', name: 'Pillow Cover', category: 'Housekeeping Linen', unit: 'Pcs', unitCost: 80, taxRate: 12, description: 'Cotton pillow cover', hsnCode: '6302', reorderLevel: 80, parLevel: 200, isActive: true },
-    { id: 9, code: 'MB-FOD-022', name: 'Chocolate Bar', category: 'Minibar', unit: 'Pkt', unitCost: 25, taxRate: 18, description: 'Premium milk chocolate bar', hsnCode: '1806', reorderLevel: 40, parLevel: 100, isActive: true },
-
-    // Kitchen Raw Ingredients
-    { id: 101, code: 'ING-001', name: 'Paneer (Cottage Cheese)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 360, taxRate: 5, description: 'Fresh malai paneer', hsnCode: '0406', reorderLevel: 5, parLevel: 15, isActive: true },
-    { id: 102, code: 'ING-002', name: 'Capsicum (Green Pepper)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 80, taxRate: 5, description: 'Fresh green capsicum', hsnCode: '0709', reorderLevel: 4, parLevel: 10, isActive: true },
-    { id: 103, code: 'ING-003', name: 'Tandoori Marinade Masala', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 450, taxRate: 12, description: 'Authentic tandoori spice blend', hsnCode: '0910', reorderLevel: 2, parLevel: 5, isActive: true },
-    { id: 104, code: 'ING-004', name: 'Amul Fresh Cream', category: 'Kitchen Raw Material', unit: 'Ltr', unitCost: 220, taxRate: 5, description: 'Pasteurised cooking fresh cream', hsnCode: '0402', reorderLevel: 3, parLevel: 8, isActive: true },
-    { id: 105, code: 'ING-005', name: 'Chicken (Boneless Breasts)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 280, taxRate: 5, description: 'Fresh boneless chicken breasts', hsnCode: '0207', reorderLevel: 8, parLevel: 20, isActive: true },
-    { id: 106, code: 'ING-006', name: 'Desi Ghee / Pure Butter', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 580, taxRate: 12, description: 'Pure cow ghee', hsnCode: '0405', reorderLevel: 3, parLevel: 10, isActive: true },
-    { id: 107, code: 'ING-007', name: 'Basmati Rice (Premium)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 140, taxRate: 5, description: 'Aged long-grain basmati rice', hsnCode: '1006', reorderLevel: 20, parLevel: 50, isActive: true },
-    { id: 108, code: 'ING-008', name: 'Ginger Garlic Paste', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 160, taxRate: 12, description: 'Prepared ginger garlic blend', hsnCode: '2103', reorderLevel: 2, parLevel: 5, isActive: true },
-    { id: 109, code: 'ING-009', name: 'Fresh Tomatoes (Ripe Red)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 45, taxRate: 5, description: 'Fresh hybrid red tomatoes', hsnCode: '0702', reorderLevel: 10, parLevel: 25, isActive: true },
-    { id: 110, code: 'ING-010', name: 'Onions (Red Medium)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 35, taxRate: 5, description: 'Fresh red onions', hsnCode: '0703', reorderLevel: 12, parLevel: 30, isActive: true },
-    { id: 111, code: 'ING-011', name: 'Refined Sunflower Oil', category: 'Kitchen Raw Material', unit: 'Ltr', unitCost: 145, taxRate: 5, description: 'Refined sunflower cooking oil', hsnCode: '1512', reorderLevel: 15, parLevel: 40, isActive: true },
-    { id: 112, code: 'ING-012', name: 'Cashew Nuts (Whole W320)', category: 'Kitchen Raw Material', unit: 'Kg', unitCost: 820, taxRate: 12, description: 'Whole premium cashew nuts', hsnCode: '0801', reorderLevel: 3, parLevel: 5, isActive: true }
-  ]);
+  masterItems = signal<MasterInventoryItem[]>([]);
 
   kitchenIngredientsPage = signal<number>(0);
   kitchenIngredientsTotalPages = signal<number>(1);
@@ -327,85 +306,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     return items;
   });
 
-  readonly purchaseOrders = signal<PurchaseOrder[]>([
-    {
-      id: 'PO-2409',
-      supplierId: 1,
-      supplier: 'Fresh Linen Co.',
-      department: 'Housekeeping',
-      orderedOn: '2026-06-14',
-      expectedOn: '2026-06-18',
-      items: 3,
-      amount: 86400,
-      status: 'Approved',
-      deliveryLocation: 'Main Store',
-      paymentTermsId: 1,
-      paymentTerms: '30 Days',
-      requestedBy: 'Meena Pillai',
-      poDate: '2026-06-14',
-      referenceNo: 'PR-1007',
-      shippingCharges: 1280,
-      subtotal: 76000,
-      taxTotal: 9120,
-      notes: 'Please pack in bundles of 10. Deliver to Main Store on ground floor.',
-      lineItems: [
-        { itemCode: 'HK-LIN-002', itemName: 'Bed Sheet (Double)', uom: 'Pcs', quantity: 100, rate: 400, taxPercent: 12, discountPercent: 0, total: 44800 },
-        { itemCode: 'HK-LIN-001', itemName: 'Bath Towel', uom: 'Pcs', quantity: 100, rate: 200, taxPercent: 12, discountPercent: 0, total: 22400 },
-        { itemCode: 'HK-LIN-003', itemName: 'Pillow Cover', uom: 'Pcs', quantity: 200, rate: 80, taxPercent: 12, discountPercent: 0, total: 17920 }
-      ]
-    },
-    {
-      id: 'PO-2410',
-      supplierId: 2,
-      supplier: 'CleanPro Hospitality Supplies',
-      department: 'Laundry',
-      orderedOn: '2026-06-15',
-      expectedOn: '2026-06-17',
-      items: 2,
-      amount: 28600,
-      status: 'Partially Received',
-      deliveryLocation: 'Laundry Store',
-      paymentTermsId: 2,
-      paymentTerms: '7 Days',
-      requestedBy: 'Laundry Desk',
-      poDate: '2026-06-15',
-      referenceNo: 'PR-1008',
-      shippingCharges: 1460,
-      subtotal: 23000,
-      taxTotal: 4140,
-      notes: 'Urgent requirement for upcoming banquet event.',
-      lineItems: [
-        { itemCode: 'LND-DET-003', itemName: 'Laundry Detergent', uom: 'Kg', quantity: 150, rate: 80, taxPercent: 18, discountPercent: 0, total: 14160 },
-        { itemCode: 'HK-CHEM-007', itemName: 'Floor Cleaner', uom: 'Ltr', quantity: 100, rate: 110, taxPercent: 18, discountPercent: 0, total: 12980 }
-      ]
-    },
-    {
-      id: 'PO-2411',
-      supplierId: 3,
-      supplier: 'MiniBar Traders',
-      department: 'Minibar',
-      orderedOn: '2026-06-15',
-      expectedOn: '2026-06-20',
-      items: 3,
-      amount: 41250,
-      status: 'Draft',
-      deliveryLocation: 'Minibar Store',
-      paymentTermsId: 3,
-      paymentTerms: '15 Days',
-      requestedBy: 'Front Office',
-      poDate: '2026-06-15',
-      referenceNo: 'PR-1009',
-      shippingCharges: 2030,
-      subtotal: 33500,
-      taxTotal: 5720,
-      notes: 'Verify expiry dates before dispatch.',
-      lineItems: [
-        { itemCode: 'MB-BEV-009', itemName: 'Soda Can', uom: 'Can', quantity: 500, rate: 25, taxPercent: 28, discountPercent: 0, total: 16000 },
-        { itemCode: 'FB-DRY-012', itemName: 'Coffee Sachet', uom: 'Pcs', quantity: 2000, rate: 6, taxPercent: 5, discountPercent: 0, total: 12600 },
-        { itemCode: 'HK-AMN-014', itemName: 'Dental Kit', uom: 'Pcs', quantity: 600, rate: 15, taxPercent: 18, discountPercent: 0, total: 10620 }
-      ]
-    }
-  ]);
+  readonly purchaseOrders = signal<PurchaseOrder[]>([]);
 
   poDraft = signal<PurchaseOrderDraft>(this.emptyPoDraft());
   poFormSubmitted = signal(false);
@@ -1041,19 +942,33 @@ export class PurchaseComponent implements OnInit, OnDestroy {
   }
 
   private itemPayloadFromDraft(draft: ItemDraft, existing: MasterInventoryItem | null): ItemConfigPayload {
+    const categoryOption = this.optionById(this.itemCategories(), draft.categoryId);
+    const uomOption = this.optionById(this.uomOptions(), draft.uomId);
+
+    const catId = draft.categoryId ?? existing?.categoryId ?? categoryOption?.id;
+    const catName = categoryOption?.value || draft.category.trim();
+
+    const uomId = draft.uomId ?? existing?.uomId ?? uomOption?.id;
+    const uomName = uomOption?.value || draft.unit.trim();
+
+    const reorderVal = draft.reorderLevel === null || draft.reorderLevel === undefined ? undefined : Number(draft.reorderLevel);
+    const maxStockVal = draft.parLevel === null || draft.parLevel === undefined ? undefined : Number(draft.parLevel);
+
     return {
       id: existing?.id,
       itemCode: draft.code.trim().toUpperCase(),
       itemName: draft.name.trim(),
-      categoryId: existing?.categoryId,
-      categoryName: draft.category.trim(),
-      uomId: existing?.uomId,
-      uomName: draft.unit.trim(),
+      categoryId: catId ? Number(catId) : undefined,
+      categoryName: catName || undefined,
+      uomId: uomId ? Number(uomId) : undefined,
+      uomName: uomName || undefined,
       unitCost: Number(draft.unitCost || 0),
       gstTaxRate: Number(draft.taxRate ?? 0),
       hsnSacCode: draft.hsnCode.trim().toUpperCase() || undefined,
-      reorderLevel: draft.reorderLevel === null || draft.reorderLevel === undefined ? undefined : Number(draft.reorderLevel),
-      maxStockLevel: draft.parLevel === null || draft.parLevel === undefined ? undefined : Number(draft.parLevel),
+      reorderLevel: reorderVal,
+      maxStockLevel: maxStockVal,
+      minimumQty: reorderVal,
+      maximumQty: maxStockVal,
       description: draft.description.trim() || undefined,
       isActive: draft.isActive
     };
@@ -1184,7 +1099,9 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       terms: this.purchaseService.getCommonMaster('PAYMENT_TERMS'),
       deliveryStores: this.purchaseService.getCommonMaster('DELIVERY_STORE'),
       statuses: this.purchaseService.getCommonMaster('SUPPLIER_STATUS'),
-      itemCategoryScopes: this.purchaseService.getCommonMaster('PURCHASE_ITEM_CATEGORY')
+      itemCategoryScopes: this.purchaseService.getCommonMaster('PURCHASE_ITEM_CATEGORY'),
+      itemCategories: this.purchaseService.getCommonMaster('ITEM_CATEGORY'),
+      uomOptions: this.purchaseService.getCommonMaster('UOM')
     }).subscribe({
       next: response => {
         this.departments.set(response.departments);
@@ -1193,6 +1110,8 @@ export class PurchaseComponent implements OnInit, OnDestroy {
         this.deliveryStores.set(response.deliveryStores);
         this.supplierStatuses.set(response.statuses);
         this.itemCategoryScopes.set(response.itemCategoryScopes);
+        this.itemCategories.set(response.itemCategories.length ? response.itemCategories : response.itemCategoryScopes);
+        this.uomOptions.set(response.uomOptions);
         this.loadSuppliers();
       },
       error: () => {
@@ -1202,6 +1121,8 @@ export class PurchaseComponent implements OnInit, OnDestroy {
         this.deliveryStores.set([]);
         this.supplierStatuses.set([]);
         this.itemCategoryScopes.set([]);
+        this.itemCategories.set([]);
+        this.uomOptions.set([]);
         this.loadSuppliers();
       }
     });
@@ -1803,6 +1724,62 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     });
   }
 
+  updateItemCategory(val: any): void {
+    const catId = val !== undefined && val !== null && val !== '' ? Number(val) : undefined;
+    const catOption = this.optionById(this.itemCategories(), catId);
+
+    const fallbackNames: Record<number, string> = {
+      1: 'Housekeeping Linen',
+      2: 'Guest Amenities',
+      3: 'Laundry Consumable',
+      4: 'Cleaning Chemical',
+      5: 'Minibar',
+      6: 'Kitchen Raw Material',
+      7: 'Stationery',
+      8: 'Engineering & Maintenance',
+      9: 'Uniforms',
+      10: 'Other'
+    };
+
+    const catName = catOption?.value || (catId ? fallbackNames[catId] : '') || (typeof val === 'string' ? val : '');
+
+    this.itemDraft.update(draft => ({
+      ...draft,
+      categoryId: catId,
+      category: catName
+    }));
+    this.itemTouchedFields.update(touched => ({ ...touched, category: true }));
+  }
+
+  updateItemUom(val: any): void {
+    const uomId = val !== undefined && val !== null && val !== '' ? Number(val) : undefined;
+    const uomOption = this.optionById(this.uomOptions(), uomId);
+
+    const fallbackUomNames: Record<number, string> = {
+      1: 'Pcs',
+      2: 'Kg',
+      3: 'Ltr',
+      4: 'Can',
+      5: 'Box',
+      6: 'Carton',
+      7: 'Dozen',
+      8: 'Set',
+      9: 'Pair',
+      10: 'Roll',
+      11: 'Gm',
+      12: 'Ml'
+    };
+
+    const uomName = uomOption?.value || (uomId ? fallbackUomNames[uomId] : '') || (typeof val === 'string' ? val : '');
+
+    this.itemDraft.update(draft => ({
+      ...draft,
+      uomId: uomId,
+      unit: uomName
+    }));
+    this.itemTouchedFields.update(touched => ({ ...touched, unit: true }));
+  }
+
   updateItemDraft<K extends keyof ItemDraft>(field: K, value: ItemDraft[K]): void {
     this.itemDraft.update(draft => ({ ...draft, [field]: value }));
     this.itemTouchedFields.update(touched => ({ ...touched, [field]: true }));
@@ -1824,8 +1801,8 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     if (!draft.code.trim()) errors.push({ field: 'code', message: 'Item code is required.' });
     else if (!/^[A-Z0-9\-]+$/i.test(draft.code.trim())) errors.push({ field: 'code', message: 'Code must be alphanumeric (hyphens allowed).' });
     if (!draft.name.trim()) errors.push({ field: 'name', message: 'Item name is required.' });
-    if (!draft.category.trim()) errors.push({ field: 'category', message: 'Category is required.' });
-    if (!draft.unit.trim()) errors.push({ field: 'unit', message: 'Unit of measure is required.' });
+    if (!draft.categoryId && !draft.category.trim()) errors.push({ field: 'category', message: 'Category is required.' });
+    if (!draft.uomId && !draft.unit.trim()) errors.push({ field: 'unit', message: 'Unit of measure is required.' });
     if (draft.unitCost === null || draft.unitCost === undefined || Number(draft.unitCost) < 0)
       errors.push({ field: 'unitCost', message: 'Enter a valid cost (>= 0).' });
     if (draft.taxRate === null || draft.taxRate === undefined || Number(draft.taxRate) < 0 || Number(draft.taxRate) > 100)
@@ -1840,11 +1817,15 @@ export class PurchaseComponent implements OnInit, OnDestroy {
   }
 
   private emptyItemDraft(): ItemDraft {
+    const defaultCat = this.itemCategories()[0];
+    const defaultUom = this.uomOptions()[0];
     return {
       code: '',
       name: '',
-      category: '',
-      unit: 'Pcs',
+      categoryId: defaultCat?.id,
+      category: defaultCat?.value || '',
+      uomId: defaultUom?.id,
+      unit: defaultUom?.value || 'Pcs',
       unitCost: null,
       taxRate: 18,
       description: '',
@@ -1856,11 +1837,15 @@ export class PurchaseComponent implements OnInit, OnDestroy {
   }
 
   private draftFromItem(item: MasterInventoryItem): ItemDraft {
+    const catOption = this.itemCategories().find(c => c.value.toLowerCase() === item.category.toLowerCase() || c.id === item.categoryId);
+    const uomOption = this.uomOptions().find(u => u.value.toLowerCase() === item.unit.toLowerCase() || u.id === item.uomId);
     return {
       id: item.id,
       code: item.code,
       name: item.name,
+      categoryId: item.categoryId ?? catOption?.id,
       category: item.category,
+      uomId: item.uomId ?? uomOption?.id,
       unit: item.unit,
       unitCost: item.unitCost,
       taxRate: item.taxRate,

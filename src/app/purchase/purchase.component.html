@@ -152,7 +152,7 @@
       </div>
     </header>
     <div class="simple-table supplier-table">
-      <div class="table-head"><span>Code</span><span>Supplier</span><span>Category</span><span>Contact</span><span>Terms</span><span>Outstanding</span><span>Status</span><span>Actions</span></div>
+      <div class="table-head"><span>Code</span><span>Supplier</span><span>Category</span><span>Contact</span><span>Terms</span><span>Status</span><span>Actions</span></div>
       <div class="table-row empty-row" *ngIf="supplierLoading()"><span>Loading suppliers...</span></div>
       <div class="table-row empty-row" *ngIf="!supplierLoading() && !filteredSuppliers().length"><span>No suppliers found.</span></div>
       <div class="table-row" *ngFor="let supplier of filteredSuppliers()">
@@ -161,7 +161,6 @@
         <span>{{ supplier.category }}</span>
         <span><b>{{ supplier.contact }}</b><small>{{ supplier.phone }} • {{ supplier.email }}</small></span>
         <span>{{ supplier.paymentTerms }}</span>
-        <b>{{ formatINR(supplier.outstanding) }}</b>
         <em [class]="statusClass(supplier.status)">{{ supplier.status }}</em>
         <span class="row-actions">
           <button type="button" title="View supplier" (click)="viewSupplier(supplier)"><span class="material-icons-round">visibility</span></button>
@@ -551,37 +550,48 @@
 
           <label [class.invalid]="itemFieldError('category')">
             <span>Category</span>
-            <select [ngModel]="itemDraft().category" (ngModelChange)="updateItemDraft('category', $event)" (blur)="markItemFieldAsTouched('category')">
-              <option value="">Select category</option>
-              <option value="Housekeeping Linen">Housekeeping Linen</option>
-              <option value="Guest Amenities">Guest Amenities</option>
-              <option value="Laundry Consumable">Laundry Consumable</option>
-              <option value="Cleaning Chemical">Cleaning Chemical</option>
-              <option value="Minibar">Minibar</option>
-              <option value="Kitchen Raw Material">Kitchen Raw Material</option>
-              <option value="Stationery">Stationery</option>
-              <option value="Engineering & Maintenance">Engineering &amp; Maintenance</option>
-              <option value="Uniforms">Uniforms</option>
-              <option value="Other">Other</option>
+            <select [ngModel]="itemDraft().categoryId" (ngModelChange)="updateItemCategory($event)" (blur)="markItemFieldAsTouched('category')">
+              <option [ngValue]="undefined">Select category</option>
+              <ng-container *ngIf="itemCategories().length; else fallbackCategories">
+                <option *ngFor="let option of itemCategories()" [ngValue]="option.id">{{ option.value }}</option>
+              </ng-container>
+              <ng-template #fallbackCategories>
+                <option [ngValue]="1">Housekeeping Linen</option>
+                <option [ngValue]="2">Guest Amenities</option>
+                <option [ngValue]="3">Laundry Consumable</option>
+                <option [ngValue]="4">Cleaning Chemical</option>
+                <option [ngValue]="5">Minibar</option>
+                <option [ngValue]="6">Kitchen Raw Material</option>
+                <option [ngValue]="7">Stationery</option>
+                <option [ngValue]="8">Engineering &amp; Maintenance</option>
+                <option [ngValue]="9">Uniforms</option>
+                <option [ngValue]="10">Other</option>
+              </ng-template>
             </select>
             <small>{{ itemFieldError('category') }}</small>
           </label>
 
           <label [class.invalid]="itemFieldError('unit')">
             <span>Unit of Measure (UOM)</span>
-            <select [ngModel]="itemDraft().unit" (ngModelChange)="updateItemDraft('unit', $event)" (blur)="markItemFieldAsTouched('unit')">
-              <option value="Pcs">Pcs</option>
-              <option value="Kg">Kg</option>
-              <option value="Ltr">Ltr</option>
-              <option value="Can">Can</option>
-              <option value="Box">Box</option>
-              <option value="Carton">Carton</option>
-              <option value="Dozen">Dozen</option>
-              <option value="Set">Set</option>
-              <option value="Pair">Pair</option>
-              <option value="Roll">Roll</option>
-              <option value="Gm">Gm</option>
-              <option value="Ml">Ml</option>
+            <select [ngModel]="itemDraft().uomId" (ngModelChange)="updateItemUom($event)" (blur)="markItemFieldAsTouched('unit')">
+              <option [ngValue]="undefined">Select UOM</option>
+              <ng-container *ngIf="uomOptions().length; else fallbackUoms">
+                <option *ngFor="let option of uomOptions()" [ngValue]="option.id">{{ option.value }}</option>
+              </ng-container>
+              <ng-template #fallbackUoms>
+                <option [ngValue]="1">Pcs</option>
+                <option [ngValue]="2">Kg</option>
+                <option [ngValue]="3">Ltr</option>
+                <option [ngValue]="4">Can</option>
+                <option [ngValue]="5">Box</option>
+                <option [ngValue]="6">Carton</option>
+                <option [ngValue]="7">Dozen</option>
+                <option [ngValue]="8">Set</option>
+                <option [ngValue]="9">Pair</option>
+                <option [ngValue]="10">Roll</option>
+                <option [ngValue]="11">Gm</option>
+                <option [ngValue]="12">Ml</option>
+              </ng-template>
             </select>
             <small>{{ itemFieldError('unit') }}</small>
           </label>

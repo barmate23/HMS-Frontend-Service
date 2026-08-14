@@ -9,7 +9,7 @@ import {
   HKRoom, HKTask, HKStaff, LostFoundItem, MaintenanceRequest,
   HKStatus, TaskType, TaskStatus, Priority, LFStatus, MaintStatus, MaintPriority,
   AuditFrequency, SopCheckpoint, HousekeepingAttentionItem, HousekeepingRoomBoard,
-  RoomAuditItem, AuditResult, AuditSeverity, RoomSopCheck, SopStatus
+  RoomAuditItem, AuditResult, AuditSeverity, RoomSopCheck, SopStatus, isSameFloor
 } from './housekeeping.service';
 import { SystemUser, UserManagementService } from '../user-management/user-management.service';
 
@@ -38,17 +38,6 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
     ).subscribe(() => {
       this.updateTabFromUrl(this.router.url);
     });
-
-    effect(() => {
-      const tab = this.activeTab();
-      if (tab === 'audit') {
-        const floorName = this.auditFloor();
-        const frequency = this.auditFrequency();
-        const floorObj = this.hk.floorsMaster().find(f => f.floorNumber === floorName || `Floor ${f.id}` === floorName);
-        const floorId = floorObj?.id ?? 1;
-        this.hk.loadRoomAudits(floorId, frequency);
-      }
-    }, { allowSignalWrites: true });
   }
 
   ngOnInit() {
@@ -68,6 +57,19 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
     this.isAuditSopExpanded.update(value => !value);
   }
 
+  fetchAuditDataForCurrentSelection(force = false): void {
+    const floorName = this.effectiveAuditFloor();
+    const frequency = this.auditFrequency();
+    const floorObj = this.hk.floorsMaster().find(f => isSameFloor(f.floorNumber, floorName) || `Floor ${f.id}` === floorName);
+    const floorId = floorObj?.id ?? 1;
+    this.hk.loadRoomAudits(floorId, frequency, force);
+  }
+
+  onAuditFloorChange(floor: string): void {
+    this.auditFloor.set(floor);
+    this.fetchAuditDataForCurrentSelection(true);
+  }
+
   private loadTabSpecificData(tab: TabType) {
     switch (tab) {
       case 'board':
@@ -82,6 +84,7 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
       case 'audit':
         this.hk.loadSopCheckpoints();
         this.hk.loadRooms();
+        this.fetchAuditDataForCurrentSelection();
         break;
       case 'staff':
         this.hk.loadStaff();
@@ -181,15 +184,21 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
     return this.hk.maintenance().filter(m => !q || m.roomNumber.includes(q) || m.issue.toLowerCase().includes(q) || m.category.toLowerCase().includes(q));
   });
 
+  effectiveAuditFloor = computed(() => {
+    const current = this.auditFloor();
+    const floors = this.auditFloors();
+    if (floors.includes(current)) return current;
+    const match = floors.find(f => isSameFloor(f, current));
+    return match || floors[0] || 'Floor 1';
+  });
+
   filteredAudits = computed(() => {
     const q = this.auditSearch().toLowerCase().trim();
-    const floor = this.auditFloor();
-    const audits = this.hk.roomAudits().length > 0
-      ? this.hk.roomAudits()
-      : this.hk.rooms().map(room => this.auditFromRoom(room));
+    const floor = this.effectiveAuditFloor();
+    const audits = this.hk.roomAudits();
 
     return audits.filter(a => {
-      const matchFloor = a.floor === floor;
+      const matchFloor = !floor || isSameFloor(a.floor, floor);
       const matchQuery = !q || a.roomNumber.toLowerCase().includes(q) || a.floor.toLowerCase().includes(q) || a.discrepancy.toLowerCase().includes(q) || (a.guestName?.toLowerCase().includes(q) ?? false);
       return matchFloor && matchQuery;
     });
@@ -213,7 +222,13 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
     };
   });
 
-  auditFloors = computed(() => Array.from(new Set(this.hk.rooms().map(a => a.floor))));
+  auditFloors = computed(() => {
+    const fromMaster = this.hk.floorsMaster().map(f => f.floorNumber || `Floor ${f.id}`);
+    const fromRooms = this.hk.rooms().map(a => a.floor);
+    const fromAudits = this.hk.roomAudits().map(a => a.floor);
+    const combined = Array.from(new Set([...fromMaster, ...fromRooms, ...fromAudits])).filter(Boolean);
+    return combined.length ? combined : ['Floor 1'];
+  });
 
   sopFrequencyOptions = computed(() => this.hk.sopFrequencyOptions());
 
@@ -285,6 +300,7 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   changeAuditFrequency(frequency: AuditFrequency) {
     this.auditFrequency.set(frequency);
     this.hk.loadSopCheckpoints(frequency);
+    this.fetchAuditDataForCurrentSelection(true);
   }
 
   openCreateSopModal() {
@@ -360,18 +376,28 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.hk.saveSopCheckpoint({
+    const payload = {
       ...checkpoint,
       id,
       frequency,
       area,
       label,
       owner,
+    };
+
+    this.hk.saveSopCheckpoint(payload).subscribe({
+      next: () => {
+        this.auditFrequency.set(frequency);
+        this.isAuditSopExpanded.set(true);
+        this.isSopModalOpen.set(false);
+        this.editingSopId.set(null);
+        this.fetchAuditDataForCurrentSelection(true);
+      },
+      error: error => {
+        console.error('Failed to save SOP checkpoint', error);
+        alert('Failed to save SOP checkpoint. Please try again.');
+      }
     });
-    this.auditFrequency.set(frequency);
-    this.isAuditSopExpanded.set(true);
-    this.isSopModalOpen.set(false);
-    this.editingSopId.set(null);
   }
 
   deleteSopCheckpoint(checkpoint: SopCheckpoint, event: Event) {
@@ -432,12 +458,27 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   });
 
   assignedHousekeepers = computed(() => {
+    const hkStaff = this.hk.staff();
+    if (hkStaff.length) {
+      return hkStaff.map(staff => ({
+        id: staff.id,
+        fullName: staff.name,
+        department: staff.role || 'Housekeeping'
+      }));
+    }
     const activeUsers = this.userService.users().filter(user => user.status === 'ACTIVE');
     const housekeepingUsers = activeUsers.filter(user => user.department.toLowerCase().includes('housekeeping'));
     return housekeepingUsers.length ? housekeepingUsers : activeUsers;
   });
 
   activeUsers = computed(() => this.userService.users().filter(user => user.status === 'ACTIVE'));
+
+  maintenanceUsers = computed(() => {
+    return this.userService.users().filter(user =>
+      user.status === 'ACTIVE' &&
+      (user.department?.toLowerCase().includes('maintenance') || user.department?.toLowerCase().includes('maint'))
+    );
+  });
 
   maintSelectedFloor = computed(() => {
     const roomNumber = this.currentMaint().roomNumber;
@@ -475,6 +516,28 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   currentMaintStatusId(): number | undefined {
     const current = this.currentMaint();
     return this.maintenanceStatusId(current.status);
+  }
+
+  getMaintAssignedToName(m: Partial<MaintenanceRequest> | null): string {
+    if (!m) return '';
+    if (m.assignedTo?.trim()) return m.assignedTo;
+    if (m.assignedToId) {
+      const user = this.userService.users().find(u => u.id === m.assignedToId);
+      if (user) return user.fullName;
+      const staff = this.hk.staff().find(s => s.id === m.assignedToId);
+      if (staff) return staff.name;
+    }
+    return '';
+  }
+
+  getMaintReportedByName(m: Partial<MaintenanceRequest> | null): string {
+    if (!m) return '—';
+    if (m.reportedBy?.trim()) return m.reportedBy;
+    if (m.reportedById) {
+      const user = this.userService.users().find(u => u.id === m.reportedById);
+      if (user) return user.fullName;
+    }
+    return '—';
   }
 
   maintenanceStatusId(status?: string): number | undefined {
@@ -879,6 +942,7 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
 
   // --- Task Modal ---
   openCreateTaskModal() {
+    this.hk.loadStaff();
     this.modalMode.set('create');
     const firstHousekeeper = this.assignedHousekeepers()[0];
     const firstRoom = this.hk.rooms()[0];
@@ -919,7 +983,7 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
 
   updateTaskAssignee(userId: number | string | undefined) {
     const parsedUserId = Number(userId);
-    const user = this.userService.users().find(item => item.id === parsedUserId);
+    const user = this.assignedHousekeepers().find(item => item.id === parsedUserId);
     this.currentTask.update(task => ({
       ...task,
       assignedToId: user?.id,

@@ -71,9 +71,6 @@
             <span class="material-icons-round">search</span>
             <input type="text" placeholder="Search room, guest, issue..." [ngModel]="auditSearch()" (ngModelChange)="auditSearch.set($event)">
           </div>
-          <select class="filter-select" [ngModel]="auditFloor()" (ngModelChange)="auditFloor.set($event)">
-            <option *ngFor="let floor of auditFloors()" [value]="floor">{{ floor }}</option>
-          </select>
           <select class="filter-select" [ngModel]="auditFrequency()" (ngModelChange)="changeAuditFrequency($event)">
             <ng-container *ngIf="sopFrequencyOptions().length; else fallbackAuditFrequencyOptions">
               <option *ngFor="let frequency of sopFrequencyOptions()" [value]="frequency.code">{{ frequency.value }} SOP</option>
@@ -402,10 +399,6 @@
           <span class="material-icons-round">speed</span>
           <div><strong>{{ auditStats().avgScore }}%</strong><small>Avg Score</small></div>
         </div>
-        <div class="audit-stat-card fail">
-          <span class="material-icons-round">construction</span>
-          <div><strong>{{ auditStats().defects }}</strong><small>Open Findings</small></div>
-        </div>
       </div>
 
       <div class="sop-definition-panel">
@@ -415,6 +408,13 @@
             <p>Defined checkpoints applied room-wise for the selected floor.</p>
           </div>
           <div class="sop-actions">
+            <div class="sop-floor-filter-box">
+              <span class="material-icons-round">layers</span>
+              <label>Floor:</label>
+              <select class="sop-filter-select" [ngModel]="effectiveAuditFloor()" (ngModelChange)="onAuditFloorChange($event)">
+                <option *ngFor="let floor of auditFloors()" [value]="floor">{{ floor }}</option>
+              </select>
+            </div>
             <span>{{ activeSopCheckpoints().length }} Checkpoints</span>
             <button type="button" class="sop-toggle-btn" (click)="openCreateSopModal()">
               <span class="material-icons-round">add</span>
@@ -441,11 +441,13 @@
 
       <div class="audit-board">
         <div class="audit-floor-block">
-          <h3 class="floor-title">
-            <span class="material-icons-round">layers</span>
-            {{ auditFloor() }}
-            <span class="floor-badge">{{ selectedFloorAudits().length }} Rooms</span>
-          </h3>
+          <div class="floor-header-bar">
+            <h3 class="floor-title">
+              <span class="material-icons-round">layers</span>
+              {{ effectiveAuditFloor() }}
+              <span class="floor-badge">{{ selectedFloorAudits().length }} Rooms</span>
+            </h3>
+          </div>
 
           <div class="room-sop-grid">
             <article class="room-sop-card" *ngFor="let audit of selectedFloorAudits()" [class.release-ready]="audit.releaseReady" [class.high-risk]="audit.severity === 'HIGH'">
@@ -908,13 +910,13 @@
                   {{ m.priority }}
                 </span>
               </td>
-              <td><span class="truncate-hover" [attr.data-full]="m.reportedBy">{{ m.reportedBy }}</span></td>
+              <td><span class="truncate-hover" [attr.data-full]="getMaintReportedByName(m)">{{ getMaintReportedByName(m) }}</span></td>
               <td>
-                <span class="assigned-box truncate-hover" *ngIf="m.assignedTo" [attr.data-full]="m.assignedTo">
+                <span class="assigned-box truncate-hover" *ngIf="getMaintAssignedToName(m)" [attr.data-full]="getMaintAssignedToName(m)">
                   <span class="material-icons-round">engineering</span>
-                  {{ m.assignedTo }}
+                  {{ getMaintAssignedToName(m) }}
                 </span>
-                <span class="none-text" *ngIf="!m.assignedTo">Unassigned</span>
+                <span class="none-text" *ngIf="!getMaintAssignedToName(m)">Unassigned</span>
               </td>
               <td>
                 <select
@@ -1367,11 +1369,11 @@
         </div>
         <div class="detail-cell">
           <span>Reported By</span>
-          <strong>{{ item.reportedBy || '-' }}</strong>
+          <strong>{{ getMaintReportedByName(item) }}</strong>
         </div>
         <div class="detail-cell">
           <span>Assigned To</span>
-          <strong>{{ item.assignedTo || 'Unassigned' }}</strong>
+          <strong>{{ getMaintAssignedToName(item) || 'Unassigned' }}</strong>
         </div>
         <div class="detail-cell">
           <span>Status</span>
@@ -1467,7 +1469,7 @@
           <label>Assigned Staff/Team</label>
           <select [ngModel]="currentMaint().assignedToId" (ngModelChange)="updateMaintUser('assigned', $event)">
             <option [ngValue]="undefined">Unassigned</option>
-            <option *ngFor="let user of activeUsers()" [ngValue]="user.id">
+            <option *ngFor="let user of maintenanceUsers()" [ngValue]="user.id">
               {{ user.fullName }} ({{ user.department }})
             </option>
           </select>

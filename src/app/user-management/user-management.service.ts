@@ -1,5 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { forkJoin, Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 
@@ -253,9 +254,20 @@ interface ApiPasswordResetResponse {
 @Injectable({ providedIn: 'root' })
 export class UserManagementService {
   private readonly http = inject(HttpClient);
+  private readonly snackBar = inject(MatSnackBar);
   private readonly userBaseUrl = '/api/hmsUserService/v1';
   private readonly masterBaseUrl = '/api/masterService/v1';
   private readonly hmsBaseUrl = '/api/hmsService/v1';
+
+  showSnackBar(message: string, isError = true): void {
+    if (!message) return;
+    this.snackBar.open(message, 'Close', {
+      duration: 5000,
+      horizontalPosition: 'end',
+      verticalPosition: 'top',
+      panelClass: isError ? ['snackbar-error'] : ['snackbar-success']
+    });
+  }
 
   readonly permissionActions: PermissionAction[] = ['view', 'create', 'edit', 'delete', 'approve', 'export'];
   readonly permissionModules = signal<PermissionModule[]>([
@@ -360,11 +372,14 @@ export class UserManagementService {
         if (response?.success === false) {
           throw response;
         }
+        this.showSnackBar(input.id ? 'User updated successfully!' : 'User created successfully!', false);
         this.loadUsers();
       }),
       map(() => true),
       catchError(err => {
-        this.apiError.set(this.apiErrorMessage(err, 'Unable to save user.'));
+        const errorMsg = this.apiErrorMessage(err, 'Unable to save user.');
+        this.apiError.set(errorMsg);
+        this.showSnackBar(errorMsg, true);
         return of(false);
       })
     );
@@ -372,9 +387,14 @@ export class UserManagementService {
 
   deleteUser(id: number): void {
     this.http.delete<StandardResponse<void>>(`${this.userBaseUrl}/users/deleteUser/${id}`).pipe(
-      tap(() => this.users.update(users => users.filter(user => user.id !== id))),
+      tap(() => {
+        this.users.update(users => users.filter(user => user.id !== id));
+        this.showSnackBar('User deleted successfully!', false);
+      }),
       catchError(err => {
-        this.apiError.set(err?.error?.message || err?.message || 'Unable to delete user.');
+        const errorMsg = this.apiErrorMessage(err, 'Unable to delete user.');
+        this.apiError.set(errorMsg);
+        this.showSnackBar(errorMsg, true);
         return of(null);
       })
     ).subscribe();
@@ -383,9 +403,14 @@ export class UserManagementService {
   setUserStatus(id: number, status: UserStatus): void {
     const params = new HttpParams().set('status', status);
     this.http.patch<StandardResponse<object>>(`${this.userBaseUrl}/users/changeStatus/${id}`, null, { params }).pipe(
-      tap(() => this.users.update(users => users.map(user => user.id === id ? { ...user, status, loginFailures: status === 'LOCKED' ? user.loginFailures : 0 } : user))),
+      tap(() => {
+        this.users.update(users => users.map(user => user.id === id ? { ...user, status, loginFailures: status === 'LOCKED' ? user.loginFailures : 0 } : user));
+        this.showSnackBar(`User status updated to ${status}.`, false);
+      }),
       catchError(err => {
-        this.apiError.set(err?.error?.message || err?.message || 'Unable to change user status.');
+        const errorMsg = this.apiErrorMessage(err, 'Unable to change user status.');
+        this.apiError.set(errorMsg);
+        this.showSnackBar(errorMsg, true);
         return of(null);
       })
     ).subscribe();
@@ -444,13 +469,17 @@ export class UserManagementService {
       : this.http.post<StandardResponse<ApiShift | object>>(`${this.userBaseUrl}/shifts/createShift`, payload);
 
     request$.pipe(
-      tap(() => {
+      tap(response => {
+        if ((response as any)?.success === false) throw response;
         this.upsertLocalShift(normalized, existing);
         this.loadShifts();
+        this.showSnackBar(existing ? 'Shift updated successfully!' : 'Shift created successfully!', false);
         this.addActivity('System', existing ? 'Shift configuration updated' : 'Shift configuration created', normalized.name, 'User Shifts', 'INFO');
       }),
       catchError(err => {
-        this.apiError.set(err?.error?.message || err?.message || 'Unable to save shift.');
+        const errorMsg = this.apiErrorMessage(err, 'Unable to save shift.');
+        this.apiError.set(errorMsg);
+        this.showSnackBar(errorMsg, true);
         return of(null);
       })
     ).subscribe();
@@ -461,20 +490,23 @@ export class UserManagementService {
     if (!target) return false;
     const assignedUsers = this.shiftUserCount(target.name);
     if (assignedUsers > 0) {
-      this.apiError.set(`Reassign ${assignedUsers} user${assignedUsers === 1 ? '' : 's'} before deleting ${target.name}.`);
+      const msg = `Reassign ${assignedUsers} user${assignedUsers === 1 ? '' : 's'} before deleting ${target.name}.`;
+      this.apiError.set(msg);
+      this.showSnackBar(msg, true);
       return false;
     }
 
     this.http.delete<StandardResponse<void>>(`${this.userBaseUrl}/shifts/deleteShift/${id}`).pipe(
-      tap(() => {
-        this.shiftConfigs.update(shifts => {
-          const next = shifts.filter(shift => shift.id !== target.id);
-          return next;
-        });
+      tap(response => {
+        if ((response as any)?.success === false) throw response;
+        this.shiftConfigs.update(shifts => shifts.filter(shift => shift.id !== target.id));
+        this.showSnackBar('Shift deleted successfully!', false);
         this.addActivity('System', 'Shift configuration deleted', target.name, 'User Shifts', 'WARNING');
       }),
       catchError(err => {
-        this.apiError.set(err?.error?.message || err?.message || 'Unable to delete shift.');
+        const errorMsg = this.apiErrorMessage(err, 'Unable to delete shift.');
+        this.apiError.set(errorMsg);
+        this.showSnackBar(errorMsg, true);
         return of(null);
       })
     ).subscribe();
@@ -489,16 +521,23 @@ export class UserManagementService {
     if (!shift || user.shift === shift) return;
     const targetShift = this.shiftConfigs().find(item => item.name === shift);
     if (!targetShift?.id) {
-      this.apiError.set('Select a valid shift before assigning.');
+      const msg = 'Select a valid shift before assigning.';
+      this.apiError.set(msg);
+      this.showSnackBar(msg, true);
       return;
     }
     this.users.update(users => users.map(item => item.id === user.id ? { ...item, shift } : item));
     const params = new HttpParams().set('shiftId', String(targetShift.id));
     this.http.post<StandardResponse<object>>(`${this.userBaseUrl}/shifts/assignShift/${user.id}`, null, { params }).pipe(
-      tap(() => this.loadUsers()),
+      tap(() => {
+        this.loadUsers();
+        this.showSnackBar(`Shift assigned to ${user.fullName}.`, false);
+      }),
       catchError(err => {
         this.users.update(users => users.map(item => item.id === user.id ? { ...item, shift: user.shift } : item));
-        this.apiError.set(err?.error?.message || err?.message || 'Unable to assign shift.');
+        const errorMsg = this.apiErrorMessage(err, 'Unable to assign shift.');
+        this.apiError.set(errorMsg);
+        this.showSnackBar(errorMsg, true);
         return of(null);
       })
     ).subscribe();
@@ -512,15 +551,21 @@ export class UserManagementService {
 
     request$.pipe(
       tap(response => {
+        if (response?.success === false) {
+          throw response;
+        }
         if (response?.success && response.data) {
           const saved = this.mapRole(response.data);
           this.roles.update(roles => input.id ? roles.map(role => role.id === saved.id ? saved : role) : [saved, ...roles]);
         } else {
           this.loadRoles();
         }
+        this.showSnackBar(input.id ? 'Role updated successfully!' : 'Role created successfully!', false);
       }),
       catchError(err => {
-        this.apiError.set(err?.error?.message || err?.message || 'Unable to save role.');
+        const errorMsg = this.apiErrorMessage(err, 'Unable to save role.');
+        this.apiError.set(errorMsg);
+        this.showSnackBar(errorMsg, true);
         return of(null);
       })
     ).subscribe();
@@ -528,9 +573,14 @@ export class UserManagementService {
 
   deleteRole(id: number): void {
     this.http.delete<StandardResponse<void>>(`${this.userBaseUrl}/roles/deleteRole/${id}`).pipe(
-      tap(() => this.roles.update(roles => roles.filter(role => role.id !== id))),
+      tap(() => {
+        this.roles.update(roles => roles.filter(role => role.id !== id));
+        this.showSnackBar('Role deleted successfully!', false);
+      }),
       catchError(err => {
-        this.apiError.set(err?.error?.message || err?.message || 'Unable to delete role.');
+        const errorMsg = this.apiErrorMessage(err, 'Unable to delete role.');
+        this.apiError.set(errorMsg);
+        this.showSnackBar(errorMsg, true);
         return of(null);
       })
     ).subscribe();
@@ -585,15 +635,22 @@ export class UserManagementService {
       : this.http.post<StandardResponse<ApiDepartment>>(`${this.userBaseUrl}/departments/createDepartment`, payload);
 
     request$.pipe(
-      map(response => this.mapDepartment(response?.data || payload, normalized)),
+      map(response => {
+        if (response?.success === false) throw response;
+        return this.mapDepartment(response?.data || payload, normalized);
+      }),
+      tap(saved => {
+        this.upsertLocalDepartment(saved, existing);
+        this.showSnackBar(existing ? 'Department updated successfully!' : 'Department created successfully!', false);
+        this.addActivity('System', existing ? 'Department updated' : 'Department created', saved.name, 'Departments', 'INFO');
+      }),
       catchError(err => {
-        this.apiError.set(null);
-        return of({ ...normalized, updatedAt: 'Local draft' });
+        const errorMsg = this.apiErrorMessage(err, 'Unable to save department.');
+        this.apiError.set(errorMsg);
+        this.showSnackBar(errorMsg, true);
+        return of(null);
       })
-    ).subscribe(saved => {
-      this.upsertLocalDepartment(saved, existing);
-      this.addActivity('System', existing ? 'Department updated' : 'Department created', saved.name, 'Departments', 'INFO');
-    });
+    ).subscribe();
   }
 
   deleteDepartment(id: number): boolean {
@@ -601,16 +658,26 @@ export class UserManagementService {
     if (!target) return false;
     const usage = this.departmentUsageCount(target.name);
     if (usage.total > 0) {
-      this.apiError.set(`Reassign ${usage.total} linked record${usage.total === 1 ? '' : 's'} before deleting ${target.name}.`);
+      const msg = `Reassign ${usage.total} linked record${usage.total === 1 ? '' : 's'} before deleting ${target.name}.`;
+      this.apiError.set(msg);
+      this.showSnackBar(msg, true);
       return false;
     }
 
     this.http.delete<StandardResponse<void>>(`${this.userBaseUrl}/departments/deleteDepartment/${id}`).pipe(
-      catchError(() => of(void 0))
-    ).subscribe(() => {
-      this.departments.update(departments => departments.filter(department => department.id !== target.id));
-      this.addActivity('System', 'Department deleted', target.name, 'Departments', 'WARNING');
-    });
+      tap(response => {
+        if ((response as any)?.success === false) throw response;
+        this.departments.update(departments => departments.filter(department => department.id !== target.id));
+        this.showSnackBar('Department deleted successfully!', false);
+        this.addActivity('System', 'Department deleted', target.name, 'Departments', 'WARNING');
+      }),
+      catchError(err => {
+        const errorMsg = this.apiErrorMessage(err, 'Unable to delete department.');
+        this.apiError.set(errorMsg);
+        this.showSnackBar(errorMsg, true);
+        return of(null);
+      })
+    ).subscribe();
     return true;
   }
 

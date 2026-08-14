@@ -474,18 +474,6 @@
 
     <!-- INGREDIENT MASTER VIEW -->
     <div class="pos-section-view" *ngSwitchCase="'ingredient-master'">
-        <section class="pos-command-band">
-          <div class="pos-command-copy">
-            <h2>Kitchen Ingredient Master</h2>
-            <p>Maintain raw material catalog, base units, purchase conversions, yield rates and reorder thresholds.</p>
-          </div>
-          <div class="command-badges">
-            <span class="soft-pill">Total: {{ ingredientStats().total }}</span>
-            <span class="soft-pill warning" *ngIf="ingredientStats().lowStock > 0">Low Stock: {{ ingredientStats().lowStock }}</span>
-            <span class="soft-pill">Categories: {{ ingredientStats().categories }}</span>
-          </div>
-        </section>
-
         <div class="card-container mt-3">
           <div class="card-header">
             <h2 class="card-title">Raw Material Ingredients</h2>

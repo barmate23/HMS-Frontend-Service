@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Observable, forkJoin, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
+import { UserManagementService } from '../user-management/user-management.service';
 
 export type HKStatus =
   | 'VACANT_CLEAN'
@@ -289,6 +290,7 @@ export interface ApiRoomAuditDTO {
   id?: number;
   roomId?: number;
   roomNumber?: string;
+  floorNumber?: string;
   roomType?: string;
   pmsStatus?: string;
   hkStatus?: string;
@@ -404,6 +406,7 @@ export interface HousekeepingDashboardData {
 @Injectable({ providedIn: 'root' })
 export class HousekeepingService {
   private readonly http = inject(HttpClient);
+  private readonly userService = inject(UserManagementService);
   private readonly taskApiBase = '/api/hmsService/v1/tasks';
   private readonly lostFoundApiBase = '/api/hmsService/v1/lost-found';
   private readonly maintenanceApiBase = '/api/hmsService/v1/maintenance';
@@ -1051,6 +1054,25 @@ export class HousekeepingService {
       item.statusName?.toUpperCase() === 'RESOLVED' ||
       item.statusName?.toUpperCase() === 'COMPLETED'
     );
+    const assignedToId = this.numberOrUndefined(item.assignedToId);
+    let assignedTo = item.assignedToName?.trim() || '';
+    if (!assignedTo && assignedToId) {
+      const user = this.userService.users().find(u => u.id === assignedToId);
+      if (user) {
+        assignedTo = user.fullName;
+      } else {
+        const staff = this._staff().find(s => s.id === assignedToId);
+        if (staff) assignedTo = staff.name;
+      }
+    }
+
+    const reportedById = this.numberOrUndefined(item.reportedById);
+    let reportedBy = item.reportedByName?.trim() || '';
+    if (!reportedBy && reportedById) {
+      const user = this.userService.users().find(u => u.id === reportedById);
+      if (user) reportedBy = user.fullName;
+    }
+
     return {
       id: Number(item.id ?? 0),
       roomId: this.numberOrUndefined(item.roomId),
@@ -1062,10 +1084,10 @@ export class HousekeepingService {
       priorityId: this.numberOrUndefined(item.priorityId),
       priority: this.asMaintPriority(item.priorityValue),
       status: this.asMaintStatus(item.statusName || item.status),
-      reportedById: this.numberOrUndefined(item.reportedById),
-      reportedBy: item.reportedByName ?? '',
-      assignedToId: this.numberOrUndefined(item.assignedToId),
-      assignedTo: item.assignedToName ?? '',
+      reportedById,
+      reportedBy,
+      assignedToId,
+      assignedTo,
       reportedAt: item.reportedAt ?? new Date().toISOString(),
       resolvedAt: resolved ? new Date().toISOString() : undefined,
       notes: item.repairNotes ?? '',
@@ -1078,6 +1100,20 @@ export class HousekeepingService {
       st => st.code?.toUpperCase() === item.status?.toUpperCase() ||
             st.value?.toUpperCase().replace(/[\s-]+/g, '_') === item.status?.toUpperCase()
     );
+    const assignedToId = this.numberOrUndefined(item.assignedToId);
+    let assignedToName = item.assignedTo?.trim() || '';
+    if (!assignedToName && assignedToId) {
+      const user = this.userService.users().find(u => u.id === assignedToId);
+      if (user) assignedToName = user.fullName;
+    }
+
+    const reportedById = this.numberOrUndefined(item.reportedById);
+    let reportedByName = item.reportedBy?.trim() || '';
+    if (!reportedByName && reportedById) {
+      const user = this.userService.users().find(u => u.id === reportedById);
+      if (user) reportedByName = user.fullName;
+    }
+
     return {
       id: this.numberOrUndefined(item.id),
       roomId: this.numberOrUndefined(item.roomId ?? room?.id),
@@ -1087,10 +1123,10 @@ export class HousekeepingService {
       categoryValue: item.category ?? '',
       priorityId: this.numberOrUndefined(item.priorityId),
       priorityValue: item.priority ?? '',
-      reportedById: this.numberOrUndefined(item.reportedById),
-      reportedByName: item.reportedBy ?? '',
-      assignedToId: this.numberOrUndefined(item.assignedToId),
-      assignedToName: item.assignedTo ?? '',
+      reportedById,
+      reportedByName,
+      assignedToId,
+      assignedToName,
       repairNotes: item.notes ?? '',
       statusId: statusObj?.id,
       statusName: item.status ?? 'OPEN',
@@ -1114,12 +1150,12 @@ export class HousekeepingService {
     });
   }
 
-  saveSopCheckpoint(checkpoint: Partial<SopCheckpoint>) {
+  saveSopCheckpoint(checkpoint: Partial<SopCheckpoint>): Observable<void> {
     const payload = this.toApiSopCheckpoint(checkpoint);
-    this.http.post<ApiResponse<void>>(`${this.auditApiBase}/createCheckpoints`, payload).subscribe({
-      next: () => this.loadSopCheckpoints(checkpoint.frequency),
-      error: error => console.error('Failed to create SOP checkpoint', error),
-    });
+    return this.http.post<ApiResponse<void>>(`${this.auditApiBase}/createCheckpoints`, payload).pipe(
+      tap(() => this.loadSopCheckpoints(checkpoint.frequency)),
+      map(() => undefined)
+    );
   }
 
   loadSopMasters() {
@@ -1195,24 +1231,31 @@ export class HousekeepingService {
     return normalized === 'ASSIGNED' || normalized === 'IN_PROGRESS' || normalized === 'ON_HOLD' || normalized === 'RESOLVED' || normalized === 'COMPLETED' || normalized === 'CANCELLED' || normalized === 'OPEN' ? normalized : 'OPEN';
   }
 
-  loadRoomAudits(floorId: number, frequency: AuditFrequency) {
+  private lastAuditLoadKey = '';
+
+  loadRoomAudits(floorId: number, frequency: AuditFrequency, force = false) {
+    const key = `${floorId}-${frequency}`;
+    if (!force && this.lastAuditLoadKey === key) return;
+    this.lastAuditLoadKey = key;
+
     this.http.get<ApiResponse<ApiRoomAuditDTO[]>>(`${this.auditApiBase}/getRoomAuditStatus`, {
       params: new HttpParams()
         .set('floorId', String(floorId))
         .set('frequency', frequency)
     }).subscribe({
       next: response => {
-        const audits = (response.data ?? []).map(item => this.fromApiRoomAudit(item));
+        const audits = (response.data ?? []).map(item => this.fromApiRoomAudit(item, floorId));
         this._roomAudits.set(audits);
       },
       error: error => {
         console.error('Failed to load room audits', error);
+        this.lastAuditLoadKey = '';
         this._roomAudits.set([]);
       }
     });
   }
 
-  private fromApiRoomAudit(item: ApiRoomAuditDTO): RoomAuditItem {
+  private fromApiRoomAudit(item: ApiRoomAuditDTO, requestedFloorId?: number): RoomAuditItem {
     let checklistObj = { cleanliness: 0, linen: 0, amenities: 0, minibar: 0, maintenance: 0, safety: 0 };
     if (item.checklist) {
       if (typeof item.checklist === 'string') {
@@ -1292,11 +1335,15 @@ export class HousekeepingService {
     const resultVal: AuditResult = isBlocked ? 'EXCEPTION' : anyNonDoneCheckpoints ? 'FAIL' : 'PASS';
     const severityVal: AuditSeverity = (isBlocked || anyNonDoneCheckpoints) ? 'HIGH' : 'LOW';
 
+    const matchedRoom = this._rooms().find(r => Number(r.id) === Number(item.roomId) || r.roomNumber === item.roomNumber);
+    const floorMaster = requestedFloorId ? this.floorsMaster().find(f => f.id === requestedFloorId) : undefined;
+    const floorName = matchedRoom?.floor || floorMaster?.floorNumber || (item.floorNumber ? (item.floorNumber.startsWith('Floor') ? item.floorNumber : `Floor ${item.floorNumber}`) : 'Floor 1');
+
     return {
       id: Number(item.roomId ?? item.id ?? 0),
-      roomNumber: item.roomNumber ?? '',
-      floor: this._rooms().find(r => r.id === item.roomId || r.roomNumber === item.roomNumber)?.floor ?? 'Floor 1',
-      roomType: item.roomType ?? 'Double Room',
+      roomNumber: item.roomNumber ?? matchedRoom?.roomNumber ?? '',
+      floor: floorName,
+      roomType: item.roomType?.trim() || matchedRoom?.type || 'Double Room',
       pmsStatus: pmsStr,
       hkStatus: hkStatusVal,
       occupancy: isOccupied ? 'Occupied' : 'Vacant',
@@ -1332,4 +1379,12 @@ export class HousekeepingService {
     if (normalized === 'MEDIUM') return 'MEDIUM';
     return 'LOW';
   }
+}
+
+export function isSameFloor(f1?: string, f2?: string): boolean {
+  if (!f1 || !f2) return false;
+  if (f1 === f2) return true;
+  const n1 = String(f1).toLowerCase().replace(/[\s_.-]+/g, '').replace(/^floor(no)?/i, '');
+  const n2 = String(f2).toLowerCase().replace(/[\s_.-]+/g, '').replace(/^floor(no)?/i, '');
+  return n1 === n2;
 }

@@ -397,9 +397,9 @@ export class BillingComponent implements OnInit, OnDestroy {
           source: (e.source || 'Room') as ChargeType,
           reference: '',
           description: e.description || '',
-          debit: Number(e.debit || e.grossAmount || 0),
-          credit: Number(e.credit || e.paid || 0),
-          gst: Number(e.tax || e.taxAmount || 0),
+          debit: Number(e.debit ?? e.grossAmount ?? (e as any).amount ?? (e as any).netAmount ?? 0),
+          credit: Number(e.credit ?? e.paid ?? 0),
+          gst: Number((e as any).gst ?? e.tax ?? e.taxAmount ?? 0),
           user: 'System'
         };
       })
@@ -714,20 +714,36 @@ export class BillingComponent implements OnInit, OnDestroy {
   }
 
   debitFor(folio?: Folio | null): number {
-    return folio?.totalCharges || 0;
+    if (!folio) return 0;
+    if (folio.lines && folio.lines.length > 0) {
+      return folio.lines.reduce((sum, line) => sum + Number(line.debit || 0), 0);
+    }
+    return folio.totalCharges || 0;
   }
 
   creditFor(folio?: Folio | null): number {
-    return folio?.totalPayments || 0;
+    if (!folio) return 0;
+    if (folio.lines && folio.lines.length > 0) {
+      const lineCredits = folio.lines.reduce((sum, line) => sum + Number(line.credit || 0), 0);
+      if (lineCredits > 0) return lineCredits;
+    }
+    return folio.totalPayments || 0;
   }
 
   balanceFor(folio?: Folio | null): number {
     if (!folio) return 0;
-    return folio.totalCharges + folio.taxAmount - folio.totalPayments;
+    const charges = this.debitFor(folio);
+    const tax = this.gstFor(folio);
+    const credits = this.creditFor(folio);
+    return (charges + tax) - credits;
   }
 
   gstFor(folio?: Folio | null): number {
-    return folio?.taxAmount || 0;
+    if (!folio) return 0;
+    if (folio.lines && folio.lines.length > 0) {
+      return folio.lines.reduce((sum, line) => sum + Number(line.gst || 0), 0);
+    }
+    return folio.taxAmount || 0;
   }
 
   formatINR(value: number): string {

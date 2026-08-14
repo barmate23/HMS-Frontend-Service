@@ -246,7 +246,7 @@ export class LaundryComponent implements OnInit, OnDestroy {
       const currentBookingId = this.orderDraft().bookingId;
       if (!currentBookingId || !rooms.some(r => r.bookingId === Number(currentBookingId))) {
         this.setDraftBooking(rooms[0].bookingId);
-      } else if (!this.activeReservation() && !this.isReservationLoading()) {
+      } else if (this.lastFetchedRoomId !== Number(currentBookingId) && !this.isReservationLoading()) {
         this.fetchReservationForRoom(Number(currentBookingId));
       }
     }
@@ -493,12 +493,19 @@ export class LaundryComponent implements OnInit, OnDestroy {
     if (firstRoom) this.setDraftBooking(firstRoom.bookingId);
   }
 
+  private lastFetchedRoomId: number | null = null;
+
   fetchReservationForRoom(roomId: number): void {
     const id = Number(roomId);
     if (!id) {
       this.activeReservation.set(null);
+      this.lastFetchedRoomId = null;
       return;
     }
+    if (this.lastFetchedRoomId === id && (this.isReservationLoading() || this.activeReservation())) {
+      return;
+    }
+    this.lastFetchedRoomId = id;
     this.isReservationLoading.set(true);
     this.laundry.getActiveReservationByRoomId(id).subscribe({
       next: (res) => {
@@ -520,6 +527,7 @@ export class LaundryComponent implements OnInit, OnDestroy {
     const roomId = Number(bookingId);
     this.orderDraft.update(draft => ({ ...draft, bookingId: roomId }));
     this.syncBookingToDraft();
+    this.lastFetchedRoomId = null;
     this.fetchReservationForRoom(roomId);
   }
 
@@ -986,6 +994,10 @@ export class LaundryComponent implements OnInit, OnDestroy {
   }
 
   editOrder(order: LaundryOrder): void {
+    if (order.status === 'Delivered' || order.status === 'Cancelled') {
+      this.laundry.showSnackBar('Cannot Edit Order', `Orders with status '${order.status}' cannot be modified.`, 'warning');
+      return;
+    }
     const booking = this.laundry.activeBookings().find(item => item.bookingId === order.bookingId);
     if (booking) this.selectedFloor.set(booking.floor);
     this.orderDraft.set({ ...order, lines: order.lines.map(line => ({ ...line })) });
@@ -993,6 +1005,7 @@ export class LaundryComponent implements OnInit, OnDestroy {
   }
 
   nextStatus(order: LaundryOrder): LaundryStatus | null {
+    if (!order || order.status === 'Delivered' || order.status === 'Cancelled') return null;
     if (order.status === 'Pickup Pending') return 'Processing';
     if (order.status === 'Processing') return 'Ready for Delivery';
     if (order.status === 'Ready for Delivery') return 'Delivered';
@@ -1001,6 +1014,8 @@ export class LaundryComponent implements OnInit, OnDestroy {
   }
 
   nextActionLabel(order: LaundryOrder): string {
+    if (order.status === 'Cancelled') return 'Order Cancelled';
+    if (order.status === 'Delivered') return 'Completed';
     const next = this.nextStatus(order);
     if (next === 'Processing') return 'Mark Picked Up';
     if (next === 'Ready for Delivery') return 'Mark Ready';
@@ -1009,6 +1024,7 @@ export class LaundryComponent implements OnInit, OnDestroy {
   }
 
   applyNextStatus(order: LaundryOrder): void {
+    if (order.status === 'Delivered' || order.status === 'Cancelled') return;
     const next = this.nextStatus(order);
     if (!next) return;
     this.laundry.updateOrderStatus(order.id, next);
@@ -1295,8 +1311,22 @@ export class LaundryComponent implements OnInit, OnDestroy {
     return `${day}-${month}-${year} ${time}`;
   }
 
+  draftSubtotal(): number {
+    const lines = this.orderDraft().lines || [];
+    return lines.reduce((sum, line) => sum + (Number(line.quantity || 0) * Number(line.unitPrice || 0)), 0);
+  }
+
+  draftTax(): number {
+    const lines = this.orderDraft().lines || [];
+    const gstRate = this.laundry.laundryGstRate() || 0;
+    return lines.reduce((sum, line) => {
+      const lineSub = Number(line.quantity || 0) * Number(line.unitPrice || 0);
+      return sum + (lineSub * gstRate / 100);
+    }, 0);
+  }
+
   draftTotal(): number {
-    return this.laundry.orderAmount({ lines: this.orderDraft().lines || [] });
+    return this.draftSubtotal() + this.draftTax();
   }
 
   linenDraftTotal(): number {

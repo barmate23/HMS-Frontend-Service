@@ -228,8 +228,25 @@
         </div>
 
         <div class="form-footer">
-          <button class="secondary-btn" (click)="saveDraft()">Save Draft</button>
-          <button class="confirm-btn" [disabled]="!canConfirmOrder()" (click)="reviewOrder()"><span class="material-icons-round">fact_check</span>Review Order</button>
+          <div class="inline-billing-summary" *ngIf="(orderDraft().lines || []).length > 0">
+            <div class="summary-chip">
+              <span>NET AMOUNT:</span>
+              <strong>{{ money(draftSubtotal()) }}</strong>
+            </div>
+            <div class="summary-chip tax">
+              <span>TAX ({{ laundry.laundryGstRate() }}% GST):</span>
+              <strong>+ {{ money(draftTax()) }}</strong>
+            </div>
+            <div class="summary-chip grand-total">
+              <span>TOTAL BILL:</span>
+              <strong>{{ money(draftTotal()) }}</strong>
+            </div>
+          </div>
+
+          <div class="form-footer-actions">
+            <button class="secondary-btn" (click)="saveDraft()">Save Draft</button>
+            <button class="confirm-btn" [disabled]="!canConfirmOrder()" (click)="reviewOrder()"><span class="material-icons-round">fact_check</span>Review Order</button>
+          </div>
         </div>
       </div>
     </ng-container>
@@ -261,8 +278,8 @@
                 <td>
                   <div class="action-buttons">
                     <button class="btn-icon view" title="View" (click)="viewOrder(order)"><span class="material-icons-round">visibility</span></button>
-                    <button class="btn-icon edit" title="Edit" (click)="editOrder(order)"><span class="material-icons-round">edit</span></button>
-                    <button class="btn-icon delete" title="Cancel" (click)="laundry.cancelOrder(order.id)"><span class="material-icons-round">cancel</span></button>
+                    <button class="btn-icon edit" [title]="(order.status === 'Delivered' || order.status === 'Cancelled') ? 'Cannot edit ' + order.status + ' order' : 'Edit Order'" (click)="editOrder(order)" [disabled]="order.status === 'Delivered' || order.status === 'Cancelled'"><span class="material-icons-round">edit</span></button>
+                    <button class="btn-icon delete" [title]="order.status === 'Delivered' ? 'Delivered orders cannot be cancelled' : order.status === 'Cancelled' ? 'Order is already cancelled' : 'Cancel Order'" (click)="laundry.cancelOrder(order.id)" [disabled]="order.status === 'Delivered' || order.status === 'Cancelled'"><span class="material-icons-round">cancel</span></button>
                   </div>
                 </td>
               </tr>
@@ -347,6 +364,7 @@
 
             <div class="detail-footer">
               <button class="secondary-btn" *ngIf="order.billingMode === 'Room Account' && !order.postedToFolio" (click)="laundry.postOrderToFolio(order.id)"><span class="material-icons-round">receipt_long</span>Post to Folio</button>
+              <button class="danger-btn" *ngIf="order.status !== 'Delivered' && order.status !== 'Cancelled'" (click)="laundry.cancelOrder(order.id)"><span class="material-icons-round">cancel</span>Cancel Order</button>
               <button class="confirm-btn" [disabled]="!nextStatus(order)" (click)="applyNextStatus(order)"><span class="material-icons-round">arrow_forward</span>{{ nextActionLabel(order) }}</button>
             </div>
           </div>
@@ -845,7 +863,12 @@
           <h2>Confirm Laundry Order</h2>
           <p>Check room, service, timing and item charges before creating the order.</p>
         </div>
-        <strong>{{ money(draftTotal()) }}</strong>
+        <div class="item-modal-billing-summary">
+          <div class="modal-sum-chip total">
+            <span>Total Bill</span>
+            <strong>{{ money(draftTotal()) }}</strong>
+          </div>
+        </div>
       </div>
 
       <div class="summary-grid">
@@ -863,6 +886,23 @@
           <span>{{ money(line.unitPrice || 0) }}</span>
           <span>{{ money(currentLineTax(line)) }}</span>
           <span>{{ money(currentLineTotal(line)) }}</span>
+        </div>
+      </div>
+
+      <div class="order-billing-summary" style="margin-top: 14px;">
+        <div class="summary-box">
+          <div class="summary-row">
+            <span>Net Amount:</span>
+            <strong>{{ money(draftSubtotal()) }}</strong>
+          </div>
+          <div class="summary-row">
+            <span>Tax Amount ({{ laundry.laundryGstRate() }}% GST):</span>
+            <strong class="tax-val">+ {{ money(draftTax()) }}</strong>
+          </div>
+          <div class="summary-row grand-total-row">
+            <span>Total Bill Amount:</span>
+            <strong class="grand-total-val">{{ money(draftTotal()) }}</strong>
+          </div>
         </div>
       </div>
 

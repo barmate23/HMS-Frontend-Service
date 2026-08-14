@@ -638,6 +638,18 @@ export class LaundryService {
   }
 
   updateOrderStatus(id: number, status: LaundryStatus): void {
+    const existing = this.orders().find(order => order.id === id);
+    if (existing) {
+      if (existing.status === 'Cancelled' && status !== 'Cancelled') {
+        this.showSnackBar('Action Blocked', `Cancelled order #${existing.orderId} cannot be processed further.`, 'warning');
+        return;
+      }
+      if (existing.status === 'Delivered' && status === 'Cancelled') {
+        this.showSnackBar('Action Blocked', `Delivered order #${existing.orderId} cannot be cancelled.`, 'warning');
+        return;
+      }
+    }
+
     this.orders.update(items => items.map(order => order.id === id
       ? { ...order, status, deliveredAt: status === 'Delivered' ? this.nowDisplayDateTime() : order.deliveredAt }
       : order
@@ -654,6 +666,15 @@ export class LaundryService {
   }
 
   cancelOrder(id: number): void {
+    const order = this.orders().find(o => o.id === id);
+    if (order && order.status === 'Delivered') {
+      this.showSnackBar('Cannot Cancel Order', `Delivered order #${order.orderId} cannot be cancelled.`, 'warning');
+      return;
+    }
+    if (order && order.status === 'Cancelled') {
+      this.showSnackBar('Order Cancelled', `Order #${order.orderId} is already cancelled.`, 'info');
+      return;
+    }
     this.updateOrderStatus(id, 'Cancelled');
   }
 

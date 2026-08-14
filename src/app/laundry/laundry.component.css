@@ -4435,3 +4435,64 @@
   color: #047857;
   font-size: 14.5px;
 }
+
+/* Inline Billing Summary Bar in Form Footer */
+.form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #E2E8F0;
+}
+
+.form-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.inline-billing-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #F8FAFC;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+}
+
+.inline-billing-summary .summary-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: #64748B;
+  font-weight: 700;
+}
+
+.inline-billing-summary .summary-chip strong {
+  font-size: 12.5px;
+  color: #0F172A;
+  font-weight: 800;
+}
+
+.inline-billing-summary .summary-chip.tax strong {
+  color: #059669;
+}
+
+.inline-billing-summary .summary-chip.grand-total {
+  font-size: 11px;
+  color: #0F172A;
+  font-weight: 900;
+  padding-left: 12px;
+  border-left: 1px dashed #CBD5E1;
+}
+
+.inline-billing-summary .summary-chip.grand-total strong {
+  font-size: 15px;
+  color: var(--primary-color, #087464);
+  font-weight: 900;
+}

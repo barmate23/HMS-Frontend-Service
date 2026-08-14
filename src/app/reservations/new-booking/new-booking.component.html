@@ -29,13 +29,15 @@
                   <option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option>
                 </select>
               </div>
-              <div class="input-group span-2">
-                <label>Guest Full Name</label>
-                <div class="input-with-icon">
-                  <input type="text" placeholder="Enter full name" [ngModel]="guestData().fullName" (ngModelChange)="updateGuestField('fullName', $event)" (blur)="markFieldTouched('fullName')" [class.invalid]="shouldShowError('fullName')">
-                  <span class="material-icons-round">search</span>
-                </div>
-                <span class="field-error" *ngIf="shouldShowError('fullName')">{{ validationMessage('fullName') }}</span>
+              <div class="input-group">
+                <label>First Name *</label>
+                <input type="text" placeholder="First name" [ngModel]="guestData().firstName" (ngModelChange)="updateGuestField('firstName', $event)" (blur)="markFieldTouched('firstName')" [class.invalid]="shouldShowError('firstName')">
+                <span class="field-error" *ngIf="shouldShowError('firstName')">{{ validationMessage('firstName') }}</span>
+              </div>
+              <div class="input-group">
+                <label>Last Name *</label>
+                <input type="text" placeholder="Last name" [ngModel]="guestData().lastName" (ngModelChange)="updateGuestField('lastName', $event)" (blur)="markFieldTouched('lastName')" [class.invalid]="shouldShowError('lastName')">
+                <span class="field-error" *ngIf="shouldShowError('lastName')">{{ validationMessage('lastName') }}</span>
               </div>
             </div>
             <div class="grid-3 mt-3">
@@ -775,14 +777,23 @@
             <option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option>
           </select>
         </div>
-        <div class="input-group span-2">
-          <label>Guest Full Name *</label>
-          <input type="text" placeholder="Enter full name" 
-                 [ngModel]="guestData().fullName" 
-                 (ngModelChange)="updateGuestField('fullName', $event)"
-                 (blur)="markCreateGuestFieldTouched('fullName')"
-                 [class.invalid]="shouldShowCreateGuestError('fullName')">
-          <span class="field-error" *ngIf="shouldShowCreateGuestError('fullName')">{{ createGuestValidationMessage('fullName') }}</span>
+        <div class="input-group">
+          <label>First Name *</label>
+          <input type="text" placeholder="First name" 
+                 [ngModel]="guestData().firstName" 
+                 (ngModelChange)="updateGuestField('firstName', $event)"
+                 (blur)="markCreateGuestFieldTouched('firstName')"
+                 [class.invalid]="shouldShowCreateGuestError('firstName')">
+          <span class="field-error" *ngIf="shouldShowCreateGuestError('firstName')">{{ createGuestValidationMessage('firstName') }}</span>
+        </div>
+        <div class="input-group">
+          <label>Last Name *</label>
+          <input type="text" placeholder="Last name" 
+                 [ngModel]="guestData().lastName" 
+                 (ngModelChange)="updateGuestField('lastName', $event)"
+                 (blur)="markCreateGuestFieldTouched('lastName')"
+                 [class.invalid]="shouldShowCreateGuestError('lastName')">
+          <span class="field-error" *ngIf="shouldShowCreateGuestError('lastName')">{{ createGuestValidationMessage('lastName') }}</span>
         </div>
       </div>
       

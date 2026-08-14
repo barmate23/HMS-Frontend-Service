@@ -712,15 +712,16 @@ export class LaundryService {
     if (!order || order.postedToFolio || order.billingMode !== 'Room Account') return;
     const booking = this.activeBookings().find(item => item.bookingId === order.bookingId || item.room === order.room);
     const roomId = Number(booking?.bookingId || order.bookingId || order.room || 0);
+    const netAmount = Number(this.orderBaseAmount(order).toFixed(2));
+    const taxAmount = Number(this.orderTaxAmount(order).toFixed(2));
     const totalAmount = this.orderAmount(order);
-    const taxTypeStr = `GST ${this.laundryGstRate()}%`;
     const descStr = `Laundry Order ${order.orderId} - ${order.serviceType || 'Service'} (${this.orderItemCount(order)} items)`;
 
     const payload = {
       roomId: roomId,
       source: 'Laundry',
-      amount: totalAmount,
-      taxType: taxTypeStr,
+      amount: netAmount,
+      taxAmount: taxAmount,
       description: descStr
     };
 

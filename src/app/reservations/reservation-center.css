@@ -1150,6 +1150,7 @@
   justify-content: center;
   gap: 8px;
   min-height: 180px;
+  width: 100%;
   color: var(--surface-400);
 }
 

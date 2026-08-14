@@ -20,6 +20,7 @@
           <option value="menu">Menu Management</option>
           <option value="ingredient-master">Kitchen Ingredients</option>
           <option value="recipes">Recipes (BOM)</option>
+          <option value="kds">Kitchen Display (KDS)</option>
         </select>
       </div>
     </div>
@@ -620,7 +621,18 @@
     <div class="ci-body">
       <div class="selected-table-summary room-summary" *ngIf="diningAction() === 'ROOM'; else tableOrResetSummary">
         <strong>Room {{ roomServiceRoomNumber() }}</strong>
-        <span>{{ diningForm().guestName || 'Guest' }} • {{ roomServiceFloorLabel() }} • In-Room Dining</span>
+        <span>
+          {{ diningForm().guestName || 'Guest' }} • {{ roomServiceFloorLabel() }} • In-Room Dining
+          <small *ngIf="activeRoomReservation()?.roomType" style="margin-left:6px;padding:2px 6px;background:#e0f2fe;color:#0369a1;border-radius:4px;font-weight:600;">
+            {{ activeRoomReservation()?.roomType }}
+          </small>
+          <small *ngIf="activeRoomReservation()?.bookingStatus" style="margin-left:4px;padding:2px 6px;background:#dcfce7;color:#15803d;border-radius:4px;font-weight:600;">
+            {{ activeRoomReservation()?.bookingStatus }}
+          </small>
+          <small *ngIf="activeRoomReservation()?.isVip" style="margin-left:4px;padding:2px 6px;background:#fef3c7;color:#b45309;border-radius:4px;font-weight:700;">
+            ★ VIP
+          </small>
+        </span>
       </div>
       <ng-template #tableOrResetSummary>
       <div class="selected-table-summary" *ngIf="diningAction() !== 'RESET'; else resetTableSummary">
@@ -660,7 +672,13 @@
             <option *ngFor="let room of roomServiceRooms()" [ngValue]="room.id">{{ room.roomNumber }} • {{ room.status }}</option>
           </select>
         </div>
-        <div class="ci-input-group"><label>Guest Name</label><input [(ngModel)]="diningForm().guestName" placeholder="Guest name"></div>
+        <div class="ci-input-group">
+          <label>
+            Guest Name
+            <small *ngIf="isLoadingActiveReservation()" style="color:var(--primary-color);font-weight:normal;margin-left:4px;">(Fetching reservation...)</small>
+          </label>
+          <input [(ngModel)]="diningForm().guestName" placeholder="Guest name">
+        </div>
         <div class="ci-input-group"><label>Order Taker</label><select [(ngModel)]="diningForm().server"><option *ngFor="let user of pos.users()" [value]="user">{{ user }}</option></select></div>
         <div class="ci-input-group room-note-field"><label>Delivery Notes</label><input [(ngModel)]="diningForm().notes" placeholder="Deliver to room after confirmation"></div>
       </div>

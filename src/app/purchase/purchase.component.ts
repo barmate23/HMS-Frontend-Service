@@ -139,6 +139,7 @@ interface MasterInventoryItem {
   description?: string;
   hsnCode?: string;
   reorderLevel?: number;
+  onHandStock?: number;
   parLevel?: number;
   isActive: boolean;
 }
@@ -161,6 +162,7 @@ interface ItemDraft {
   description: string;
   hsnCode: string;
   reorderLevel: number | null;
+  onHandStock: number | null;
   parLevel: number | null;
   isActive: boolean;
 }
@@ -454,20 +456,21 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     const data = this.dashboardData();
     if (data) {
       const pipeline = data.procurementPipeline;
+      const newOrders = pipeline.newOrders ?? ((pipeline.draft || 0) + (pipeline.approved || 0));
+      const receivedGrn = pipeline.receivedGrn ?? (pipeline.partiallyReceived || 0);
+      const invoiced = pipeline.invoiced ?? (pipeline.closed || 0);
       return {
-        draft: pipeline.draft,
-        approved: pipeline.approved,
-        partiallyReceived: pipeline.partiallyReceived,
-        closed: pipeline.closed,
-        total: pipeline.totalPos
+        newOrders,
+        receivedGrn,
+        invoiced,
+        total: pipeline.totalPos || (newOrders + receivedGrn + invoiced)
       };
     }
     const orders = this.purchaseOrders();
-    const draft = orders.filter(o => o.status === 'Draft').length;
-    const approved = orders.filter(o => o.status === 'Approved').length;
-    const partiallyReceived = orders.filter(o => o.status === 'Partially Received').length;
-    const closed = orders.filter(o => o.status === 'Closed').length;
-    return { draft, approved, partiallyReceived, closed, total: orders.length };
+    const newOrders = orders.filter(o => o.status === 'Draft' || o.status === 'Approved').length;
+    const receivedGrn = orders.filter(o => o.status === 'Partially Received').length;
+    const invoiced = orders.filter(o => o.status === 'Closed').length;
+    return { newOrders, receivedGrn, invoiced, total: orders.length };
   });
 
   readonly supplierCategorySummary = computed(() => {
@@ -936,6 +939,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       description: String(input.description || '').trim(),
       hsnCode: String(input.hsnSacCode || '').trim().toUpperCase(),
       reorderLevel: input.reorderLevel === undefined || input.reorderLevel === null ? undefined : Number(input.reorderLevel),
+      onHandStock: input.onHandStock === undefined || input.onHandStock === null ? undefined : Number(input.onHandStock),
       parLevel: input.maxStockLevel === undefined || input.maxStockLevel === null ? undefined : Number(input.maxStockLevel),
       isActive: input.isActive ?? true
     };
@@ -952,6 +956,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
     const uomName = uomOption?.value || draft.unit.trim();
 
     const reorderVal = draft.reorderLevel === null || draft.reorderLevel === undefined ? undefined : Number(draft.reorderLevel);
+    const onHandVal = draft.onHandStock === null || draft.onHandStock === undefined ? 0 : Number(draft.onHandStock);
     const maxStockVal = draft.parLevel === null || draft.parLevel === undefined ? undefined : Number(draft.parLevel);
 
     return {
@@ -966,6 +971,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       gstTaxRate: Number(draft.taxRate ?? 0),
       hsnSacCode: draft.hsnCode.trim().toUpperCase() || undefined,
       reorderLevel: reorderVal,
+      onHandStock: onHandVal,
       maxStockLevel: maxStockVal,
       minimumQty: reorderVal,
       maximumQty: maxStockVal,
@@ -1019,7 +1025,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       requestedBy: String(input.requestedBy || '').trim(),
       poDate: String(input.poDate || ''),
       referenceNo: String(input.prNumber || '').trim(),
-      shippingCharges: 0,
+      shippingCharges: Number(input.shippingFreightRate ?? 0),
       subtotal: Math.round(subtotal * 100) / 100,
       taxTotal: Math.round(taxTotal * 100) / 100,
       notes: String(input.poNote || '').trim(),
@@ -1063,6 +1069,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       requestedBy: draft.requestedBy.trim(),
       itemCount: draft.lineItems.length,
       poNote: draft.notes.trim() || undefined,
+      shippingFreightRate: Number(draft.shippingCharges || 0),
       totalAmount: draft.amount,
       lines: draft.lineItems.map(line => {
         const masterItem = this.resolvePoMasterItem(line.itemId, line.itemCode, line.itemName);
@@ -1809,6 +1816,8 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       errors.push({ field: 'taxRate', message: 'Tax rate must be between 0 and 100.' });
     if (draft.reorderLevel !== null && Number(draft.reorderLevel) < 0)
       errors.push({ field: 'reorderLevel', message: 'Reorder level cannot be negative.' });
+    if (draft.onHandStock !== null && Number(draft.onHandStock) < 0)
+      errors.push({ field: 'onHandStock', message: 'On hand stock cannot be negative.' });
     if (draft.parLevel !== null && Number(draft.parLevel) < 0)
       errors.push({ field: 'parLevel', message: 'Maximum stock level cannot be negative.' });
     if (draft.reorderLevel !== null && draft.parLevel !== null && Number(draft.parLevel) < Number(draft.reorderLevel))
@@ -1831,6 +1840,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       description: '',
       hsnCode: '',
       reorderLevel: null,
+      onHandStock: 0,
       parLevel: null,
       isActive: true
     };
@@ -1852,6 +1862,7 @@ export class PurchaseComponent implements OnInit, OnDestroy {
       description: item.description || '',
       hsnCode: item.hsnCode || '',
       reorderLevel: item.reorderLevel ?? null,
+      onHandStock: item.onHandStock ?? 0,
       parLevel: item.parLevel ?? null,
       isActive: item.isActive
     };

@@ -326,8 +326,8 @@ button {
 
 .pipeline-breakdown {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 12px;
 }
 
 .pipeline-item {
@@ -541,6 +541,51 @@ button {
   font-size: 8.5px;
   line-height: 1.1;
   font-weight: 600;
+}
+
+.simple-table.items-table {
+  overflow-x: hidden;
+}
+
+.items-table .table-head,
+.items-table .table-row {
+  grid-template-columns: minmax(80px, 0.85fr) minmax(140px, 1.8fr) minmax(95px, 1.1fr) minmax(50px, 0.55fr) minmax(80px, 0.85fr) minmax(80px, 0.85fr) minmax(55px, 0.6fr) minmax(80px, 0.85fr) minmax(80px, 0.85fr) minmax(75px, 0.75fr);
+  width: 100%;
+}
+
+.items-table .table-head > span,
+.items-table .table-row > span,
+.items-table .table-row > strong,
+.items-table .table-row > b {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.items-table .table-head > span:nth-child(6),
+.items-table .table-row > b:nth-child(6),
+.items-table .table-head > span:nth-child(7),
+.items-table .table-row > span:nth-child(7),
+.items-table .table-head > span:nth-child(8),
+.items-table .table-row > span:nth-child(8),
+.items-table .table-head > span:nth-child(9),
+.items-table .table-row > span:nth-child(9) {
+  justify-self: center;
+  text-align: center;
+}
+
+.items-table .table-head > span:last-child,
+.items-table .table-row > .row-actions {
+  justify-self: center;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.items-table .empty-row {
+  grid-template-columns: 1fr;
 }
 
 .supplier-table .table-head,
@@ -777,6 +822,14 @@ em.closed {
   color: var(--surface-800);
   font-size: 11px;
   font-weight: 600;
+}
+
+.form-grid input:disabled,
+.form-grid select:disabled {
+  background-color: var(--surface-100, #f1f5f9);
+  color: var(--surface-500, #64748b);
+  cursor: not-allowed;
+  opacity: 0.75;
 }
 
 .form-grid label.invalid input,
@@ -1576,9 +1629,14 @@ em.closed {
 }
 
 /* ===== ITEM CONFIGURATION TABLE ===== */
+.simple-table.items-table {
+  overflow-x: hidden;
+}
+
 .items-table .table-head,
 .items-table .table-row {
-  grid-template-columns: 90px minmax(165px, 1fr) 110px 50px 70px 78px 48px 72px 70px 62px 72px;
+  grid-template-columns: minmax(80px, 0.85fr) minmax(140px, 1.8fr) minmax(95px, 1.1fr) minmax(50px, 0.55fr) minmax(80px, 0.85fr) minmax(80px, 0.85fr) minmax(55px, 0.6fr) minmax(80px, 0.85fr) minmax(80px, 0.85fr) minmax(75px, 0.75fr);
+  width: 100%;
 }
 
 .items-table .empty-row {

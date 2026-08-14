@@ -8,6 +8,7 @@ import { Subscription, filter } from 'rxjs';
 import { HotelMastersService, Room } from '../masters/hotel-masters.service';
 
 import {
+  ActiveReservationDetails,
   OrderStatus,
   OrderType,
   PosAuditLog,
@@ -182,6 +183,9 @@ export class PosComponent implements OnInit, OnDestroy {
   selectedBillForView = signal<PosBill | null>(null);
   isViewBillModalOpen = signal<boolean>(false);
   isLoadingViewBill = signal<boolean>(false);
+
+  readonly activeRoomReservation = signal<ActiveReservationDetails | null>(null);
+  readonly isLoadingActiveReservation = signal<boolean>(false);
 
   activeIngredientDropdownIndex = signal<number | null>(null);
   ingredientSearchQuery = signal<string>('');
@@ -610,9 +614,7 @@ export class PosComponent implements OnInit, OnDestroy {
     if (newFilter && !isNaN(newFilter)) {
       this.outletFilter.set(newFilter);
       this.pos.setSelectedOutletId(newFilter);
-      this.pos.loadTables(newFilter);
-      this.pos.loadMenuItems(newFilter);
-      this.pos.loadOrders(newFilter);
+      this.reloadTabApis(this.activeTab());
     }
   }
 
@@ -631,8 +633,10 @@ export class PosComponent implements OnInit, OnDestroy {
   diningMenuItems = computed(() => {
     const action = this.diningAction();
     const outletId = action === 'ROOM' ? this.roomServiceOutletId() : (this.selectedTable()?.outletId || this.defaultOutletId());
-    const items = this.pos.menuItems().filter(item => item.outletId === outletId && item.available);
-    return items.length ? items : this.pos.menuItems().filter(item => item.available);
+    const allItems = this.pos.menuItems();
+    const items = allItems.filter(item => item.outletId === outletId && item.available);
+    if (items.length) return items;
+    return allItems.filter(item => item.available);
   });
 
   roomServiceFloors = computed(() => this.masters.floors().filter(floor => floor.isActive));
@@ -729,7 +733,11 @@ export class PosComponent implements OnInit, OnDestroy {
 
   currentBillIsRoomOrder = computed(() => {
     const bill = this.currentBill();
-    return !!(bill.isRoomOrder ?? (bill.orderType === 'ROOM' || !!bill.roomId || !!bill.roomNo));
+    if (bill.isRoomOrder) return true;
+    if (bill.orderType === 'ROOM' || !!bill.roomId || !!bill.roomNo) return true;
+    const order = this.billOrder(bill);
+    if (order && (order.type === 'ROOM' || !!order.roomId || !!order.roomNo)) return true;
+    return false;
   });
 
 
@@ -773,7 +781,6 @@ export class PosComponent implements OnInit, OnDestroy {
   switchTab(tab: PosTab): void {
     this.activeTab.set(tab);
     this.router.navigate([`/pos/${tab}`]);
-    this.reloadTabApis(tab);
   }
 
 
@@ -1577,19 +1584,24 @@ export class PosComponent implements OnInit, OnDestroy {
       roomId,
       roomNo: room?.roomNumber || order.roomNo || ''
     }));
+    if (roomId) {
+      this.loadActiveReservationForRoom(roomId, (guestName) => {
+        this.currentOrder.update(order => ({ ...order, guestName }));
+      });
+    }
   }
 
   selectDiningTable(table: PosTable): void {
     this.selectedTable.set(table);
     this.diningForm.set({
-      server: table.server === 'Unassigned' ? 'Arjun Menon' : table.server,
+      server: table.server === 'Unassigned' ? '' : table.server,
       covers: table.covers || 2,
       secondaryTableId: this.mergeCandidates()[0]?.id || null,
       floorId: this.diningForm().floorId,
       roomId: this.diningForm().roomId,
-      roomNo: '102',
-      guestName: table.guestName || (table.server !== 'Unassigned' ? table.server : 'Guest'),
-      bookingTime: table.bookingTime || 'Today, 08:00 PM',
+      roomNo: '',
+      guestName: table.guestName || '',
+      bookingTime: table.bookingTime || '',
       notes: ''
     });
 
@@ -1629,6 +1641,8 @@ export class PosComponent implements OnInit, OnDestroy {
       if (first) this.selectDiningTable(first);
     }
     this.diningAction.set(action);
+    const outletId = action === 'ROOM' ? this.roomServiceOutletId() : (this.selectedTable()?.outletId || this.defaultOutletId());
+    this.pos.loadMenuItems(outletId);
     if (action === 'ROOM') this.prepareRoomServiceDefaults();
     if (action === 'START' || action === 'ROOM') this.seedStartOrderLines();
     this.isDiningActionOpen.set(true);
@@ -1721,6 +1735,11 @@ export class PosComponent implements OnInit, OnDestroy {
       roomId: firstRoom?.id || null,
       roomNo: firstRoom?.roomNumber || ''
     }));
+    if (firstRoom?.id) {
+      this.loadActiveReservationForRoom(firstRoom.id);
+    } else {
+      this.activeRoomReservation.set(null);
+    }
   }
 
   updateRoomServiceRoom(value: number | string): void {
@@ -1731,6 +1750,11 @@ export class PosComponent implements OnInit, OnDestroy {
       roomId,
       roomNo: room?.roomNumber || form.roomNo
     }));
+    if (roomId) {
+      this.loadActiveReservationForRoom(roomId);
+    } else {
+      this.activeRoomReservation.set(null);
+    }
   }
 
   removeStartLine(index: number): void {
@@ -1926,7 +1950,7 @@ export class PosComponent implements OnInit, OnDestroy {
       orderType: order.type || 'TABLE',
       tableNo: order.tableNo || '',
       roomNo: order.roomNo || '',
-      guestName: order.guestName || (order.server !== 'Unassigned' ? order.server : ''),
+      guestName: order.guestName || '',
       subtotal: Number(breakdown.taxableSubtotal.toFixed(2)) || breakdown.grossAmount,
       tax: effectiveGstRate,
       taxAmount: Number(breakdown.taxTotal.toFixed(2)),
@@ -2086,21 +2110,24 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   billDraftForOrder(order?: PosOrder | null, input: Partial<PosBill> = {}): Partial<PosBill> {
+    const isRoom = order?.type === 'ROOM' || !!order?.roomNo || !!order?.roomId || input.orderType === 'ROOM' || !!input.roomNo || !!input.roomId;
+
     const base: Partial<PosBill> = {
       ...input,
       orderId: order?.id ?? input.orderId,
-      orderType: order?.type || input.orderType || 'TABLE',
+      orderType: order?.type || input.orderType || (isRoom ? 'ROOM' : 'TABLE'),
       tableNo: order?.type === 'TABLE' ? order.tableNo || '' : input.tableNo || '',
-      floorId: order?.type === 'ROOM' ? order.floorId || null : input.floorId || null,
-      roomId: order?.type === 'ROOM' ? order.roomId || null : input.roomId || null,
-      roomNo: order?.type === 'ROOM' ? order.roomNo || '' : input.roomNo || '',
+      floorId: isRoom ? (order?.floorId || input.floorId || null) : null,
+      roomId: isRoom ? (order?.roomId || input.roomId || null) : null,
+      roomNo: isRoom ? (order?.roomNo || input.roomNo || '') : '',
       guestName: order?.guestName || input.guestName || '',
       discount: Number(input.discount || 0),
       paid: Number(input.paid || 0),
       status: input.status || this.pos.billStatuses()[0] || 'OPEN',
       paymentModes: input.paymentModes?.length ? input.paymentModes : [this.pos.paymentModes()[0] || 'Cash'],
       compReason: input.compReason || '',
-      postedToFolio: !!input.postedToFolio
+      postedToFolio: !!input.postedToFolio,
+      isRoomOrder: isRoom
     };
     const breakdown = this.billBreakdown(base);
 
@@ -2182,8 +2209,40 @@ export class PosComponent implements OnInit, OnDestroy {
       floorId,
       roomId: room?.id || null,
       roomNo: room?.roomNumber || current.roomNo || '',
-      guestName: current.guestName || 'Guest',
-      server: current.server || 'Meena Pillai'
+      guestName: current.guestName || '',
+      server: current.server || ''
+    });
+
+    if (room?.id) {
+      this.loadActiveReservationForRoom(room.id);
+    }
+  }
+
+  loadActiveReservationForRoom(roomId: number, callback?: (guestName: string) => void): void {
+    if (!roomId) {
+      this.activeRoomReservation.set(null);
+      return;
+    }
+    this.isLoadingActiveReservation.set(true);
+    this.pos.getActiveReservationByRoomId(roomId).subscribe({
+      next: res => {
+        this.isLoadingActiveReservation.set(false);
+        this.activeRoomReservation.set(res);
+        if (res && res.guestName) {
+          if (callback) {
+            callback(res.guestName);
+          } else {
+            this.diningForm.update(form => ({
+              ...form,
+              guestName: res.guestName || form.guestName
+            }));
+          }
+        }
+      },
+      error: () => {
+        this.isLoadingActiveReservation.set(false);
+        this.activeRoomReservation.set(null);
+      }
     });
   }
 
@@ -2295,35 +2354,49 @@ export class PosComponent implements OnInit, OnDestroy {
 
     switch (tab) {
       case 'dashboard':
+        this.pos.loadPosDashboard();
+        this.pos.loadPosDashboardCards();
         this.pos.loadOutlets();
         this.pos.loadOrders(outletId);
         this.pos.loadBills();
+        this.pos.loadTables(outletId);
+        this.pos.loadMenuItems(outletId);
         break;
 
       case 'outlets':
         this.pos.loadOutlets();
+        this.pos.loadOutletTypes();
+        this.pos.loadShiftSchedules();
         break;
 
       case 'dining':
         this.pos.loadTables(outletId);
         this.pos.loadOrders(outletId);
+        this.pos.loadOutlets();
+        this.pos.loadMenuItems(outletId);
+        this.masters.loadAll();
         break;
 
       case 'orders':
         this.pos.loadOrders(outletId);
         this.pos.loadMenuItems(outletId);
         this.pos.loadTables(outletId);
+        this.pos.loadOutlets();
+        this.masters.loadAll();
         break;
 
       case 'billing':
         this.pos.loadBills(this.statusFilter(), 0, this.pos.billsPageSize());
-        this.loadOpenOrdersForBill(outletId);
+        this.pos.loadOrders(outletId);
+        this.pos.loadOutlets();
+        this.pos.loadPaymentModes();
         break;
 
       case 'menu':
         this.pos.loadMenuItems(outletId);
         this.pos.loadMenuCategories();
         this.pos.loadMenuSubcategories();
+        this.pos.loadOutlets();
         break;
 
       case 'billing-setup':
@@ -2332,22 +2405,41 @@ export class PosComponent implements OnInit, OnDestroy {
         this.pos.loadBillStatuses();
         break;
 
+      case 'ingredient-master':
+        this.pos.loadIngredients();
+        this.pos.loadIngredientCategoryMasters();
+        this.pos.loadBaseUnitMasters();
+        this.pos.loadPurchaseUnitMasters();
+        this.pos.loadStorageTypeMasters();
+        break;
+
+      case 'recipes':
+        this.pos.loadRecipes();
+        this.pos.loadIngredients();
+        this.pos.loadMenuItems(outletId);
+        break;
+
       default:
+        this.pos.loadPosDashboard();
+        this.pos.loadPosDashboardCards();
         this.pos.loadOutlets();
-        this.pos.loadOrders(outletId);
-        this.pos.loadBills();
         break;
     }
   }
 
+  private lastLoadedTab: PosTab | null = null;
+
   private updateTabFromUrl(url: string): void {
     const last = url.split('/').pop()?.split('?')[0] as PosTab;
-    const tab: PosTab = ['dashboard', 'outlets', 'dining', 'orders', 'billing', 'menu', 'billing-setup', 'ingredient-master', 'recipes'].includes(last) ? last : 'dashboard';
+    const tab: PosTab = ['dashboard', 'outlets', 'dining', 'orders', 'billing', 'menu', 'billing-setup', 'ingredient-master', 'recipes', 'kds'].includes(last) ? last : 'dashboard';
     this.activeTab.set(tab);
     this.search.set('');
     this.statusFilter.set('ALL');
 
-    this.reloadTabApis(tab);
+    if (this.lastLoadedTab !== tab) {
+      this.lastLoadedTab = tab;
+      this.reloadTabApis(tab);
+    }
   }
 }
 

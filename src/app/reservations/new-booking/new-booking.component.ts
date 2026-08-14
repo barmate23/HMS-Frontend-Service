@@ -111,6 +111,8 @@ interface ReservationRequest {
 export interface GuestProfile {
   id?: string;
   title: string;
+  firstName: string;
+  lastName: string;
   fullName: string;
   phoneCode: string;
   phone: string;
@@ -143,7 +145,7 @@ export interface AccompanyingMember {
 }
 
 type BookingValidationField =
-  'fullName' | 'phone' | 'email' | 'zip' | 'dob' | 'idNumber' |
+  'firstName' | 'lastName' | 'fullName' | 'phone' | 'email' | 'zip' | 'dob' | 'idNumber' |
   'checkIn' | 'checkOut' | 'adults' | 'children' | 'room' | 'plan';
 
 @Component({
@@ -239,7 +241,7 @@ export class NewBookingComponent implements OnInit {
 
   // Guest State
   guestData = signal<GuestProfile>({
-    title: 'Mr.', fullName: '', phoneCode: '+91 (India)', phone: '', email: '',
+    title: 'Mr.', firstName: '', lastName: '', fullName: '', phoneCode: '+91 (India)', phone: '', email: '',
     country: 'India', address1: '', address2: '', city: '', state: '', zip: '',
     vip: false, nationality: '', gender: '', dob: '', idProof: 'Aadhar Card', idNumber: '', notes: '', visits: 0
   });
@@ -280,9 +282,9 @@ export class NewBookingComponent implements OnInit {
   });
   
   mockGuests: GuestProfile[] = [
-    { id: 'G1001', title: 'Mr.', fullName: 'Rajesh Kumar', phoneCode: '+91 (India)', phone: '9876543210', email: 'rajesh.k@example.com', country: 'India', address1: '123 Park Street', address2: '', city: 'Mumbai', state: 'MH', zip: '400001', vip: true, nationality: 'Indian', gender: 'Male', dob: '1985-06-15', idProof: 'Aadhar Card', idNumber: '1234 5678 9012', notes: 'Prefers quiet rooms.', visits: 5, lastVisit: '2026-03-10' },
-    { id: 'G1002', title: 'Ms.', fullName: 'Sarah Jenkins', phoneCode: '+1 (USA)', phone: '555-0198', email: 's.jenkins@example.com', country: 'USA', address1: '456 Oak Lane', address2: 'Apt 4B', city: 'New York', state: 'NY', zip: '10001', vip: false, nationality: 'American', gender: 'Female', dob: '1990-11-20', idProof: 'Passport', idNumber: 'P1234567', notes: 'Allergic to peanuts.', visits: 1, lastVisit: '2025-12-05' },
-    { id: 'G1003', title: 'Dr.', fullName: 'Amitabh Sharma', phoneCode: '+91 (India)', phone: '9123456789', email: 'dr.sharma@example.com', country: 'India', address1: '789 Clinic Road', address2: '', city: 'Delhi', state: 'DL', zip: '110001', vip: true, nationality: 'Indian', gender: 'Male', dob: '1975-02-28', idProof: 'Aadhar Card', idNumber: '9876 5432 1098', notes: 'Requires early check-in.', visits: 12, lastVisit: '2026-05-01' }
+    { id: 'G1001', title: 'Mr.', firstName: 'Rajesh', lastName: 'Kumar', fullName: 'Rajesh Kumar', phoneCode: '+91 (India)', phone: '9876543210', email: 'rajesh.k@example.com', country: 'India', address1: '123 Park Street', address2: '', city: 'Mumbai', state: 'MH', zip: '400001', vip: true, nationality: 'Indian', gender: 'Male', dob: '1985-06-15', idProof: 'Aadhar Card', idNumber: '1234 5678 9012', notes: 'Prefers quiet rooms.', visits: 5, lastVisit: '2026-03-10' },
+    { id: 'G1002', title: 'Ms.', firstName: 'Sarah', lastName: 'Jenkins', fullName: 'Sarah Jenkins', phoneCode: '+1 (USA)', phone: '555-0198', email: 's.jenkins@example.com', country: 'USA', address1: '456 Oak Lane', address2: 'Apt 4B', city: 'New York', state: 'NY', zip: '10001', vip: false, nationality: 'American', gender: 'Female', dob: '1990-11-20', idProof: 'Passport', idNumber: 'P1234567', notes: 'Allergic to peanuts.', visits: 1, lastVisit: '2025-12-05' },
+    { id: 'G1003', title: 'Dr.', firstName: 'Amitabh', lastName: 'Sharma', fullName: 'Amitabh Sharma', phoneCode: '+91 (India)', phone: '9123456789', email: 'dr.sharma@example.com', country: 'India', address1: '789 Clinic Road', address2: '', city: 'Delhi', state: 'DL', zip: '110001', vip: true, nationality: 'Indian', gender: 'Male', dob: '1975-02-28', idProof: 'Aadhar Card', idNumber: '9876 5432 1098', notes: 'Requires early check-in.', visits: 12, lastVisit: '2026-05-01' }
   ];
 
   roomTypes = [
@@ -1021,7 +1023,7 @@ export class NewBookingComponent implements OnInit {
     this.createGuestTouched.set({});
     // Reset form for new guest
     this.guestData.set({
-      title: 'Mr.', fullName: '', phoneCode: '+91 (India)', phone: '', email: '',
+      title: 'Mr.', firstName: '', lastName: '', fullName: '', phoneCode: '+91 (India)', phone: '', email: '',
       country: 'India', address1: '', address2: '', city: '', state: '', zip: '',
       vip: false, nationality: '', gender: '', dob: '', idProof: 'Aadhar Card', idNumber: '', notes: '', visits: 0
     });
@@ -1089,9 +1091,19 @@ export class NewBookingComponent implements OnInit {
   createGuestValidationMessage(field: string): string {
     const guest = this.guestData();
     switch (field) {
+      case 'firstName': {
+        const name = (guest.firstName || '').trim();
+        if (!name && !guest.fullName) return 'First name is required.';
+        return '';
+      }
+      case 'lastName': {
+        const name = (guest.lastName || '').trim();
+        if (!name && !guest.fullName) return 'Last name is required.';
+        return '';
+      }
       case 'fullName': {
-        const name = guest.fullName.trim();
-        if (!name) return 'Guest full name is required.';
+        const name = (guest.fullName || `${guest.firstName || ''} ${guest.lastName || ''}`).trim();
+        if (!name) return 'Guest name is required.';
         if (name.length < 2) return 'Enter a valid guest name.';
         if (!/^[A-Za-z][A-Za-z .'-]*$/.test(name)) return 'Name must contain letters, spaces, dots or hyphens only.';
         return '';
@@ -1134,7 +1146,7 @@ export class NewBookingComponent implements OnInit {
   }
 
   validateCreateGuest(): string | null {
-    const fields = ['fullName', 'phone', 'email', 'idNumber'];
+    const fields = ['firstName', 'lastName', 'fullName', 'phone', 'email', 'idNumber'];
     return fields.map(f => this.createGuestValidationMessage(f)).find(Boolean) || null;
   }
 
@@ -1204,6 +1216,8 @@ export class NewBookingComponent implements OnInit {
     return {
       id: String(apiGuest.id),
       title,
+      firstName: apiGuest.firstName || (apiGuest.fullName ? apiGuest.fullName.trim().split(/\s+/)[0] : ''),
+      lastName: apiGuest.lastName || (apiGuest.fullName ? apiGuest.fullName.trim().split(/\s+/).slice(1).join(' ') : ''),
       fullName,
       phoneCode: apiGuest.countryCode ? `${apiGuest.countryCode}` : '+91 (India)',
       phone: apiGuest.phone || '',
@@ -1270,8 +1284,27 @@ export class NewBookingComponent implements OnInit {
     };
   }
 
+  private capitalizeName(val: string): string {
+    if (!val) return '';
+    return val.trim().split(/\s+/).map(word =>
+      word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : ''
+    ).join(' ');
+  }
+
   updateGuestField(field: keyof GuestProfile, value: any) {
-    this.guestData.update(data => ({ ...data, [field]: value }));
+    this.guestData.update(data => {
+      let val = value;
+      if ((field === 'firstName' || field === 'lastName' || field === 'fullName') && typeof value === 'string') {
+        val = this.capitalizeName(value);
+      }
+      const next = { ...data, [field]: val };
+      if (field === 'firstName' || field === 'lastName') {
+        const first = this.capitalizeName(field === 'firstName' ? String(value || '') : (data.firstName || ''));
+        const last = this.capitalizeName(field === 'lastName' ? String(value || '') : (data.lastName || ''));
+        next.fullName = `${first} ${last}`.trim();
+      }
+      return next;
+    });
     if (this.createGuestModalOpen()) {
       this.markCreateGuestFieldTouched(field);
     }
@@ -1289,9 +1322,19 @@ export class NewBookingComponent implements OnInit {
     const guest = this.guestData();
 
     switch (field) {
+      case 'firstName': {
+        const name = (guest.firstName || '').trim();
+        if (!name && !guest.fullName) return 'First name is required.';
+        return '';
+      }
+      case 'lastName': {
+        const name = (guest.lastName || '').trim();
+        if (!name && !guest.fullName) return 'Last name is required.';
+        return '';
+      }
       case 'fullName': {
-        const name = guest.fullName.trim();
-        if (!name) return 'Guest full name is required.';
+        const name = (guest.fullName || `${guest.firstName || ''} ${guest.lastName || ''}`).trim();
+        if (!name) return 'Guest name is required.';
         if (name.length < 2) return 'Enter a valid guest name.';
         if (!/^[A-Za-z][A-Za-z .'-]*$/.test(name)) return 'Use letters, spaces, dots, apostrophes or hyphens only.';
         return '';
@@ -1502,7 +1545,7 @@ export class NewBookingComponent implements OnInit {
       reservationStatus: status,
       roomIds: roomIds,
       ratePlanId: this.selectedPlan() ? Number(this.selectedPlan()) : (this.ratePlans[0]?.id ? Number(this.ratePlans[0].id) : 1),
-      billingName: this.guestData().fullName,
+      billingName: this.capitalizeName(this.guestData().fullName),
       billingAddress: [this.guestData().address1, this.guestData().address2, this.guestData().city, this.guestData().state, this.guestData().zip]
         .filter(Boolean)
         .join(', '),
@@ -1524,7 +1567,9 @@ export class NewBookingComponent implements OnInit {
 
   private buildGuestDetailsPayload(): GuestRequest {
     const guest = this.guestData();
-    const { firstName, lastName } = this.splitGuestName(guest.fullName);
+    const nameSplit = this.splitGuestName(guest.fullName);
+    const firstName = this.capitalizeName((guest.firstName || '').trim() || nameSplit.firstName);
+    const lastName = this.capitalizeName((guest.lastName || '').trim() || nameSplit.lastName);
 
     const guestDetails: any = {
       title: this.mapGuestTitle(guest.title),

@@ -327,6 +327,24 @@
                 <tbody><tr *ngFor="let line of order.lines"><td>{{ line.itemName }}</td><td>{{ line.quantity }}</td><td>{{ money(line.unitPrice) }}</td><td><span class="tax-rate-badge">{{ laundry.orderGstPercent(order) }}%</span></td><td>{{ money(currentLineTax(line, laundry.orderGstPercent(order))) }}</td><td><strong>{{ money(currentLineTotal(line, laundry.orderGstPercent(order))) }}</strong></td><td>{{ line.notes || '-' }}</td></tr></tbody>
               </table>
             </div>
+
+            <div class="order-billing-summary">
+              <div class="summary-box">
+                <div class="summary-row">
+                  <span>Net Amount:</span>
+                  <strong>{{ money(laundry.orderBaseAmount(order)) }}</strong>
+                </div>
+                <div class="summary-row">
+                  <span>Tax Amount ({{ laundry.orderGstPercent(order) }}% GST):</span>
+                  <strong class="tax-val">+ {{ money(laundry.orderTaxAmount(order)) }}</strong>
+                </div>
+                <div class="summary-row grand-total-row">
+                  <span>Total Bill Amount:</span>
+                  <strong class="grand-total-val">{{ money(laundry.orderAmount(order)) }}</strong>
+                </div>
+              </div>
+            </div>
+
             <div class="detail-footer">
               <button class="secondary-btn" *ngIf="order.billingMode === 'Room Account' && !order.postedToFolio" (click)="laundry.postOrderToFolio(order.id)"><span class="material-icons-round">receipt_long</span>Post to Folio</button>
               <button class="confirm-btn" [disabled]="!nextStatus(order)" (click)="applyNextStatus(order)"><span class="material-icons-round">arrow_forward</span>{{ nextActionLabel(order) }}</button>
@@ -868,9 +886,19 @@
           <h2>{{ order.orderId }} · Room {{ order.room }}</h2>
           <p>{{ order.serviceType }} · {{ laundry.orderItemCount(order) }} items · {{ order.billingMode }}</p>
         </div>
-        <div class="item-modal-total">
-          <span>Total</span>
-          <strong>{{ money(laundry.orderAmount(order)) }}</strong>
+        <div class="item-modal-billing-summary">
+          <div class="modal-sum-chip">
+            <span>Net Amount</span>
+            <strong>{{ money(laundry.orderBaseAmount(order)) }}</strong>
+          </div>
+          <div class="modal-sum-chip tax">
+            <span>Tax ({{ laundry.orderGstPercent(order) }}%)</span>
+            <strong>+ {{ money(laundry.orderTaxAmount(order)) }}</strong>
+          </div>
+          <div class="modal-sum-chip total">
+            <span>Total Bill</span>
+            <strong>{{ money(laundry.orderAmount(order)) }}</strong>
+          </div>
         </div>
       </div>
 

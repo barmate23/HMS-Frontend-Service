@@ -77,6 +77,7 @@ export interface PurchaseOrderPayload {
   requestedBy: string;
   itemCount?: number;
   poNote?: string;
+  shippingFreightRate?: number;
   totalAmount: number;
   lines: PurchaseOrderLinePayload[];
   statusId?: number;
@@ -146,6 +147,7 @@ export interface ItemConfigPayload {
   gstTaxRate: number;
   hsnSacCode?: string;
   reorderLevel?: number;
+  onHandStock?: number;
   maxStockLevel?: number;
   minimumQty?: number;
   maximumQty?: number;
@@ -188,10 +190,13 @@ export interface SupplierCategoryItem {
 
 export interface ProcurementPipeline {
   totalPos: number;
-  draft: number;
-  approved: number;
-  partiallyReceived: number;
-  closed: number;
+  draft?: number;
+  approved?: number;
+  partiallyReceived?: number;
+  closed?: number;
+  newOrders?: number;
+  receivedGrn?: number;
+  invoiced?: number;
 }
 
 export interface PurchaseDashboardData {

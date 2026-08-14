@@ -536,7 +536,8 @@ export class ReservationCenter implements OnInit, OnDestroy {
 
     const firstName = guest.firstName || item.firstName || '';
     const lastName = guest.lastName || item.lastName || '';
-    const guestName = item.guestFullName || item.guestName || `${firstName} ${lastName}`.trim() || item.billingName || 'Guest';
+    const rawGuestName = item.guestFullName || item.guestName || `${firstName} ${lastName}`.trim() || item.billingName || 'Guest';
+    const guestName = this.capitalizeName(rawGuestName);
     const checkIn = item.checkInDate || item.arrivalDate || item.checkIn || '';
     const checkOut = item.checkOutDate || item.departureDate || item.checkOut || '';
     
@@ -740,8 +741,16 @@ export class ReservationCenter implements OnInit, OnDestroy {
     return status.toLowerCase().replace('_', '-');
   }
 
+  private capitalizeName(val: string): string {
+    if (!val) return '';
+    return val.trim().split(/\s+/).map(word =>
+      word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : ''
+    ).join(' ');
+  }
+
   detailGuestName(details: any): string {
-    return details?.guestFullName || details?.guestName || details?.billingName || 'Guest';
+    const raw = details?.guestFullName || details?.guestName || details?.billingName || 'Guest';
+    return this.capitalizeName(raw);
   }
 
   detailRooms(details: any): any[] {

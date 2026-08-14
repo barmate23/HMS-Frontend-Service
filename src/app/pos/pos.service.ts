@@ -6,7 +6,7 @@ import { Observable, map, catchError, of, throwError } from 'rxjs';
 import { UserManagementService } from '../user-management/user-management.service';
 import { IngredientCategory, IngredientMaster, RecipeIngredient, RecipeMaster, StorageType } from './models/recipe.model';
 
-export type PosTab = 'dashboard' | 'outlets' | 'dining' | 'orders' | 'billing' | 'menu' | 'billing-setup' | 'ingredient-master' | 'recipes';
+export type PosTab = 'dashboard' | 'outlets' | 'dining' | 'orders' | 'billing' | 'menu' | 'billing-setup' | 'ingredient-master' | 'recipes' | 'kds';
 export type OutletType = string;
 export type OutletStatus = 'ACTIVE' | 'INACTIVE';
 export type TableStatus = string;
@@ -204,6 +204,41 @@ export interface PosDashboardPaymentSplit {
   method?: string;
   percentage?: number;
   amount?: number;
+}
+
+export interface ActiveReservationDetails {
+  bookingId?: number;
+  reservationId?: number;
+  roomId?: number;
+  roomNumber?: string;
+  roomType?: string;
+  floorName?: string;
+  guestId?: number;
+  guestName?: string;
+  guestPhone?: string;
+  guestEmail?: string;
+  guestNationality?: string;
+  isVip?: boolean;
+  checkInDate?: string;
+  checkInTime?: string;
+  checkOutDate?: string;
+  checkOutTime?: string;
+  numberOfNights?: number;
+  numberOfAdults?: number;
+  numberOfChildren?: number;
+  totalGuests?: number;
+  ratePlanName?: string;
+  ratePerNight?: number;
+  ratePlanCharge?: number;
+  totalPrice?: number;
+  discountPercentage?: number;
+  discountAmount?: number;
+  finalPrice?: number;
+  billingName?: string;
+  bookingStatus?: string;
+  reservationStatus?: string;
+  specialRequests?: string;
+  notes?: string;
 }
 
 export interface PosDashboardFastMovingItem {
@@ -609,18 +644,10 @@ export class PosService {
     this.loadVoidReasons();
     this.loadGstRules();
     this.loadOutlets();
-    this.loadTables();
-    this.loadMenuItems();
-    this.loadOrders();
-    this.loadBills();
-    this.loadIngredients();
-    this.loadRecipes();
     this.loadIngredientCategoryMasters();
     this.loadBaseUnitMasters();
     this.loadPurchaseUnitMasters();
     this.loadStorageTypeMasters();
-    this.loadPosDashboard();
-    this.loadPosDashboardCards();
   }
 
   loadOutletTypes(): void {
@@ -1187,6 +1214,14 @@ export class PosService {
   }
 
 
+  getActiveReservationByRoomId(roomId: number): Observable<ActiveReservationDetails | null> {
+    if (!roomId) return of(null);
+    return this.http.get<StandardResponse<ActiveReservationDetails>>(`/api/hmsService/v1/reservation/active?roomId=${roomId}`).pipe(
+      map(res => res?.data || null),
+      catchError(() => of(null))
+    );
+  }
+
   loadPosDashboard(): void {
     this.http.get<StandardResponse<PosDashboardData>>(`${this.posBaseUrl}/dashboard/getPosDashboardData`).subscribe({
       next: response => this.posDashboard.set(response?.data || null),
@@ -1445,7 +1480,7 @@ export class PosService {
       type: 'TABLE',
       tableNo: table.number,
       guestName: table.guestName || '',
-      server: table.server === 'Unassigned' ? 'Arjun Menon' : table.server,
+      server: table.server === 'Unassigned' ? '' : table.server,
       status: 'OPEN',
       openedAt: 'Just now',
       notes: `${table.covers || 2} covers at ${outlet?.name || 'Outlet'}.`,
@@ -1479,7 +1514,7 @@ export class PosService {
       type: 'ROOM',
       roomNo: input.roomNo,
       guestName: input.guestName,
-      server: input.server || 'Meena Pillai',
+      server: input.server || '',
       status: 'OPEN',
       openedAt: 'Just now',
       notes: input.notes || 'Room service order created from table dining.',
@@ -1533,74 +1568,98 @@ export class PosService {
   }
 
   saveBill(input: Partial<PosBill>): void {
-    const isPostedSelected = !!input.status && String(input.status).toLowerCase() === 'posted';
+    const isPostedRequested = !!input.postedToFolio || (!!input.status && String(input.status).toLowerCase() === 'posted');
+    const isRoomOrder = input.isRoomOrder ?? (input.orderType === 'ROOM' || !!input.roomId || !!input.roomNo);
 
-    const executeSave = () => {
-      const nextId = Math.max(0, ...this.bills().map(item => item.id)) + 1;
-      const bill: PosBill = {
-        id: input.id ?? nextId,
-        orderId: Number(input.orderId || this.orders()[0]?.id || 1),
-        billNo: input.billNo || `BILL-${7000 + nextId}`,
-        orderType: input.orderType,
-        tableNo: input.tableNo || '',
-        floorId: input.floorId || null,
-        roomId: input.roomId || null,
-        guestName: input.guestName || '',
-        roomNo: input.roomNo || '',
-        subtotal: Number(input.subtotal || 0),
-        discount: Number(input.discount || 0),
-        tax: Number(input.tax ?? 18),
-        taxAmount: Number(input.taxAmount || 0),
-        compReason: input.compReason || '',
-        paid: Number(input.paid || 0),
-        status: input.status || 'OPEN',
-        statusId: input.statusId,
-        paymentModes: input.paymentModes?.length ? input.paymentModes : ['Cash'],
-        postedToFolio: isPostedSelected || !!input.postedToFolio,
-        isRoomOrder: input.isRoomOrder
-      };
-
-      const payload = this.toApiBill(bill);
-      const request$ = input.id
-        ? this.http.put<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/updateBill/${input.id}`, payload)
-        : this.http.post<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/createBill`, payload);
-
-      request$.subscribe({
-        next: response => {
-          const savedApiItem = (response as StandardResponse<ApiBill>)?.data || response;
-          const savedBill = savedApiItem && savedApiItem.id ? this.mapBill(savedApiItem) : bill;
-          this.bills.update(items => input.id
-            ? items.map(existing => existing.id === input.id ? savedBill : existing)
-            : [savedBill, ...items]
-          );
-          this.addAudit(input.id ? 'Bill updated' : 'Bill generated', 'Billing', savedBill.billNo);
-          this.loadPosDashboardCards();
-          this.snackBar.open(input.id ? 'Bill updated successfully' : 'Bill created successfully', 'Close', { duration: 3000 });
-        },
-        error: error => {
-          this.bills.update(items => input.id ? items.map(existing => existing.id === input.id ? bill : existing) : [bill, ...items]);
-          this.addAudit(input.id ? 'Bill updated (local fallback)' : 'Bill generated (local fallback)', 'Billing', bill.billNo);
-        }
-      });
-    };
-
-    if (isPostedSelected) {
-      const isRoomOrder = input.isRoomOrder ?? (input.orderType === 'ROOM' || !!input.roomId || !!input.roomNo);
-      if (!isRoomOrder) {
-        this.snackBar.open('Cannot set status to Posted: Bill must be a Room order.', 'Close', { duration: 4000 });
-        return;
-      }
-      if (input.id) {
-        this.postBillToRoom(input.id, () => {
-          executeSave();
-        });
-      } else {
-        executeSave();
-      }
-    } else {
-      executeSave();
+    if (isPostedRequested && !isRoomOrder) {
+      this.snackBar.open('Cannot post to room folio: Bill must be a Room order.', 'Close', { duration: 4000 });
+      return;
     }
 
+    const nextId = Math.max(0, ...this.bills().map(item => item.id)) + 1;
+    const billId = input.id ?? nextId;
+    const postedMaster = this.billStatusMasters().find(m =>
+      (m.value && m.value.toLowerCase() === 'posted') ||
+      (m.code && m.code.toLowerCase() === 'posted')
+    );
+
+    const bill: PosBill = {
+      id: billId,
+      orderId: Number(input.orderId || this.orders()[0]?.id || 1),
+      billNo: input.billNo || `BILL-${7000 + billId}`,
+      orderType: input.orderType || (isRoomOrder ? 'ROOM' : 'TABLE'),
+      tableNo: input.tableNo || '',
+      floorId: input.floorId || null,
+      roomId: input.roomId || null,
+      guestName: input.guestName || '',
+      roomNo: input.roomNo || '',
+      subtotal: Number(input.subtotal || 0),
+      discount: Number(input.discount || 0),
+      tax: Number(input.tax ?? 18),
+      taxAmount: Number(input.taxAmount || 0),
+      compReason: input.compReason || '',
+      paid: Number(input.paid || 0),
+      status: isPostedRequested ? 'Posted' : (input.status || 'OPEN'),
+      statusId: isPostedRequested ? (postedMaster?.id || input.statusId) : input.statusId,
+      paymentModes: input.paymentModes?.length ? input.paymentModes : ['Cash'],
+      postedToFolio: isPostedRequested,
+      isRoomOrder: isRoomOrder
+    };
+
+    const payload = this.toApiBill(bill);
+    const request$ = input.id
+      ? this.http.put<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/updateBill/${input.id}`, payload)
+      : this.http.post<ApiBill | StandardResponse<ApiBill>>(`${this.posBaseUrl}/billing/createBill`, payload);
+
+    request$.subscribe({
+      next: response => {
+        const savedApiItem = (response as StandardResponse<ApiBill>)?.data || response;
+        const savedBill = savedApiItem && savedApiItem.id ? this.mapBill(savedApiItem) : bill;
+        this.bills.update(items => input.id
+          ? items.map(existing => existing.id === input.id ? savedBill : existing)
+          : [savedBill, ...items]
+        );
+        this.addAudit(input.id ? 'Bill updated' : 'Bill generated', 'Billing', savedBill.billNo);
+        this.loadPosDashboardCards();
+
+        if (isPostedRequested) {
+          const order = this.orders().find(o => o.id === savedBill.orderId);
+          const targetRoomId = savedBill.roomId ? Number(savedBill.roomId) : (order?.roomId ? Number(order.roomId) : 1);
+          const netAmount = Number(savedBill.subtotal || 0);
+          const taxAmount = Number(savedBill.taxAmount || 0);
+          const totalAmount = Number((netAmount + taxAmount).toFixed(2));
+
+          const folioPayload = {
+            roomId: targetRoomId,
+            source: 'POS Billing',
+            amount: netAmount,
+            taxAmount: taxAmount,
+            description: `POS Bill ${savedBill.billNo} - Room ${savedBill.roomNo || targetRoomId} (${savedBill.guestName || 'Guest'})`
+          };
+
+          this.http.post<StandardResponse<any>>(`${this.hmsBaseUrl}/billing/folios/postToFolio`, folioPayload).subscribe({
+            next: (folioRes: any) => {
+              if (folioRes && folioRes.success === false) {
+                const errorMsg = folioRes.error?.details || folioRes.error?.message || folioRes.message || 'Failed to post bill to folio';
+                this.snackBar.open(`Bill saved, but Post to Folio failed: ${errorMsg}`, 'Close', { duration: 5000 });
+              } else {
+                this.snackBar.open(`Bill saved & posted ₹${totalAmount} to Room Folio successfully!`, 'Close', { duration: 4000 });
+              }
+            },
+            error: (err) => {
+              const errorMsg = err?.error?.message || err?.message || 'Failed to post bill to folio';
+              this.snackBar.open(`Bill saved, but Post to Folio failed: ${errorMsg}`, 'Close', { duration: 5000 });
+            }
+          });
+        } else {
+          this.snackBar.open(input.id ? 'Bill updated successfully' : 'Bill created successfully', 'Close', { duration: 3000 });
+        }
+      },
+      error: () => {
+        this.bills.update(items => input.id ? items.map(existing => existing.id === input.id ? bill : existing) : [bill, ...items]);
+        this.addAudit(input.id ? 'Bill updated (local fallback)' : 'Bill generated (local fallback)', 'Billing', bill.billNo);
+      }
+    });
   }
 
   voidBill(id: number, reason?: string): void {
@@ -1639,15 +1698,16 @@ export class PosService {
 
     const order = this.orders().find(o => o.id === bill.orderId);
     const roomId = bill.roomId ? Number(bill.roomId) : (order?.roomId ? Number(order.roomId) : 1);
-    const totalAmount = Number(bill.subtotal || 0);
-    const taxTypeStr = `GST ${bill.tax || 18}%`;
+    const netAmount = Number(bill.subtotal || 0);
+    const taxAmount = Number(bill.taxAmount || 0);
+    const totalAmount = Number((netAmount + taxAmount).toFixed(2));
     const descStr = `POS Bill ${bill.billNo} - ${bill.orderType || 'Order'} (${bill.guestName || 'Guest'})`;
 
     const payload = {
       roomId: roomId,
       source: 'POS Billing',
-      amount: totalAmount,
-      taxType: taxTypeStr,
+      amount: netAmount,
+      taxAmount: taxAmount,
       description: descStr
     };
 
@@ -2299,91 +2359,7 @@ export class PosService {
   }
 
   private getMockKitchenOrders(isClosed: boolean, outletId?: number | 'ALL'): KitchenDisplayOrder[] {
-    const mockData: KitchenDisplayOrder[] = [
-      {
-        id: 1,
-        orderNumber: "ORD-1",
-        orderType: "DINE_IN",
-        outletId: 1,
-        outletName: "Radisson",
-        tableNumber: "T01",
-        roomNumber: null,
-        guestName: "Guest",
-        serverName: "Rajan Mehta",
-        kotStatus: isClosed ? "CLOSED" : "KOT Sent",
-        createdAt: "2026-08-06T06:07:25.750757",
-        items: [
-          { id: 28, itemName: "Paneer Tikka", quantity: 2, readyQuantity: isClosed ? 2 : 0 },
-          { id: 29, itemName: "tandoor roti", quantity: 2, readyQuantity: isClosed ? 2 : 0 }
-        ]
-      },
-      {
-        id: 2,
-        orderNumber: "ORD-2",
-        orderType: "DINE_IN",
-        outletId: 1,
-        outletName: "Radisson",
-        tableNumber: "T01",
-        roomNumber: null,
-        guestName: "Guest",
-        serverName: "Meena Pillai",
-        kotStatus: isClosed ? "CLOSED" : "KOT Sent",
-        createdAt: "2026-08-06T06:08:40.183001",
-        items: [
-          { id: 30, itemName: "Chicken", quantity: 1, readyQuantity: isClosed ? 1 : 0 }
-        ]
-      },
-      {
-        id: 3,
-        orderNumber: "ORD-3",
-        orderType: "DINE_IN",
-        outletId: 1,
-        outletName: "Radisson",
-        tableNumber: "T01",
-        roomNumber: null,
-        guestName: "Akshay",
-        serverName: "Arjun Menon",
-        kotStatus: isClosed ? "CLOSED" : "KOT READY",
-        createdAt: "2026-08-06T07:12:20.827451",
-        items: [
-          { id: 25, itemName: "Paneer Tikka", quantity: 25, readyQuantity: 10 },
-          { id: 26, itemName: "tandoor roti", quantity: 13, readyQuantity: 12 },
-          { id: 27, itemName: "Chicken", quantity: 2, readyQuantity: 1 }
-        ]
-      },
-      {
-        id: 4,
-        orderNumber: "ORD-4 (12 Items)",
-        orderType: "DINE_IN",
-        outletId: 1,
-        outletName: "Radisson",
-        tableNumber: "T04 Banquet",
-        roomNumber: null,
-        guestName: "Vikram Sharma",
-        serverName: "Deepa Thomas",
-        kotStatus: isClosed ? "CLOSED" : "KOT Sent",
-        createdAt: "2026-08-06T07:35:10.123456",
-        items: [
-          { id: 401, itemName: "Paneer Tikka Starter", quantity: 4, readyQuantity: 4 },
-          { id: 402, itemName: "Tandoori Chicken Full", quantity: 2, readyQuantity: 2 },
-          { id: 403, itemName: "Dal Makhani Special", quantity: 3, readyQuantity: 1 },
-          { id: 404, itemName: "Butter Naan", quantity: 12, readyQuantity: 8 },
-          { id: 405, itemName: "Garlic Naan", quantity: 6, readyQuantity: 4 },
-          { id: 406, itemName: "Veg Biryani Large", quantity: 2, readyQuantity: 0 },
-          { id: 407, itemName: "Chicken Hyderabadi Biryani", quantity: 3, readyQuantity: 0 },
-          { id: 408, itemName: "Malai Kofta Curry", quantity: 2, readyQuantity: 0 },
-          { id: 409, itemName: "Mixed Vegetable Curry", quantity: 2, readyQuantity: 0 },
-          { id: 410, itemName: "Jeera Rice", quantity: 4, readyQuantity: 0 },
-          { id: 411, itemName: "Gulab Jamun (4 Pcs)", quantity: 3, readyQuantity: 0 },
-          { id: 412, itemName: "Mango Lassi Pitcher", quantity: 2, readyQuantity: 0 }
-        ]
-      }
-    ];
-
-    if (outletId && outletId !== 'ALL') {
-      return mockData.filter(o => o.outletId === Number(outletId));
-    }
-    return mockData;
+    return [];
   }
 
   updateKotStatus(orderId: number, kotStatusId: number = 1): Observable<StandardResponse<any>> {

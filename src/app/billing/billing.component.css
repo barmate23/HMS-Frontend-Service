@@ -144,8 +144,8 @@ button {
 }
 
 .metric-card {
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 46px;
+  padding: 5px 8px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -154,15 +154,15 @@ button {
 }
 
 .metric-card > span {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   flex: 0 0 auto;
   border-radius: 6px;
   display: grid;
   place-items: center;
   background: #e8f3ff;
   color: #0a62cf;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .metric-card.due { border-left-color: #c57650; }
@@ -175,7 +175,7 @@ button {
 .metric-card strong {
   display: block;
   color: #051f2a;
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1;
   font-weight: 900;
   white-space: nowrap;
@@ -357,7 +357,9 @@ button {
   min-width: 0;
   min-height: 0;
   padding: 8px 10px;
-  overflow: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .folio-header {
@@ -365,22 +367,22 @@ button {
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  padding-bottom: 8px;
+  padding-bottom: 4px;
   border-bottom: 1px solid var(--surface-200);
 }
 
 .folio-header h2 {
   color: var(--primary-color);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.1;
   font-weight: 900;
   letter-spacing: 0;
 }
 
 .folio-header p {
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--surface-600);
-  font-size: 10px;
+  font-size: 9.5px;
   line-height: 1.1;
   font-weight: 700;
 }
@@ -400,28 +402,28 @@ button {
 }
 
 .folio-balance strong {
-  margin-top: 4px;
-  font-size: 20px;
+  margin-top: 2px;
+  font-size: 17px;
 }
 
 .folio-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
-  margin: 8px 0;
+  margin: 5px 0;
 }
 
 .folio-summary div {
-  min-height: 48px;
+  min-height: 38px;
   border: 1px solid var(--surface-200);
   border-radius: 6px;
-  padding: 7px 8px;
+  padding: 4px 8px;
 }
 
 .folio-summary span {
   display: block;
   color: var(--surface-500);
-  font-size: 9px;
+  font-size: 8.5px;
   line-height: 1;
   font-weight: 900;
   text-transform: uppercase;
@@ -429,9 +431,9 @@ button {
 
 .folio-summary strong {
   display: block;
-  margin-top: 8px;
+  margin-top: 4px;
   color: var(--primary-color);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
   font-weight: 900;
 }
@@ -489,7 +491,17 @@ button {
   font-weight: 800;
 }
 
-.simplified-table,
+.simplified-table {
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .data-table {
   border: 1px solid var(--surface-200);
   border-radius: 6px;
@@ -562,14 +574,66 @@ button {
 .simplified-row i.service { background: #c57650; }
 .simplified-row i.adjustment { background: #5b6675; }
 
-.simplified-totals {
+.simplified-rows-scroll {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.simplified-rows-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.simplified-rows-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+.simplified-footer-bar {
+  flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  border-top: 1px solid var(--surface-200);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
   background: #fbfaf7;
-  padding: 12px 16px;
-  gap: 8px;
+  border-top: 1px solid var(--surface-200);
+}
+
+.simplified-totals-inline {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.total-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.total-item span {
+  color: var(--surface-500);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.total-item strong {
+  color: var(--primary-color);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.balance-item {
+  padding-left: 10px;
+  border-left: 1px solid var(--surface-300);
+}
+
+.balance-item strong {
+  font-size: 13.5px;
+  color: #b14f2f;
 }
 
 .simplified-totals div {

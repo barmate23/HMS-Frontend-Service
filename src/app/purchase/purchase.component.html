@@ -116,20 +116,16 @@
       </header>
       <div class="pipeline-breakdown">
         <div class="pipeline-item">
-          <div class="pipeline-label"><span class="stage-dot draft-dot"></span><span>Draft</span><strong>{{ poStatusSummary().draft }}</strong></div>
-          <div class="progress-bar mini-bar grey"><div class="fill" [style.width.%]="(poStatusSummary().draft / (poStatusSummary().total || 1)) * 100"></div></div>
+          <div class="pipeline-label"><span class="stage-dot draft-dot"></span><span>New Orders</span><strong>{{ poStatusSummary().newOrders }}</strong></div>
+          <div class="progress-bar mini-bar blue"><div class="fill" [style.width.%]="(poStatusSummary().newOrders / (poStatusSummary().total || 1)) * 100"></div></div>
         </div>
         <div class="pipeline-item">
-          <div class="pipeline-label"><span class="stage-dot approved-dot"></span><span>Approved</span><strong>{{ poStatusSummary().approved }}</strong></div>
-          <div class="progress-bar mini-bar green"><div class="fill" [style.width.%]="(poStatusSummary().approved / (poStatusSummary().total || 1)) * 100"></div></div>
+          <div class="pipeline-label"><span class="stage-dot partial-dot"></span><span>Received (GRN)</span><strong>{{ poStatusSummary().receivedGrn }}</strong></div>
+          <div class="progress-bar mini-bar orange"><div class="fill" [style.width.%]="(poStatusSummary().receivedGrn / (poStatusSummary().total || 1)) * 100"></div></div>
         </div>
         <div class="pipeline-item">
-          <div class="pipeline-label"><span class="stage-dot partial-dot"></span><span>Partially Received</span><strong>{{ poStatusSummary().partiallyReceived }}</strong></div>
-          <div class="progress-bar mini-bar orange"><div class="fill" [style.width.%]="(poStatusSummary().partiallyReceived / (poStatusSummary().total || 1)) * 100"></div></div>
-        </div>
-        <div class="pipeline-item">
-          <div class="pipeline-label"><span class="stage-dot closed-dot"></span><span>Closed</span><strong>{{ poStatusSummary().closed }}</strong></div>
-          <div class="progress-bar mini-bar blue"><div class="fill" [style.width.%]="(poStatusSummary().closed / (poStatusSummary().total || 1)) * 100"></div></div>
+          <div class="pipeline-label"><span class="stage-dot approved-dot"></span><span>Invoiced (Billed)</span><strong>{{ poStatusSummary().invoiced }}</strong></div>
+          <div class="progress-bar mini-bar green"><div class="fill" [style.width.%]="(poStatusSummary().invoiced / (poStatusSummary().total || 1)) * 100"></div></div>
         </div>
       </div>
       <div class="quick-actions-panel">
@@ -213,7 +209,7 @@
     </header>
     <div class="simple-table items-table">
       <div class="table-head">
-        <span>Code</span><span>Item Name</span><span>Category</span><span>UOM</span><span>HSN Code</span><span>Unit Cost</span><span>Tax %</span><span>Reorder Min</span><span>Stock Max</span><span>Status</span><span>Actions</span>
+        <span>Code</span><span>Item Name</span><span>Category</span><span>UOM</span><span>HSN Code</span><span>Unit Cost</span><span>Tax %</span><span>Reorder</span><span>Max Stock</span><span>Actions</span>
       </div>
       <div class="table-row empty-row" *ngIf="itemLoading()"><span>Loading item configuration...</span></div>
       <div class="table-row empty-row" *ngIf="!itemLoading() && itemError()"><span>{{ itemError() }}</span></div>
@@ -228,7 +224,6 @@
         <span>{{ item.taxRate }}%</span>
         <span>{{ item.reorderLevel ?? '—' }}</span>
         <span>{{ item.parLevel ?? '—' }}</span>
-        <em [class]="item.isActive ? 'approved' : 'draft'">{{ item.isActive ? 'Active' : 'Inactive' }}</em>
         <span class="row-actions">
           <button type="button" title="Edit item" (click)="editItem(item)"><span class="material-icons-round">edit</span></button>
           <button type="button" title="Delete item" (click)="deleteItem(item.id)"><span class="material-icons-round">delete</span></button>
@@ -617,6 +612,12 @@
           <label>
             <span>HSN / SAC Code</span>
             <input [ngModel]="itemDraft().hsnCode" (ngModelChange)="updateItemDraft('hsnCode', $event)" placeholder="e.g. 6302" style="text-transform: uppercase;">
+          </label>
+
+          <label [class.invalid]="itemFieldError('onHandStock')" *ngIf="!selectedItem()">
+            <span>On Hand Stock</span>
+            <input type="number" min="0" [ngModel]="itemDraft().onHandStock" (ngModelChange)="updateItemDraft('onHandStock', $event === '' ? null : +$event)" (blur)="markItemFieldAsTouched('onHandStock')" placeholder="Current available stock">
+            <small>{{ itemFieldError('onHandStock') }}</small>
           </label>
 
           <label [class.invalid]="itemFieldError('reorderLevel')">

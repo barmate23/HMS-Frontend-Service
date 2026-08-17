@@ -83,6 +83,8 @@ export interface LicenseStatusResponse {
   activatedAt?: string;
   expiresAt: string;
   daysRemaining: number;
+  logoUrl?: string;
+  logo?: string;
   message?: string;
 }
 

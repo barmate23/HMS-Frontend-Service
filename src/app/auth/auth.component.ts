@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { LicenseService, LicenseStatusResponse } from '../setup/license.service';
+import { HmsLoadingAnimationComponent } from '../shared/hms-loading-animation/hms-loading-animation.component';
 
 type AuthStep = 'login' | 'first-login' | 'activate-license' | 'forgot' | 'verify' | 'reset' | 'success';
 
@@ -30,7 +31,7 @@ interface FirstLoginForm {
 @Component({
   selector: 'app-auth',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HmsLoadingAnimationComponent],
   templateUrl: './auth.component.html',
   styleUrls: ['./auth.component.css'],
 })
@@ -46,6 +47,11 @@ export class AuthComponent {
   showNewPassword = signal(false);
   message = signal('');
   recoveryCode = signal('');
+
+  // 3D Loading Animation State
+  show3dLoader = signal(false);
+  loaderLogoUrl = signal('');
+  loaderHotelName = signal('HMS Cloud');
 
   // License Activation State
   activationKeyInput = signal('');
@@ -215,8 +221,7 @@ export class AuthComponent {
 
   private verifyLicenseAndProceed(hotelId: number, done: () => void, directStatus?: string): void {
     if (directStatus && 'ACTIVE'.equalsIgnoreCase(directStatus)) {
-      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
-      this.router.navigateByUrl(returnUrl).finally(done);
+      this.proceedWith3dLoading(hotelId, done);
       return;
     }
 
@@ -227,6 +232,9 @@ export class AuthComponent {
           this.licenseStatusInfo.set(lic);
           this.pendingHotelId.set(lic.hotelId || hotelId);
 
+          if (lic.hotelName) this.loaderHotelName.set(lic.hotelName);
+          if (lic.logoUrl) this.loaderLogoUrl.set(lic.logoUrl);
+
           // Check if License requires activation or is expired
           if (!lic.isActive || 'PENDING_ACTIVATION'.equalsIgnoreCase(lic.status) || 'EXPIRED'.equalsIgnoreCase(lic.status)) {
             const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
@@ -235,16 +243,37 @@ export class AuthComponent {
           }
         }
 
-        // Active license -> navigate to dashboard
-        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
-        this.router.navigateByUrl(returnUrl).finally(done);
+        // Active license -> show 3D sphere loading transition
+        this.proceedWith3dLoading(hotelId, done);
       },
       error: () => {
-        // Fallback navigate to dashboard if backend status call fails
-        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
-        this.router.navigateByUrl(returnUrl).finally(done);
+        // Fallback navigate to dashboard with 3D loader
+        this.proceedWith3dLoading(hotelId, done);
       }
     });
+  }
+
+  private proceedWith3dLoading(hotelId: number, done: () => void): void {
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
+
+    if (!this.loaderLogoUrl()) {
+      this.licenseService.getLicenseStatus(hotelId).subscribe({
+        next: (res) => {
+          if (res && res.data) {
+            if (res.data.hotelName) this.loaderHotelName.set(res.data.hotelName);
+            if (res.data.logoUrl) this.loaderLogoUrl.set(res.data.logoUrl);
+          }
+        }
+      });
+    }
+
+    this.show3dLoader.set(true);
+
+    setTimeout(() => {
+      this.router.navigateByUrl(returnUrl).finally(() => {
+        done();
+      });
+    }, 2200);
   }
 
   submitForgot(): void {

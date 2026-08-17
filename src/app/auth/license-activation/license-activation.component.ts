@@ -191,8 +191,10 @@ export class LicenseActivationComponent {
       this.redirectCountdown.update(c => {
         if (c <= 1) {
           clearInterval(interval);
-          const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
-          this.router.navigateByUrl(returnUrl);
+          const hotelId = this.licenseDetails()?.hotelId || this.pendingHotelId() || 1;
+          this.router.navigate(['/masters/hotels'], {
+            queryParams: { firstTimeOnboard: 'true', editHotelId: hotelId }
+          });
           return 0;
         }
         return c - 1;

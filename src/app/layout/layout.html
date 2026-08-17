@@ -3,10 +3,16 @@
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="logo-container">
-        <div class="logo-box">
-          <span class="material-icons-round">bed</span>
+        <div class="logo-box logo-3d-frame" [class.has-custom-logo]="!!hotelLogoSrc()">
+          <img *ngIf="hotelLogoSrc()" [src]="hotelLogoSrc()" [alt]="hotelName()" class="property-logo-img logo-3d-element" />
+          <div *ngIf="!hotelLogoSrc()" class="hms-default-logo-badge logo-3d-element">
+            <span class="material-icons-round default-logo-icon">domain</span>
+          </div>
         </div>
-        <span class="logo-text" *ngIf="!isCollapsed()">HMS Cloud</span>
+        <div class="logo-text-wrap" *ngIf="!isCollapsed()">
+          <strong class="logo-text">{{ hotelName() }}</strong>
+          <span class="logo-subtext">{{ hotelTagline() }}</span>
+        </div>
       </div>
       <button class="menu-toggle" (click)="toggleSidebar()">
         <span class="material-icons-round">menu</span>

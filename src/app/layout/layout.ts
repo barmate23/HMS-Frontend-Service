@@ -1,8 +1,9 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../auth/auth.service';
+import { HotelMastersService } from '../masters/hotel-masters.service';
 
 export interface NavItemChild {
   label: string;
@@ -29,9 +30,42 @@ export interface NavItem {
   styleUrls: ['./layout.css']
 })
 export class Layout implements OnInit {
+  public readonly mastersService = inject(HotelMastersService);
   isCollapsed = signal(false);
   activeTheme = signal('oasis');
   activeBg = signal('warm');
+
+  currentHotel = computed(() => {
+    const user = this.auth.currentUser();
+    const hotels = this.mastersService.hotels();
+    if (!hotels || hotels.length === 0) return null;
+    if (user && user.hotelId) {
+      const found = hotels.find(h => Number(h.id) === Number(user.hotelId));
+      if (found) return found;
+    }
+    return hotels[0];
+  });
+
+  hotelLogoSrc = computed(() => {
+    const h = this.currentHotel();
+    if (!h) return '';
+    if (h.logoUrl) {
+      if (h.logoUrl.startsWith('http') || h.logoUrl.startsWith('data:')) {
+        return h.logoUrl;
+      }
+      return `data:image/png;base64,${h.logoUrl}`;
+    }
+    if (h.logo) {
+      if (h.logo.startsWith('http') || h.logo.startsWith('data:')) {
+        return h.logo;
+      }
+      return `data:image/png;base64,${h.logo}`;
+    }
+    return '';
+  });
+
+  hotelName = computed(() => this.currentHotel()?.name || 'HMS Cloud');
+  hotelTagline = computed(() => this.currentHotel()?.tagline || 'Hotel Operations Suite');
 
   themeOptions = [
     { name: 'Oasis Pine', primary: '#0F3D3E', light: '#E8F3F1', accent: '#C08261', value: 'oasis' },
@@ -110,6 +144,8 @@ export class Layout implements OnInit {
   ];
 
   ngOnInit() {
+    this.mastersService.loadAll();
+
     const savedTheme = localStorage.getItem('hms-theme-color') || 'oasis';
     this.applyTheme(savedTheme);
 

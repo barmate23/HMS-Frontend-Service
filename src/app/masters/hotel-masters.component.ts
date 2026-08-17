@@ -1,7 +1,7 @@
 import { Component, signal, computed, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, NavigationEnd, RouterModule } from '@angular/router';
+import { Router, ActivatedRoute, NavigationEnd, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
@@ -22,6 +22,7 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   public readonly mastersService = inject(HotelMastersService);
   public readonly addressService = inject(AddressService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private routerSub?: Subscription;
   private searchDebounceTimer: any;
 
@@ -120,10 +121,40 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       this.updateTabFromUrl(event.urlAfterRedirects || event.url);
     });
 
+    // Auto open Edit Hotel Property modal dialog if redirected after first-time license activation
+    this.route.queryParams.subscribe(params => {
+      if (params['firstTimeOnboard'] === 'true' || params['editHotelId']) {
+        const hotelId = params['editHotelId'] ? Number(params['editHotelId']) : null;
+        this.activeTab.set('hotels');
+        this.checkAndAutoOpenHotelEditModal(hotelId);
+      }
+    });
+
     // Load Address API dropdown data
     this.addressService.loadCountries().subscribe();
     this.addressService.loadStates().subscribe();
     this.addressService.loadCities().subscribe();
+  }
+
+  private checkAndAutoOpenHotelEditModal(hotelId: number | null): void {
+    const tryOpen = () => {
+      const hotels = this.mastersService.hotels();
+      let targetHotel = hotelId ? hotels.find(h => Number(h.id) === Number(hotelId)) : null;
+      if (!targetHotel && hotels.length > 0) {
+        targetHotel = hotels[0];
+      }
+
+      if (targetHotel) {
+        this.openEditModal(targetHotel);
+      }
+    };
+
+    if (this.mastersService.hotels().length > 0) {
+      setTimeout(tryOpen, 250);
+    } else {
+      this.mastersService.loadAll();
+      setTimeout(tryOpen, 800);
+    }
   }
 
   ngOnDestroy() {

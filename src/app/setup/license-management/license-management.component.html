@@ -1,0 +1,323 @@
+<div class="license-container">
+
+  <!-- Header Banner -->
+  <header class="license-header">
+    <div class="header-left">
+      <div class="icon-circle">
+        <mat-icon>vpn_key</mat-icon>
+      </div>
+      <div>
+        <h1 class="header-title">License & Subscription Management</h1>
+        <p class="header-subtitle">Enterprise tenant licensing, property quotas, module access control, and client onboarding hub.</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-outline" (click)="openOnboardModal()">
+        <mat-icon>person_add</mat-icon> Onboard New Client
+      </button>
+      <button class="btn btn-primary" (click)="openActivateModal()">
+        <mat-icon>check_circle</mat-icon> Activate License Key
+      </button>
+    </div>
+  </header>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage()" class="alert alert-success">
+    <mat-icon>check_circle</mat-icon>
+    <span>{{ successMessage() }}</span>
+  </div>
+
+  <div *ngIf="errorMessage()" class="alert alert-danger">
+    <mat-icon>error</mat-icon>
+    <span>{{ errorMessage() }}</span>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="isLoading()" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading license information...</p>
+  </div>
+
+  <!-- License Overview Cards -->
+  <div *ngIf="!isLoading() && currentLicense() as lic" class="overview-grid">
+    
+    <!-- Status & Hotel Info Card -->
+    <div class="card status-card">
+      <div class="card-header">
+        <span class="card-tag">Property License</span>
+        <span class="badge" [ngClass]="getStatusClass(lic.status)">
+          {{ lic.status }}
+        </span>
+      </div>
+
+      <div class="hotel-title-row">
+        <h2>{{ lic.hotelName }}</h2>
+        <p class="hotel-email"><mat-icon>email</mat-icon> {{ lic.clientEmail }}</p>
+      </div>
+
+      <div class="key-box">
+        <div class="key-label">Active License Key</div>
+        <div class="key-value">
+          <code>{{ lic.licenseKey }}</code>
+          <button class="icon-btn" (click)="copyToClipboard(lic.licenseKey)" title="Copy Key">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <div class="expiry-bar-wrap">
+        <div class="expiry-row">
+          <span>Validity Status</span>
+          <span class="expiry-days" [class.text-danger]="lic.daysRemaining < 15">
+            {{ lic.daysRemaining }} Days Remaining
+          </span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" [style.width.%]="lic.daysRemaining > 365 ? 100 : (lic.daysRemaining / 3.65)"></div>
+        </div>
+        <div class="expiry-date-label">
+          Expires on: {{ lic.expiresAt | date:'mediumDate' }}
+        </div>
+      </div>
+
+      <div class="card-footer-actions">
+        <button class="btn btn-sm btn-outline-primary" (click)="openRenewModal()">
+          <mat-icon>published_with_changes</mat-icon> Renew Subscription
+        </button>
+      </div>
+    </div>
+
+    <!-- Entitlement Quotas Card -->
+    <div class="card quotas-card">
+      <div class="card-header">
+        <span class="card-tag">Subscription Entitlements</span>
+        <span class="tier-pill">{{ lic.tier }} TIER</span>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <mat-icon class="stat-icon room-icon">meeting_room</mat-icon>
+          <div class="stat-info">
+            <span class="stat-value">{{ lic.maxRooms }}</span>
+            <span class="stat-label">Max Allowed Rooms</span>
+          </div>
+        </div>
+
+        <div class="stat-box">
+          <mat-icon class="stat-icon user-icon">group</mat-icon>
+          <div class="stat-info">
+            <span class="stat-value">{{ lic.maxUsers }}</span>
+            <span class="stat-label">Max Active Users</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modules-section">
+        <h4 class="section-subtitle">Enabled Feature Modules</h4>
+        <div class="module-chips">
+          <span *ngFor="let mod of lic.enabledModules" class="module-chip">
+            <mat-icon class="chip-icon">verified</mat-icon> {{ mod }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client Onboarding Section / Instructions -->
+  <section class="onboarding-guide-section">
+    <div class="section-header">
+      <mat-icon class="section-icon">payments</mat-icon>
+      <div>
+        <h3>Payment Confirmation & Client Onboarding Workflow</h3>
+        <p>Follow the steps below to onboard a client hotel once payment confirmation is received.</p>
+      </div>
+    </div>
+
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <h4>Payment Confirmation</h4>
+        <p>Receive payment confirmation for subscription tier (Starter, Professional, Enterprise).</p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <h4>Client Onboarding API</h4>
+        <p>Click "Onboard New Client" to generate Hotel, default Admin user, and License Key.</p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <h4>Automated Email Dispatch</h4>
+        <p>Welcome email sent to client with Cloud Portal URL, temporary credentials, and License Key.</p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">4</div>
+        <h4>Portal Activation & Renewal</h4>
+        <p>Client signs in and activates license key. Renewal keys can be generated upon subscription expiry.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- MODAL 1: Activate License Key -->
+<div *ngIf="isActivateModalOpen()" class="modal-backdrop">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3><mat-icon>vpn_key</mat-icon> Activate HMS License Key</h3>
+      <button class="close-btn" (click)="closeActivateModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-desc">Enter the License Key sent to your property's contact email to activate your HMS Cloud portal.</p>
+      
+      <div class="form-group">
+        <label>License Key *</label>
+        <input type="text" class="form-control" [(ngModel)]="activationKey" placeholder="e.g. HMS-LIC-A8F2-99C1-4B2E" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeActivateModal()">Cancel</button>
+      <button class="btn btn-primary" [disabled]="isSubmitting()" (click)="onActivateLicense()">
+        <span *ngIf="isSubmitting()" class="spinner-sm"></span> Activate License
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 2: Renew Subscription -->
+<div *ngIf="isRenewModalOpen()" class="modal-backdrop">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3><mat-icon>published_with_changes</mat-icon> Renew Subscription License</h3>
+      <button class="close-btn" (click)="closeRenewModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Extension Validity (Months) *</label>
+        <select class="form-control" [(ngModel)]="renewMonths">
+          <option [ngValue]="1">1 Month</option>
+          <option [ngValue]="6">6 Months</option>
+          <option [ngValue]="12">12 Months (1 Year)</option>
+          <option [ngValue]="24">24 Months (2 Years)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Subscription Tier</label>
+        <select class="form-control" [(ngModel)]="renewTier">
+          <option value="STARTER">Starter Tier</option>
+          <option value="PROFESSIONAL">Professional Tier</option>
+          <option value="ENTERPRISE">Enterprise Tier</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Room Quota Limit</label>
+        <input type="number" class="form-control" [(ngModel)]="renewRooms" min="1" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeRenewModal()">Cancel</button>
+      <button class="btn btn-success" [disabled]="isSubmitting()" (click)="onRenewLicense()">
+        <span *ngIf="isSubmitting()" class="spinner-sm"></span> Issue Renewal Key & Email Client
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 3: Super Admin Client Onboarding -->
+<div *ngIf="isOnboardModalOpen()" class="modal-backdrop modal-lg">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3><mat-icon>person_add</mat-icon> Super Admin - Onboard New Hotel Client</h3>
+      <button class="close-btn" (click)="closeOnboardModal()">&times;</button>
+    </div>
+    
+    <div class="modal-body">
+
+      <!-- Success Result Preview -->
+      <div *ngIf="lastOnboardResult() as result" class="onboard-result-box">
+        <div class="result-header">
+          <mat-icon>check_circle</mat-icon>
+          <h4>Client Onboarded & Email Dispatched!</h4>
+        </div>
+
+        <div class="result-details">
+          <p><strong>Hotel:</strong> {{ result.hotelName }} (ID: {{ result.hotelId }})</p>
+          <p><strong>Admin Username:</strong> <code>{{ result.adminUsername }}</code></p>
+          <p><strong>Temp Password:</strong> <code>{{ result.temporaryPassword }}</code></p>
+          <p><strong>License Key:</strong> <code>{{ result.licenseKey }}</code></p>
+          <p><strong>Expires On:</strong> {{ result.expiresAt | date:'medium' }}</p>
+        </div>
+      </div>
+
+      <form *ngIf="!lastOnboardResult()" class="onboard-form">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Hotel / Property Name *</label>
+            <input type="text" class="form-control" [(ngModel)]="onboardData.hotelName" name="hotelName" placeholder="e.g. Royal Palace Hotel" required />
+          </div>
+
+          <div class="form-group">
+            <label>Client Contact Email *</label>
+            <input type="email" class="form-control" [(ngModel)]="onboardData.email" name="email" placeholder="admin@royalpalace.com" required />
+          </div>
+
+          <div class="form-group">
+            <label>Contact Phone *</label>
+            <input type="text" class="form-control" [(ngModel)]="onboardData.phone" name="phone" placeholder="+1 555 123 4567" required />
+          </div>
+
+          <div class="form-group">
+            <label>Total Rooms *</label>
+            <input type="number" class="form-control" [(ngModel)]="onboardData.totalRooms" name="totalRooms" min="1" required />
+          </div>
+
+          <div class="form-group">
+            <label>Subscription Tier</label>
+            <select class="form-control" [(ngModel)]="onboardData.tier" name="tier">
+              <option value="STARTER">Starter Tier</option>
+              <option value="PROFESSIONAL">Professional Tier</option>
+              <option value="ENTERPRISE">Enterprise Tier</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Validity (Months)</label>
+            <select class="form-control" [(ngModel)]="onboardData.validityMonths" name="validityMonths">
+              <option [ngValue]="1">1 Month Trial</option>
+              <option [ngValue]="6">6 Months</option>
+              <option [ngValue]="12">12 Months (1 Year)</option>
+              <option [ngValue]="24">24 Months (2 Years)</option>
+            </select>
+          </div>
+
+          <div class="form-group full-width">
+            <hr class="form-divider" />
+            <h4 class="form-subtitle">Default Admin Account Setup</h4>
+          </div>
+
+          <div class="form-group">
+            <label>Admin Full Name *</label>
+            <input type="text" class="form-control" [(ngModel)]="onboardData.adminFullName" name="adminFullName" placeholder="e.g. John Doe" required />
+          </div>
+
+          <div class="form-group">
+            <label>Admin Username *</label>
+            <input type="text" class="form-control" [(ngModel)]="onboardData.adminUsername" name="adminUsername" placeholder="e.g. royal_admin" required />
+          </div>
+        </div>
+      </form>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeOnboardModal()">Close</button>
+      <button *ngIf="!lastOnboardResult()" class="btn btn-primary" [disabled]="isSubmitting()" (click)="onOnboardClient()">
+        <span *ngIf="isSubmitting()" class="spinner-sm"></span> Issue License & Email Client
+      </button>
+    </div>
+  </div>
+</div>

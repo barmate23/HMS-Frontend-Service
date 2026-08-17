@@ -8,6 +8,9 @@ export interface AuthUser {
   email: string;
   role: string;
   initials: string;
+  hotelId?: number;
+  licenseStatus?: string;
+  licenseExpiresAt?: string;
 }
 
 export interface LoginResult {
@@ -15,6 +18,9 @@ export interface LoginResult {
   message: string;
   requiresPasswordChange?: boolean;
   identifier?: string;
+  hotelId?: number;
+  licenseStatus?: string;
+  licenseExpiresAt?: string;
 }
 
 export interface RecoveryResult {
@@ -40,6 +46,9 @@ interface ApiAuthUser {
   email?: string;
   role?: string;
   roleCode?: string;
+  hotelId?: number;
+  licenseStatus?: string;
+  licenseExpiresAt?: string;
 }
 
 interface ApiAuthResponse {
@@ -116,7 +125,10 @@ export class AuthService {
         success: !!response.success && !!response.data,
         message: response.success ? '' : this.responseMessage(response, 'Unable to sign in.'),
         requiresPasswordChange: this.requiresPasswordChange(response.data),
-        identifier: normalizedIdentifier
+        identifier: normalizedIdentifier,
+        hotelId: response.data?.user?.hotelId || 1,
+        licenseStatus: response.data?.user?.licenseStatus,
+        licenseExpiresAt: response.data?.user?.licenseExpiresAt
       })),
       catchError(error => of({
         success: false,
@@ -248,6 +260,26 @@ export class AuthService {
     }
   }
 
+  updateSessionLicenseStatus(status: string): void {
+    const current = this.currentSessionState();
+    if (!current || !current.user) return;
+
+    const updatedUser: AuthUser = {
+      ...current.user,
+      licenseStatus: status
+    };
+
+    const updatedSession: StoredAuthSession = {
+      ...current,
+      user: updatedUser
+    };
+
+    this.currentSessionState.set(updatedSession);
+    const remember = this.isRememberedSession();
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem(SESSION_KEY, JSON.stringify(updatedSession));
+  }
+
   clearSession(): void {
     localStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(SESSION_KEY);
@@ -276,7 +308,10 @@ export class AuthService {
       fullName,
       email: user.email || '',
       role: user.role || user.roleCode || 'Hotel Staff',
-      initials: this.initials(fullName)
+      initials: this.initials(fullName),
+      hotelId: user.hotelId || 1,
+      licenseStatus: user.licenseStatus,
+      licenseExpiresAt: user.licenseExpiresAt
     };
   }
 

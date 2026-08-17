@@ -1,0 +1,159 @@
+<div class="auth-shell">
+  <!-- Left Side Visual (Matches Login Screen Theme) -->
+  <div class="auth-visual">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <div>
+        <strong>HMS Cloud</strong>
+        <span>Hotel Operations Suite</span>
+      </div>
+    </div>
+
+    <div class="visual-copy">
+      <h1>Activate your property workspace.</h1>
+      <p>Enter your HMS License Key to unlock room management, billing, housekeeping, and front office operations.</p>
+    </div>
+  </div>
+
+  <!-- Right Side Activation Form Panel -->
+  <div class="auth-panel-wrap">
+    <div class="auth-panel">
+      
+      <!-- SUCCESS ACTIVATED CARD -->
+      @if (isSuccess()) {
+        <div class="activation-card-content animate-fade-in">
+          <div class="success-icon-badge">
+            <span class="material-icons-round">check_circle</span>
+          </div>
+
+          <h2 class="auth-title text-success">License Activated!</h2>
+          <p class="auth-subtitle">
+            Your property instance is verified and ready.
+          </p>
+
+          <!-- License Specs Box -->
+          <div class="specs-card">
+            <div class="spec-item">
+              <span class="spec-label">Property</span>
+              <strong class="spec-val">{{ licenseDetails()?.hotelName || 'HMS Hotel Instance' }}</strong>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">License Key</span>
+              <code class="spec-key">{{ fullKey() }}</code>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Subscription Tier</span>
+              <span class="tier-badge">{{ licenseDetails()?.tier || 'ENTERPRISE' }}</span>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Valid Until</span>
+              <span class="spec-val">{{ licenseDetails()?.expiresAt || 'Active' }}</span>
+            </div>
+          </div>
+
+          <div class="redirect-info">
+            <div class="spinner-sm"></div>
+            <span>Redirecting to HMS Portal in <strong>{{ redirectCountdown() }}s</strong>...</span>
+          </div>
+        </div>
+      }
+
+      <!-- INPUT ACTIVATION FORM CARD -->
+      @if (!isSuccess()) {
+        <div class="activation-card-content animate-fade-in">
+
+          <!-- Top Symbol Badge Icon -->
+          <div class="panel-header-icon">
+            <span class="material-icons-round">vpn_key</span>
+          </div>
+
+          <h1 class="auth-title">Activate HMS Portal</h1>
+          <p class="auth-subtitle">
+            Input the License Key emailed to your property to activate this HMS Cloud instance.
+          </p>
+
+          <!-- Alert Error Message -->
+          @if (errorMessage()) {
+            <div class="alert-banner alert-error">
+              <span class="material-icons-round">error_outline</span>
+              <span>{{ errorMessage() }}</span>
+            </div>
+          }
+
+          <!-- Segmented Key Entry Box -->
+          <div class="key-card" (paste)="onPaste($event)">
+            <div class="key-card-header">
+              <span class="card-label">LICENSE KEY</span>
+              <span class="format-tag" [class.valid]="isValidFormat()">
+                {{ isValidFormat() ? 'Format Valid' : '12 Digits' }}
+              </span>
+            </div>
+
+            <!-- Segmented Inputs Row (3 Blocks of 4 Chars) -->
+            <div class="segments-row">
+              <div class="seg-box prefix-box">
+                <span>HMS-LIC</span>
+              </div>
+              <span class="dash">-</span>
+
+              <div class="seg-box" [class.filled]="seg1().length === 4" [class.active]="seg1().length > 0">
+                <input #segInput type="text" maxlength="4" [value]="seg1()" (input)="onSegmentInput(0, $event)" (keydown)="onKeyDown(0, $event)" placeholder="8LYN" autocomplete="off" />
+              </div>
+              <span class="dash">-</span>
+
+              <div class="seg-box" [class.filled]="seg2().length === 4" [class.active]="seg2().length > 0">
+                <input #segInput type="text" maxlength="4" [value]="seg2()" (input)="onSegmentInput(1, $event)" (keydown)="onKeyDown(1, $event)" placeholder="LNTE" autocomplete="off" />
+              </div>
+              <span class="dash">-</span>
+
+              <div class="seg-box" [class.filled]="seg3().length === 4" [class.active]="seg3().length > 0">
+                <input #segInput type="text" maxlength="4" [value]="seg3()" (input)="onSegmentInput(2, $event)" (keydown)="onKeyDown(2, $event)" placeholder="1VB1" autocomplete="off" />
+              </div>
+            </div>
+
+            <!-- Clean Progress Line -->
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" [style.width.%]="progressPercentage()"></div>
+            </div>
+
+            <!-- Helper Quick Actions -->
+            <div class="actions-row">
+              <button type="button" class="btn-text-action" (click)="clearKey()">
+                <span class="material-icons-round">delete_outline</span> Clear
+              </button>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button 
+            type="button" 
+            class="primary-btn"
+            [disabled]="isSubmitting() || !isValidFormat()"
+            (click)="submitActivation()"
+          >
+            @if (isSubmitting()) {
+              <span class="btn-spinner"></span>
+              <span>Activating...</span>
+            } @else {
+              <span class="material-icons-round">verified_user</span>
+              <span>Activate & Enter HMS Portal</span>
+            }
+          </button>
+
+          <!-- Back to sign in -->
+          <button type="button" class="ghost-btn" (click)="goToLogin()">
+            Sign in with another account
+          </button>
+
+          <!-- Security note -->
+          <div class="security-note">
+            <span class="material-icons-round">security</span>
+            <span>Secure access for hotel staff and administrators</span>
+          </div>
+
+        </div>
+      }
+
+    </div>
+  </div>
+</div>

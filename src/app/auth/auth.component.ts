@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from './auth.service';
+import { LicenseService, LicenseStatusResponse } from '../setup/license.service';
 
-type AuthStep = 'login' | 'first-login' | 'forgot' | 'verify' | 'reset' | 'success';
+type AuthStep = 'login' | 'first-login' | 'activate-license' | 'forgot' | 'verify' | 'reset' | 'success';
 
 interface LoginForm {
   username: string;
@@ -34,12 +35,22 @@ interface FirstLoginForm {
   styleUrls: ['./auth.component.css'],
 })
 export class AuthComponent {
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  readonly auth = inject(AuthService);
+  private readonly licenseService = inject(LicenseService);
+
   step = signal<AuthStep>('login');
   isSubmitting = signal(false);
   showPassword = signal(false);
   showNewPassword = signal(false);
   message = signal('');
   recoveryCode = signal('');
+
+  // License Activation State
+  activationKeyInput = signal('');
+  pendingHotelId = signal<number>(1);
+  licenseStatusInfo = signal<LicenseStatusResponse | null>(null);
 
   loginForm = signal<LoginForm>({
     username: '',
@@ -65,6 +76,7 @@ export class AuthComponent {
     switch (this.step()) {
       case 'forgot': return 'Recover Access';
       case 'first-login': return 'Set Your Password';
+      case 'activate-license': return 'Activate HMS Portal';
       case 'verify': return 'Verify Code';
       case 'reset': return 'Create New Password';
       case 'success': return 'Password Updated';
@@ -76,18 +88,13 @@ export class AuthComponent {
     switch (this.step()) {
       case 'forgot': return 'Enter your registered email and we will send a verification code.';
       case 'first-login': return 'This is your first sign-in. Replace the temporary password before entering HMS Cloud.';
+      case 'activate-license': return 'Input the License Key emailed to your property to activate this HMS Cloud instance.';
       case 'verify': return 'Use the 6 digit code sent to your registered email address.';
       case 'reset': return 'Choose a strong password before returning to your HMS Cloud workspace.';
       case 'success': return 'Your password has been reset successfully. You can sign in again now.';
       default: return 'Sign in to manage rooms, staff, reservations and hotel operations.';
     }
   });
-
-  constructor(
-    private readonly router: Router,
-    private readonly route: ActivatedRoute,
-    readonly auth: AuthService
-  ) {}
 
   updateLogin(field: keyof LoginForm, value: string | boolean): void {
     this.loginForm.update(form => ({ ...form, [field]: value }));
@@ -127,8 +134,10 @@ export class AuthComponent {
           done();
           return;
         }
-        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
-        this.router.navigateByUrl(returnUrl).finally(done);
+
+        // Validate License Activation & Expiration Status for the logged in user's hotelId
+        const userHotelId = result.hotelId || this.auth.currentUser()?.hotelId || 1;
+        this.verifyLicenseAndProceed(userHotelId, done, result.licenseStatus);
       });
     });
   }
@@ -159,17 +168,82 @@ export class AuthComponent {
           done();
           return;
         }
-        this.loginForm.update(login => ({
-          ...login,
-          username: form.identifier,
-          password: '',
-          remember: true
-        }));
-        this.firstLoginForm.set({ identifier: '', temporaryPassword: '', newPassword: '', confirmPassword: '' });
-        this.message.set('Password updated. Sign in with your new password.');
-        this.step.set('login');
-        done();
+        // Auto sign in after setting password and verify license key
+        this.auth.login(form.identifier, form.newPassword, true).subscribe(loginRes => {
+          if (loginRes.success) {
+            const userHotelId = loginRes.hotelId || this.auth.currentUser()?.hotelId || 1;
+            this.verifyLicenseAndProceed(userHotelId, done, loginRes.licenseStatus);
+          } else {
+            this.message.set('Password updated successfully. Please sign in with your new password.');
+            this.step.set('login');
+            done();
+          }
+        });
       });
+    });
+  }
+
+  submitLicenseKeyActivation(): void {
+    const key = this.activationKeyInput().trim();
+    if (!key) {
+      this.message.set('Please enter a valid License Key.');
+      return;
+    }
+
+    this.runAction(done => {
+      this.licenseService.activateLicense({
+        hotelId: this.pendingHotelId(),
+        licenseKey: key
+      }).subscribe(res => {
+        if (res.success && res.data) {
+          if (!res.data.isActive) {
+            this.message.set(res.message || 'License key has expired. Please renew your subscription key.');
+            done();
+            return;
+          }
+
+          this.message.set('HMS Portal activated successfully!');
+          const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
+          this.router.navigateByUrl(returnUrl).finally(done);
+        } else {
+          this.message.set(res.message || 'License key is invalid or has expired.');
+          done();
+        }
+      });
+    });
+  }
+
+  private verifyLicenseAndProceed(hotelId: number, done: () => void, directStatus?: string): void {
+    if (directStatus && 'ACTIVE'.equalsIgnoreCase(directStatus)) {
+      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
+      this.router.navigateByUrl(returnUrl).finally(done);
+      return;
+    }
+
+    this.licenseService.getLicenseStatus(hotelId).subscribe({
+      next: (statusRes) => {
+        if (statusRes.success && statusRes.data) {
+          const lic = statusRes.data;
+          this.licenseStatusInfo.set(lic);
+          this.pendingHotelId.set(lic.hotelId || hotelId);
+
+          // Check if License requires activation or is expired
+          if (!lic.isActive || 'PENDING_ACTIVATION'.equalsIgnoreCase(lic.status) || 'EXPIRED'.equalsIgnoreCase(lic.status)) {
+            const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
+            this.router.navigate(['/activate-license'], { queryParams: { returnUrl, hotelId: lic.hotelId || hotelId } }).finally(done);
+            return;
+          }
+        }
+
+        // Active license -> navigate to dashboard
+        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
+        this.router.navigateByUrl(returnUrl).finally(done);
+      },
+      error: () => {
+        // Fallback navigate to dashboard if backend status call fails
+        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/dashboard';
+        this.router.navigateByUrl(returnUrl).finally(done);
+      }
     });
   }
 
@@ -284,4 +358,16 @@ export class AuthComponent {
   private validPassword(value: string): boolean {
     return value.length >= 8 && /[A-Za-z]/.test(value) && /\d/.test(value);
   }
+}
+
+// Helper extension method
+declare global {
+  interface String {
+    equalsIgnoreCase(other: string | null | undefined): boolean;
+  }
+}
+if (!String.prototype.equalsIgnoreCase) {
+  String.prototype.equalsIgnoreCase = function (other: string | null | undefined): boolean {
+    return !!other && this.toLowerCase() === other.toLowerCase();
+  };
 }

@@ -279,7 +279,8 @@ export class Layout implements OnInit {
       color: '#64748B',
       expanded: false,
       children: [
-        { label: 'Master Data', icon: 'folder', route: '/setup/master-data', color: '#64748B' }
+        { label: 'Master Data', icon: 'folder', route: '/setup/master-data', color: '#64748B' },
+        { label: 'License & Subscription', icon: 'vpn_key', route: '/setup/license', color: '#0F3D3E' }
       ]
     },
     {

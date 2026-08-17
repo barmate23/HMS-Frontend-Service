@@ -7,6 +7,7 @@ import { authGuard, guestGuard } from './auth/auth.guard';
 
 export const routes: Routes = [
   { path: 'login', canActivate: [guestGuard], loadComponent: () => import('./auth/auth.component').then(m => m.AuthComponent) },
+  { path: 'activate-license', loadComponent: () => import('./auth/license-activation/license-activation.component').then(m => m.LicenseActivationComponent) },
   {
     path: '',
     component: Layout,
@@ -75,6 +76,7 @@ export const routes: Routes = [
       { path: 'user-management/activity', loadComponent: () => import('./user-management/user-management.component').then(m => m.UserManagementComponent) },
       { path: 'setup', redirectTo: 'setup/master-data', pathMatch: 'full' },
       { path: 'setup/master-data', loadComponent: () => import('./setup/master-data-configuration.component').then(m => m.MasterDataConfigurationComponent) },
+      { path: 'setup/license', loadComponent: () => import('./setup/license-management/license-management.component').then(m => m.LicenseManagementComponent) },
       { path: 'pos', redirectTo: 'pos/dashboard', pathMatch: 'full' },
       { path: 'pos/dashboard', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) },
       { path: 'pos/outlets', loadComponent: () => import('./pos/pos.component').then(m => m.PosComponent) },

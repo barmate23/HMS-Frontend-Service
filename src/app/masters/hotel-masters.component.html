@@ -286,7 +286,6 @@
               <th>ID</th>
               <th>ROOM TYPE</th>
               <th>HOTEL PROPERTY</th>
-              <th style="text-align: center;">CAPACITY</th>
               <th style="text-align: center;">BASE PRICE</th>
               <th style="text-align: center;">AREA</th>
               <th style="text-align: center;">STATUS</th>
@@ -310,12 +309,6 @@
                 <div class="hotel-ref">
                   <span class="material-icons-round">domain</span>
                   <span>{{ getHotelName(rt.hotelId) }}</span>
-                </div>
-              </td>
-              <td style="text-align: center;">
-                <div class="capacity-box">
-                  <span class="material-icons-round">people</span>
-                  <span>{{ rt.capacity }} Pax</span>
                 </div>
               </td>
               <td style="text-align: center;">
@@ -1057,17 +1050,10 @@
         <span class="field-error" *ngIf="shouldShowError('hotelId')">{{ validationMessage('hotelId') }}</span>
       </div>
 
-      <div class="ci-form-grid mt-3">
-        <div class="ci-input-group">
-          <label>Room Category Name *</label>
-          <input type="text" [(ngModel)]="currentRoomType().name" (blur)="markFieldTouched('name')" [class.invalid]="shouldShowError('name')" placeholder="e.g. Deluxe Suite">
-          <span class="field-error" *ngIf="shouldShowError('name')">{{ validationMessage('name') }}</span>
-        </div>
-        <div class="ci-input-group">
-          <label>Max Guest Capacity (Pax) *</label>
-          <input type="number" [(ngModel)]="currentRoomType().capacity" (blur)="markFieldTouched('capacity')" [class.invalid]="shouldShowError('capacity')" placeholder="2" min="1">
-          <span class="field-error" *ngIf="shouldShowError('capacity')">{{ validationMessage('capacity') }}</span>
-        </div>
+      <div class="ci-input-group mt-3">
+        <label>Room Category Name *</label>
+        <input type="text" [(ngModel)]="currentRoomType().name" (blur)="markFieldTouched('name')" [class.invalid]="shouldShowError('name')" placeholder="e.g. Deluxe Suite">
+        <span class="field-error" *ngIf="shouldShowError('name')">{{ validationMessage('name') }}</span>
       </div>
 
       <div class="ci-form-grid mt-3">

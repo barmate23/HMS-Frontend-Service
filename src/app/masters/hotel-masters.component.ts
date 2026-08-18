@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { HotelMastersService, Hotel, Floor, RoomType, Room, RatePlan, GstConfig } from './hotel-masters.service';
 import { AddressService } from '../address.service';
+import { ToastService } from '../shared/toast/toast.service';
 
 type MasterTab = 'hotels' | 'floors' | 'room-types' | 'rooms' | 'rate-plans' | 'gst-config';
 type ValidationErrors = Partial<Record<string, string>>;
@@ -21,6 +22,7 @@ type ValidationErrors = Partial<Record<string, string>>;
 export class HotelMastersComponent implements OnInit, OnDestroy {
   public readonly mastersService = inject(HotelMastersService);
   public readonly addressService = inject(AddressService);
+  private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private routerSub?: Subscription;
@@ -306,29 +308,32 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
   nextRoomsPage() {
     const current = this.mastersService.roomsPage();
     const total = this.mastersService.roomsTotalPages();
+    const size = this.mastersService.roomsPageSize();
     if (current < total - 1) {
-      this.mastersService.loadRooms(current + 1, 5, this.searchQuery());
+      this.mastersService.loadRooms(current + 1, size, this.searchQuery());
     }
   }
 
   prevRoomsPage() {
     const current = this.mastersService.roomsPage();
+    const size = this.mastersService.roomsPageSize();
     if (current > 0) {
-      this.mastersService.loadRooms(current - 1, 5, this.searchQuery());
+      this.mastersService.loadRooms(current - 1, size, this.searchQuery());
     }
   }
 
   goToRoomsPage(page: number) {
-    this.mastersService.loadRooms(page, 5, this.searchQuery());
+    const size = this.mastersService.roomsPageSize();
+    this.mastersService.loadRooms(page, size, this.searchQuery());
   }
 
   get roomsRangeMin(): number {
     if (this.mastersService.roomsTotalElements() === 0) return 0;
-    return (this.mastersService.roomsPage() * 5) + 1;
+    return (this.mastersService.roomsPage() * this.mastersService.roomsPageSize()) + 1;
   }
 
   get roomsRangeMax(): number {
-    const max = (this.mastersService.roomsPage() + 1) * 5;
+    const max = (this.mastersService.roomsPage() + 1) * this.mastersService.roomsPageSize();
     const total = this.mastersService.roomsTotalElements();
     return Math.min(max, total || max);
   }
@@ -841,7 +846,6 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     else if (!/^[A-Za-z0-9][A-Za-z0-9 .,'&()-]*$/.test(name)) errors['name'] = 'Use letters, numbers and common punctuation only.';
     else if (this.isDuplicateRoomType(name, rt.hotelId, rt.id)) errors['name'] = 'This room category already exists for the selected hotel.';
 
-    if (!this.isPositiveInteger(rt.capacity)) errors['capacity'] = 'Capacity must be at least 1.';
     if (!this.isNonNegativeNumber(rt.basePricePerNight)) errors['basePricePerNight'] = 'Base rate must be 0 or more.';
     if (!this.isPositiveNumber(rt.area)) errors['area'] = 'Area must be greater than 0.';
     if ((rt.description || '').length > 250) errors['description'] = 'Description must be 250 characters or fewer.';
@@ -969,10 +973,12 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       next: () => {
         this.isSaving.set(false);
         this.modalErrorMessage.set(null);
+        this.toast.success('Hotel property details saved successfully!', 'Hotel Saved');
         this.closeModal('hotels');
       },
       error: (err) => {
         this.isSaving.set(false);
+        this.toast.error(err, 'Error Saving Hotel');
         const msg = err?.error?.message || err?.error?.error?.message || err?.message || 'Error saving hotel property.';
         this.modalErrorMessage.set(msg);
       }
@@ -992,18 +998,21 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     const floor = this.currentFloor();
     this.isSaving.set(true);
     this.mastersService.saveFloor(floor).subscribe({
-      next: () => { this.isSaving.set(false); this.closeModal('floors'); },
-      error: (err) => { this.isSaving.set(false); alert('Error saving floor: ' + (err?.message || 'Unknown error')); }
+      next: () => { this.isSaving.set(false); this.toast.success('Floor details saved successfully!', 'Floor Saved'); this.closeModal('floors'); },
+      error: (err) => { this.isSaving.set(false); this.toast.error(err, 'Error Saving Floor'); }
     });
   }
 
   saveRoomType() {
     if (!this.validateForm('room-types')) return;
-    const rt = this.currentRoomType();
+    const rt = {
+      ...this.currentRoomType(),
+      capacity: this.currentRoomType().capacity || 2
+    };
     this.isSaving.set(true);
     this.mastersService.saveRoomType(rt).subscribe({
-      next: () => { this.isSaving.set(false); this.closeModal('room-types'); },
-      error: (err) => { this.isSaving.set(false); alert('Error saving room type: ' + (err?.message || 'Unknown error')); }
+      next: () => { this.isSaving.set(false); this.toast.success('Room Category saved successfully!', 'Room Category Saved'); this.closeModal('room-types'); },
+      error: (err) => { this.isSaving.set(false); this.toast.error(err, 'Error Saving Room Category'); }
     });
   }
 
@@ -1012,8 +1021,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     const room = this.currentRoom();
     this.isSaving.set(true);
     this.mastersService.saveRoom(room).subscribe({
-      next: () => { this.isSaving.set(false); this.closeModal('rooms'); },
-      error: (err) => { this.isSaving.set(false); alert('Error saving room: ' + (err?.message || 'Unknown error')); }
+      next: () => { this.isSaving.set(false); this.toast.success('Room details saved successfully!', 'Room Saved'); this.closeModal('rooms'); },
+      error: (err) => { this.isSaving.set(false); this.toast.error(err, 'Error Saving Room'); }
     });
   }
 
@@ -1022,8 +1031,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     const ratePlan = this.currentRatePlan();
     this.isSaving.set(true);
     this.mastersService.saveRatePlan(ratePlan).subscribe({
-      next: () => { this.isSaving.set(false); this.closeModal('rate-plans'); },
-      error: (err) => { this.isSaving.set(false); alert('Error saving rate plan: ' + (err?.message || 'Unknown error')); }
+      next: () => { this.isSaving.set(false); this.toast.success('Rate Plan saved successfully!', 'Rate Plan Saved'); this.closeModal('rate-plans'); },
+      error: (err) => { this.isSaving.set(false); this.toast.error(err, 'Error Saving Rate Plan'); }
     });
   }
 
@@ -1077,8 +1086,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       () => {
         this.isDeleting.set(true);
         this.mastersService.deleteHotel(id).subscribe({
-          next: () => this.isDeleting.set(false),
-          error: (err) => { this.isDeleting.set(false); alert('Error deleting hotel: ' + (err?.message || 'Unknown error')); }
+          next: () => { this.isDeleting.set(false); this.toast.success(`Hotel "${name}" deleted successfully!`); },
+          error: (err) => { this.isDeleting.set(false); this.toast.error(err, 'Error Deleting Hotel'); }
         });
       }
     );
@@ -1092,8 +1101,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       () => {
         this.isDeleting.set(true);
         this.mastersService.deleteFloor(id).subscribe({
-          next: () => this.isDeleting.set(false),
-          error: (err) => { this.isDeleting.set(false); alert('Error deleting floor: ' + (err?.message || 'Unknown error')); }
+          next: () => { this.isDeleting.set(false); this.toast.success(`Floor "${floorNumber}" deleted successfully!`); },
+          error: (err) => { this.isDeleting.set(false); this.toast.error(err, 'Error Deleting Floor'); }
         });
       }
     );
@@ -1107,8 +1116,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       () => {
         this.isDeleting.set(true);
         this.mastersService.deleteRoomType(id).subscribe({
-          next: () => this.isDeleting.set(false),
-          error: (err) => { this.isDeleting.set(false); alert('Error deleting room type: ' + (err?.message || 'Unknown error')); }
+          next: () => { this.isDeleting.set(false); this.toast.success(`Room Category "${name}" deleted successfully!`); },
+          error: (err) => { this.isDeleting.set(false); this.toast.error(err, 'Error Deleting Room Category'); }
         });
       }
     );
@@ -1122,8 +1131,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       () => {
         this.isDeleting.set(true);
         this.mastersService.deleteRoom(id).subscribe({
-          next: () => this.isDeleting.set(false),
-          error: (err) => { this.isDeleting.set(false); alert('Error deleting room: ' + (err?.message || 'Unknown error')); }
+          next: () => { this.isDeleting.set(false); this.toast.success(`Room #${roomNumber} deleted successfully!`); },
+          error: (err) => { this.isDeleting.set(false); this.toast.error(err, 'Error Deleting Room'); }
         });
       }
     );
@@ -1137,8 +1146,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       () => {
         this.isDeleting.set(true);
         this.mastersService.deleteRatePlan(id).subscribe({
-          next: () => this.isDeleting.set(false),
-          error: (err) => { this.isDeleting.set(false); alert('Error deleting rate plan: ' + (err?.message || 'Unknown error')); }
+          next: () => { this.isDeleting.set(false); this.toast.success(`Rate Plan "${name}" deleted successfully!`); },
+          error: (err) => { this.isDeleting.set(false); this.toast.error(err, 'Error Deleting Rate Plan'); }
         });
       }
     );
@@ -1149,8 +1158,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
     const gst = this.currentGst();
     this.isSaving.set(true);
     this.mastersService.saveGst(gst).subscribe({
-      next: () => { this.isSaving.set(false); this.closeModal('gst-config'); },
-      error: (err) => { this.isSaving.set(false); alert('Error saving GST config: ' + (err?.message || 'Unknown error')); }
+      next: () => { this.isSaving.set(false); this.toast.success('GST Configuration saved successfully!'); this.closeModal('gst-config'); },
+      error: (err) => { this.isSaving.set(false); this.toast.error(err, 'Error Saving GST Configuration'); }
     });
   }
 
@@ -1167,8 +1176,8 @@ export class HotelMastersComponent implements OnInit, OnDestroy {
       () => {
         this.isDeleting.set(true);
         this.mastersService.deleteGst(id).subscribe({
-          next: () => this.isDeleting.set(false),
-          error: (err) => { this.isDeleting.set(false); alert('Error deleting GST config: ' + (err?.message || 'Unknown error')); }
+          next: () => { this.isDeleting.set(false); this.toast.success(`GST Configuration for "${serviceCategory}" deleted successfully!`); },
+          error: (err) => { this.isDeleting.set(false); this.toast.error(err, 'Error Deleting GST Configuration'); }
         });
       }
     );

@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
+import { ToastService } from '../shared/toast/toast.service';
 import {
   DepartmentOption,
   PermissionAction,
@@ -45,6 +46,7 @@ type UserValidationKey =
 })
 export class UserManagementComponent implements OnInit, OnDestroy {
   readonly userService = inject(UserManagementService);
+  private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private routerSub?: Subscription;
 
@@ -66,6 +68,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   currentRole = signal<Partial<UserRole>>({});
   currentDepartment = signal<Partial<DepartmentOption>>({});
   currentShift = signal<Partial<UserShift>>({});
+  userDeleteTarget = signal<SystemUser | null>(null);
   roleDeleteTarget = signal<UserRole | null>(null);
   departmentDeleteTarget = signal<DepartmentOption | null>(null);
   shiftDeleteTarget = signal<UserShift | null>(null);
@@ -426,9 +429,21 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   deleteUser(user: SystemUser): void {
-    if (confirm(`Delete user "${user.fullName}"?`)) {
-      this.userService.deleteUser(user.id);
-    }
+    this.userDeleteTarget.set(user);
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeUserDeleteModal(): void {
+    this.userDeleteTarget.set(null);
+    document.body.style.overflow = '';
+  }
+
+  confirmDeleteUser(): void {
+    const user = this.userDeleteTarget();
+    if (!user) return;
+    this.userService.deleteUser(user.id);
+    this.toast.success(`User account for "${user.fullName}" deleted successfully!`, 'User Deleted');
+    this.closeUserDeleteModal();
   }
 
   deleteRole(role: UserRole): void {
@@ -503,13 +518,13 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   resetPassword(user: SystemUser): void {
-    this.userService.resetPassword(user.id).subscribe(result => {
+    this.userService.resetPassword(user.id).subscribe((result: any) => {
       if (!result.success) {
-        alert(result.message);
+        this.toast.error(result.message, 'Password Reset Failed');
         return;
       }
-      const temporaryPassword = result.temporaryPassword ? `\nTemporary password: ${result.temporaryPassword}` : '';
-      alert(`${result.message}${temporaryPassword}`);
+      const temporaryPassword = result.temporaryPassword ? ` Temporary password: ${result.temporaryPassword}` : '';
+      this.toast.success(`${result.message}.${temporaryPassword}`, 'Password Reset', 7000);
     });
   }
 

@@ -1845,29 +1845,64 @@
   text-transform: uppercase;
 }
 
+.sop-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
 .sop-card-actions {
-  position: absolute;
-  top: 6px;
-  right: 6px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+  opacity: 1 !important;
+  flex-shrink: 0;
 }
 
 .sop-checkpoint-card:hover .sop-card-actions {
   opacity: 1;
 }
 
-.sop-card-actions .btn-icon {
-  width: 22px;
-  height: 22px;
-  background: white;
+.sop-card-actions .sop-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--surface-200);
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
 }
 
-.sop-card-actions .btn-icon .material-icons-round {
-  font-size: 13px;
+.sop-card-actions .sop-btn.edit {
+  color: #0288d1;
+  background: #e3f2fd;
+  border-color: #bbdefb;
+}
+
+.sop-card-actions .sop-btn.edit:hover {
+  background: #0288d1;
+  color: #ffffff;
+}
+
+.sop-card-actions .sop-btn.delete {
+  color: #d32f2f;
+  background: #ffebee;
+  border-color: #ffcdd2;
+}
+
+.sop-card-actions .sop-btn.delete:hover {
+  background: #d32f2f;
+  color: #ffffff;
+}
+
+.sop-card-actions .sop-btn .material-icons-round {
+  font-size: 15px !important;
 }
 
 .audit-floor-block {

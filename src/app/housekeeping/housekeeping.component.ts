@@ -12,6 +12,7 @@ import {
   RoomAuditItem, AuditResult, AuditSeverity, RoomSopCheck, SopStatus, isSameFloor
 } from './housekeeping.service';
 import { SystemUser, UserManagementService } from '../user-management/user-management.service';
+import { ToastService } from '../shared/toast/toast.service';
 
 type TabType = 'board' | 'tasks' | 'audit' | 'staff' | 'lost-found' | 'maintenance';
 
@@ -26,11 +27,18 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   readonly hk = inject(HousekeepingService);
   readonly router = inject(Router);
   readonly userService = inject(UserManagementService);
+  private readonly toast = inject(ToastService);
 
   private routerSub?: Subscription;
 
   // --- Tab ---
   activeTab = signal<TabType>('board');
+
+  // --- Delete Target Signals ---
+  taskDeleteTarget = signal<HKTask | null>(null);
+  lostFoundDeleteTarget = signal<LostFoundItem | null>(null);
+  maintDeleteTarget = signal<MaintenanceRequest | null>(null);
+  sopDeleteTarget = signal<SopCheckpoint | null>(null);
 
   constructor() {
     this.routerSub = this.router.events.pipe(
@@ -402,7 +410,27 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
 
   deleteSopCheckpoint(checkpoint: SopCheckpoint, event: Event) {
     event.stopPropagation();
-    alert(`Delete API is not available for SOP checkpoint ${checkpoint.id}.`);
+    this.sopDeleteTarget.set(checkpoint);
+  }
+
+  closeSopDeleteModal() {
+    this.sopDeleteTarget.set(null);
+  }
+
+  confirmDeleteSop() {
+    const checkpoint = this.sopDeleteTarget();
+    if (!checkpoint) return;
+    this.hk.deleteSopCheckpoint(checkpoint.id).subscribe({
+      next: () => {
+        this.toast.success(`SOP Checkpoint "${checkpoint.id}" deleted successfully!`, 'Checkpoint Deleted');
+        this.fetchAuditDataForCurrentSelection(true);
+        this.closeSopDeleteModal();
+      },
+      error: () => {
+        this.toast.error(`Failed to delete SOP Checkpoint "${checkpoint.id}"`, 'Error');
+        this.closeSopDeleteModal();
+      }
+    });
   }
 
   private nextSopId(frequency: AuditFrequency): string {
@@ -1012,9 +1040,21 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
     this.hk.updateTaskStatus(task.id, status);
   }
 
-  deleteTask(id: number, event: Event) {
+  deleteTask(task: HKTask, event: Event) {
     event.stopPropagation();
-    if (confirm('Delete this task?')) this.hk.deleteTask(id);
+    this.taskDeleteTarget.set(task);
+  }
+
+  closeTaskDeleteModal() {
+    this.taskDeleteTarget.set(null);
+  }
+
+  confirmDeleteTask() {
+    const task = this.taskDeleteTarget();
+    if (!task) return;
+    this.hk.deleteTask(task.id);
+    this.toast.success(`Task "${this.taskTypeLabel(task.taskType)}" for Room #${task.roomNumber} deleted!`, 'Task Deleted');
+    this.closeTaskDeleteModal();
   }
 
   // --- Lost & Found Modal ---
@@ -1109,9 +1149,21 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
     this.hk.updateLFStatus(id, status);
   }
 
-  deleteLF(id: number, event: Event) {
+  deleteLF(item: LostFoundItem, event: Event) {
     event.stopPropagation();
-    if (confirm('Remove this Lost & Found record?')) this.hk.deleteLostFound(id);
+    this.lostFoundDeleteTarget.set(item);
+  }
+
+  closeLFDeleteModal() {
+    this.lostFoundDeleteTarget.set(null);
+  }
+
+  confirmDeleteLF() {
+    const item = this.lostFoundDeleteTarget();
+    if (!item) return;
+    this.hk.deleteLostFound(item.id);
+    this.toast.success(`Lost & Found record "${item.description}" deleted!`, 'Record Deleted');
+    this.closeLFDeleteModal();
   }
 
   // --- Maintenance Modal ---
@@ -1216,9 +1268,58 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
     this.hk.updateMaintStatus(req.id, nextStatus);
   }
 
-  deleteMaint(id: number, event: Event) {
+  deleteMaint(req: MaintenanceRequest, event: Event) {
     event.stopPropagation();
-    if (confirm('Delete this maintenance request?')) this.hk.deleteMaintenance(id);
+    this.maintDeleteTarget.set(req);
+  }
+
+  closeMaintDeleteModal() {
+    this.maintDeleteTarget.set(null);
+  }
+
+  confirmDeleteMaint() {
+    const req = this.maintDeleteTarget();
+    if (!req) return;
+    this.hk.deleteMaintenance(req.id);
+    this.toast.success(`Maintenance request for Room #${req.roomNumber} deleted!`, 'Issue Deleted');
+    this.closeMaintDeleteModal();
+  }
+
+  // --- HK Status Common Master Dropdown Options ---
+  readonly hkStatusDropdownOptions = computed(() => {
+    const masterOptions = this.hk.hkStatusOptions();
+    if (masterOptions && masterOptions.length > 0) {
+      return masterOptions.map(opt => ({
+        statusKey: this.mapCodeOrValueToHKStatus(opt.code, opt.value),
+        label: opt.value || opt.code || ''
+      }));
+    }
+    return [
+      { statusKey: 'VACANT_CLEAN', label: 'Vacant Clean' },
+      { statusKey: 'VACANT_DIRTY', label: 'Vacant Dirty' },
+      { statusKey: 'OCCUPIED_CLEAN', label: 'Occupied Clean' },
+      { statusKey: 'OCCUPIED_DIRTY', label: 'Occupied Dirty' },
+      { statusKey: 'INSPECTED', label: 'Inspected' },
+      { statusKey: 'OUT_OF_ORDER', label: 'Out Of Order' },
+      { statusKey: 'DO_NOT_DISTURB', label: 'Do Not Disturb' },
+      { statusKey: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
+      { statusKey: 'UNCLEANED', label: 'Uncleaned' }
+    ];
+  });
+
+  private mapCodeOrValueToHKStatus(code?: string, value?: string): HKStatus {
+    const c = String(code || '').trim().toUpperCase();
+    const v = String(value || '').trim().toUpperCase().replace(/\s+/g, '_');
+    if (c === 'VC' || v === 'VACANT_CLEAN') return 'VACANT_CLEAN';
+    if (c === 'VD' || v === 'VACANT_DIRTY') return 'VACANT_DIRTY';
+    if (c === 'OC' || v === 'OCCUPIED_CLEAN') return 'OCCUPIED_CLEAN';
+    if (c === 'OD' || v === 'OCCUPIED_DIRTY') return 'OCCUPIED_DIRTY';
+    if (c === 'INS' || v === 'INSPECTED') return 'INSPECTED';
+    if (c === 'OOO' || v === 'OUT_OF_ORDER') return 'OUT_OF_ORDER';
+    if (c === 'DND' || v === 'DO_NOT_DISTURB') return 'DO_NOT_DISTURB';
+    if (c === 'UM' || v === 'UNDER_MAINTENANCE') return 'UNDER_MAINTENANCE';
+    if (c === 'UC' || v === 'UNCLEANED') return 'UNCLEANED';
+    return (code || value || 'VACANT_CLEAN') as HKStatus;
   }
 
   // --- Misc ---

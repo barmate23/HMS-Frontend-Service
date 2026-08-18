@@ -8,10 +8,6 @@
       <span class="material-icons-round" style="color:#2563EB;">request_quote</span>
       Invoices
     </button>
-    <button type="button" [class.active]="activeTab() === 'refunds'" (click)="setTab('refunds')">
-      <span class="material-icons-round" style="color:#EF4444;">currency_exchange</span>
-      Refunds
-    </button>
     <button type="button" [class.active]="activeTab() === 'inward'" (click)="setTab('inward')">
       <span class="material-icons-round" style="color:#06B6D4;">move_to_inbox</span>
       Inward GRN
@@ -282,21 +278,7 @@
     </div>
   </section>
 
-  <section class="tab-table" *ngIf="activeTab() === 'refunds'">
-    <header>
-      <h2>Refund Requests</h2>
-      <div class="refund-action">
-        <input [ngModel]="refundReason()" (ngModelChange)="refundReason.set($event)" placeholder="Refund reason">
-        <button class="primary-btn" (click)="requestRefund()"><span class="material-icons-round">undo</span> Request Refund</button>
-      </div>
-    </header>
-    <div class="data-table">
-      <div class="table-head"><span>Folio</span><span>Guest</span><span>Reason</span><span>Mode</span><span>Status</span><span>Amount</span></div>
-      <div class="table-row" *ngFor="let refund of refunds()">
-        <span>{{ refund.folioNo }}</span><span>{{ refund.guest }}</span><span>{{ refund.reason }}</span><span>{{ refund.mode }}</span><em>{{ refund.status }}</em><strong>{{ formatINR(refund.amount) }}</strong>
-      </div>
-    </div>
-  </section>
+
 
   <div class="invoice-preview-overlay" *ngIf="selectedInvoice() as invoice" (click)="closeInvoicePreview()">
     <section class="invoice-preview" (click)="$event.stopPropagation()">

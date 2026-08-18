@@ -16,7 +16,7 @@ import {
 } from '../purchase/purchase.service';
 import { BillingService, FolioLedgerDTO, InvoiceDTO, InvoiceDocumentDetailsDTO, InvoiceLineItemDTO } from './billing.service';
 
-type BillingTab = 'folios' | 'invoices' | 'refunds' | 'inward' | 'bills';
+type BillingTab = 'folios' | 'invoices' | 'inward' | 'bills';
 type FolioStatus = 'Open' | 'Due Out' | 'Settled' | 'Hold';
 type ChargeType = 'Room' | 'POS' | 'Laundry' | 'Discount' | 'Service Charge' | 'Adjustment' | 'Payment' | 'Reservation';
 type PaymentMode = 'Cash' | 'Card' | 'UPI' | 'Bank Transfer' | 'Company Credit';
@@ -862,7 +862,6 @@ export class BillingComponent implements OnInit, OnDestroy {
 
   private updateTabFromUrl(url: string): void {
     if (url.includes('/billing/invoices')) this.activeTab.set('invoices');
-    else if (url.includes('/billing/refunds')) this.activeTab.set('refunds');
     else if (url.includes('/billing/inward')) this.activeTab.set('inward');
     else if (url.includes('/billing/bills')) this.activeTab.set('bills');
     else this.activeTab.set('folios');

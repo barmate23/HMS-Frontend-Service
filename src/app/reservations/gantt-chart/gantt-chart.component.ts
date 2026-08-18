@@ -49,9 +49,11 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
   summaryCheckedIn = 0;
 
   private syncingScroll = false;
+  private syncingVerticalScroll = false;
 
   @ViewChild('timelineHeaderEl') timelineHeaderEl?: ElementRef<HTMLDivElement>;
   @ViewChild('timelineBodyEl') timelineBodyEl?: ElementRef<HTMLDivElement>;
+  @ViewChild('leftBodyEl') leftBodyEl?: ElementRef<HTMLDivElement>;
 
   private readonly router = inject(Router);
   private routerSub?: Subscription;
@@ -62,17 +64,16 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    this.masters.loadAll();
     const today = new Date();
     const end = new Date(today);
     end.setDate(today.getDate() + 7);
     this.startDate = this.toInputDate(today);
     this.endDate = this.toInputDate(end);
-    this.ensureFloorSelected();
     this.loadGanttData();
     setTimeout(() => {
-      this.ensureFloorSelected();
       this.rebuildLanes();
-    }, 1200);
+    }, 800);
 
     this.routerSub = this.router.events.pipe(
       filter(event => event instanceof NavigationEnd),
@@ -185,8 +186,25 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
     this.syncingScroll = false;
   }
 
-  onBodyScroll() {
+  onLeftBodyScroll() {
+    if (this.syncingVerticalScroll) return;
+    this.syncingVerticalScroll = true;
+    const top = this.leftBodyEl?.nativeElement.scrollTop ?? 0;
+    if (this.timelineBodyEl) {
+      this.timelineBodyEl.nativeElement.scrollTop = top;
+    }
+    this.syncingVerticalScroll = false;
+  }
+
+  onTimelineBodyScroll() {
     this.syncTimelineScrollFromBody();
+    if (this.syncingVerticalScroll) return;
+    this.syncingVerticalScroll = true;
+    const top = this.timelineBodyEl?.nativeElement.scrollTop ?? 0;
+    if (this.leftBodyEl) {
+      this.leftBodyEl.nativeElement.scrollTop = top;
+    }
+    this.syncingVerticalScroll = false;
   }
 
   labelForDate(date: Date): string {
@@ -275,10 +293,9 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private rebuildLanes() {
-    this.ensureFloorSelected();
     const rooms = this.masters.rooms()
       .filter(r => r.isActive)
-      .filter(r => !this.selectedFloorId || r.floorId === this.selectedFloorId)
+      .filter(r => !this.selectedFloorId || Number(r.floorId) === Number(this.selectedFloorId))
       .sort((a, b) => this.roomSort(a, b));
 
     const roomTypes = this.masters.roomTypesMap();

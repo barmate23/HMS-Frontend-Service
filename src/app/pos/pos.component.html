@@ -304,7 +304,7 @@
               <td><span class="soft-pill">{{ order.kotStatusName || 'Not Sent' }}</span></td>
               <td>{{ order.server }}</td>
               <td><span class="status-badge" [class]="order.status.toLowerCase()">{{ order.status }}</span></td>
-              <td><div class="action-buttons"><button class="btn-icon check" title="Send KOT" (click)="updateOrderStatus(order, 'KOT_SENT')"><span class="material-icons-round">local_fire_department</span></button><button class="btn-icon check" title="Hold Order" (click)="updateOrderStatus(order, 'HELD')"><span class="material-icons-round">pause_circle</span></button><button class="btn-icon edit" title="Edit Order" (click)="openEdit('order', order)"><span class="material-icons-round">edit</span></button><button class="btn-icon delete" title="Cancel Order" (click)="updateOrderStatus(order, 'CANCELLED')"><span class="material-icons-round">cancel</span></button></div></td>
+              <td><div class="action-buttons"><button class="btn-icon check" [disabled]="isOrderBilled(order)" [title]="isOrderBilled(order) ? 'Billed order cannot be modified' : 'Send KOT'" (click)="updateOrderStatus(order, 'KOT_SENT')"><span class="material-icons-round">local_fire_department</span></button><button class="btn-icon check" [disabled]="isOrderBilled(order)" [title]="isOrderBilled(order) ? 'Billed order cannot be modified' : 'Hold Order'" (click)="updateOrderStatus(order, 'HELD')"><span class="material-icons-round">pause_circle</span></button><button class="btn-icon edit" [disabled]="isOrderBilled(order)" [title]="isOrderBilled(order) ? 'Billed order cannot be edited' : 'Edit Order'" (click)="openEdit('order', order)"><span class="material-icons-round">edit</span></button><button class="btn-icon delete" [disabled]="isOrderBilled(order)" [title]="isOrderBilled(order) ? 'Billed order cannot be cancelled' : 'Cancel Order'" (click)="updateOrderStatus(order, 'CANCELLED')"><span class="material-icons-round">cancel</span></button></div></td>
             </tr>
           </tbody>
         </table>
@@ -339,7 +339,7 @@
       <div class="card-header"><h2 class="card-title">Billing, Payments & Room Posting</h2><span class="total-badge">{{ filteredBills().length }} Bills</span></div>
       <div class="table-container">
         <table class="premium-table hk-grid-table">
-          <thead><tr><th>BILL</th><th>ORDER</th><th>GUEST / ROOM</th><th>AMOUNT</th><th>DISCOUNT</th><th>PAYMENT</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+          <thead><tr><th>BILL</th><th>ORDER</th><th>GUEST / ROOM</th><th>AMOUNT</th><th>DISCOUNT</th><th>PAYMENT</th><th>ACTIONS</th></tr></thead>
           <tbody>
             <tr *ngFor="let bill of filteredBills()">
               <td><strong>{{ bill.billNo }}</strong></td>
@@ -349,7 +349,6 @@
               <td>₹{{ billTotal(bill) | number:'1.0-0' }}<span class="subline">Paid ₹{{ bill.paid | number:'1.0-0' }}</span></td>
               <td>{{ billBreakdown(bill).discountPercent }}%<span class="subline" *ngIf="billBreakdown(bill).discountAmount">₹{{ billBreakdown(bill).discountAmount | number:'1.0-0' }}</span><span class="subline" *ngIf="bill.compReason">Comp: {{ bill.compReason }}</span></td>
               <td>{{ bill.paymentModes.join(', ') }}</td>
-              <td><span class="status-badge" [class]="bill.status.toLowerCase()">{{ bill.status }}</span></td>
               <td><div class="action-buttons"><button class="btn-icon check" [class.frozen]="!bill.isRoomOrder || bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')" [disabled]="!bill.isRoomOrder || bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')" [title]="!bill.isRoomOrder ? 'Room posting disabled for non-room orders' : ((bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')) ? 'Already posted to room folio' : 'Post to Folio')" (click)="pos.postBillToRoom(bill.id)"><span class="material-icons-round">bed</span></button><button class="btn-icon view" (click)="openViewBill(bill)" title="View Bill Details"><span class="material-icons-round">visibility</span></button><button class="btn-icon delete" (click)="voidBill(bill)" title="Void Bill"><span class="material-icons-round">block</span></button></div></td>
 
 
@@ -648,6 +647,13 @@
       </ng-template>
 
       <div class="ci-form-grid" *ngIf="diningAction() === 'START' || diningAction() === 'BOOK'">
+        <div class="ci-input-group">
+          <label>Selected Table *</label>
+          <select [ngModel]="selectedTable()?.id" (ngModelChange)="onSelectTableIdInModal($event)">
+            <option *ngFor="let t of outletTables()" [value]="t.id">{{ t.number }} ({{ t.section }} - {{ t.status }})</option>
+          </select>
+        </div>
+        <div class="ci-input-group"><label>Server / Attendant</label><select [(ngModel)]="diningForm().server"><option *ngFor="let user of pos.users()" [value]="user">{{ user }}</option></select></div>
         <div class="ci-input-group"><label>Covers</label><input type="number" min="1" [(ngModel)]="diningForm().covers"></div>
         <div class="ci-input-group"><label>Guest Name</label><input [(ngModel)]="diningForm().guestName" placeholder="Guest name"></div>
       </div>
@@ -656,6 +662,17 @@
         <div class="ci-input-group"><label>Booking Time</label><input [(ngModel)]="diningForm().bookingTime" placeholder="Today, 08:00 PM"></div>
       </div>
 
+
+      <div class="ci-form-grid" *ngIf="diningAction() === 'ROOM'">
+        <div class="ci-input-group">
+          <label>Order Type</label>
+          <select [ngModel]="diningForm().orderType" (ngModelChange)="updateDiningOrderType($event)">
+            <option value="TABLE">Table</option>
+            <option value="TAKEAWAY">Takeaway</option>
+            <option value="ROOM">Room</option>
+          </select>
+        </div>
+      </div>
 
       <div class="ci-form-grid" *ngIf="diningAction() === 'ROOM'">
         <div class="ci-input-group">
@@ -751,6 +768,10 @@
     </div>
 
     <div class="ci-body" (scroll)="closeRowDropdown()" [ngSwitch]="modalKind()">
+      <div class="modal-alert error" *ngIf="modalErrorMessage()" style="margin-bottom: 16px; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; color: #991b1b; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;">
+        <span class="material-icons-round" style="color: #dc2626; font-size: 18px;">error</span>
+        <span>{{ modalErrorMessage() }}</span>
+      </div>
       <ng-container *ngSwitchCase="'outlet'">
         <div class="ci-form-grid"><div class="ci-input-group"><label>Outlet Name *</label><input [(ngModel)]="currentOutlet().name"></div><div class="ci-input-group"><label>Outlet Type</label><select [(ngModel)]="currentOutlet().type"><option *ngFor="let type of pos.outletTypes()" [value]="type">{{ type }}</option></select></div></div>
         <div class="ci-form-grid mt-3"><div class="ci-input-group"><label>Location</label><input [(ngModel)]="currentOutlet().location"></div><div class="ci-input-group"><label>Timing / Shift Schedule</label><select [(ngModel)]="currentOutlet().timing"><option *ngFor="let schedule of pos.shiftSchedules()" [value]="schedule">{{ schedule }}</option></select></div></div>
@@ -893,19 +914,6 @@
                   <option value="ROOM">Room</option>
                 </select>
               </div>
-              <div class="ci-input-group">
-                <label>Bill Status</label>
-                <select [ngModel]="currentBillStatus()" disabled style="opacity:0.7;cursor:not-allowed;">
-                  <option *ngFor="let status of availableBillStatuses()" [value]="status">{{ status }}</option>
-                  <option *ngIf="currentBill().status && !availableBillStatuses().includes(currentBillStatus())" [value]="currentBill().status">
-                    {{ currentBill().status }}
-                  </option>
-                  <option *ngIf="!availableBillStatuses().includes('Paid')" value="Paid">Paid</option>
-                </select>
-              </div>
-
-
-
             </div>
 
             <div class="ci-form-grid mt-3" *ngIf="currentBill().orderType === 'TABLE'">
@@ -1341,7 +1349,14 @@
 
     </div>
 
-    <div class="ci-footer"><button class="ci-btn-cancel" (click)="closeModal()">Cancel</button><button class="ci-btn-confirm" (click)="saveModal()"><span class="material-icons-round">save</span>{{ modalMode() === 'create' ? 'Create' : 'Save Changes' }}</button></div>
+    <div class="ci-footer">
+      <button class="ci-btn-cancel" [disabled]="isSubmittingModal()" (click)="closeModal()">Cancel</button>
+      <button class="ci-btn-confirm" [disabled]="isSubmittingModal()" (click)="saveModal()">
+        <span class="material-icons-round" *ngIf="!isSubmittingModal()">save</span>
+        <span class="material-icons-round spinning" *ngIf="isSubmittingModal()">sync</span>
+        {{ isSubmittingModal() ? 'Saving...' : (modalMode() === 'create' ? 'Create' : 'Save Changes') }}
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1497,69 +1512,110 @@
         <span class="material-icons-round spin">sync</span> Loading bill details...
       </div>
 
-      <!-- Quick Details Grid -->
-      <div class="vb-info-grid">
-        <div class="vb-info-card">
-          <span class="vb-label">Guest Name</span>
-          <strong>{{ bill.guestName || 'Walk-in Guest' }}</strong>
-        </div>
-        <div class="vb-info-card">
-          <span class="vb-label">Order Reference</span>
-          <strong>{{ bill.orderRef || ('ORD-' + bill.orderId) }}</strong>
-        </div>
-        <div class="vb-info-card">
-          <span class="vb-label">Order Source / Table</span>
-          <strong>{{ bill.orderType === 'ROOM' ? ('Room ' + bill.roomNo) : bill.orderType === 'TAKEAWAY' ? 'Takeaway' : ('Table ' + (bill.tableNo || '-')) }}</strong>
-        </div>
-        <div class="vb-info-card">
-          <span class="vb-label">Payment Method</span>
-          <strong>{{ bill.paymentModes.join(', ') || 'Cash' }}</strong>
-        </div>
-        <div class="vb-info-card">
-          <span class="vb-label">Room Posting Status</span>
-          <strong [class.text-success]="bill.postedToFolio" [class.text-warning]="!bill.postedToFolio">
-            {{ bill.postedToFolio ? 'Posted to Room Folio' : 'Not Posted' }}
-          </strong>
-        </div>
-      </div>
+      <div class="vb-split-layout">
+        <!-- LEFT COLUMN: Order Details & Financial Summary -->
+        <div class="vb-left-col">
+          <!-- Quick Details Grid -->
+          <div class="vb-info-grid">
+            <div class="vb-info-card">
+              <span class="vb-label">Guest Name</span>
+              <strong>{{ bill.guestName || 'Walk-in Guest' }}</strong>
+            </div>
+            <div class="vb-info-card">
+              <span class="vb-label">Order Reference</span>
+              <strong>{{ bill.orderRef || ('ORD-' + bill.orderId) }}</strong>
+            </div>
+            <div class="vb-info-card">
+              <span class="vb-label">Order Source / Table</span>
+              <strong>{{ bill.orderType === 'ROOM' ? ('Room ' + bill.roomNo) : bill.orderType === 'TAKEAWAY' ? 'Takeaway' : ('Table ' + (bill.tableNo || '-')) }}</strong>
+            </div>
+            <div class="vb-info-card">
+              <span class="vb-label">Payment Method</span>
+              <strong>{{ bill.paymentModes.join(', ') || 'Cash' }}</strong>
+            </div>
+            <div class="vb-info-card full-width">
+              <span class="vb-label">Room Posting Status</span>
+              <strong [class.text-success]="bill.postedToFolio" [class.text-warning]="!bill.postedToFolio">
+                {{ bill.postedToFolio ? 'Posted to Room Folio' : 'Not Posted' }}
+              </strong>
+            </div>
+          </div>
 
-      <!-- Financial Summary Breakdown Card -->
-      <div class="vb-financial-card">
-        <div class="vb-financial-title">
-          <span class="material-icons-round">account_balance_wallet</span>
-          <span>Financial Summary</span>
-        </div>
-        <div class="vb-fin-rows">
-          <div class="vb-fin-row">
-            <span>Gross Amount (Subtotal)</span>
-            <strong>₹{{ bill.subtotal | number:'1.2-2' }}</strong>
+          <!-- Financial Summary Breakdown Card -->
+          <div class="vb-financial-card">
+            <div class="vb-financial-title">
+              <span class="material-icons-round">account_balance_wallet</span>
+              <span>Financial Summary</span>
+            </div>
+            <div class="vb-fin-rows">
+              <div class="vb-fin-row">
+                <span>Gross Amount (Subtotal)</span>
+                <strong>₹{{ bill.subtotal | number:'1.2-2' }}</strong>
+              </div>
+              <div class="vb-fin-row" *ngIf="bill.discount">
+                <span>Discount</span>
+                <strong class="text-danger">- ₹{{ bill.discount | number:'1.2-2' }}</strong>
+              </div>
+              <div class="vb-fin-row">
+                <span>GST Tax ({{ bill.tax }}%)</span>
+                <strong>₹{{ (bill.taxAmount || 0) | number:'1.2-2' }}</strong>
+              </div>
+              <div class="vb-fin-row total-row">
+                <span>Total Net Amount</span>
+                <strong class="total-val">₹{{ billBreakdown(bill).total | number:'1.2-2' }}</strong>
+              </div>
+              <div class="vb-fin-row">
+                <span>Paid Amount</span>
+                <strong class="text-success">₹{{ bill.paid | number:'1.2-2' }}</strong>
+              </div>
+              <div class="vb-fin-row" *ngIf="billBreakdown(bill).due > 0">
+                <span>Balance Due</span>
+                <strong class="text-warning">₹{{ billBreakdown(bill).due | number:'1.2-2' }}</strong>
+              </div>
+            </div>
           </div>
-          <div class="vb-fin-row" *ngIf="bill.discount">
-            <span>Discount</span>
-            <strong class="text-danger">- ₹{{ bill.discount | number:'1.2-2' }}</strong>
-          </div>
-          <div class="vb-fin-row">
-            <span>GST Tax ({{ bill.tax }}%)</span>
-            <strong>₹{{ (bill.taxAmount || 0) | number:'1.2-2' }}</strong>
-          </div>
-          <div class="vb-fin-row total-row">
-            <span>Total Net Amount</span>
-            <strong class="total-val">₹{{ billBreakdown(bill).total | number:'1.2-2' }}</strong>
-          </div>
-          <div class="vb-fin-row">
-            <span>Paid Amount</span>
-            <strong class="text-success">₹{{ bill.paid | number:'1.2-2' }}</strong>
-          </div>
-          <div class="vb-fin-row" *ngIf="billBreakdown(bill).due > 0">
-            <span>Balance Due</span>
-            <strong class="text-warning">₹{{ billBreakdown(bill).due | number:'1.2-2' }}</strong>
-          </div>
-        </div>
-      </div>
 
-      <div class="vb-notes" *ngIf="bill.notes">
-        <span class="vb-label">Notes / Special Instructions</span>
-        <p>{{ bill.notes }}</p>
+          <div class="vb-notes" *ngIf="bill.notes">
+            <span class="vb-label">Notes / Special Instructions</span>
+            <p>{{ bill.notes }}</p>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Item Details Table -->
+        <div class="vb-right-col">
+          <div class="vb-financial-card full-height">
+            <div class="vb-financial-title">
+              <span class="material-icons-round">restaurant_menu</span>
+              <span>Billed Items ({{ bill.items?.length || 0 }})</span>
+            </div>
+            <div class="vb-items-table-wrapper" *ngIf="bill.items && bill.items.length; else noBillItemsTpl">
+              <table class="vb-items-table">
+                <thead>
+                  <tr>
+                    <th style="text-align: left;">ITEM NAME</th>
+                    <th style="text-align: center;">QTY</th>
+                    <th style="text-align: right;">PRICE</th>
+                    <th style="text-align: right;">SUBTOTAL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let it of bill.items">
+                    <td style="text-align: left;"><strong>{{ it.itemName }}</strong></td>
+                    <td style="text-align: center;"><span class="qty-badge">{{ it.quantity }}</span></td>
+                    <td style="text-align: right;">₹{{ it.price | number:'1.2-2' }}</td>
+                    <td style="text-align: right; font-weight: 700; color: #0f172a;">₹{{ it.subtotal | number:'1.2-2' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <ng-template #noBillItemsTpl>
+              <div class="vb-no-items">
+                <span *ngIf="isLoadingViewBill(); else emptyStateText">Fetching order items...</span>
+                <ng-template #emptyStateText>No item line details attached to this bill.</ng-template>
+              </div>
+            </ng-template>
+          </div>
+        </div>
       </div>
     </div>
 

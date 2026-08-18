@@ -6,6 +6,7 @@ import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 
 import { HotelMastersService, Room } from '../masters/hotel-masters.service';
+import { ToastService, formatApiErrorMessage } from '../shared/toast/toast.service';
 
 import {
   ActiveReservationDetails,
@@ -76,6 +77,7 @@ export class PosComponent implements OnInit, OnDestroy {
   readonly masters = inject(HotelMastersService);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly toast = inject(ToastService);
   private routerSub?: Subscription;
 
 
@@ -86,6 +88,8 @@ export class PosComponent implements OnInit, OnDestroy {
   modalKind = signal<ModalKind>('outlet');
   modalMode = signal<ModalMode>('create');
   isModalOpen = signal(false);
+  modalErrorMessage = signal('');
+  isSubmittingModal = signal(false);
 
   currentOutlet = signal<Partial<PosOutlet>>({});
   currentMenuItem = signal<Partial<PosMenuItem>>({});
@@ -105,7 +109,7 @@ export class PosComponent implements OnInit, OnDestroy {
   readonly orderRoomTotalPages = signal<number>(1);
   readonly isLoadingOrderRooms = signal<boolean>(false);
   readonly hasMoreOrderRooms = signal<boolean>(false);
-  diningForm = signal<{ server: string; covers: number; secondaryTableId: number | null; floorId: number | null; roomId: number | null; roomNo: string; guestName: string; bookingTime: string; notes: string }>({
+  diningForm = signal<{ server: string; covers: number; secondaryTableId: number | null; floorId: number | null; roomId: number | null; roomNo: string; guestName: string; bookingTime: string; notes: string; orderType: string }>({
     server: '',
     covers: 2,
     secondaryTableId: null,
@@ -114,7 +118,8 @@ export class PosComponent implements OnInit, OnDestroy {
     roomNo: '',
     guestName: '',
     bookingTime: '',
-    notes: ''
+    notes: '',
+    orderType: 'ROOM'
   });
   startOrderLines = signal<PosOrderLine[]>([]);
   billingSetupSection = signal<BillingSetupSection>('identity');
@@ -794,7 +799,7 @@ export class PosComponent implements OnInit, OnDestroy {
       this.pos.loadMenuItems(outletId);
       this.pos.loadTables(outletId);
       const table = this.pos.tables().find(item => item.outletId === outletId);
-      this.currentOrder.set({ outletId, type: 'TABLE', tableNo: table?.number || '', roomNo: '', guestName: '', server: 'Unassigned', status: this.pos.orderStatuses()[0] || 'OPEN', notes: '', lines: [] });
+      this.currentOrder.set({ outletId, type: 'TABLE', orderType: 'TABLE', tableNo: table?.number || '', roomNo: '', guestName: '', server: 'Unassigned', status: this.pos.orderStatuses()[0] || 'OPEN', notes: '', lines: [] });
     }
     if (kind === 'bill') {
       const outletId = String(this.outletFilter()) !== 'ALL' ? Number(this.outletFilter()) : this.defaultOutletId();
@@ -813,12 +818,22 @@ export class PosComponent implements OnInit, OnDestroy {
     document.body.style.overflow = 'hidden';
   }
 
+  isOrderBilled(order: PosOrder | any): boolean {
+    if (!order || !order.status) return false;
+    const s = String(order.status).toUpperCase().trim();
+    return s === 'BILLED' || s === 'PAID' || s === 'COMPLETED' || s === 'CLOSED' || s.includes('BILLED') || s.includes('PAID');
+  }
+
   openEdit(kind: ModalKind, item: any): void {
     this.modalKind.set(kind);
     this.modalMode.set('edit');
     if (kind === 'outlet') this.currentOutlet.set({ ...item });
     if (kind === 'menu') this.currentMenuItem.set({ ...item, variants: [...item.variants], modifiers: [...item.modifiers] });
     if (kind === 'order') {
+      if (this.isOrderBilled(item)) {
+        this.toast.warning(`Order ${item.orderNo || ''} is BILLED and cannot be edited.`, 'Order Finalized');
+        return;
+      }
       this.pos.loadMenuItems(item.outletId);
       this.pos.loadTables(item.outletId);
       this.currentOrder.set({ ...item, lines: item.lines.map((line: PosOrderLine) => ({ ...line })) });
@@ -845,6 +860,8 @@ export class PosComponent implements OnInit, OnDestroy {
       this.loadOpenOrdersForBill(outletId, Number(item.orderId));
     }
     if (kind === 'table') this.currentTable.set({ ...item });
+    this.modalErrorMessage.set('');
+    this.isSubmittingModal.set(false);
     this.isModalOpen.set(true);
     document.body.style.overflow = 'hidden';
   }
@@ -869,9 +886,45 @@ export class PosComponent implements OnInit, OnDestroy {
 
   saveModal(): void {
     const kind = this.modalKind();
+    this.modalErrorMessage.set('');
+
+    if (kind === 'table') {
+      const table = this.currentTable() as PosTable;
+      if (!table.number || !table.number.trim()) {
+        const msg = 'Table Number is required.';
+        this.modalErrorMessage.set(msg);
+        this.toast.error(msg, 'Validation Error');
+        return;
+      }
+
+      this.isSubmittingModal.set(true);
+      this.pos.saveTable(table).subscribe({
+        next: (savedTable) => {
+          this.toast.success(`Table "${savedTable.number}" saved successfully!`, 'Table Saved');
+          this.isSubmittingModal.set(false);
+          this.closeModal();
+        },
+        error: err => {
+          const errMsg = err.message || formatApiErrorMessage(err, 'Failed to save dining table.');
+          this.modalErrorMessage.set(errMsg);
+          this.toast.error(errMsg, 'Table Creation Failed');
+          this.isSubmittingModal.set(false);
+        }
+      });
+      return;
+    }
+
     if (kind === 'outlet') this.pos.saveOutlet(this.currentOutlet());
     if (kind === 'menu') this.pos.saveMenuItem(this.currentMenuItem());
-    if (kind === 'order') this.pos.saveOrder(this.currentOrder());
+    if (kind === 'order') {
+      const order = this.currentOrder();
+      if (this.isOrderBilled(order)) {
+        this.toast.warning('Billed orders cannot be modified.', 'Order Finalized');
+        return;
+      }
+      this.pos.saveOrder(order);
+      this.closeModal();
+    }
     if (kind === 'bill') {
       const order = this.billOrder(this.currentBill());
       const draft = this.billDraftForOrder(order, this.currentBill());
@@ -886,7 +939,6 @@ export class PosComponent implements OnInit, OnDestroy {
         paid: Number(draft.paid || breakdown.total)
       });
     }
-    if (kind === 'table') this.pos.saveTable(this.currentTable() as PosTable);
     if (kind === 'ingredient') {
       const ing = this.currentIngredient();
       const conv = Math.max(1, Number(ing.conversionFactor || 1));
@@ -900,11 +952,7 @@ export class PosComponent implements OnInit, OnDestroy {
       const ingredientIds = rows.map(r => r.ingredientId);
       const uniqueIds = new Set(ingredientIds);
       if (uniqueIds.size !== ingredientIds.length) {
-        this.snackBar.open('Duplicate ingredients detected! Each ingredient can only be added once per recipe.', 'Close', {
-          duration: 5000,
-          horizontalPosition: 'end',
-          verticalPosition: 'top'
-        });
+        this.toast.error('Duplicate ingredients detected! Each ingredient can only be added once per recipe.', 'Validation Error');
         return;
       }
 
@@ -1412,6 +1460,10 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   updateOrderStatus(order: PosOrder, status: OrderStatus): void {
+    if (this.isOrderBilled(order)) {
+      this.toast.warning(`Order ${order.orderNo || ''} is BILLED and cannot be modified.`, 'Order Finalized');
+      return;
+    }
     this.pos.updateOrderStatus(order.id, status);
   }
 
@@ -1466,7 +1518,7 @@ export class PosComponent implements OnInit, OnDestroy {
     if (value === 'TABLE') {
       const outletId = Number(this.currentOrder().outletId || this.defaultOutletId());
       const firstTable = this.pos.tables().find(table => table.outletId === outletId);
-      this.currentOrder.update(order => ({ ...order, type: value, tableNo: firstTable?.number || '', roomNo: '', roomId: null, floorId: null, guestName: '' }));
+      this.currentOrder.update(order => ({ ...order, type: value, orderType: value, tableNo: firstTable?.number || '', roomNo: '', roomId: null, floorId: null, guestName: '' }));
       return;
     }
 
@@ -1475,6 +1527,7 @@ export class PosComponent implements OnInit, OnDestroy {
       this.currentOrder.update(order => ({
         ...order,
         type: value,
+        orderType: value,
         outletId: this.roomServiceOutletId(),
         tableNo: '',
         floorId: firstFloor?.id || null,
@@ -1486,7 +1539,7 @@ export class PosComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.currentOrder.update(order => ({ ...order, type: value, tableNo: '', roomNo: '', roomId: null, floorId: null, guestName: '' }));
+    this.currentOrder.update(order => ({ ...order, type: value, orderType: value, tableNo: '', roomNo: '', roomId: null, floorId: null, guestName: '' }));
   }
 
   updateOrderTable(value: string): void {
@@ -1602,7 +1655,8 @@ export class PosComponent implements OnInit, OnDestroy {
       roomNo: '',
       guestName: table.guestName || '',
       bookingTime: table.bookingTime || '',
-      notes: ''
+      notes: '',
+      orderType: 'ROOM'
     });
 
     if (table.status === 'OCCUPIED' || table.status === 'BILLED' || table.activeOrderNo) {
@@ -1635,10 +1689,21 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
 
+  onSelectTableIdInModal(tableId: number | string): void {
+    const table = this.outletTables().find(t => t.id === Number(tableId));
+    if (table) {
+      this.selectedTable.set(table);
+    }
+  }
+
+  updateDiningOrderType(type: string): void {
+    this.diningForm.update(f => ({ ...f, orderType: type }));
+  }
+
   openDiningAction(action: DiningAction): void {
     if (action !== 'RESET' && action !== 'ROOM' && !this.selectedTable()) {
-      const first = this.outletTables()[0];
-      if (first) this.selectDiningTable(first);
+      this.toast.warning('Please select a dining table first before starting an order.', 'Select Table First');
+      return;
     }
     this.diningAction.set(action);
     const outletId = action === 'ROOM' ? this.roomServiceOutletId() : (this.selectedTable()?.outletId || this.defaultOutletId());
@@ -1672,10 +1737,13 @@ export class PosComponent implements OnInit, OnDestroy {
       const roomNo = room?.roomNumber || form.roomNo;
       this.pos.startRoomOrder({
         outletId: this.roomServiceOutletId(),
+        floorId: form.floorId || room?.floorId || null,
+        roomId: form.roomId || room?.id || null,
         roomNo,
         guestName: form.guestName,
         server: form.server,
-        notes: form.notes || `Deliver to room ${roomNo}.`
+        notes: form.notes || `Deliver to room ${roomNo}.`,
+        orderType: (form.orderType || 'ROOM') as 'TABLE' | 'TAKEAWAY' | 'ROOM'
       }, this.startOrderLines());
       this.closeDiningAction();
       return;

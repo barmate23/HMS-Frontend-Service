@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable, map, catchError, of, throwError } from 'rxjs';
+import { ToastService, formatApiErrorMessage } from '../shared/toast/toast.service';
 
 import { UserManagementService } from '../user-management/user-management.service';
 import { IngredientCategory, IngredientMaster, RecipeIngredient, RecipeMaster, StorageType } from './models/recipe.model';
@@ -82,6 +83,7 @@ export interface PosOrder {
   outletId: number;
   orderNo: string;
   type: OrderType;
+  orderType?: OrderType;
   floorId?: number | null;
   roomId?: number | null;
   tableNo?: string;
@@ -119,6 +121,16 @@ export interface KitchenDisplayOrder {
   items: KitchenDisplayItem[];
 }
 
+export interface PosBillItem {
+  id?: number;
+  menuItemId?: number;
+  itemName?: string;
+  quantity?: number;
+  readyQuantity?: number;
+  price?: number;
+  subtotal?: number;
+}
+
 export interface PosBill {
   id: number;
   orderId: number;
@@ -147,6 +159,7 @@ export interface PosBill {
   isRoomOrder?: boolean;
   notes?: string;
   createdAt?: string;
+  items?: PosBillItem[];
 }
 
 export interface PosShift {
@@ -442,6 +455,9 @@ interface ApiBill {
   folioPostingId?: number | null;
   isRoomOrder?: boolean;
   notes?: string;
+  items?: any[];
+  lines?: any[];
+  orderLines?: any[];
 }
 
 export interface ApiKitchenIngredientResponse {
@@ -557,6 +573,7 @@ export class PosService {
   private readonly http = inject(HttpClient);
   private readonly userManagement: any = inject(UserManagementService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly toast = inject(ToastService);
   private readonly posBaseUrl = '/api/hmsService/v1/pos';
   private readonly hmsBaseUrl = '/api/hmsService/v1';
   private readonly defaultOutletTypes: OutletType[] = [];
@@ -1328,11 +1345,13 @@ export class PosService {
   saveOrder(input: Partial<PosOrder>): void {
     const isUpdate = !!input.id && this.orders().some(item => item.id === input.id);
     const nextId = Math.max(0, ...this.orders().map(item => item.id)) + 1;
+    const resolvedType = input.orderType || input.type || 'TABLE';
     const order: PosOrder = {
       id: input.id ?? nextId,
       outletId: Number(input.outletId || this.outlets()[0]?.id || 1),
       orderNo: input.orderNo || `ORD-${1000 + nextId}`,
-      type: input.type || 'TABLE',
+      type: resolvedType,
+      orderType: resolvedType,
       floorId: input.floorId || null,
       roomId: input.roomId || null,
       tableNo: input.tableNo || '',
@@ -1360,15 +1379,12 @@ export class PosService {
         this.loadTables();
         this.loadPosDashboardCards();
         this.addAudit(isUpdate ? 'Order updated' : 'Order created', 'Orders', saved.orderNo);
+        const msg = (response as any)?.message || (isUpdate ? 'Order updated successfully' : 'Order created successfully');
+        this.toast.success(msg, isUpdate ? 'Order Updated' : 'Order Created');
       },
       error: error => {
-        const errMsg = error?.error?.message || error?.message || (isUpdate ? 'Order update failed' : 'Order create failed');
-        this.snackBar.open(errMsg, 'Close', {
-          duration: 5000,
-          horizontalPosition: 'end',
-          verticalPosition: 'top',
-          panelClass: ['snackbar-error']
-        });
+        const errMsg = formatApiErrorMessage(error, isUpdate ? 'Order update failed' : 'Order create failed');
+        this.toast.error(error, isUpdate ? 'Order Update Failed' : 'Order Creation Failed');
         this.addAudit(isUpdate ? 'Order update failed' : 'Order create failed', 'Orders', errMsg);
       }
     });
@@ -1424,7 +1440,7 @@ export class PosService {
     this.addAudit(`Order marked ${status}`, 'Orders', `ORD-${1000 + id}`);
   }
 
-  saveTable(input: PosTable): void {
+  saveTable(input: PosTable): Observable<PosTable> {
     const nextId = Math.max(0, ...this.tables().map(item => item.id)) + 1;
     const table: PosTable = {
       id: input.id || nextId,
@@ -1442,16 +1458,25 @@ export class PosService {
       ? this.http.put<ApiDiningTable | StandardResponse<ApiDiningTable>>(`${this.posBaseUrl}/tables/updateTable/${input.id}`, this.toApiTable(table))
       : this.http.post<ApiDiningTable | StandardResponse<ApiDiningTable>>(`${this.posBaseUrl}/tables/createTable`, this.toApiTable(table));
 
-    request$.subscribe({
-      next: response => {
+    return request$.pipe(
+      map(response => {
+        if (response && (response as any).success === false) {
+          const errMsg = (response as any).error?.message || (response as any).message || 'Failed to save dining table.';
+          throw new Error(errMsg);
+        }
         const responseTable = this.itemData(response);
         const saved = responseTable ? this.mapTable(responseTable) : table;
         this.loadTables();
         this.loadPosDashboardCards();
         this.addAudit(input.id ? 'Dining table updated' : 'Dining table created', 'Table Dining', saved.number);
-      },
-      error: error => this.addAudit(input.id ? 'Dining table update failed' : 'Dining table create failed', 'Table Dining', error?.error?.message || error?.message || table.number)
-    });
+        return saved;
+      }),
+      catchError(error => {
+        const errMsg = formatApiErrorMessage(error, 'Failed to save dining table.');
+        this.addAudit(input.id ? 'Dining table update failed' : 'Dining table create failed', 'Table Dining', errMsg);
+        return throwError(() => new Error(errMsg));
+      })
+    );
   }
 
   deleteTable(id: number): void {
@@ -1478,6 +1503,7 @@ export class PosService {
       outletId: table.outletId,
       orderNo: `ORD-${1000 + nextId}`,
       type: 'TABLE',
+      orderType: 'TABLE',
       tableNo: table.number,
       guestName: table.guestName || '',
       server: table.server === 'Unassigned' ? '' : table.server,
@@ -1505,16 +1531,20 @@ export class PosService {
     this.addAudit('Started table order', 'Table Dining', `${table.number} / ${order.orderNo}`);
   }
 
-  startRoomOrder(input: { outletId: number; roomNo: string; guestName: string; server: string; notes?: string }, lines: PosOrderLine[] = []): void {
+  startRoomOrder(input: { outletId: number; floorId?: number | null; roomId?: number | null; roomNo: string; guestName: string; server: string; notes?: string; orderType?: 'TABLE' | 'TAKEAWAY' | 'ROOM' }, lines: PosOrderLine[] = []): void {
     const nextId = Math.max(0, ...this.orders().map(item => item.id)) + 1;
+    const orderType = input.orderType || 'ROOM';
     const order: PosOrder = {
       id: nextId,
       outletId: input.outletId,
       orderNo: `ORD-${1000 + nextId}`,
-      type: 'ROOM',
+      type: orderType,
+      orderType,
+      floorId: input.floorId || null,
+      roomId: input.roomId || null,
       roomNo: input.roomNo,
       guestName: input.guestName,
-      server: input.server || '',
+      server: input.server || 'Unassigned',
       status: 'OPEN',
       openedAt: 'Just now',
       notes: input.notes || 'Room service order created from table dining.',
@@ -1928,13 +1958,14 @@ export class PosService {
 
   private mapOrder(item: ApiOrder, fallbackOutletId?: number): PosOrder {
     const lines = item.orderLines || item.lines || item.items || [];
-    const type = item.orderType || item.type || (item.roomNo || item.roomNumber ? 'ROOM' : 'TABLE');
+    const type = (item.orderType || item.type || (item.roomNo || item.roomNumber ? 'ROOM' : 'TABLE')) as OrderType;
 
     return {
       id: Number(item.id),
       outletId: Number(item.outletId || fallbackOutletId || this.outlets()[0]?.id || 1),
       orderNo: item.orderNo || item.orderNumber || `ORD-${item.id}`,
       type,
+      orderType: type,
       floorId: item.floorId || null,
       roomId: item.roomId || null,
       tableNo: item.tableNo || item.tableNumber || '',
@@ -1976,14 +2007,15 @@ export class PosService {
     const table = this.tables().find(value => value.outletId === item.outletId && value.number === item.tableNo);
     const server = ((this.userManagement.users() as any) || []).find((user: any) => String(user?.fullName || '').toLowerCase() === item.server.toLowerCase());
     const lines = item.lines.map(line => this.toApiOrderLine(line));
+    const resolvedOrderType = item.orderType || item.type || 'TABLE';
 
     return {
       id: item.id,
       outletId: item.outletId,
       orderNo: item.orderNo,
       orderNumber: item.orderNo,
-      orderType: item.type,
-      type: item.type,
+      orderType: resolvedOrderType,
+      type: resolvedOrderType,
       floorId: item.floorId || null,
       roomId: item.roomId || null,
       tableId: table?.id,
@@ -2114,6 +2146,17 @@ export class PosService {
     const totalAmount = Number(item.netAmount ?? item.totalAmount ?? grossOrSubtotal);
     const paidAmount = Number(item.paidAmount ?? item.paid ?? 0);
 
+    const rawItems = item.items || item.lines || item.orderLines || [];
+    const billItems: PosBillItem[] = rawItems.map((bi: any) => ({
+      id: Number(bi.id || 0),
+      menuItemId: Number(bi.menuItemId || bi.itemId || 0),
+      itemName: bi.itemName || bi.name || bi.menuItemName || 'Item',
+      quantity: Number(bi.quantity ?? bi.qty ?? 1),
+      readyQuantity: Number(bi.readyQuantity ?? bi.quantity ?? 1),
+      price: Number(bi.price || 0),
+      subtotal: Number(bi.subtotal ?? (Number(bi.quantity || 1) * Number(bi.price || 0)))
+    }));
+
     return {
       id: Number(item.id),
       orderId: Number(item.orderId || 0),
@@ -2141,7 +2184,8 @@ export class PosService {
       folioPostingId: item.folioPostingId ? Number(item.folioPostingId) : null,
       isRoomOrder: item.isRoomOrder ?? (orderType === 'ROOM'),
       notes: item.notes || '',
-      createdAt: (item as any).createdAt || ''
+      createdAt: (item as any).createdAt || '',
+      items: billItems
     };
   }
 

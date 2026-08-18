@@ -5,6 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../auth/auth.service';
 import { HotelMastersService } from '../masters/hotel-masters.service';
 
+import { ToastContainerComponent } from '../shared/toast/toast-container.component';
+
 export interface NavItemChild {
   label: string;
   icon: string;
@@ -25,7 +27,7 @@ export interface NavItem {
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatIconModule],
+  imports: [CommonModule, RouterModule, MatIconModule, ToastContainerComponent],
   templateUrl: './layout.html',
   styleUrls: ['./layout.css']
 })
@@ -239,7 +241,6 @@ export class Layout implements OnInit {
       children: [
         { label: 'Guest Folios', icon: 'receipt_long', route: '/billing/folios', color: '#16A34A' },
         { label: 'Invoices', icon: 'request_quote', route: '/billing/invoices', color: '#2563EB' },
-        { label: 'Refunds', icon: 'currency_exchange', route: '/billing/refunds', color: '#EF4444' },
         { label: 'Inward Stock', icon: 'move_to_inbox', route: '/billing/inward', color: '#8B5CF6' },
         { label: 'Vendor Bills', icon: 'receipt_long', route: '/billing/bills', color: '#F59E0B' }
       ]

@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, catchError, map, of, tap } from 'rxjs';
+import { formatApiErrorMessage } from '../shared/toast/toast.service';
 
 export interface AuthUser {
   id: number;
@@ -345,6 +346,6 @@ export class AuthService {
   }
 
   private errorMessage(error: any, fallback: string): string {
-    return error?.error?.message || error?.error?.error?.message || error?.error?.error?.details || error?.message || fallback;
+    return formatApiErrorMessage(error, fallback);
   }
 }

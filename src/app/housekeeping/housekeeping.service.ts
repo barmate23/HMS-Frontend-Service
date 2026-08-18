@@ -452,6 +452,7 @@ export class HousekeepingService {
   private _maintenanceCategories = signal<CommonMasterOption[]>([]);
   private _maintenancePriorities = signal<CommonMasterOption[]>([]);
   private _maintenanceStatuses = signal<CommonMasterOption[]>([]);
+  private _hkStatusOptions = signal<CommonMasterOption[]>([]);
   private _sopCheckpoints = signal<SopCheckpoint[]>([]);
   private _sopFrequencyOptions = signal<CommonMasterOption[]>([]);
   private _sopAuditAreaOptions = signal<CommonMasterOption[]>([]);
@@ -471,6 +472,7 @@ export class HousekeepingService {
   readonly maintenanceCategories = this._maintenanceCategories.asReadonly();
   readonly maintenancePriorities = this._maintenancePriorities.asReadonly();
   readonly maintenanceStatuses = this._maintenanceStatuses.asReadonly();
+  readonly hkStatusOptions = this._hkStatusOptions.asReadonly();
   readonly sopCheckpoints = this._sopCheckpoints.asReadonly();
   readonly sopFrequencyOptions = this._sopFrequencyOptions.asReadonly();
   readonly sopAuditAreaOptions = this._sopAuditAreaOptions.asReadonly();
@@ -512,6 +514,7 @@ export class HousekeepingService {
     this.loadLostFoundCategories();
     this.loadMaintenance();
     this.loadMaintenanceMasters();
+    this.loadHkStatusMasters();
     this.loadSopMasters();
     this.loadSopCheckpoints();
   }
@@ -955,6 +958,16 @@ export class HousekeepingService {
     return status === 'CLAIMED' || status === 'DONATED' || status === 'DISPOSED' || status === 'STORED' ? status : 'STORED';
   }
 
+  loadHkStatusMasters() {
+    this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/HK_STATUS`).subscribe({
+      next: response => this._hkStatusOptions.set(this.commonMasterData(response)),
+      error: error => {
+        console.error('Failed to load HK_STATUS master options', error);
+        this._hkStatusOptions.set([]);
+      },
+    });
+  }
+
   loadLostFoundCategories() {
     this.http.get<CommonMasterOption[] | ApiListResponse<CommonMasterOption>>(`${this.hmsApiBase}/common/getCommonMaster/LOST_FOUND_CATEGORY`).subscribe({
       next: response => this._lostFoundCategories.set(this.commonMasterData(response)),
@@ -1156,6 +1169,11 @@ export class HousekeepingService {
       tap(() => this.loadSopCheckpoints(checkpoint.frequency)),
       map(() => undefined)
     );
+  }
+
+  deleteSopCheckpoint(id: string): Observable<void> {
+    this._sopCheckpoints.update(list => list.filter(item => item.id !== id));
+    return of(undefined);
   }
 
   loadSopMasters() {

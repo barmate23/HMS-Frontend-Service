@@ -644,6 +644,45 @@
   </div>
 </div>
 
+<div class="modal-overlay" *ngIf="userDeleteTarget() as user" (click)="closeUserDeleteModal()">
+  <div class="admin-modal confirm-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h2>Delete User Account</h2>
+        <p>Review user details before confirming deletion.</p>
+      </div>
+      <button class="close-btn" (click)="closeUserDeleteModal()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+
+    <div class="modal-body confirm-body">
+      <div class="confirm-icon danger">
+        <span class="material-icons-round">person_remove</span>
+      </div>
+      <div class="confirm-copy">
+        <h3>{{ user.fullName }}</h3>
+        <p>
+          Deleting employee account <strong>{{ user.employeeId }}</strong> (<code>{{ user.username }}</code> · {{ user.email }}) will immediately revoke their access to HMS Cloud.
+        </p>
+      </div>
+
+      <div class="warning-panel">
+        <span class="material-icons-round">priority_high</span>
+        <strong>This action permanently deletes the user account and cannot be undone.</strong>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="secondary-btn" (click)="closeUserDeleteModal()">Cancel</button>
+      <button class="danger-btn" (click)="confirmDeleteUser()">
+        <span class="material-icons-round">delete_outline</span>
+        Delete User
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" *ngIf="roleDeleteTarget() as role" (click)="closeRoleDeleteModal()">
   <div class="admin-modal confirm-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">

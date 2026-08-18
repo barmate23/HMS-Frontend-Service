@@ -10,8 +10,11 @@
       <div class="date-range">
         <label>
           <span>Floor</span>
-          <select [(ngModel)]="selectedFloorId" (ngModelChange)="onFloorChange()">
-            <option *ngFor="let f of floors" [ngValue]="f.id">{{ f.floorNumber }}</option>
+          <select [(ngModel)]="selectedFloorId" (ngModelChange)="onFloorChange()" class="floor-select">
+            <option [ngValue]="null">All Floors</option>
+            <option *ngFor="let f of floors" [ngValue]="f.id">
+              Floor {{ f.floorNumber }} ({{ f.noOfRooms || 0 }} Rooms)
+            </option>
           </select>
         </label>
         <label>
@@ -83,7 +86,7 @@
           </div>
         </div>
 
-        <div class="left-body">
+        <div class="left-body" #leftBodyEl (scroll)="onLeftBodyScroll()">
           <div class="row-meta"
                *ngFor="let lane of roomLanes"
                (mouseenter)="onRoomHover(lane.roomId)"
@@ -117,7 +120,7 @@
           <div class="empty-row" *ngIf="roomLanes.length === 0">No rooms found for selected floor.</div>
         </div>
 
-        <div class="timeline-body" #timelineBodyEl (scroll)="onBodyScroll()" [style.--day-col-width.px]="dayColWidthPx">
+        <div class="timeline-body" #timelineBodyEl (scroll)="onTimelineBodyScroll()" [style.--day-col-width.px]="dayColWidthPx">
           <div class="today-focus-line body" *ngIf="showTodayFocus && todayLinePct !== null" [style.left.%]="todayLinePct"></div>
           <div class="timeline-body-inner" [style.width.px]="timelineWidthPx">
             <div class="timeline-row" *ngFor="let lane of roomLanes">

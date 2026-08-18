@@ -33,7 +33,7 @@ export const routes: Routes = [
       { path: 'billing', redirectTo: 'billing/folios', pathMatch: 'full' },
       { path: 'billing/folios', loadComponent: () => import('./billing/billing.component').then(m => m.BillingComponent) },
       { path: 'billing/invoices', loadComponent: () => import('./billing/billing.component').then(m => m.BillingComponent) },
-      { path: 'billing/refunds', loadComponent: () => import('./billing/billing.component').then(m => m.BillingComponent) },
+      { path: 'billing/refunds', redirectTo: 'billing/folios', pathMatch: 'full' },
       { path: 'billing/inward', loadComponent: () => import('./billing/billing.component').then(m => m.BillingComponent) },
       { path: 'billing/bills', loadComponent: () => import('./billing/billing.component').then(m => m.BillingComponent) },
       { path: 'housekeeping', loadComponent: () => import('./housekeeping/housekeeping.component').then(m => m.HousekeepingComponent) },

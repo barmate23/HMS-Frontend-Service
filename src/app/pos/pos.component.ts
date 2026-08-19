@@ -235,6 +235,188 @@ export class PosComponent implements OnInit, OnDestroy {
     return { total: list.length, avgFoodCost, avgMargin, highMargin };
   });
 
+  // POS Performance Component State (Matching User Reference Design)
+  activeItemTab = signal<'top' | 'less'>('top');
+
+  posPerformanceKpis = signal({
+    orderValue: 3430,
+    avgOrder: 381,
+    menuItemsCount: 3
+  });
+
+  topSellingItemsDetailed = signal([
+    {
+      rank: 1,
+      name: 'Naan',
+      category: 'Main Course / Item',
+      soldQty: 21,
+      rate: 30,
+      avgRate: 30,
+      revenue: 630,
+      imageUrl: 'https://images.unsplash.com/photo-1626074353765-517a681e40be?w=120',
+      monthlyTrend: [
+        { month: 'apr', val: 12 }, { month: 'may', val: 15 }, { month: 'jun', val: 18 },
+        { month: 'jul', val: 20 }, { month: 'aug', val: 85 }, { month: 'sep', val: 15 },
+        { month: 'oct', val: 18 }, { month: 'nov', val: 22 }, { month: 'dec', val: 28 },
+        { month: 'jan', val: 24 }, { month: 'feb', val: 19 }, { month: 'mar', val: 21 }
+      ]
+    },
+    {
+      rank: 2,
+      name: 'Paneer',
+      category: 'Appetizer / Item',
+      soldQty: 14,
+      rate: 100,
+      avgRate: 100,
+      revenue: 1400,
+      imageUrl: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=120',
+      monthlyTrend: [
+        { month: 'apr', val: 10 }, { month: 'may', val: 12 }, { month: 'jun', val: 14 },
+        { month: 'jul', val: 16 }, { month: 'aug', val: 75 }, { month: 'sep', val: 14 },
+        { month: 'oct', val: 16 }, { month: 'nov', val: 18 }, { month: 'dec', val: 22 },
+        { month: 'jan', val: 18 }, { month: 'feb', val: 14 }, { month: 'mar', val: 16 }
+      ]
+    },
+    {
+      rank: 3,
+      name: 'Chicken',
+      category: 'Appetizer / Item',
+      soldQty: 7,
+      rate: 200,
+      avgRate: 200,
+      revenue: 1400,
+      imageUrl: 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=120',
+      monthlyTrend: [
+        { month: 'apr', val: 8 }, { month: 'may', val: 10 }, { month: 'jun', val: 12 },
+        { month: 'jul', val: 14 }, { month: 'aug', val: 65 }, { month: 'sep', val: 10 },
+        { month: 'oct', val: 12 }, { month: 'nov', val: 14 }, { month: 'dec', val: 18 },
+        { month: 'jan', val: 14 }, { month: 'feb', val: 10 }, { month: 'mar', val: 12 }
+      ]
+    }
+  ]);
+
+  lessSellingItemsDetailed = signal([
+    {
+      rank: 1,
+      name: 'Lobster Thermidor',
+      category: 'Seafood Special / Item',
+      soldQty: 1,
+      rate: 1850,
+      avgRate: 1850,
+      revenue: 1850,
+      imageUrl: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=120',
+      monthlyTrend: [
+        { month: 'apr', val: 5 }, { month: 'may', val: 5 }, { month: 'jun', val: 5 },
+        { month: 'jul', val: 5 }, { month: 'aug', val: 15 }, { month: 'sep', val: 5 },
+        { month: 'oct', val: 5 }, { month: 'nov', val: 5 }, { month: 'dec', val: 5 },
+        { month: 'jan', val: 5 }, { month: 'feb', val: 5 }, { month: 'mar', val: 5 }
+      ]
+    },
+    {
+      rank: 2,
+      name: 'Artichoke Tart',
+      category: 'Gourmet / Item',
+      soldQty: 2,
+      rate: 620,
+      avgRate: 620,
+      revenue: 1240,
+      imageUrl: 'https://images.unsplash.com/photo-1621996346565-e3def6164286?w=120',
+      monthlyTrend: [
+        { month: 'apr', val: 8 }, { month: 'may', val: 5 }, { month: 'jun', val: 5 },
+        { month: 'jul', val: 8 }, { month: 'aug', val: 20 }, { month: 'sep', val: 5 },
+        { month: 'oct', val: 8 }, { month: 'nov', val: 5 }, { month: 'dec', val: 10 },
+        { month: 'jan', val: 5 }, { month: 'feb', val: 5 }, { month: 'mar', val: 8 }
+      ]
+    }
+  ]);
+
+  // POS Dashboard Dummy Data Signals for Customization
+  dummyPosStats = signal({
+    totalOutlets: 4,
+    totalDiningTables: 48,
+    totalRevenue: 248500,
+    totalOrders: 384
+  });
+
+  monthlyOutletSales = signal([
+    {
+      outletName: 'Main Dining Restaurant',
+      code: 'MDR',
+      totalRevenue: 98500,
+      billCount: 142,
+      growth: '+18.4%',
+      maxRevenue: 100000,
+      months: [
+        { month: 'Jan', revenue: 78000, orders: 110, barWidth: 78 },
+        { month: 'Feb', revenue: 84000, orders: 125, barWidth: 84 },
+        { month: 'Mar', revenue: 91000, orders: 132, barWidth: 91 },
+        { month: 'Apr', revenue: 95000, orders: 138, barWidth: 95 },
+        { month: 'May', revenue: 98500, orders: 142, barWidth: 98 }
+      ]
+    },
+    {
+      outletName: 'Rooftop Lounge & Bar',
+      code: 'RLB',
+      totalRevenue: 74200,
+      billCount: 108,
+      growth: '+12.1%',
+      maxRevenue: 100000,
+      months: [
+        { month: 'Jan', revenue: 58000, orders: 85, barWidth: 58 },
+        { month: 'Feb', revenue: 62000, orders: 92, barWidth: 62 },
+        { month: 'Mar', revenue: 68000, orders: 99, barWidth: 68 },
+        { month: 'Apr', revenue: 71000, orders: 104, barWidth: 71 },
+        { month: 'May', revenue: 74200, orders: 108, barWidth: 74 }
+      ]
+    },
+    {
+      outletName: 'Poolside Bistro & Cafe',
+      code: 'PBC',
+      totalRevenue: 45800,
+      billCount: 84,
+      growth: '+8.5%',
+      maxRevenue: 100000,
+      months: [
+        { month: 'Jan', revenue: 32000, orders: 60, barWidth: 32 },
+        { month: 'Feb', revenue: 36000, orders: 68, barWidth: 36 },
+        { month: 'Mar', revenue: 40000, orders: 75, barWidth: 40 },
+        { month: 'Apr', revenue: 43000, orders: 80, barWidth: 43 },
+        { month: 'May', revenue: 45800, orders: 84, barWidth: 45 }
+      ]
+    },
+    {
+      outletName: '24/7 Room Service Dining',
+      code: 'RSD',
+      totalRevenue: 30000,
+      billCount: 50,
+      growth: '+5.2%',
+      maxRevenue: 100000,
+      months: [
+        { month: 'Jan', revenue: 22000, orders: 38, barWidth: 22 },
+        { month: 'Feb', revenue: 24000, orders: 42, barWidth: 24 },
+        { month: 'Mar', revenue: 26000, orders: 45, barWidth: 26 },
+        { month: 'Apr', revenue: 28000, orders: 48, barWidth: 28 },
+        { month: 'May', revenue: 30000, orders: 50, barWidth: 30 }
+      ]
+    }
+  ]);
+
+  topSellingItems = signal([
+    { id: 1, name: 'Paneer Butter Masala', category: 'Main Course', price: 340, qtySold: 184, revenue: 62560, outlet: 'Main Dining', imageUrl: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=120' },
+    { id: 2, name: 'Butter Naan', category: 'Breads', price: 65, qtySold: 320, revenue: 20800, outlet: 'Main Dining', imageUrl: 'https://images.unsplash.com/photo-1626074353765-517a681e40be?w=120' },
+    { id: 3, name: 'Signature Club Sandwich', category: 'Snacks', price: 280, qtySold: 145, revenue: 40600, outlet: 'Poolside Bistro', imageUrl: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=120' },
+    { id: 4, name: 'Iced Artisan Latte', category: 'Beverages', price: 190, qtySold: 128, revenue: 24320, outlet: 'Poolside Bistro', imageUrl: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=120' },
+    { id: 5, name: 'Tandoori Murgh (Full)', category: 'Appetizers', price: 580, qtySold: 92, revenue: 53360, outlet: 'Rooftop Lounge', imageUrl: 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=120' }
+  ]);
+
+  topNonSellingItems = signal([
+    { id: 101, name: 'Lobster Thermidor', category: 'Seafood Special', price: 1850, qtySold: 1, lastOrderDaysAgo: 24, stockRemaining: 12, outlet: 'Rooftop Lounge', warning: 'High Cost / Low Turnover' },
+    { id: 102, name: 'Artichoke & Truffle Tart', category: 'Gourmet Starters', price: 620, qtySold: 2, lastOrderDaysAgo: 19, stockRemaining: 8, outlet: 'Main Dining', warning: 'Perishable Ingredient' },
+    { id: 103, name: 'Sparkling Elderflower Soda', category: 'Beverages', price: 240, qtySold: 3, lastOrderDaysAgo: 15, stockRemaining: 30, outlet: 'Poolside Bistro', warning: 'Low Demand' },
+    { id: 104, name: 'Vegan Quinoa Risotto', category: 'Healthy Choice', price: 420, qtySold: 4, lastOrderDaysAgo: 12, stockRemaining: 15, outlet: 'Main Dining', warning: 'Menu Review Needed' },
+    { id: 105, name: 'Espresso Panna Cotta', category: 'Desserts', price: 290, qtySold: 5, lastOrderDaysAgo: 10, stockRemaining: 18, outlet: '24/7 Room Service', warning: 'Slow Moving' }
+  ]);
+
   readonly dashboardOutlets = computed(() => this.pos.outlets());
   readonly dashboardMenuItems = computed(() => this.pos.menuItems());
   readonly dashboardTables = computed(() => this.pos.tables());
@@ -290,19 +472,27 @@ export class PosComponent implements OnInit, OnDestroy {
     const occupiedTables = tables.filter(table => ['OCCUPIED', 'RESERVED'].includes(String(table.status).toUpperCase())).length;
     const availableTables = tables.filter(table => String(table.status).toUpperCase() === 'AVAILABLE').length;
     const totalTables = Math.max(1, tables.length);
-    const paidSales = bills.filter(bill => bill.status !== 'VOID').reduce((sum, bill) => sum + this.billTotal(bill), 0);
+    const validBills = bills.filter(bill => bill.status !== 'VOID');
+    const paidSales = validBills.reduce((sum, bill) => sum + this.billTotal(bill), 0);
     const roomPostingAmount = bills
       .filter(bill => bill.postedToFolio)
       .reduce((sum, bill) => sum + this.billTotal(bill), 0);
     const unpaidAmount = bills
       .filter(bill => bill.status === 'OPEN' || bill.status === 'PARTIAL')
       .reduce((sum, bill) => sum + Math.max(0, this.billTotal(bill) - Number(bill.paid || 0)), 0);
+    const avgOrderValue = Math.round(paidSales / Math.max(1, validBills.length));
+    const voidAmount = bills
+      .filter(bill => bill.status === 'VOID')
+      .reduce((sum, bill) => sum + this.billTotal(bill), 0);
+    const voidRatePercent = paidSales > 0 ? Number(((voidAmount / paidSales) * 100).toFixed(1)) : 0;
 
     return {
       activeOrders: activeOrders.length,
       tableLoad: Math.round((occupiedTables / totalTables) * 100),
       availableTables,
       paidSales,
+      avgOrderValue,
+      voidRatePercent,
       roomPostingAmount,
       unpaidAmount,
       kotPending: orders.filter(order => order.status === 'OPEN' || order.status === 'HELD').length,
@@ -356,6 +546,12 @@ export class PosComponent implements OnInit, OnDestroy {
     });
 
     return segments.length ? `conic-gradient(${segments.join(', ')})` : 'conic-gradient(var(--surface-200) 0% 100%)';
+  });
+
+  tableOccupancyRate = computed(() => {
+    const summary = this.tableStatusSummary();
+    const occupied = summary.find(s => s.status === 'OCCUPIED');
+    return occupied ? occupied.percent : 0;
   });
 
   outletRevenue = computed(() => {

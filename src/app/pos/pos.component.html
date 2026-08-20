@@ -70,7 +70,7 @@
     </div>
   </div>
 
-  <div class="pos-stats-grid" *ngIf="activeTab() !== 'dashboard'">
+  <div class="pos-stats-grid" *ngIf="activeTab() !== 'dashboard' && activeTab() !== 'recipes' && activeTab() !== 'ingredient-master'">
     <div class="pos-stat-card"><span class="material-icons-round">storefront</span><div><strong>{{ stats().outlets }}</strong><small>Active Outlets</small></div></div>
     <div class="pos-stat-card"><span class="material-icons-round">restaurant</span><div><strong>{{ stats().orders }}</strong><small>Open Orders</small></div></div>
     <div class="pos-stat-card warning"><span class="material-icons-round">local_fire_department</span><div><strong>{{ stats().kot }}</strong><small>KOT Running</small></div></div>
@@ -109,9 +109,9 @@
             </div>
             <div class="kpi-details">
               <span class="kpi-label">Outlets</span>
-              <strong class="kpi-value">{{ dummyPosStats().totalOutlets }} Outlets</strong>
+              <strong class="kpi-value">{{ posHeroKpis().activeOutlets }} Outlets</strong>
             </div>
-            <span class="kpi-badge success">Active</span>
+            <span class="kpi-badge success">{{ posHeroKpis().outletStatus }}</span>
           </div>
 
           <!-- Card 2: Tables -->
@@ -121,9 +121,9 @@
             </div>
             <div class="kpi-details">
               <span class="kpi-label">Tables</span>
-              <strong class="kpi-value">{{ dummyPosStats().totalDiningTables }} Tables</strong>
+              <strong class="kpi-value">{{ posHeroKpis().totalTables }} Tables</strong>
             </div>
-            <span class="kpi-badge info">192 Seats</span>
+            <span class="kpi-badge info">{{ posHeroKpis().totalSeats }} Seats</span>
           </div>
 
           <!-- Card 3: Revenue -->
@@ -133,9 +133,9 @@
             </div>
             <div class="kpi-details">
               <span class="kpi-label">Revenue</span>
-              <strong class="kpi-value">&#8377;{{ dummyPosStats().totalRevenue | number:'1.0-0' }}</strong>
+              <strong class="kpi-value">&#8377;{{ posHeroKpis().grossSales | number:'1.0-2' }}</strong>
             </div>
-            <span class="kpi-badge success"><span class="material-icons-round">trending_up</span> +16.8%</span>
+            <span class="kpi-badge success"><span class="material-icons-round">trending_up</span> {{ posHeroKpis().revenueTrend }}</span>
           </div>
 
           <!-- Card 4: Orders -->
@@ -145,9 +145,9 @@
             </div>
             <div class="kpi-details">
               <span class="kpi-label">Orders</span>
-              <strong class="kpi-value">{{ dummyPosStats().totalOrders }} Orders</strong>
+              <strong class="kpi-value">{{ posHeroKpis().totalOrders }} Orders</strong>
             </div>
-            <span class="kpi-badge warning"><span class="material-icons-round">bolt</span> ~12m Avg</span>
+            <span class="kpi-badge warning"><span class="material-icons-round">bolt</span> {{ posHeroKpis().orderTrend }}</span>
           </div>
         </div>
       </section>
@@ -166,11 +166,11 @@
         <!-- 3 KPI Summary Cards -->
         <div class="perf-kpi-strip">
           <div class="perf-kpi-box">
-            <strong class="perf-kpi-num">&#8377;{{ posPerformanceKpis().orderValue | number:'1.0-0' }}</strong>
+            <strong class="perf-kpi-num">&#8377;{{ posPerformanceKpis().orderValue | number:'1.0-2' }}</strong>
             <span class="perf-kpi-sub">ORDER VALUE</span>
           </div>
           <div class="perf-kpi-box">
-            <strong class="perf-kpi-num">&#8377;{{ posPerformanceKpis().avgOrder | number:'1.0-0' }}</strong>
+            <strong class="perf-kpi-num">&#8377;{{ posPerformanceKpis().avgOrder | number:'1.0-2' }}</strong>
             <span class="perf-kpi-sub">AVG ORDER</span>
           </div>
           <div class="perf-kpi-box">
@@ -247,16 +247,15 @@
       <div class="card-header"><h2 class="card-title">POS Outlet Management</h2><span class="total-badge">{{ filteredOutlets().length }} Outlets</span></div>
       <div class="table-container">
         <table class="premium-table hk-grid-table">
-          <thead><tr><th>OUTLET</th><th>TYPE</th><th>LOCATION</th><th>TIMING</th><th>MANAGER</th><th>STATUS</th><th style="text-align:center;">ACTIONS</th></tr></thead>
+          <thead><tr><th>Outlet</th><th>Type</th><th>Location</th><th>Timing</th><th>Manager</th><th>Status</th><th style="text-align:center;">Actions</th></tr></thead>
           <tbody>
             <tr *ngFor="let outlet of filteredOutlets()">
-              <td><strong>{{ outlet.name }}</strong></td>
-              <td>{{ outlet.type }}</td>
-              <td>{{ outlet.location }}</td>
-              <td>{{ outlet.timing }}</td>
-
-              <td>{{ outlet.manager }}</td>
-              <td><span class="status-badge" [class.completed]="outlet.active" [class.cancelled]="!outlet.active">{{ outlet.active ? 'ACTIVE' : 'INACTIVE' }}</span></td>
+              <td>{{ titleCase(outlet.name) }}</td>
+              <td>{{ titleCase(outlet.type) }}</td>
+              <td>{{ titleCase(outlet.location) }}</td>
+              <td>{{ titleCase(outlet.timing) }}</td>
+              <td>{{ titleCase(outlet.manager) }}</td>
+              <td><span class="status-badge" [class.completed]="outlet.active" [class.cancelled]="!outlet.active">{{ outlet.active ? 'Active' : 'Inactive' }}</span></td>
               <td><div class="action-buttons"><button class="btn-icon check" (click)="toggleOutlet(outlet)" title="Toggle Active"><span class="material-icons-round">{{ outlet.active ? 'pause' : 'play_arrow' }}</span></button><button class="btn-icon edit" (click)="openEdit('outlet', outlet)" title="Edit"><span class="material-icons-round">edit</span></button><button class="btn-icon delete" (click)="deleteOutlet(outlet.id)" title="Delete"><span class="material-icons-round">delete_outline</span></button></div></td>
             </tr>
           </tbody>
@@ -310,17 +309,20 @@
       <div class="card-header"><h2 class="card-title">Order Listing & KOT Queue</h2><span class="total-badge">{{ filteredOrders().length }} Orders</span></div>
       <div class="table-container">
         <table class="premium-table hk-grid-table orders-table">
-          <thead><tr><th>ORDER</th><th>OUTLET</th><th>ORDER TYPE</th><th>TABLE / ROOM / GUEST</th><th>ITEMS / AMOUNT</th><th>KOT STATUS</th><th>SERVER</th><th>ORDER STATUS</th><th>ACTIONS</th></tr></thead>
+          <thead><tr><th>Order</th><th>Outlet</th><th>Order Type</th><th>Table / Room / Guest</th><th>Items / Amount</th><th>KOT Status</th><th>Server</th><th>Order Status</th><th style="text-align:center;">Actions</th></tr></thead>
           <tbody>
             <tr *ngFor="let order of filteredOrders()">
-              <td><strong>{{ order.orderNo }}</strong><span class="subline">{{ order.openedAt }}</span></td>
-              <td>{{ outletName(order.outletId) }}</td>
-              <td>{{ order.type }}</td>
-              <td>{{ order.tableNo || order.roomNo || 'Takeaway' }}<span class="subline">{{ order.guestName || order.notes || 'No guest linked' }}</span></td>
-              <td><strong>{{ order.lines.length }}</strong> items<span class="subline">₹{{ orderTotal(order) | number:'1.0-0' }}</span></td>
-              <td><span class="soft-pill">{{ order.kotStatusName || 'Not Sent' }}</span></td>
-              <td>{{ order.server }}</td>
-              <td><span class="status-badge" [class]="order.status.toLowerCase()">{{ order.status }}</span></td>
+              <td><span>{{ order.orderNo }}</span><span class="subline">{{ order.openedAt }}</span></td>
+              <td>{{ titleCase(outletName(order.outletId)) }}</td>
+              <td>{{ titleCase(order.type) }}</td>
+              <td>
+                <span>{{ order.tableNo ? 'Table ' + order.tableNo : (order.roomNo ? 'Room ' + order.roomNo : 'Takeaway') }}</span>
+                <span class="subline">{{ titleCase(order.guestName || order.notes || 'No guest linked') }}</span>
+              </td>
+              <td><span>{{ order.lines.length }}</span> items<span class="subline">₹{{ orderTotal(order) | number:'1.0-0' }}</span></td>
+              <td><span class="soft-pill">{{ titleCase(order.kotStatusName || 'Not Sent') }}</span></td>
+              <td>{{ titleCase(order.server || 'Unassigned') }}</td>
+              <td><span class="status-badge" [class]="order.status.toLowerCase()">{{ titleCase(order.status) }}</span></td>
               <td><div class="action-buttons"><button class="btn-icon check" [disabled]="isOrderBilled(order)" [title]="isOrderBilled(order) ? 'Billed order cannot be modified' : 'Send KOT'" (click)="updateOrderStatus(order, 'KOT_SENT')"><span class="material-icons-round">local_fire_department</span></button><button class="btn-icon check" [disabled]="isOrderBilled(order)" [title]="isOrderBilled(order) ? 'Billed order cannot be modified' : 'Hold Order'" (click)="updateOrderStatus(order, 'HELD')"><span class="material-icons-round">pause_circle</span></button><button class="btn-icon edit" [disabled]="isOrderBilled(order)" [title]="isOrderBilled(order) ? 'Billed order cannot be edited' : 'Edit Order'" (click)="openEdit('order', order)"><span class="material-icons-round">edit</span></button><button class="btn-icon delete" [disabled]="isOrderBilled(order)" [title]="isOrderBilled(order) ? 'Billed order cannot be cancelled' : 'Cancel Order'" (click)="updateOrderStatus(order, 'CANCELLED')"><span class="material-icons-round">cancel</span></button></div></td>
             </tr>
           </tbody>
@@ -332,19 +334,19 @@
       <div class="card-header"><h2 class="card-title">Menu & Item Catalog</h2><span class="total-badge">{{ filteredMenu().length }} Items</span></div>
       <div class="table-container">
         <table class="premium-table hk-grid-table menu-table">
-          <thead><tr><th>ITEM</th><th>OUTLET</th><th>CATEGORY</th><th>PRICE</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+          <thead><tr><th>Item</th><th>Outlet</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
             <tr *ngFor="let item of filteredMenu()">
               <td>
                 <div class="menu-item-cell">
                   <img [src]="menuImage(item)" [alt]="item.name">
-                  <div><strong>{{ item.name }}</strong><span class="subline" *ngIf="item.featured">Featured / Fast Moving</span></div>
+                  <div><span>{{ item.name }}</span><span class="subline" *ngIf="item.featured">Featured / Fast moving</span></div>
                 </div>
               </td>
-              <td>{{ outletName(item.outletId) }}</td>
-              <td>{{ item.category }}<span class="subline">{{ item.subcategory }}</span></td>
+              <td>{{ titleCase(outletName(item.outletId)) }}</td>
+              <td>{{ titleCase(item.category) }}<span class="subline">{{ titleCase(item.subcategory) }}</span></td>
               <td>₹{{ item.price }}<span class="subline" *ngIf="item.happyHourPrice">HH ₹{{ item.happyHourPrice }} • {{ item.happyHourWindow }}</span></td>
-              <td><span class="status-badge" [class.completed]="item.available" [class.cancelled]="!item.available">{{ item.available ? 'AVAILABLE' : 'UNAVAILABLE' }}</span></td>
+              <td><span class="status-badge" [class.completed]="item.available" [class.cancelled]="!item.available">{{ item.available ? 'Available' : 'Unavailable' }}</span></td>
               <td><div class="action-buttons"><button class="btn-icon check" (click)="toggleMenuAvailability(item)" title="Toggle Available"><span class="material-icons-round">{{ item.available ? 'visibility_off' : 'visibility' }}</span></button><button class="btn-icon edit" (click)="openEdit('menu', item)"><span class="material-icons-round">edit</span></button><button class="btn-icon delete" (click)="deleteMenuItem(item.id)"><span class="material-icons-round">delete_outline</span></button></div></td>
             </tr>
           </tbody>
@@ -356,26 +358,21 @@
       <div class="card-header"><h2 class="card-title">Billing, Payments & Room Posting</h2><span class="total-badge">{{ filteredBills().length }} Bills</span></div>
       <div class="table-container">
         <table class="premium-table hk-grid-table">
-          <thead><tr><th>BILL</th><th>ORDER</th><th>GUEST / ROOM</th><th>AMOUNT</th><th>DISCOUNT</th><th>PAYMENT</th><th>ACTIONS</th></tr></thead>
+          <thead><tr><th>Bill</th><th>Order</th><th>Guest / Room</th><th>Amount</th><th>Discount</th><th>Payment</th><th style="text-align:center;">Actions</th></tr></thead>
           <tbody>
             <tr *ngFor="let bill of filteredBills()">
-              <td><strong>{{ bill.billNo }}</strong></td>
+              <td>{{ bill.billNo }}</td>
               <td>{{ billOrderRef(bill) }}</td>
-
-              <td>{{ bill.guestName || 'Walk-in' }}<span class="subline">{{ bill.roomNo ? 'Room ' + bill.roomNo : 'No room posting' }}</span></td>
+              <td>{{ titleCase(bill.guestName || 'Walk-in') }}<span class="subline">{{ bill.roomNo ? 'Room ' + bill.roomNo : 'No room posting' }}</span></td>
               <td>₹{{ billTotal(bill) | number:'1.0-0' }}<span class="subline">Paid ₹{{ bill.paid | number:'1.0-0' }}</span></td>
               <td>{{ billBreakdown(bill).discountPercent }}%<span class="subline" *ngIf="billBreakdown(bill).discountAmount">₹{{ billBreakdown(bill).discountAmount | number:'1.0-0' }}</span><span class="subline" *ngIf="bill.compReason">Comp: {{ bill.compReason }}</span></td>
               <td>{{ bill.paymentModes.join(', ') }}</td>
               <td><div class="action-buttons"><button class="btn-icon check" [class.frozen]="!bill.isRoomOrder || bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')" [disabled]="!bill.isRoomOrder || bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')" [title]="!bill.isRoomOrder ? 'Room posting disabled for non-room orders' : ((bill.postedToFolio || (bill.status && bill.status.toLowerCase() === 'posted')) ? 'Already posted to room folio' : 'Post to Folio')" (click)="pos.postBillToRoom(bill.id)"><span class="material-icons-round">bed</span></button><button class="btn-icon view" (click)="openViewBill(bill)" title="View Bill Details"><span class="material-icons-round">visibility</span></button><button class="btn-icon delete" (click)="voidBill(bill)" title="Void Bill"><span class="material-icons-round">block</span></button></div></td>
-
-
-
-
-
             </tr>
           </tbody>
         </table>
       </div>
+
 
       <!-- Billing Pagination -->
       <div class="pos-pagination" *ngIf="pos.bills().length">
@@ -491,6 +488,26 @@
 
     <!-- INGREDIENT MASTER VIEW -->
     <div class="pos-section-view" *ngSwitchCase="'ingredient-master'">
+        <!-- Kitchen Ingredients KPI Cards -->
+        <div class="pos-stats-grid ingredients-kpi-grid" style="margin-bottom: 14px;">
+          <div class="pos-stat-card">
+            <span class="material-icons-round" style="background:#E0F2FE;color:#0284C7;">kitchen</span>
+            <div><strong>{{ ingredientStats().total }}</strong><small>Raw Ingredients</small></div>
+          </div>
+          <div class="pos-stat-card warning">
+            <span class="material-icons-round">warning</span>
+            <div><strong>{{ ingredientStats().lowStock }}</strong><small>Low Stock Items</small></div>
+          </div>
+          <div class="pos-stat-card pass">
+            <span class="material-icons-round">category</span>
+            <div><strong>{{ ingredientStats().categories }}</strong><small>Categories</small></div>
+          </div>
+          <div class="pos-stat-card">
+            <span class="material-icons-round" style="background:#ECE9FE;color:#6D28D9;">account_balance_wallet</span>
+            <div><strong>₹{{ ingredientStats().totalValue | number:'1.2-2' }}</strong><small>Stock Inventory Value</small></div>
+          </div>
+        </div>
+
         <div class="card-container mt-3">
           <div class="card-header">
             <h2 class="card-title">Raw Material Ingredients</h2>
@@ -558,19 +575,32 @@
 
       <!-- RECIPES (BOM) VIEW -->
       <div class="pos-section-view" *ngSwitchCase="'recipes'">
-        <section class="pos-command-band">
-          <div class="pos-command-copy">
-            <h2>Dish Recipes (Bill of Materials)</h2>
-            <p>Link dish items to raw ingredients, track portion preparation costs, food cost %, and gross margin %.</p>
-          </div>
-          <div class="command-badges">
-            <span class="soft-pill">Total Recipes: {{ recipeStats().total }}</span>
-            <span class="soft-pill">Avg Food Cost: {{ recipeStats().avgFoodCost }}%</span>
-            <span class="soft-pill pass">Avg Margin: {{ recipeStats().avgMargin }}%</span>
-          </div>
-        </section>
 
-        <div class="card-container mt-3">
+        <!-- Dish Recipes (BOM) KPI Cards -->
+        <div class="pos-stats-grid recipes-kpi-grid" style="margin-top: 4px; margin-bottom: 4px;">
+          <div class="pos-stat-card">
+            <span class="material-icons-round" style="background:#E0F2FE;color:#0284C7;">menu_book</span>
+            <div><strong>{{ recipeStats().total }}</strong><small>Total Dish Recipes</small></div>
+          </div>
+          <div class="pos-stat-card">
+            <span class="material-icons-round" style="background:#ECE9FE;color:#6D28D9;">payments</span>
+            <div><strong>₹{{ recipeStats().avgPortionCost }}</strong><small>Avg Portion Cost</small></div>
+          </div>
+          <div class="pos-stat-card warning">
+            <span class="material-icons-round">pie_chart</span>
+            <div><strong>{{ recipeStats().avgFoodCost }}%</strong><small>Avg Food Cost %</small></div>
+          </div>
+          <div class="pos-stat-card pass">
+            <span class="material-icons-round">trending_up</span>
+            <div><strong>{{ recipeStats().avgMargin }}%</strong><small>Avg Gross Margin %</small></div>
+          </div>
+          <div class="pos-stat-card pass">
+            <span class="material-icons-round">verified</span>
+            <div><strong>{{ recipeStats().highMargin }}</strong><small>High Margin Recipes (>=65%)</small></div>
+          </div>
+        </div>
+
+        <div class="card-container">
           <div class="card-header">
             <h2 class="card-title">Dish Recipe Catalog & Cost Breakdown</h2>
             <span class="total-badge">{{ filteredRecipes().length }} Recipes</span>

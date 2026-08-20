@@ -255,7 +255,8 @@ export class Layout implements OnInit {
         { label: 'Create Order', icon: 'add_circle', route: '/laundry/create', color: '#10B981' },
         { label: 'Order Tracking', icon: 'list_alt', route: '/laundry/orders', color: '#3B82F6' },
         { label: 'Status Flow', icon: 'timeline', route: '/laundry/detail', color: '#8B5CF6' },
-        { label: 'Price Master', icon: 'inventory_2', route: '/laundry/catalogue', color: '#F59E0B' }
+        { label: 'Price Master', icon: 'inventory_2', route: '/laundry/catalogue', color: '#F59E0B' },
+        { label: 'Service Catalog', icon: 'dry_cleaning', route: '/laundry/services', color: '#EC4899' }
       ]
     },
     {

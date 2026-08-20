@@ -393,17 +393,21 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
       owner,
     };
 
-    this.hk.saveSopCheckpoint(payload).subscribe({
+    const isEdit = this.modalMode() === 'edit';
+
+    this.hk.saveSopCheckpoint(payload, isEdit).subscribe({
       next: () => {
+        this.toast.success(`SOP Checkpoint "${id}" ${isEdit ? 'updated' : 'created'} successfully!`, 'Success');
         this.auditFrequency.set(frequency);
+        this.hk.loadSopCheckpoints(frequency);
+        this.fetchAuditDataForCurrentSelection(true);
         this.isAuditSopExpanded.set(true);
         this.isSopModalOpen.set(false);
         this.editingSopId.set(null);
-        this.fetchAuditDataForCurrentSelection(true);
       },
       error: error => {
         console.error('Failed to save SOP checkpoint', error);
-        alert('Failed to save SOP checkpoint. Please try again.');
+        this.toast.error('Failed to save SOP checkpoint. Please try again.', 'Error');
       }
     });
   }
@@ -420,13 +424,16 @@ export class HousekeepingComponent implements OnInit, OnDestroy {
   confirmDeleteSop() {
     const checkpoint = this.sopDeleteTarget();
     if (!checkpoint) return;
-    this.hk.deleteSopCheckpoint(checkpoint.id).subscribe({
+    const frequency = this.auditFrequency();
+    this.hk.deleteSopCheckpoint(checkpoint.id, checkpoint.apiId, frequency).subscribe({
       next: () => {
         this.toast.success(`SOP Checkpoint "${checkpoint.id}" deleted successfully!`, 'Checkpoint Deleted');
+        this.hk.loadSopCheckpoints(frequency);
         this.fetchAuditDataForCurrentSelection(true);
         this.closeSopDeleteModal();
       },
-      error: () => {
+      error: (err) => {
+        console.error('Failed to delete SOP Checkpoint', err);
         this.toast.error(`Failed to delete SOP Checkpoint "${checkpoint.id}"`, 'Error');
         this.closeSopDeleteModal();
       }

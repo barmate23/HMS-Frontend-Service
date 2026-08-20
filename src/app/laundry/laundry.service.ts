@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { forkJoin, Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
+import { ToastService, formatApiErrorMessage } from '../shared/toast/toast.service';
 
 export type LaundryTab = 'dashboard' | 'create' | 'orders' | 'detail' | 'linen' | 'catalogue' | 'services';
 export type LaundryServiceType = string;
@@ -299,6 +300,7 @@ interface ApiRoomType {
 @Injectable({ providedIn: 'root' })
 export class LaundryService {
   private readonly http = inject(HttpClient);
+  private readonly toast = inject(ToastService);
   private readonly apiBase = '/api/hmsService/v1/laundry';
   private readonly hmsBase = '/api/hmsService/v1';
   private readonly masterBase = '/api/masterService/v1';
@@ -319,20 +321,11 @@ export class LaundryService {
   readonly linenDispatches = signal<LinenDispatch[]>([]);
 
   readonly laundryGstRate = signal<number>(18);
-  readonly snackBar = signal<SnackBarNotification | null>(null);
-  private snackBarTimeout: any = null;
-
   showSnackBar(title: string, message: string, type: 'error' | 'success' | 'warning' | 'info' = 'error', durationMs = 6000): void {
-    if (this.snackBarTimeout) clearTimeout(this.snackBarTimeout);
-    this.snackBar.set({ title, message, type });
-    this.snackBarTimeout = setTimeout(() => {
-      this.closeSnackBar();
-    }, durationMs);
+    this.toast.show(message, type, title, durationMs);
   }
 
   closeSnackBar(): void {
-    if (this.snackBarTimeout) clearTimeout(this.snackBarTimeout);
-    this.snackBar.set(null);
   }
 
   readonly catalogueMap = computed(() => new Map(this.catalogue().map(item => [item.id, item])));
@@ -566,8 +559,20 @@ export class LaundryService {
       ? this.http.put<ApiLaundryPriceMaster | StandardResponse<ApiLaundryPriceMaster>>(`${this.apiBase}/updatePriceMaster/${input.id}`, this.toPriceMasterPayload(item))
       : this.http.post<ApiLaundryPriceMaster | StandardResponse<ApiLaundryPriceMaster>>(`${this.apiBase}/createPriceMaster`, this.toPriceMasterPayload(item));
     request$.subscribe({
-      next: response => this.upsertCatalogueItem(this.mapPriceMaster(this.itemData(response) || this.toPriceMasterPayload(item))),
-      error: error => console.error('[Laundry] Failed to save price master', error)
+      next: (response: any) => {
+        if (response && response.success === false) {
+          const errMsg = formatApiErrorMessage(response, 'Failed to save price master');
+          this.showSnackBar('Price Master Error', errMsg, 'error', 7000);
+          return;
+        }
+        this.upsertCatalogueItem(this.mapPriceMaster(this.itemData(response) || this.toPriceMasterPayload(item)));
+        this.showSnackBar('Success', `Price master item "${item.itemName}" saved successfully.`, 'success');
+      },
+      error: error => {
+        console.error('[Laundry] Failed to save price master', error);
+        const errMsg = formatApiErrorMessage(error, 'Failed to save price master');
+        this.showSnackBar('Price Master Error', errMsg, 'error', 7000);
+      }
     });
   }
 
@@ -577,8 +582,19 @@ export class LaundryService {
     const updated = { ...existing, active: !existing.active };
     this.upsertCatalogueItem(updated);
     this.http.put<ApiLaundryPriceMaster | StandardResponse<ApiLaundryPriceMaster>>(`${this.apiBase}/updatePriceMaster/${id}`, this.toPriceMasterPayload(updated)).subscribe({
-      next: response => this.upsertCatalogueItem(this.mapPriceMaster(this.itemData(response) || this.toPriceMasterPayload(updated))),
-      error: error => console.error('[Laundry] Failed to update price master status', error)
+      next: (response: any) => {
+        if (response && response.success === false) {
+          const errMsg = formatApiErrorMessage(response, 'Failed to update price master status');
+          this.showSnackBar('Update Error', errMsg, 'error', 7000);
+          return;
+        }
+        this.upsertCatalogueItem(this.mapPriceMaster(this.itemData(response) || this.toPriceMasterPayload(updated)));
+      },
+      error: error => {
+        console.error('[Laundry] Failed to update price master status', error);
+        const errMsg = formatApiErrorMessage(error, 'Failed to update price master status');
+        this.showSnackBar('Update Error', errMsg, 'error', 7000);
+      }
     });
   }
 
@@ -616,7 +632,7 @@ export class LaundryService {
       map(response => {
         const stdResp = response as StandardResponse<ApiLaundryOrder>;
         if (stdResp && stdResp.success === false) {
-          const errMsg = stdResp.message || (stdResp as any)?.error?.message || 'Failed to create laundry order.';
+          const errMsg = formatApiErrorMessage(stdResp, 'Failed to create laundry order.');
           this.showSnackBar('Order Failed', errMsg, 'error', 7000);
           return { success: false, message: errMsg };
         }
@@ -629,7 +645,7 @@ export class LaundryService {
         return { success: true, data: savedOrder };
       }),
       catchError(err => {
-        const errMsg = err?.error?.message || err?.error?.error?.message || 'Unable to create laundry order.';
+        const errMsg = formatApiErrorMessage(err, 'Unable to create laundry order.');
         console.error('[Laundry] Failed to save order:', err);
         this.showSnackBar('Order Failed', errMsg, 'error', 7000);
         return of({ success: false, message: errMsg });
@@ -657,11 +673,20 @@ export class LaundryService {
     this.dashboardData.set(this.buildLocalDashboardData());
     const params = new HttpParams().set('status', status);
     this.http.patch<ApiLaundryOrder | StandardResponse<ApiLaundryOrder>>(`${this.apiBase}/updateOrderStatus/${id}`, null, { params }).subscribe({
-      next: response => {
+      next: (response: any) => {
+        if (response && response.success === false) {
+          const errMsg = formatApiErrorMessage(response, 'Failed to update order status');
+          this.showSnackBar('Status Update Error', errMsg, 'error', 7000);
+          return;
+        }
         this.upsertOrder(this.mapOrder(this.itemData(response) || this.toOrderPayload(this.orders().find(order => order.id === id)!)));
         this.loadDashboardData();
       },
-      error: error => console.error('[Laundry] Failed to update order status', error)
+      error: error => {
+        console.error('[Laundry] Failed to update order status', error);
+        const errMsg = formatApiErrorMessage(error, 'Failed to update order status');
+        this.showSnackBar('Status Update Error', errMsg, 'error', 7000);
+      }
     });
   }
 
@@ -682,15 +707,40 @@ export class LaundryService {
     this.orders.update(items => items.filter(order => order.id !== id));
     this.dashboardData.set(this.buildLocalDashboardData());
     this.http.delete<void | StandardResponse<void>>(`${this.apiBase}/deleteOrder/${id}`).subscribe({
-      next: () => this.loadDashboardData(),
-      error: error => console.error('[Laundry] Failed to delete order', error)
+      next: (response: any) => {
+        if (response && response.success === false) {
+          const errMsg = formatApiErrorMessage(response, 'Failed to delete order');
+          this.showSnackBar('Delete Error', errMsg, 'error', 7000);
+          return;
+        }
+        this.loadDashboardData();
+      },
+      error: error => {
+        console.error('[Laundry] Failed to delete order', error);
+        const errMsg = formatApiErrorMessage(error, 'Failed to delete order');
+        this.showSnackBar('Delete Error', errMsg, 'error', 7000);
+      }
     });
   }
 
   deleteCatalogueItem(id: number): void {
+    const existing = this.catalogue().find(item => item.id === id);
     this.catalogue.update(items => items.filter(item => item.id !== id));
     this.http.delete<void | StandardResponse<void>>(`${this.apiBase}/deletePriceMaster/${id}`).subscribe({
-      error: error => console.error('[Laundry] Failed to delete price master', error)
+      next: (response: any) => {
+        if (response && response.success === false) {
+          if (existing) this.upsertCatalogueItem(existing);
+          const errMsg = formatApiErrorMessage(response, 'Failed to delete price master item');
+          this.showSnackBar('Delete Error', errMsg, 'error', 7000);
+          return;
+        }
+      },
+      error: error => {
+        console.error('[Laundry] Failed to delete price master', error);
+        if (existing) this.upsertCatalogueItem(existing);
+        const errMsg = formatApiErrorMessage(error, 'Failed to delete price master item');
+        this.showSnackBar('Delete Error', errMsg, 'error', 7000);
+      }
     });
   }
 
@@ -709,8 +759,21 @@ export class LaundryService {
       ? this.http.put<ApiLaundryServiceCatalog | StandardResponse<ApiLaundryServiceCatalog>>(`${this.apiBase}/updateServiceCatalog/${input.id}`, this.toServiceCatalogPayload(item))
       : this.http.post<ApiLaundryServiceCatalog | StandardResponse<ApiLaundryServiceCatalog>>(`${this.apiBase}/createServiceCatalog`, this.toServiceCatalogPayload(item));
     request$.subscribe({
-      next: response => this.upsertServiceCatalogItem(this.mapServiceCatalog(this.itemData(response) || this.toServiceCatalogPayload(item))),
-      error: error => console.error('[Laundry] Failed to save service catalog', error)
+      next: (response: any) => {
+        if (response && response.success === false) {
+          const errMsg = formatApiErrorMessage(response, 'Failed to save service catalog');
+          this.showSnackBar('Service Error', errMsg, 'error', 7000);
+          return;
+        }
+        const saved = this.mapServiceCatalog(this.itemData(response) || this.toServiceCatalogPayload(item));
+        this.upsertServiceCatalogItem(saved);
+        this.showSnackBar('Service Saved', `Service catalog item "${item.serviceName}" saved successfully.`, 'success');
+      },
+      error: error => {
+        console.error('[Laundry] Failed to save service catalog', error);
+        const errMsg = formatApiErrorMessage(error, 'Failed to save service catalog');
+        this.showSnackBar('Service Error', errMsg, 'error', 7000);
+      }
     });
   }
 
@@ -721,10 +784,25 @@ export class LaundryService {
   }
 
   deleteServiceCatalogItem(id: number): void {
+    const existing = this.serviceCatalog().find(item => item.id === id);
     this.serviceCatalog.update(items => items.filter(item => item.id !== id));
     this.syncServiceTypes();
     this.http.delete<void | StandardResponse<void>>(`${this.apiBase}/deleteServiceCatalog/${id}`).subscribe({
-      error: error => console.error('[Laundry] Failed to delete service catalog', error)
+      next: (response: any) => {
+        if (response && response.success === false) {
+          if (existing) this.upsertServiceCatalogItem(existing);
+          const errMsg = formatApiErrorMessage(response, 'Failed to delete service catalog');
+          this.showSnackBar('Delete Error', errMsg, 'error', 7000);
+          return;
+        }
+        this.showSnackBar('Service Deleted', 'Service deleted successfully.', 'info');
+      },
+      error: error => {
+        console.error('[Laundry] Failed to delete service catalog', error);
+        if (existing) this.upsertServiceCatalogItem(existing);
+        const errMsg = formatApiErrorMessage(error, 'Failed to delete service catalog');
+        this.showSnackBar('Delete Error', errMsg, 'error', 7000);
+      }
     });
   }
 
@@ -1116,12 +1194,16 @@ export class LaundryService {
       const key = this.normalizeServiceName(service.serviceName);
       if (!key) continue;
       if (prices[key] !== undefined) continue;
-      if (service.pricingBasis === 'washFold') prices[key] = Number(item.washFold || 0);
-      if (service.pricingBasis === 'washPress') prices[key] = Number(item.washPress || 0);
-      if (service.pricingBasis === 'dryClean') prices[key] = Number(item.dryClean || 0);
-      if (service.pricingBasis === 'express') {
+
+      const norm = service.serviceName.toLowerCase();
+      if (norm.includes('fold')) prices[key] = Number(item.washFold || 0);
+      else if (norm.includes('press') || norm.includes('iron')) prices[key] = Number(item.washPress || 0);
+      else if (norm.includes('dry')) prices[key] = Number(item.dryClean || 0);
+      else if (service.pricingBasis === 'express') {
         const base = item.washPress || item.washFold || item.dryClean || 0;
         prices[key] = Math.round(base * (1 + Number(item.expressSurcharge || 0) / 100));
+      } else {
+        prices[key] = 0;
       }
     }
     return prices;

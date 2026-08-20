@@ -10,6 +10,7 @@ import { ToastService, formatApiErrorMessage } from '../shared/toast/toast.servi
 
 import {
   ActiveReservationDetails,
+  MonthlySalesMap,
   OrderStatus,
   OrderType,
   PosAuditLog,
@@ -228,114 +229,132 @@ export class PosComponent implements OnInit, OnDestroy {
 
   recipeStats = computed(() => {
     const list = this.pos.recipes();
-    if (!list.length) return { total: 0, avgFoodCost: 0, avgMargin: 0, highMargin: 0 };
+    if (!list.length) return { total: 0, avgFoodCost: '0.0', avgMargin: '0.0', highMargin: 0, avgPortionCost: '0.00' };
+    const totalCost = list.reduce((sum, r) => sum + (r.totalPortionCost || 0), 0);
+    const avgPortionCost = (totalCost / list.length).toFixed(2);
     const avgFoodCost = (list.reduce((sum, r) => sum + r.foodCostPercent, 0) / list.length).toFixed(1);
     const avgMargin = (list.reduce((sum, r) => sum + r.grossMarginPercent, 0) / list.length).toFixed(1);
     const highMargin = list.filter(r => r.grossMarginPercent >= 65).length;
-    return { total: list.length, avgFoodCost, avgMargin, highMargin };
+    return { total: list.length, avgFoodCost, avgMargin, highMargin, avgPortionCost };
   });
 
   // POS Performance Component State (Matching User Reference Design)
   activeItemTab = signal<'top' | 'less'>('top');
 
-  posPerformanceKpis = signal({
-    orderValue: 3430,
-    avgOrder: 381,
-    menuItemsCount: 3
+  posHeroKpis = computed(() => {
+    const cards = this.pos.posDashboardCards() || this.pos.posDashboard()?.cards;
+    if (cards) {
+      return {
+        activeOutlets: Number(cards.activeOutlets ?? 0),
+        outletStatus: cards.outletStatus || (cards.activeOutlets ? 'ACTIVE' : 'INACTIVE'),
+        totalTables: Number(cards.totalTables ?? 0),
+        totalSeats: Number(cards.totalSeats ?? 0),
+        grossSales: Number(cards.grossSales ?? 0),
+        revenueTrend: cards.revenueTrend || '+0%',
+        totalOrders: Number(cards.totalOrders ?? cards.openOrders ?? 0),
+        orderTrend: cards.orderTrend || '~12m Avg'
+      };
+    }
+    const outlets = this.pos.outlets();
+    const tables = this.pos.tables();
+    const orders = this.pos.orders();
+    const bills = this.pos.bills();
+    const totalSales = bills.reduce((sum, bill) => sum + this.billTotal(bill), 0);
+    return {
+      activeOutlets: outlets.filter(o => o.active).length || outlets.length,
+      outletStatus: 'ACTIVE',
+      totalTables: tables.length,
+      totalSeats: 0,
+      grossSales: totalSales,
+      revenueTrend: '+0%',
+      totalOrders: orders.length,
+      orderTrend: '~12m Avg'
+    };
   });
 
-  topSellingItemsDetailed = signal([
-    {
-      rank: 1,
-      name: 'Naan',
-      category: 'Main Course / Item',
-      soldQty: 21,
-      rate: 30,
-      avgRate: 30,
-      revenue: 630,
-      imageUrl: 'https://images.unsplash.com/photo-1626074353765-517a681e40be?w=120',
-      monthlyTrend: [
-        { month: 'apr', val: 12 }, { month: 'may', val: 15 }, { month: 'jun', val: 18 },
-        { month: 'jul', val: 20 }, { month: 'aug', val: 85 }, { month: 'sep', val: 15 },
-        { month: 'oct', val: 18 }, { month: 'nov', val: 22 }, { month: 'dec', val: 28 },
-        { month: 'jan', val: 24 }, { month: 'feb', val: 19 }, { month: 'mar', val: 21 }
-      ]
-    },
-    {
-      rank: 2,
-      name: 'Paneer',
-      category: 'Appetizer / Item',
-      soldQty: 14,
-      rate: 100,
-      avgRate: 100,
-      revenue: 1400,
-      imageUrl: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=120',
-      monthlyTrend: [
-        { month: 'apr', val: 10 }, { month: 'may', val: 12 }, { month: 'jun', val: 14 },
-        { month: 'jul', val: 16 }, { month: 'aug', val: 75 }, { month: 'sep', val: 14 },
-        { month: 'oct', val: 16 }, { month: 'nov', val: 18 }, { month: 'dec', val: 22 },
-        { month: 'jan', val: 18 }, { month: 'feb', val: 14 }, { month: 'mar', val: 16 }
-      ]
-    },
-    {
-      rank: 3,
-      name: 'Chicken',
-      category: 'Appetizer / Item',
-      soldQty: 7,
-      rate: 200,
-      avgRate: 200,
-      revenue: 1400,
-      imageUrl: 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=120',
-      monthlyTrend: [
-        { month: 'apr', val: 8 }, { month: 'may', val: 10 }, { month: 'jun', val: 12 },
-        { month: 'jul', val: 14 }, { month: 'aug', val: 65 }, { month: 'sep', val: 10 },
-        { month: 'oct', val: 12 }, { month: 'nov', val: 14 }, { month: 'dec', val: 18 },
-        { month: 'jan', val: 14 }, { month: 'feb', val: 10 }, { month: 'mar', val: 12 }
-      ]
+  posPerformanceKpis = computed(() => {
+    const data = this.pos.posDashboard();
+    if (data && (data.orderValue !== undefined || data.avgOrder !== undefined)) {
+      return {
+        orderValue: Number(data.orderValue ?? 0),
+        avgOrder: Number(data.avgOrder ?? 0),
+        menuItemsCount: Number(data.menuItemsCount ?? this.pos.menuItems().length)
+      };
     }
-  ]);
+    const bills = this.pos.bills().filter(b => b.status !== 'VOID');
+    const sales = bills.reduce((sum, b) => sum + this.billTotal(b), 0);
+    const avg = bills.length ? Math.round(sales / bills.length) : 0;
+    return {
+      orderValue: sales,
+      avgOrder: avg,
+      menuItemsCount: this.pos.menuItems().length
+    };
+  });
 
-  lessSellingItemsDetailed = signal([
-    {
-      rank: 1,
-      name: 'Lobster Thermidor',
-      category: 'Seafood Special / Item',
-      soldQty: 1,
-      rate: 1850,
-      avgRate: 1850,
-      revenue: 1850,
-      imageUrl: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=120',
-      monthlyTrend: [
-        { month: 'apr', val: 5 }, { month: 'may', val: 5 }, { month: 'jun', val: 5 },
-        { month: 'jul', val: 5 }, { month: 'aug', val: 15 }, { month: 'sep', val: 5 },
-        { month: 'oct', val: 5 }, { month: 'nov', val: 5 }, { month: 'dec', val: 5 },
-        { month: 'jan', val: 5 }, { month: 'feb', val: 5 }, { month: 'mar', val: 5 }
-      ]
-    },
-    {
-      rank: 2,
-      name: 'Artichoke Tart',
-      category: 'Gourmet / Item',
-      soldQty: 2,
-      rate: 620,
-      avgRate: 620,
-      revenue: 1240,
-      imageUrl: 'https://images.unsplash.com/photo-1621996346565-e3def6164286?w=120',
-      monthlyTrend: [
-        { month: 'apr', val: 8 }, { month: 'may', val: 5 }, { month: 'jun', val: 5 },
-        { month: 'jul', val: 8 }, { month: 'aug', val: 20 }, { month: 'sep', val: 5 },
-        { month: 'oct', val: 8 }, { month: 'nov', val: 5 }, { month: 'dec', val: 10 },
-        { month: 'jan', val: 5 }, { month: 'feb', val: 5 }, { month: 'mar', val: 8 }
-      ]
+  private mapMonthlyTrend(sales?: MonthlySalesMap, fallbackQty: number = 0): { month: string; val: number }[] {
+    const months = ['apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec', 'jan', 'feb', 'mar'] as const;
+    if (!sales) {
+      return months.map(m => ({ month: m, val: m === 'aug' ? (fallbackQty ? 85 : 0) : 0 }));
     }
-  ]);
+    const vals = months.map(m => Number(sales[m] ?? 0));
+    const maxVal = Math.max(1, ...vals);
+    return months.map(m => {
+      const v = Number(sales[m] ?? 0);
+      const heightPercent = v > 0 ? Math.min(100, Math.max(25, Math.round((v / maxVal) * 100))) : 0;
+      return { month: m, val: heightPercent };
+    });
+  }
 
-  // POS Dashboard Dummy Data Signals for Customization
-  dummyPosStats = signal({
-    totalOutlets: 4,
-    totalDiningTables: 48,
-    totalRevenue: 248500,
-    totalOrders: 384
+  topSellingItemsDetailed = computed(() => {
+    const apiItems = this.pos.posDashboard()?.fastMovingItems;
+    if (apiItems && apiItems.length > 0) {
+      return apiItems.map((item, idx) => {
+        const menuItem = this.pos.menuItems().find(m => m.name.toLowerCase() === (item.itemName || '').toLowerCase());
+        const soldQty = Number(item.soldQty || 0);
+        const rate = Number(item.rate ?? menuItem?.price ?? 0);
+        const totalAmount = Number(item.totalAmount ?? (rate * soldQty));
+        const catName = item.categoryName || menuItem?.category || 'Main Course';
+        const itemType = item.itemType || 'Item';
+        return {
+          rank: idx + 1,
+          name: item.itemName || `Item ${idx + 1}`,
+          category: `${catName} / ${itemType}`,
+          soldQty,
+          rate,
+          avgRate: rate,
+          revenue: totalAmount,
+          imageUrl: item.imageUrl || item.itemImage || menuItem?.imageUrl || this.menuImage(menuItem || {}),
+          monthlyTrend: this.mapMonthlyTrend(item.monthlySales, soldQty)
+        };
+      });
+    }
+    return [];
+  });
+
+  lessSellingItemsDetailed = computed(() => {
+    const apiItems = this.pos.posDashboard()?.lessMovingItems;
+    if (apiItems && apiItems.length > 0) {
+      return apiItems.map((item, idx) => {
+        const menuItem = this.pos.menuItems().find(m => m.name.toLowerCase() === (item.itemName || '').toLowerCase());
+        const soldQty = Number(item.soldQty || 0);
+        const rate = Number(item.rate ?? menuItem?.price ?? 0);
+        const totalAmount = Number(item.totalAmount ?? (rate * soldQty));
+        const catName = item.categoryName || menuItem?.category || 'Appetizer';
+        const itemType = item.itemType || 'Item';
+        return {
+          rank: idx + 1,
+          name: item.itemName || `Item ${idx + 1}`,
+          category: `${catName} / ${itemType}`,
+          soldQty,
+          rate,
+          avgRate: rate,
+          revenue: totalAmount,
+          imageUrl: item.imageUrl || item.itemImage || menuItem?.imageUrl || this.menuImage(menuItem || {}),
+          monthlyTrend: this.mapMonthlyTrend(item.monthlySales, soldQty)
+        };
+      });
+    }
+    return [];
   });
 
   monthlyOutletSales = signal([
@@ -2288,8 +2307,21 @@ export class PosComponent implements OnInit, OnDestroy {
     input.value = ''; // reset so same file can be re-selected
   }
 
+  titleCase(text?: string): string {
+    if (!text) return '';
+    const str = String(text).trim();
+    if (!str) return '';
+    if (/^[A-Z]{2,4}-\d+$/i.test(str)) return str;
+    return str
+      .toLowerCase()
+      .split(' ')
+      .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1) : '')
+      .join(' ');
+  }
+
   outletName(id?: number): string {
-    return this.pos.outletMap().get(Number(id))?.name || 'Unknown Outlet';
+    const raw = this.pos.outletMap().get(Number(id))?.name || 'Main Outlet';
+    return this.titleCase(raw);
   }
 
   dashboardOutletName(id?: number): string {

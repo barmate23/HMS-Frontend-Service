@@ -115,7 +115,7 @@
               </div>
               <div class="input-group">
                 <label>Date of Birth</label>
-                <input type="date" [ngModel]="guestData().dob" (ngModelChange)="updateGuestField('dob', $event)" (blur)="markFieldTouched('dob')" [class.invalid]="shouldShowError('dob')">
+                <input type="date" [max]="todayIso" [ngModel]="guestData().dob" (ngModelChange)="updateGuestField('dob', $event)" (blur)="markFieldTouched('dob')" [class.invalid]="shouldShowError('dob')">
                 <span class="field-error" *ngIf="shouldShowError('dob')">{{ validationMessage('dob') }}</span>
               </div>
             </div>
@@ -189,7 +189,7 @@
                   </div>
                   <div class="input-group">
                     <label>Date of Birth</label>
-                    <input type="date" [(ngModel)]="member.dob">
+                    <input type="date" [max]="todayIso" [(ngModel)]="member.dob" (ngModelChange)="validateMemberDob(member)">
                   </div>
                   <div class="input-group">
                     <label>Relationship</label>

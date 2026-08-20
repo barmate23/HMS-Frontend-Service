@@ -177,7 +177,7 @@
             </div>
             <!-- Active follow ups feed -->
             <div class="activity-feed" *ngIf="dashboardFollowUps().length">
-              <div class="feed-item" *ngFor="let item of dashboardFollowUps()">
+              <div class="feed-item clickable-feed-item" *ngFor="let item of dashboardFollowUps()" (click)="viewEnquiry(item)" title="Click to View Details">
                 <div class="feed-avatar" [ngClass]="'priority-' + item.priority.toLowerCase()">
                   {{ getInitials(item.guestName) }}
                 </div>
@@ -204,7 +204,7 @@
           </div>
           <div class="card-body">
             <div class="activity-feed">
-              <div class="feed-item" *ngFor="let item of dashboardRecentActivity()">
+              <div class="feed-item clickable-feed-item" *ngFor="let item of dashboardRecentActivity()" (click)="viewEnquiry(item)" title="Click to View Details">
                 <div class="feed-avatar" [ngClass]="item.status.toLowerCase().replace(' ', '-')">
                   {{ getInitials(item.guestName) }}
                 </div>
@@ -222,12 +222,52 @@
       </div>
     </div>
 
-    <!-- Tab View: Enquiries List screen (Matching Housekeeping Tasks table layout) -->
+    <!-- Tab View: Enquiries & Tasks List screen -->
     <div class="tab-content-container animate-fade-in" *ngIf="currentTab() === 'list'">
       
+      <!-- Top KPI Metrics Strip -->
+      <div class="crm-kpi-grid">
+        <div class="kpi-card teal-accent">
+          <div class="kpi-icon"><span class="material-icons-round">assignment</span></div>
+          <div class="kpi-info">
+            <span class="kpi-label">TOTAL ACTIVE TASKS</span>
+            <strong class="kpi-value">{{ filteredEnquiries().length }}</strong>
+            <small class="kpi-sub">Active pipeline leads</small>
+          </div>
+        </div>
+
+        <div class="kpi-card red-accent">
+          <div class="kpi-icon"><span class="material-icons-round">priority_high</span></div>
+          <div class="kpi-info">
+            <span class="kpi-label">HIGH PRIORITY LEADS</span>
+            <strong class="kpi-value">{{ calcHighPriorityCount() }}</strong>
+            <small class="kpi-sub">Needs urgent action</small>
+          </div>
+        </div>
+
+        <div class="kpi-card gold-accent">
+          <div class="kpi-icon"><span class="material-icons-round">receipt_long</span></div>
+          <div class="kpi-info">
+            <span class="kpi-label">PROPOSALS SENT</span>
+            <strong class="kpi-value">{{ calcQuotedCount() }}</strong>
+            <small class="kpi-sub">Quotations active</small>
+          </div>
+        </div>
+
+        <div class="kpi-card green-accent">
+          <div class="kpi-icon"><span class="material-icons-round">payments</span></div>
+          <div class="kpi-info">
+            <span class="kpi-label">PIPELINE VALUE</span>
+            <strong class="kpi-value">{{ formatCurrency(calcTotalPipelineValue()) }}</strong>
+            <small class="kpi-sub">Target revenue</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main CRM Tasks Table Card -->
       <div class="modern-card">
         <div class="card-header">
-          <h2 class="card-title">Housekeeping Assignments & Tasks</h2>
+          <h2 class="card-title">Active CRM Enquiries & Follow-Up Tasks</h2>
           <div class="header-actions">
             <span class="total-badge">{{ filteredEnquiries().length }} Active Tasks</span>
           </div>
@@ -237,26 +277,38 @@
           <table class="premium-table hk-grid-table hk-hover-table task-grid">
             <thead>
               <tr>
-                <th style="width: 14%; min-width: 120px;">ENQUIRY REF</th>
-                <th style="width: 9%;">SOURCE</th>
-                <th style="width: 27%;">GUEST & TYPE</th>
-                <th style="width: 10%;">PRIORITY</th>
-                <th style="width: 17%;">ASSIGNED TO</th>
-                <th style="width: 7%; text-align: center;">EST. MINS</th>
-                <th style="width: 10%;">STATUS</th>
-                <th style="width: 6%; text-align: center;">ACTIONS</th>
+                <th style="width: 13%; min-width: 120px;">ENQUIRY REF</th>
+                <th style="width: 10%;">SOURCE</th>
+                <th style="width: 23%;">GUEST & CONTACT</th>
+                <th style="width: 17%;">REQUIREMENT / DATES</th>
+                <th style="width: 12%; text-align: right;">EXPECTED REV</th>
+                <th style="width: 9%;">PRIORITY</th>
+                <th style="width: 14%;">ASSIGNED TO</th>
+                <th style="width: 8%;">STATUS</th>
+                <th style="width: 7%; text-align: center;">ACTIONS</th>
               </tr>
             </thead>
 
             <tbody>
               <tr *ngFor="let item of filteredEnquiries()">
                 <td><span class="room-pill">{{ item.id }}</span></td>
-                <td>{{ item.source || 'Floor 1' }}</td>
+                <td>
+                  <span class="source-pill">{{ item.source || 'Walk-in' }}</span>
+                </td>
                 <td>
                   <div class="task-type-container">
                     <strong class="task-label">{{ item.guestName }}</strong>
-                    <small class="task-notes">— {{ item.phone }} • {{ item.enquiryType || 'Stayover Clean' }}</small>
+                    <small class="task-notes">{{ item.phone }} <span *ngIf="item.companyName">• {{ item.companyName }}</span></small>
                   </div>
+                </td>
+                <td>
+                  <div class="req-dates-cell">
+                    <span class="req-type font-semibold text-teal">{{ item.enquiryType || 'Room' }}</span>
+                    <small class="req-dates" *ngIf="item.checkIn">In: {{ item.checkIn }} <span *ngIf="item.rooms">({{ item.rooms }} Rms)</span></small>
+                  </div>
+                </td>
+                <td style="text-align: right;">
+                  <strong class="font-mono text-success">{{ formatCurrency(item.expectedRevenue || item.budget || 0) }}</strong>
                 </td>
                 <td>
                   <span class="priority-pill" [class]="item.priority.toLowerCase()">
@@ -272,9 +324,6 @@
                     <span class="staff-name">{{ item.salesPerson || 'Unassigned' }}</span>
                   </div>
                 </td>
-                <td style="text-align: center;">
-                  <span>0m</span>
-                </td>
                 <td>
                   <span class="status-badge" [class]="item.status.toLowerCase().replace(' ', '_')">
                     {{ item.status }}
@@ -282,6 +331,9 @@
                 </td>
                 <td style="text-align: center;">
                   <div class="quick-actions">
+                    <button type="button" class="quick-btn" title="View Details" (click)="viewEnquiry(item)">
+                      <span class="material-icons-round text-primary">visibility</span>
+                    </button>
                     <button type="button" class="quick-btn" title="Edit Enquiry" (click)="editEnquiry(item)">
                       <span class="material-icons-round">edit</span>
                     </button>
@@ -305,9 +357,7 @@
             <span>Next</span>
             <span class="material-icons-round">chevron_right</span>
           </button>
-        </div>
       </div>
-
     </div>
 
     <!-- Tab View: New Enquiry Form -->
@@ -805,6 +855,184 @@
           </button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- View Enquiry Details Modal -->
+  <div class="crm-modal-overlay" *ngIf="isEnquiryViewModalOpen() && selectedEnquiryForView() as eq" (click)="closeEnquiryViewModal()">
+    <div class="crm-modal-card preview-modal enquiry-view-modal animate-slide-down" (click)="$event.stopPropagation()">
+      
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="material-icons-round text-primary">visibility</span>
+          <h3>Task & Enquiry Details</h3>
+          <span class="room-pill ml-2">{{ eq.id }}</span>
+        </div>
+        <button type="button" class="close-btn" (click)="closeEnquiryViewModal()">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body-form preview-body">
+
+        <!-- Top Header Hero Banner -->
+        <div class="enquiry-view-hero">
+          <div class="hero-guest-info">
+            <span class="avatar-lg">{{ getInitials(eq.guestName) }}</span>
+            <div>
+              <h2 class="hero-guest-name">{{ eq.guestName }}</h2>
+              <p class="hero-guest-sub" *ngIf="eq.companyName">{{ eq.companyName }}</p>
+              <div class="hero-badges">
+                <span class="status-badge" [class]="eq.status.toLowerCase().replace(' ', '_')">{{ eq.status }}</span>
+                <span class="priority-pill" [class]="eq.priority.toLowerCase()">
+                  <span class="material-icons-round" *ngIf="eq.priority === 'High'">north</span>
+                  <span class="material-icons-round" *ngIf="eq.priority === 'Medium'">drag_handle</span>
+                  <span class="material-icons-round" *ngIf="eq.priority === 'Low'">south</span>
+                  {{ eq.priority }} Priority
+                </span>
+                <span class="source-tag"><span class="material-icons-round">place</span> {{ eq.source || 'Walk-in' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-revenue-box">
+            <span class="rev-label">Expected Revenue</span>
+            <span class="rev-amount">{{ formatCurrency(eq.expectedRevenue || eq.budget || 0) }}</span>
+            <small class="rev-quoted" *ngIf="eq.quoted === 'Yes'"><span class="material-icons-round inline-icon">check_circle</span> Quotation Sent</small>
+            <small class="rev-quoted" *ngIf="eq.quoted !== 'Yes'"><span class="material-icons-round inline-icon">pending</span> Pending Quotation</small>
+          </div>
+        </div>
+
+        <!-- Detail Cards Grid -->
+        <div class="view-details-grid mt-3">
+          
+          <!-- Card 1: Guest Contact Profile -->
+          <div class="view-card">
+            <div class="card-section-title">
+              <span class="material-icons-round text-primary">person</span>
+              <h4>Guest Profile & Contact</h4>
+            </div>
+            <div class="detail-rows">
+              <div class="detail-row">
+                <span class="d-label">Full Name:</span>
+                <span class="d-val font-semibold">{{ eq.salutation ? eq.salutation + ' ' : '' }}{{ eq.guestName }}</span>
+              </div>
+              <div class="detail-row" *ngIf="eq.companyName">
+                <span class="d-label">Company:</span>
+                <span class="d-val">{{ eq.companyName }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="d-label">Phone:</span>
+                <span class="d-val font-mono"><a [href]="'tel:' + eq.phone" class="link-tel">{{ eq.phone }}</a></span>
+              </div>
+              <div class="detail-row" *ngIf="eq.altPhone">
+                <span class="d-label">Alt Phone:</span>
+                <span class="d-val font-mono">{{ eq.altPhone }}</span>
+              </div>
+              <div class="detail-row" *ngIf="eq.email">
+                <span class="d-label">Email:</span>
+                <span class="d-val"><a [href]="'mailto:' + eq.email" class="link-email">{{ eq.email }}</a></span>
+              </div>
+              <div class="detail-row" *ngIf="eq.city || eq.state || eq.address">
+                <span class="d-label">Address:</span>
+                <span class="d-val">{{ eq.address ? eq.address + ', ' : '' }}{{ eq.city ? eq.city + ', ' : '' }}{{ eq.state || '' }}</span>
+              </div>
+              <div class="detail-row" *ngIf="eq.gstNumber">
+                <span class="d-label">GSTIN:</span>
+                <span class="d-val font-mono">{{ eq.gstNumber }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Enquiry & Booking Parameters -->
+          <div class="view-card">
+            <div class="card-section-title">
+              <span class="material-icons-round text-primary">event_available</span>
+              <h4>Requirement Details</h4>
+            </div>
+            <div class="detail-rows">
+              <div class="detail-row">
+                <span class="d-label">Enquiry Category:</span>
+                <span class="d-val font-semibold text-teal">{{ eq.enquiryType }}</span>
+              </div>
+              <div class="detail-row" *ngIf="eq.checkIn">
+                <span class="d-label">Check In:</span>
+                <span class="d-val font-mono">{{ eq.checkIn }}</span>
+              </div>
+              <div class="detail-row" *ngIf="eq.checkOut">
+                <span class="d-label">Check Out:</span>
+                <span class="d-val font-mono">{{ eq.checkOut }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="d-label">Rooms Required:</span>
+                <span class="d-val font-semibold">{{ eq.rooms || 1 }} Room(s)</span>
+              </div>
+              <div class="detail-row">
+                <span class="d-label">Guests Count:</span>
+                <span class="d-val">{{ eq.adults || 1 }} Adult(s)<span *ngIf="eq.children">, {{ eq.children }} Child(ren)</span></span>
+              </div>
+              <div class="detail-row" *ngIf="eq.mealPlan">
+                <span class="d-label">Meal Plan:</span>
+                <span class="d-val">{{ eq.mealPlan }}</span>
+              </div>
+              <div class="detail-row" *ngIf="eq.budget">
+                <span class="d-label">Budget:</span>
+                <span class="d-val font-mono">{{ formatCurrency(eq.budget) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Staff Assignment & Communication Notes -->
+          <div class="view-card full-width">
+            <div class="card-section-title">
+              <span class="material-icons-round text-primary">assignment_ind</span>
+              <h4>Sales Assignment & Notes</h4>
+            </div>
+            <div class="detail-rows grid-2-col">
+              <div class="detail-row">
+                <span class="d-label">Assigned Representative:</span>
+                <span class="d-val font-semibold">
+                  <span class="avatar-sm inline-avatar">{{ getInitials(eq.salesPerson) }}</span>
+                  {{ eq.salesPerson || 'Unassigned' }}
+                </span>
+              </div>
+              <div class="detail-row" *ngIf="eq.nextFollowUp">
+                <span class="d-label">Next Follow-up:</span>
+                <span class="d-val font-mono text-warn font-semibold">{{ eq.nextFollowUp }}</span>
+              </div>
+              <div class="detail-row" *ngIf="eq.lastContacted">
+                <span class="d-label">Last Contact Date:</span>
+                <span class="d-val font-mono">{{ eq.lastContacted }}</span>
+              </div>
+              <div class="detail-row" *ngIf="eq.latestRemark">
+                <span class="d-label">Latest Staff Remark:</span>
+                <span class="d-val">{{ eq.latestRemark }}</span>
+              </div>
+            </div>
+
+            <!-- Notes & Message box -->
+            <div class="message-notes-box mt-3" *ngIf="eq.message">
+              <span class="notes-header"><span class="material-icons-round inline-icon">notes</span> Special Requirements / Guest Message:</span>
+              <p class="notes-content">{{ eq.message }}</p>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeEnquiryViewModal()">Close</button>
+        <button type="button" class="btn btn-outline" (click)="editEnquiryFromView(eq)">
+          <span class="material-icons-round inline-icon">edit</span> Edit Enquiry
+        </button>
+        <button type="button" class="btn btn-primary green-btn-alt" (click)="openCreateQuotationForEnquiry(eq)">
+          <span class="material-icons-round inline-icon">receipt_long</span> Create Quotation
+        </button>
+      </div>
+
     </div>
   </div>
 

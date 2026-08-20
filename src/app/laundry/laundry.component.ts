@@ -1155,10 +1155,11 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
   saveServiceDraft(): void {
     const name = this.serviceDraftName().trim();
-    if (!name) return;
+    if (!name) {
+      this.laundry.showSnackBar('Validation Error', 'Service name is required.', 'warning');
+      return;
+    }
     const current = this.editingServiceName();
-    const newKey = name.toLowerCase();
-    if (this.serviceCatalog().some(service => service.name.toLowerCase() === newKey && service.name !== current)) return;
     const existing = current ? this.laundry.serviceCatalog().find(service => service.serviceName === current) : null;
     this.laundry.saveServiceCatalogItem({
       id: existing?.id,
@@ -1231,33 +1232,47 @@ export class LaundryComponent implements OnInit, OnDestroy {
     const key = this.normalizeServiceName(service);
     const dynamicPrice = draft.servicePrices?.[key];
     if (dynamicPrice !== undefined) return Number(dynamicPrice || 0);
-    return this.priceForService(draft as LaundryCatalogueItem, service);
+    if (draft.id) {
+      const existingItem = this.laundry.catalogue().find(item => item.id === draft.id);
+      if (existingItem) {
+        return this.priceForService(existingItem, service);
+      }
+    }
+    return 0;
   }
 
   setDraftServicePrice(service: string, value: number | string): void {
     const key = this.normalizeServiceName(service);
     const price = Number(value || 0);
-    const base = this.serviceBase(service);
     const current = this.catalogueDraft();
     const servicePrices = { ...(current.servicePrices || {}), [key]: price };
     const next: Partial<LaundryCatalogueItem> = { ...current, servicePrices };
 
-    if (base === 'washFold') next.washFold = price;
-    if (base === 'washPress') next.washPress = price;
-    if (base === 'dryClean') next.dryClean = price;
+    const norm = service.toLowerCase();
+    if (norm.includes('fold')) next.washFold = price;
+    else if (norm.includes('press') || norm.includes('iron')) next.washPress = price;
+    else if (norm.includes('dry')) next.dryClean = price;
 
     this.catalogueDraft.set(next);
   }
 
   priceForService(item: LaundryCatalogueItem, service: string): number {
-    const dynamicPrice = item.servicePrices?.[this.normalizeServiceName(service)];
+    const key = this.normalizeServiceName(service);
+    const dynamicPrice = item.servicePrices?.[key];
     if (dynamicPrice !== undefined) return Number(dynamicPrice || 0);
+
     const base = this.serviceBase(service);
     if (base === 'express') {
       const normal = item.washPress || item.washFold || item.dryClean;
       return Math.round(normal * (1 + Number(item.expressSurcharge || 0) / 100));
     }
-    return Number(item[base] || 0);
+
+    const norm = service.toLowerCase();
+    if (norm.includes('fold')) return Number(item.washFold || 0);
+    if (norm.includes('press') || norm.includes('iron')) return Number(item.washPress || 0);
+    if (norm.includes('dry')) return Number(item.dryClean || 0);
+
+    return 0;
   }
 
   serviceIcon(service: string): string {

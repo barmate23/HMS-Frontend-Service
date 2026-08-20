@@ -1163,17 +1163,36 @@ export class HousekeepingService {
     });
   }
 
-  saveSopCheckpoint(checkpoint: Partial<SopCheckpoint>): Observable<void> {
+  saveSopCheckpoint(checkpoint: Partial<SopCheckpoint>, isEdit: boolean = false): Observable<void> {
     const payload = this.toApiSopCheckpoint(checkpoint);
+    const updateId = checkpoint.apiId ?? checkpoint.id;
+
+    if (isEdit && updateId) {
+      return this.http.put<ApiResponse<void>>(`${this.auditApiBase}/updateCheckpoint/${updateId}`, payload).pipe(
+        tap(() => this.loadSopCheckpoints(checkpoint.frequency)),
+        map(() => undefined)
+      );
+    }
+
     return this.http.post<ApiResponse<void>>(`${this.auditApiBase}/createCheckpoints`, payload).pipe(
       tap(() => this.loadSopCheckpoints(checkpoint.frequency)),
       map(() => undefined)
     );
   }
 
-  deleteSopCheckpoint(id: string): Observable<void> {
-    this._sopCheckpoints.update(list => list.filter(item => item.id !== id));
-    return of(undefined);
+  deleteSopCheckpoint(id: string, apiId?: number, frequency?: AuditFrequency): Observable<void> {
+    const targetId = apiId ?? id;
+    return this.http.delete<ApiResponse<void>>(`${this.auditApiBase}/deleteCheckpoint/${targetId}`).pipe(
+      tap(() => {
+        this.loadSopCheckpoints(frequency);
+      }),
+      map(() => undefined),
+      catchError(error => {
+        console.error('Failed to delete SOP checkpoint via API', error);
+        this.loadSopCheckpoints(frequency);
+        return of(undefined);
+      })
+    );
   }
 
   loadSopMasters() {

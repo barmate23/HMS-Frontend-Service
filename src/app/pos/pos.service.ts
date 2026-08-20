@@ -254,11 +254,32 @@ export interface ActiveReservationDetails {
   notes?: string;
 }
 
+export interface MonthlySalesMap {
+  apr?: number;
+  may?: number;
+  jun?: number;
+  jul?: number;
+  aug?: number;
+  sep?: number;
+  oct?: number;
+  nov?: number;
+  dec?: number;
+  jan?: number;
+  feb?: number;
+  mar?: number;
+}
+
 export interface PosDashboardFastMovingItem {
   itemName?: string;
   outletName?: string;
   soldQty?: number;
   imageUrl?: string | null;
+  itemImage?: string | null;
+  categoryName?: string;
+  itemType?: string;
+  rate?: number;
+  totalAmount?: number;
+  monthlySales?: MonthlySalesMap;
 }
 
 export interface PosDashboardBillingWatch {
@@ -276,23 +297,34 @@ export interface PosDashboardRecentActivity {
   timestamp?: string;
 }
 
+export interface PosDashboardCards {
+  activeOutlets?: number;
+  outletStatus?: string;
+  totalTables?: number;
+  totalSeats?: number;
+  openOrders?: number;
+  kotRunning?: number;
+  bills?: number;
+  roomPostings?: number;
+  grossSales?: number;
+  revenueTrend?: string;
+  totalOrders?: number;
+  orderTrend?: string;
+}
+
 export interface PosDashboardData {
+  cards?: PosDashboardCards;
   floorPulse?: PosDashboardFloorPulse;
   kotQueue?: PosDashboardKotQueueItem[];
   revenueMix?: PosDashboardOutletRevenue[];
   paymentSplit?: PosDashboardPaymentSplit[];
   fastMovingItems?: PosDashboardFastMovingItem[];
+  lessMovingItems?: PosDashboardFastMovingItem[];
   billingWatch?: PosDashboardBillingWatch;
   recentActivity?: PosDashboardRecentActivity[];
-}
-
-export interface PosDashboardCards {
-  activeOutlets: number;
-  openOrders: number;
-  kotRunning: number;
-  bills: number;
-  roomPostings: number;
-  grossSales: number;
+  orderValue?: number;
+  avgOrder?: number;
+  menuItemsCount?: number;
 }
 
 interface ApiOutlet {
@@ -1241,7 +1273,13 @@ export class PosService {
 
   loadPosDashboard(): void {
     this.http.get<StandardResponse<PosDashboardData>>(`${this.posBaseUrl}/dashboard/getPosDashboardData`).subscribe({
-      next: response => this.posDashboard.set(response?.data || null),
+      next: response => {
+        const data = response?.data || null;
+        this.posDashboard.set(data);
+        if (data?.cards) {
+          this.posDashboardCards.set(data.cards);
+        }
+      },
       error: error => this.addAudit('Unable to load POS dashboard from API', 'Dashboard', error?.error?.message || error?.message || 'API error')
     });
   }

@@ -261,10 +261,7 @@ export class BillingComponent implements OnInit, OnDestroy {
 
   invoices = signal<Invoice[]>([]);
 
-  refunds = signal<Refund[]>([
-    { id: 1, folioNo: 'FOL-0998', guest: 'Nisha Rao', amount: 1200, mode: 'UPI', reason: 'Duplicate advance', status: 'Processed' },
-    { id: 2, folioNo: 'FOL-1001', guest: 'Akshay Barmate', amount: 500, mode: 'Card', reason: 'Service recovery', status: 'Pending Approval' }
-  ]);
+  refunds = signal<Refund[]>([]);
 
   inwardReceipts = signal<InwardReceipt[]>([]);
 

@@ -334,7 +334,9 @@ export class CrmComponent implements OnInit {
   // Modal forms trigger
   isQuotationModalOpen = signal(false);
   isQuotationViewModalOpen = signal(false);
+  isEnquiryViewModalOpen = signal(false);
   selectedQuotation = signal<Quotation | null>(null);
+  selectedEnquiryForView = signal<Enquiry | null>(null);
   linkedEnquiry = signal<Enquiry | null>(null);
   
   // Dashboard and Pagination signals
@@ -418,12 +420,7 @@ export class CrmComponent implements OnInit {
 
   quotations = signal<Quotation[]>([]);
 
-  salesTeam = signal<SalesMember[]>([
-    { name: 'Aman Rajawat', designation: 'Front office', phone: '7489 711 220', email: '', monthlyTarget: 800000.00 },
-    { name: 'Khushbu', designation: 'Front Office Executive', phone: '7389203572', email: 'hotclambiencc2015@gmail.com', monthlyTarget: 800000.00 },
-    { name: 'Rishi Chauhan', designation: 'Sales Manager', phone: '7880096602', email: 'hotelambience2015@gmail.com', monthlyTarget: 1000000.00 },
-    { name: 'Suraj Tomar', designation: 'Front office', phone: '96914 90829', email: '', monthlyTarget: 700000.00 }
-  ]);
+  salesTeam = signal<SalesMember[]>([]);
 
 
 
@@ -440,6 +437,19 @@ export class CrmComponent implements OnInit {
 
       return matchesSearch && matchesStatus && matchesSales;
     });
+  }
+
+  // KPI helper calculations for CRM Tasks view
+  calcHighPriorityCount(): number {
+    return this.filteredEnquiries().filter(e => e.priority === 'High').length;
+  }
+
+  calcQuotedCount(): number {
+    return this.filteredEnquiries().filter(e => e.quoted === 'Yes').length;
+  }
+
+  calcTotalPipelineValue(): number {
+    return this.filteredEnquiries().reduce((sum, e) => sum + (e.expectedRevenue || e.budget || 0), 0);
   }
 
   // Helper for top-aligned MatSnackBar notifications
@@ -970,6 +980,29 @@ export class CrmComponent implements OnInit {
     this.isQuotationViewModalOpen.set(false);
     this.selectedQuotation.set(null);
     this.linkedEnquiry.set(null);
+  }
+
+  // View Enquiry / Task details preview modal
+  viewEnquiry(item: Enquiry) {
+    this.selectedEnquiryForView.set(item);
+    this.isEnquiryViewModalOpen.set(true);
+  }
+
+  closeEnquiryViewModal() {
+    this.isEnquiryViewModalOpen.set(false);
+    this.selectedEnquiryForView.set(null);
+  }
+
+  editEnquiryFromView(item: Enquiry) {
+    this.closeEnquiryViewModal();
+    this.editEnquiry(item);
+  }
+
+  openCreateQuotationForEnquiry(item: Enquiry) {
+    this.closeEnquiryViewModal();
+    this.newQuotation.enquiryId = item.id;
+    this.onSelectEnquiryForQuotation(item.id);
+    this.isQuotationModalOpen.set(true);
   }
 }
 

@@ -268,6 +268,12 @@ export class NewBookingComponent implements OnInit {
     this.accompanyingMembers.update(members => members.filter((_, i) => i !== index));
   }
 
+  validateMemberDob(member: any) {
+    if (member && member.dob && member.dob >= this.todayIso) {
+      member.dob = '';
+    }
+  }
+
   searchGuestModalOpen = signal(false);
   createGuestModalOpen = signal(false);
   searchQuery = signal('');
@@ -281,11 +287,7 @@ export class NewBookingComponent implements OnInit {
     message: ''
   });
   
-  mockGuests: GuestProfile[] = [
-    { id: 'G1001', title: 'Mr.', firstName: 'Rajesh', lastName: 'Kumar', fullName: 'Rajesh Kumar', phoneCode: '+91 (India)', phone: '9876543210', email: 'rajesh.k@example.com', country: 'India', address1: '123 Park Street', address2: '', city: 'Mumbai', state: 'MH', zip: '400001', vip: true, nationality: 'Indian', gender: 'Male', dob: '1985-06-15', idProof: 'Aadhar Card', idNumber: '1234 5678 9012', notes: 'Prefers quiet rooms.', visits: 5, lastVisit: '2026-03-10' },
-    { id: 'G1002', title: 'Ms.', firstName: 'Sarah', lastName: 'Jenkins', fullName: 'Sarah Jenkins', phoneCode: '+1 (USA)', phone: '555-0198', email: 's.jenkins@example.com', country: 'USA', address1: '456 Oak Lane', address2: 'Apt 4B', city: 'New York', state: 'NY', zip: '10001', vip: false, nationality: 'American', gender: 'Female', dob: '1990-11-20', idProof: 'Passport', idNumber: 'P1234567', notes: 'Allergic to peanuts.', visits: 1, lastVisit: '2025-12-05' },
-    { id: 'G1003', title: 'Dr.', firstName: 'Amitabh', lastName: 'Sharma', fullName: 'Amitabh Sharma', phoneCode: '+91 (India)', phone: '9123456789', email: 'dr.sharma@example.com', country: 'India', address1: '789 Clinic Road', address2: '', city: 'Delhi', state: 'DL', zip: '110001', vip: true, nationality: 'Indian', gender: 'Male', dob: '1975-02-28', idProof: 'Aadhar Card', idNumber: '9876 5432 1098', notes: 'Requires early check-in.', visits: 12, lastVisit: '2026-05-01' }
-  ];
+  mockGuests: GuestProfile[] = [];
 
   roomTypes = [
     { id: 'ALL', label: 'All Types', icon: 'meeting_room' },
@@ -1292,6 +1294,9 @@ export class NewBookingComponent implements OnInit {
   }
 
   updateGuestField(field: keyof GuestProfile, value: any) {
+    if (field === 'dob' && value && String(value) >= this.todayIso) {
+      this.markFieldTouched('dob');
+    }
     this.guestData.update(data => {
       let val = value;
       if ((field === 'firstName' || field === 'lastName' || field === 'fullName') && typeof value === 'string') {
@@ -1367,9 +1372,10 @@ export class NewBookingComponent implements OnInit {
       }
       case 'dob': {
         if (!guest.dob) return '';
+        if (guest.dob > this.todayIso) return 'Date of birth cannot be a future date.';
         const dob = new Date(guest.dob);
         if (Number.isNaN(dob.getTime())) return 'Enter a valid date of birth.';
-        if (dob >= new Date()) return 'Date of birth must be in the past.';
+        if (guest.dob >= this.todayIso) return 'Date of birth cannot be a future date.';
         return '';
       }
       case 'idNumber': {

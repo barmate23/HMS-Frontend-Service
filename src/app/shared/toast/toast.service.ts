@@ -28,18 +28,25 @@ export function formatApiErrorMessage(err: any, fallbackMessage: string = 'An un
     if (typeof payload === 'string') {
       try {
         const parsed = JSON.parse(payload);
-        if (parsed.error?.message) return parsed.error.message;
-        if (parsed.message) return parsed.message;
+        const codeMsg = parsed.error?.message || parsed.message;
+        const details = parsed.error?.details || parsed.details;
+        if (codeMsg && details && details !== codeMsg) return `${codeMsg} (${details})`;
+        if (codeMsg) return codeMsg;
       } catch {
         if (!payload.includes('Http failure response') && !payload.includes('<!DOCTYPE html>')) {
           return payload;
         }
       }
     } else {
-      if (payload.error?.message) return payload.error.message;
-      if (payload.error?.details) return payload.error.details;
-      if (payload.message && !payload.message.includes('Http failure response')) return payload.message;
-      if (payload.details) return payload.details;
+      const codeMsg = payload.error?.message || payload.message;
+      const details = payload.error?.details || payload.details;
+      if (codeMsg && typeof codeMsg === 'string' && !codeMsg.includes('Http failure response')) {
+        if (details && typeof details === 'string' && details !== codeMsg) {
+          return `${codeMsg} (${details})`;
+        }
+        return codeMsg;
+      }
+      if (payload.details && typeof payload.details === 'string') return payload.details;
     }
   }
 

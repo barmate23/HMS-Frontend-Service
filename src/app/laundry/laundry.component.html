@@ -1110,21 +1110,4 @@
       </div>
     </section>
   </div>
-
-  <!-- Floating User-Appealing SnackBar Notification -->
-  <div class="hms-snackbar-container" *ngIf="laundry.snackBar() as snack" [class]="snack.type">
-    <div class="snackbar-content">
-      <span class="material-icons-round snackbar-icon" *ngIf="snack.type === 'error'">error_outline</span>
-      <span class="material-icons-round snackbar-icon" *ngIf="snack.type === 'success'">check_circle_outline</span>
-      <span class="material-icons-round snackbar-icon" *ngIf="snack.type === 'warning'">warning_amber</span>
-      <span class="material-icons-round snackbar-icon" *ngIf="snack.type === 'info'">info</span>
-      <div class="snackbar-text">
-        <strong class="snackbar-title">{{ snack.title }}</strong>
-        <p class="snackbar-message">{{ snack.message }}</p>
-      </div>
-    </div>
-    <button class="snackbar-close-btn" type="button" (click)="laundry.closeSnackBar()">
-      <span class="material-icons-round">close</span>
-    </button>
-  </div>
 </div>

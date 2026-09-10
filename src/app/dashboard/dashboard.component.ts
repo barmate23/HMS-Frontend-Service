@@ -114,6 +114,8 @@ export class DashboardComponent {
   readonly isLoadingRevenue = signal(false);
   readonly revenueError = signal<string | null>(null);
   readonly activeSellingTab = signal<'top' | 'less'>('top');
+  readonly activeRevenueChartView = signal<'area' | 'bar'>('area');
+  readonly hoveredMonthIndex = signal<number | null>(null);
 
   readonly financialYears = computed(() => {
     const current = this.currentFinancialYear();
@@ -169,6 +171,140 @@ export class DashboardComponent {
     }
 
     return this.withMonthHeights(months.map(month => ({ ...month, revenue: 0, bookings: 0 })));
+  });
+
+  readonly donutChartData = computed(() => {
+    const kpis = this.roomKpis();
+    const total = kpis.total || 0;
+    const circumference = 2 * Math.PI * 40; // ~251.327
+
+    if (!total) {
+      return {
+        total: 0,
+        available: 0,
+        occupied: 0,
+        blocked: 0,
+        occupancy: 0,
+        availablePct: 0,
+        occupiedPct: 0,
+        blockedPct: 0,
+        circumference,
+        occupiedDash: `0 ${circumference}`,
+        availableDash: `0 ${circumference}`,
+        blockedDash: `0 ${circumference}`,
+        occupiedOffset: 0,
+        availableOffset: 0,
+        blockedOffset: 0
+      };
+    }
+
+    const occupiedPct = Math.round((kpis.occupied / total) * 100);
+    const availablePct = Math.round((kpis.available / total) * 100);
+    const blockedPct = Math.max(0, 100 - occupiedPct - availablePct);
+
+    const occupiedLen = (kpis.occupied / total) * circumference;
+    const availableLen = (kpis.available / total) * circumference;
+    const blockedLen = (kpis.blocked / total) * circumference;
+
+    return {
+      total,
+      available: kpis.available,
+      occupied: kpis.occupied,
+      blocked: kpis.blocked,
+      occupancy: kpis.occupancy,
+      availablePct,
+      occupiedPct,
+      blockedPct,
+      circumference,
+      occupiedDash: `${occupiedLen.toFixed(2)} ${(circumference - occupiedLen).toFixed(2)}`,
+      availableDash: `${availableLen.toFixed(2)} ${(circumference - availableLen).toFixed(2)}`,
+      blockedDash: `${blockedLen.toFixed(2)} ${(circumference - blockedLen).toFixed(2)}`,
+      occupiedOffset: 0,
+      availableOffset: -occupiedLen,
+      blockedOffset: -(occupiedLen + availableLen)
+    };
+  });
+
+  readonly revenueTrendChart = computed(() => {
+    const months = this.monthMetrics();
+    const width = 720;
+    const height = 130;
+    const padding = { top: 12, right: 20, bottom: 20, left: 48 };
+    const usableWidth = width - padding.left - padding.right;
+    const usableHeight = height - padding.top - padding.bottom;
+
+    const rawMaxRevenue = Math.max(1000, ...months.map(m => m.revenue));
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rawMaxRevenue)));
+    const maxRevenue = Math.ceil(rawMaxRevenue / magnitude) * magnitude;
+    const maxBookings = Math.max(1, ...months.map(m => m.bookings));
+
+    const yTicks = [0, 0.5, 1].map(ratio => {
+      const val = maxRevenue * ratio;
+      const y = padding.top + usableHeight - ratio * usableHeight;
+      let label = '0';
+      if (val >= 10000000) label = (val / 10000000).toFixed(1) + 'Cr';
+      else if (val >= 100000) label = (val / 100000).toFixed(1) + 'L';
+      else if (val >= 1000) label = (val / 1000).toFixed(0) + 'k';
+      else if (val > 0) label = String(Math.round(val));
+      return { y, value: val, label: '₹' + label };
+    });
+
+    const points = months.map((m, i) => {
+      const x = padding.left + (i / Math.max(1, months.length - 1)) * usableWidth;
+      const revRatio = Math.min(1, Math.max(0, m.revenue / maxRevenue));
+      const bookRatio = Math.min(1, Math.max(0, m.bookings / maxBookings));
+      const yRev = padding.top + usableHeight - revRatio * usableHeight;
+      const yBook = padding.top + usableHeight - bookRatio * usableHeight;
+      return {
+        index: i,
+        month: m.label,
+        revenue: m.revenue,
+        bookings: m.bookings,
+        x,
+        yRev,
+        yBook
+      };
+    });
+
+    const buildSmoothPath = (pts: Array<{ x: number; y: number }>) => {
+      if (!pts.length) return '';
+      if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y}`;
+      let d = `M ${pts[0].x} ${pts[0].y}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i === 0 ? 0 : i - 1];
+        const p1 = pts[i];
+        const p2 = pts[i + 1];
+        const p3 = pts[i + 2 >= pts.length ? pts.length - 1 : i + 2];
+        const cp1x = p1.x + (p2.x - p0.x) / 6;
+        const cp1y = p1.y + (p2.y - p0.y) / 6;
+        const cp2x = p2.x - (p3.x - p1.x) / 6;
+        const cp2y = p2.y - (p3.y - p1.y) / 6;
+        d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+      }
+      return d;
+    };
+
+    const revCoords = points.map(p => ({ x: p.x, y: p.yRev }));
+    const bookCoords = points.map(p => ({ x: p.x, y: p.yBook }));
+
+    const revLine = buildSmoothPath(revCoords);
+    const bookLine = buildSmoothPath(bookCoords);
+    const bottomY = padding.top + usableHeight;
+    const revArea = revCoords.length ? `${revLine} L ${revCoords[revCoords.length - 1].x.toFixed(1)} ${bottomY} L ${revCoords[0].x.toFixed(1)} ${bottomY} Z` : '';
+
+    return {
+      width,
+      height,
+      padding,
+      bottomY,
+      maxRevenue,
+      maxBookings,
+      yTicks,
+      points,
+      revLine,
+      bookLine,
+      revArea
+    };
   });
 
   readonly totalMonthlyRevenue = computed(() => Number(this.dashboardData()?.revenueAndBookings?.totalRevenue ?? this.dashboardData()?.summary?.fyBookingRevenue ?? 0));

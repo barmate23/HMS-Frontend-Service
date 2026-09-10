@@ -1,7 +1,7 @@
 <section class="dashboard-shell">
   <div class="dashboard-toolbar">
     <div>
-      <span class="eyebrow">HMS Cloud Command</span>
+      <span class="eyebrow">HMS Overview</span>
       <h1>Main Dashboard</h1>
       <p>Room inventory, booking revenue and POS movement for the selected financial year.</p>
     </div>
@@ -39,6 +39,9 @@
         <strong>{{ roomKpis().occupied }}</strong>
         <small>Occupied Rooms</small>
       </div>
+      <div class="occupancy-pill">
+        {{ roomKpis().occupancy }}%
+      </div>
     </a>
 
     <a routerLink="/reservations" class="kpi-card revenue">
@@ -59,34 +62,130 @@
   </div>
 
   <div class="dashboard-grid">
+    <!-- Revenue & Bookings Multi-Graph Panel -->
     <article class="panel combined-chart-panel">
       <header>
         <div>
-          <h2>Revenue & Bookings</h2>
-          <p>{{ formatFinancialYear(selectedFinancialYear()) }} monthly booking performance</p>
+          <h2>Revenue & Bookings Performance</h2>
+          <p>{{ formatFinancialYear(selectedFinancialYear()) }} monthly trajectory</p>
         </div>
-        <div class="panel-summary">
-          <div>
-            <strong>{{ totalMonthlyRevenue() | currency:'INR':'symbol':'1.0-0' }}</strong>
-            <span>Revenue</span>
+
+        <div class="chart-header-actions">
+          <div class="combined-legend">
+            <span><i class="revenue-dot"></i>Revenue</span>
+            <span><i class="booking-dot"></i>Bookings</span>
           </div>
-          <div>
-            <strong>{{ totalBookings() }}</strong>
-            <span>Bookings</span>
+
+          <div class="panel-summary">
+            <div>
+              <strong>{{ totalMonthlyRevenue() | currency:'INR':'symbol':'1.0-0' }}</strong>
+              <span>Revenue</span>
+            </div>
+            <div>
+              <strong>{{ totalBookings() }}</strong>
+              <span>Bookings</span>
+            </div>
+            <div>
+              <strong>{{ averageBookingValue() | currency:'INR':'symbol':'1.0-0' }}</strong>
+              <span>ABV</span>
+            </div>
           </div>
-          <div>
-            <strong>{{ averageBookingValue() | currency:'INR':'symbol':'1.0-0' }}</strong>
-            <span>ABV</span>
+
+          <!-- Different Graph Switcher: Area Trend vs Grouped Pillars -->
+          <div class="chart-toggle-strip">
+            <button type="button" [class.active]="activeRevenueChartView() === 'area'"
+              (click)="activeRevenueChartView.set('area')" title="Smooth Area Trend Curve">
+              <span class="material-icons-round">show_chart</span>
+              <span>Trend</span>
+            </button>
+            <button type="button" [class.active]="activeRevenueChartView() === 'bar'"
+              (click)="activeRevenueChartView.set('bar')" title="Monthly Grouped Columns">
+              <span class="material-icons-round">bar_chart</span>
+              <span>Columns</span>
+            </button>
           </div>
         </div>
       </header>
 
-      <div class="combined-legend">
-        <span><i class="revenue-dot"></i>Revenue</span>
-        <span><i class="booking-dot"></i>Bookings</span>
+      <!-- Graph 1: Smooth SVG Area & Curve Trend Chart -->
+      <div class="trend-chart-box" *ngIf="activeRevenueChartView() === 'area'" [class.loading]="isLoadingRevenue()">
+        <svg viewBox="0 0 720 130" class="trend-svg" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="revenueLightGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#0F3D3E" stop-opacity="0.22" />
+              <stop offset="65%" stop-color="#0F3D3E" stop-opacity="0.06" />
+              <stop offset="100%" stop-color="#0F3D3E" stop-opacity="0.0" />
+            </linearGradient>
+          </defs>
+
+          <!-- Horizontal Reference Gridlines & Y-Axis Labels -->
+          <g class="grid-lines">
+            <g *ngFor="let tick of revenueTrendChart().yTicks">
+              <line x1="50" [attr.y1]="tick.y" x2="695" [attr.y2]="tick.y" stroke="var(--surface-200)" stroke-width="1" stroke-dasharray="3 3" />
+              <text x="44" [attr.y]="tick.y + 4" text-anchor="end" class="chart-tick-label">{{ tick.label }}</text>
+            </g>
+          </g>
+
+          <!-- Smooth Area Gradient Fill -->
+          <path [attr.d]="revenueTrendChart().revArea" fill="url(#revenueLightGrad)" />
+
+          <!-- Smooth Revenue Primary Curve -->
+          <path [attr.d]="revenueTrendChart().revLine" fill="none" stroke="#0F3D3E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+          <!-- Bookings Accent Spline -->
+          <path [attr.d]="revenueTrendChart().bookLine" fill="none" stroke="#C08261" stroke-width="2" stroke-dasharray="4 3" stroke-linecap="round" />
+
+          <!-- Hover Vertical Guideline -->
+          <line *ngIf="hoveredMonthIndex() !== null"
+            [attr.x1]="revenueTrendChart().points[hoveredMonthIndex()!].x"
+            y1="15"
+            [attr.x2]="revenueTrendChart().points[hoveredMonthIndex()!].x"
+            [attr.y2]="revenueTrendChart().bottomY"
+            stroke="#0F3D3E" stroke-width="1.5" stroke-dasharray="2 2" opacity="0.6" />
+
+          <!-- Interactive Data Points & Hover Targets -->
+          <g *ngFor="let pt of revenueTrendChart().points">
+            <!-- Revenue Node -->
+            <circle [attr.cx]="pt.x" [attr.cy]="pt.yRev" r="4" fill="#FFFFFF" stroke="#0F3D3E" stroke-width="2"
+              [class.active-node]="hoveredMonthIndex() === pt.index" />
+            <!-- Bookings Node -->
+            <circle [attr.cx]="pt.x" [attr.cy]="pt.yBook" r="3" fill="#FFFFFF" stroke="#C08261" stroke-width="1.5"
+              [class.active-node]="hoveredMonthIndex() === pt.index" />
+
+            <!-- Invisible hit target for smooth mouse tracking -->
+            <rect [attr.x]="pt.x - 26" y="0" width="52" height="130" fill="transparent" class="hover-hitbox"
+              (mouseenter)="hoveredMonthIndex.set(pt.index)"
+              (mouseleave)="hoveredMonthIndex.set(null)" />
+          </g>
+        </svg>
+
+        <!-- Floating Analytical Tooltip on Node Hover -->
+        <div class="trend-tooltip" *ngIf="hoveredMonthIndex() !== null"
+          [style.left.%]="(revenueTrendChart().points[hoveredMonthIndex()!].x / 720) * 100">
+          <div class="tooltip-header">{{ revenueTrendChart().points[hoveredMonthIndex()!].month }} Summary</div>
+          <div class="tooltip-row rev">
+            <span class="bullet-rev"></span>
+            <span class="lbl">Revenue:</span>
+            <strong>{{ revenueTrendChart().points[hoveredMonthIndex()!].revenue | currency:'INR':'symbol':'1.0-0' }}</strong>
+          </div>
+          <div class="tooltip-row book">
+            <span class="bullet-book"></span>
+            <span class="lbl">Bookings:</span>
+            <strong>{{ revenueTrendChart().points[hoveredMonthIndex()!].bookings }}</strong>
+          </div>
+        </div>
+
+        <!-- X-Axis Month Indicators -->
+        <div class="trend-x-axis">
+          <span *ngFor="let pt of revenueTrendChart().points"
+            [class.active]="hoveredMonthIndex() === pt.index">
+            {{ pt.month }}
+          </span>
+        </div>
       </div>
 
-      <div class="combined-chart" [class.loading]="isLoadingRevenue()">
+      <!-- Graph 2: Grouped Columns View (Alternate) -->
+      <div class="combined-chart" *ngIf="activeRevenueChartView() === 'bar'" [class.loading]="isLoadingRevenue()">
         <div class="combo-month" *ngFor="let month of monthMetrics()">
           <div class="combo-bars">
             <span class="combo-bar revenue-bar" [style.height.%]="month.revenueHeight"
@@ -98,19 +197,21 @@
           </div>
           <div class="combo-values">
             <strong>{{ month.revenue | currency:'INR':'symbol':'1.0-0' }}</strong>
-            <span>{{ month.bookings }} booking{{ month.bookings === 1 ? '' : 's' }}</span>
+            <span>{{ month.bookings }} bk</span>
           </div>
           <small>{{ month.label }}</small>
         </div>
       </div>
+
       <p class="error-text" *ngIf="revenueError()">{{ revenueError() }}</p>
     </article>
 
+    <!-- Room Status & Floor Distribution Panel (Donut Chart + Floor Meters) -->
     <article class="panel room-panel">
       <header>
         <div>
-          <h2>Floor Wise Rooms</h2>
-          <p>Available and occupied rooms from current room records</p>
+          <h2>Room Status & Capacity</h2>
+          <p>Real-time room occupancy and floor-wise distribution</p>
         </div>
         <div class="floor-header-tools">
           <div class="room-legend">
@@ -122,21 +223,88 @@
         </div>
       </header>
 
+      <!-- Different Graph: Donut Distribution Chart & Proportion Metrics -->
+      <div class="room-donut-section">
+        <div class="donut-container">
+          <svg viewBox="0 0 100 100" class="room-donut-svg">
+            <!-- Background base track -->
+            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--surface-100)" stroke-width="11" />
+            <!-- Occupied Segment (Deep Pine) -->
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#0F3D3E" stroke-width="11"
+              [attr.stroke-dasharray]="donutChartData().occupiedDash"
+              [attr.stroke-dashoffset]="donutChartData().occupiedOffset"
+              transform="rotate(-90 50 50)" stroke-linecap="butt" class="donut-slice" />
+            <!-- Available Segment (Emerald) -->
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#2A9D8F" stroke-width="11"
+              [attr.stroke-dasharray]="donutChartData().availableDash"
+              [attr.stroke-dashoffset]="donutChartData().availableOffset"
+              transform="rotate(-90 50 50)" stroke-linecap="butt" class="donut-slice" />
+            <!-- Blocked Segment (Terracotta) -->
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#C08261" stroke-width="11"
+              [attr.stroke-dasharray]="donutChartData().blockedDash"
+              [attr.stroke-dashoffset]="donutChartData().blockedOffset"
+              transform="rotate(-90 50 50)" stroke-linecap="butt" class="donut-slice" />
+          </svg>
+          <div class="donut-center-metric">
+            <strong>{{ donutChartData().occupancy }}%</strong>
+            <small>Occupancy</small>
+          </div>
+        </div>
+
+        <div class="donut-legend-grid">
+          <div class="donut-stat-item available">
+            <div class="stat-header">
+              <span class="stat-indicator"></span>
+              <span class="stat-name">Available</span>
+              <span class="stat-pct">{{ donutChartData().availablePct }}%</span>
+            </div>
+            <div class="stat-count">{{ roomKpis().available }} <small>rooms</small></div>
+          </div>
+
+          <div class="donut-stat-item occupied">
+            <div class="stat-header">
+              <span class="stat-indicator"></span>
+              <span class="stat-name">Occupied</span>
+              <span class="stat-pct">{{ donutChartData().occupiedPct }}%</span>
+            </div>
+            <div class="stat-count">{{ roomKpis().occupied }} <small>rooms</small></div>
+          </div>
+
+          <div class="donut-stat-item blocked">
+            <div class="stat-header">
+              <span class="stat-indicator"></span>
+              <span class="stat-name">Blocked</span>
+              <span class="stat-pct">{{ donutChartData().blockedPct }}%</span>
+            </div>
+            <div class="stat-count">{{ roomKpis().blocked }} <small>rooms</small></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floor-Wise Segmented Capacity Progress Meters -->
       <div class="floor-list" *ngIf="floorRoomMetrics().length; else noRooms">
         <div class="floor-row" *ngFor="let floor of floorRoomMetrics()">
           <div class="floor-main">
             <strong>{{ floor.floor }}</strong>
-            <span>{{ floor.total }} rooms</span>
+            <span>{{ floor.total }} total rooms</span>
           </div>
-          <div class="floor-bars">
-            <span class="available" [style.width.%]="floor.total ? floor.available / floor.total * 100 : 0"></span>
-            <span class="occupied" [style.width.%]="floor.total ? floor.occupied / floor.total * 100 : 0"></span>
-            <span class="blocked" [style.width.%]="floor.total ? floor.blocked / floor.total * 100 : 0"></span>
+          <div class="floor-meter-col">
+            <div class="floor-segmented-bar">
+              <span class="seg available" [style.width.%]="floor.total ? (floor.available / floor.total * 100) : 0"
+                [title]="floor.available + ' available'"></span>
+              <span class="seg occupied" [style.width.%]="floor.total ? (floor.occupied / floor.total * 100) : 0"
+                [title]="floor.occupied + ' occupied'"></span>
+              <span class="seg blocked" [style.width.%]="floor.total ? (floor.blocked / floor.total * 100) : 0"
+                [title]="floor.blocked + ' blocked'"></span>
+            </div>
+            <div class="floor-counts">
+              <span class="c-avail"><b>{{ floor.available }}</b> avail</span>
+              <span class="c-occ"><b>{{ floor.occupied }}</b> occ</span>
+              <span class="c-blk"><b>{{ floor.blocked }}</b> blk</span>
+            </div>
           </div>
-          <div class="floor-counts">
-            <span>{{ floor.available }} available</span>
-            <span>{{ floor.occupied }} occupied</span>
-            <span>{{ floor.blocked }} blocked</span>
+          <div class="floor-pct-pill" [class.active-occ]="floorOccupancy(floor) > 0">
+            {{ floorOccupancy(floor) }}%
           </div>
         </div>
       </div>
@@ -145,25 +313,26 @@
       </ng-template>
     </article>
 
+    <!-- POS Performance & Movement Panel -->
     <article class="panel pos-panel">
       <header>
         <div>
-          <h2>POS Performance</h2>
-          <p>Order count, value and menu item movement</p>
+          <h2>POS Movement & Highlights</h2>
+          <p>Order volume, revenue ticket sizes and menu velocity</p>
         </div>
-        <a routerLink="/pos/orders">Open POS</a>
+        <a routerLink="/pos/orders" class="panel-link">Open POS</a>
       </header>
 
       <div class="pos-mini-grid">
-        <div>
+        <div class="pos-stat-card">
           <strong>{{ posOrderValue() | currency:'INR':'symbol':'1.0-0' }}</strong>
           <span>Order value</span>
         </div>
-        <div>
+        <div class="pos-stat-card">
           <strong>{{ averagePosOrderValue() | currency:'INR':'symbol':'1.0-0' }}</strong>
-          <span>Avg order</span>
+          <span>Avg ticket</span>
         </div>
-        <div>
+        <div class="pos-stat-card">
           <strong>{{ posMenuItemCount() }}</strong>
           <span>Menu items</span>
         </div>
@@ -189,8 +358,7 @@
             <div class="item-main">
               <strong>{{ item.name }}</strong>
               <span>{{ item.category }} / {{ item.subcategory }} - {{ item.qty }} sold</span>
-              <em>Rate {{ item.price | currency:'INR':'symbol':'1.0-0' }} - Avg {{ (item.qty ? item.value / item.qty :
-                0) | currency:'INR':'symbol':'1.0-0' }}</em>
+              <em>Rate {{ item.price | currency:'INR':'symbol':'1.0-0' }} - Avg {{ (item.qty ? item.value / item.qty : 0) | currency:'INR':'symbol':'1.0-0' }}</em>
             </div>
             <div class="item-variation" aria-label="Month wise item order variation">
               <span *ngFor="let month of item.monthVariation" [class.empty]="month.qty === 0"
@@ -214,8 +382,7 @@
             <div class="item-main">
               <strong>{{ item.name }}</strong>
               <span>{{ item.category }} / {{ item.subcategory }} - {{ item.qty }} sold</span>
-              <em>Rate {{ item.price | currency:'INR':'symbol':'1.0-0' }} - Avg {{ (item.qty ? item.value / item.qty :
-                0) | currency:'INR':'symbol':'1.0-0' }}</em>
+              <em>Rate {{ item.price | currency:'INR':'symbol':'1.0-0' }} - Avg {{ (item.qty ? item.value / item.qty : 0) | currency:'INR':'symbol':'1.0-0' }}</em>
             </div>
             <div class="item-variation" aria-label="Month wise item order variation">
               <span *ngFor="let month of item.monthVariation" [class.empty]="month.qty === 0"
@@ -231,10 +398,8 @@
           </div>
         </div>
 
-        <div class="empty-state small" *ngIf="activeSellingTab() === 'top' && !topSellingItems().length">No POS sales
-          found.</div>
-        <div class="empty-state small" *ngIf="activeSellingTab() === 'less' && !lessSellingItems().length">No menu
-          records available.</div>
+        <div class="empty-state small" *ngIf="activeSellingTab() === 'top' && !topSellingItems().length">No POS sales found.</div>
+        <div class="empty-state small" *ngIf="activeSellingTab() === 'less' && !lessSellingItems().length">No menu records available.</div>
       </div>
     </article>
   </div>

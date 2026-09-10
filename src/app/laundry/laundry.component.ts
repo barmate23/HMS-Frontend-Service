@@ -209,15 +209,33 @@ export class LaundryComponent implements OnInit, OnDestroy {
   });
 
   readonly priceServices = computed(() => {
-    return this.serviceCatalog()
-      .filter(service => service.active)
-      .map(service => ({
-        name: service.name,
-        icon: service.icon,
-        base: service.base,
-        enabled: service.configured,
-        description: service.description
-      }));
+    const active = this.serviceCatalog().filter(service => service.active);
+    const seen = new Map<string, typeof active[0]>();
+
+    for (const service of active) {
+      const cKey = this.canonicalKey(service.name);
+      if (!cKey) continue;
+      const existing = seen.get(cKey);
+      if (!existing) {
+        seen.set(cKey, service);
+      } else {
+        const existingHasSpace = existing.name.includes(' ');
+        const newHasSpace = service.name.includes(' ');
+        if (!existingHasSpace && newHasSpace) {
+          seen.set(cKey, service);
+        } else if (service.configured && !existing.configured) {
+          seen.set(cKey, service);
+        }
+      }
+    }
+
+    return Array.from(seen.values()).map(service => ({
+      name: service.name,
+      icon: service.icon,
+      base: service.base,
+      enabled: service.configured,
+      description: service.description
+    }));
   });
 
   readonly selectedCatalogueItem = computed(() => {
@@ -1230,7 +1248,17 @@ export class LaundryComponent implements OnInit, OnDestroy {
   draftServicePrice(service: string): number {
     const draft = this.catalogueDraft();
     const key = this.normalizeServiceName(service);
-    const dynamicPrice = draft.servicePrices?.[key];
+    const prices = draft.servicePrices || {};
+    let dynamicPrice = prices[key];
+    if (dynamicPrice === undefined) {
+      const cKey = this.canonicalKey(service);
+      for (const [k, v] of Object.entries(prices)) {
+        if (this.canonicalKey(k) === cKey && v !== undefined) {
+          dynamicPrice = v;
+          break;
+        }
+      }
+    }
     if (dynamicPrice !== undefined) return Number(dynamicPrice || 0);
     if (draft.id) {
       const existingItem = this.laundry.catalogue().find(item => item.id === draft.id);
@@ -1243,9 +1271,18 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
   setDraftServicePrice(service: string, value: number | string): void {
     const key = this.normalizeServiceName(service);
+    const cKey = this.canonicalKey(service);
     const price = Number(value || 0);
     const current = this.catalogueDraft();
-    const servicePrices = { ...(current.servicePrices || {}), [key]: price };
+    const servicePrices = { ...(current.servicePrices || {}) };
+
+    for (const k of Object.keys(servicePrices)) {
+      if (this.canonicalKey(k) === cKey) {
+        servicePrices[k] = price;
+      }
+    }
+    servicePrices[key] = price;
+
     const next: Partial<LaundryCatalogueItem> = { ...current, servicePrices };
 
     const norm = service.toLowerCase();
@@ -1258,7 +1295,17 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
   priceForService(item: LaundryCatalogueItem, service: string): number {
     const key = this.normalizeServiceName(service);
-    const dynamicPrice = item.servicePrices?.[key];
+    const prices = item.servicePrices || {};
+    let dynamicPrice = prices[key];
+    if (dynamicPrice === undefined) {
+      const cKey = this.canonicalKey(service);
+      for (const [k, v] of Object.entries(prices)) {
+        if (this.canonicalKey(k) === cKey && Number(v) > 0) {
+          dynamicPrice = v;
+          break;
+        }
+      }
+    }
     if (dynamicPrice !== undefined) return Number(dynamicPrice || 0);
 
     const base = this.serviceBase(service);
@@ -1402,6 +1449,10 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
   private normalizeServiceName(service: string): string {
     return String(service || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  private canonicalKey(service: string): string {
+    return String(service || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
   private defaultLaundryCategory(): string {

@@ -121,6 +121,19 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.masters.floors().filter(f => f.isActive);
   }
 
+  getFloorLabel(f: any): string {
+    if (!f) return '';
+    const raw = (f.floorNumber || '').trim();
+    if (!raw) return `Floor ${f.id || ''}`.trim();
+    if (/^floor\b/i.test(raw)) {
+      return raw;
+    }
+    if (/^\d+$/.test(raw)) {
+      return `Floor ${raw}`;
+    }
+    return raw;
+  }
+
   loadGanttData() {
     if (!this.startDate || !this.endDate || this.startDate > this.endDate) {
       this.errorMessage = 'Please select a valid date range.';

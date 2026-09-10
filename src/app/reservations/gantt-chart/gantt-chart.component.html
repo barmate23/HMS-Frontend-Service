@@ -13,7 +13,7 @@
           <select [(ngModel)]="selectedFloorId" (ngModelChange)="onFloorChange()" class="floor-select">
             <option [ngValue]="null">All Floors</option>
             <option *ngFor="let f of floors" [ngValue]="f.id">
-              Floor {{ f.floorNumber }} ({{ f.noOfRooms || 0 }} Rooms)
+              {{ getFloorLabel(f) }}
             </option>
           </select>
         </label>

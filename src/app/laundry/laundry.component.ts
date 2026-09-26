@@ -209,33 +209,15 @@ export class LaundryComponent implements OnInit, OnDestroy {
   });
 
   readonly priceServices = computed(() => {
-    const active = this.serviceCatalog().filter(service => service.active);
-    const seen = new Map<string, typeof active[0]>();
-
-    for (const service of active) {
-      const cKey = this.canonicalKey(service.name);
-      if (!cKey) continue;
-      const existing = seen.get(cKey);
-      if (!existing) {
-        seen.set(cKey, service);
-      } else {
-        const existingHasSpace = existing.name.includes(' ');
-        const newHasSpace = service.name.includes(' ');
-        if (!existingHasSpace && newHasSpace) {
-          seen.set(cKey, service);
-        } else if (service.configured && !existing.configured) {
-          seen.set(cKey, service);
-        }
-      }
-    }
-
-    return Array.from(seen.values()).map(service => ({
-      name: service.name,
-      icon: service.icon,
-      base: service.base,
-      enabled: service.configured,
-      description: service.description
-    }));
+    return this.serviceCatalog()
+      .filter(service => service.active)
+      .map(service => ({
+        name: service.name,
+        icon: service.icon,
+        base: service.base,
+        enabled: service.configured,
+        description: service.description
+      }));
   });
 
   readonly selectedCatalogueItem = computed(() => {
@@ -1177,7 +1159,21 @@ export class LaundryComponent implements OnInit, OnDestroy {
       this.laundry.showSnackBar('Validation Error', 'Service name is required.', 'warning');
       return;
     }
+
     const current = this.editingServiceName();
+    const canonicalName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const isDuplicate = this.laundry.serviceCatalog().some(service => {
+      if (current && service.serviceName === current) {
+        return false;
+      }
+      return service.serviceName.toLowerCase().replace(/[^a-z0-9]/g, '') === canonicalName;
+    });
+
+    if (isDuplicate) {
+      this.laundry.showSnackBar('Validation Error', 'A service with a similar name already exists in the catalog.', 'warning');
+      return;
+    }
+    
     const existing = current ? this.laundry.serviceCatalog().find(service => service.serviceName === current) : null;
     this.laundry.saveServiceCatalogItem({
       id: existing?.id,
@@ -1248,17 +1244,7 @@ export class LaundryComponent implements OnInit, OnDestroy {
   draftServicePrice(service: string): number {
     const draft = this.catalogueDraft();
     const key = this.normalizeServiceName(service);
-    const prices = draft.servicePrices || {};
-    let dynamicPrice = prices[key];
-    if (dynamicPrice === undefined) {
-      const cKey = this.canonicalKey(service);
-      for (const [k, v] of Object.entries(prices)) {
-        if (this.canonicalKey(k) === cKey && v !== undefined) {
-          dynamicPrice = v;
-          break;
-        }
-      }
-    }
+    const dynamicPrice = draft.servicePrices?.[key];
     if (dynamicPrice !== undefined) return Number(dynamicPrice || 0);
     if (draft.id) {
       const existingItem = this.laundry.catalogue().find(item => item.id === draft.id);
@@ -1271,17 +1257,9 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
   setDraftServicePrice(service: string, value: number | string): void {
     const key = this.normalizeServiceName(service);
-    const cKey = this.canonicalKey(service);
     const price = Number(value || 0);
     const current = this.catalogueDraft();
-    const servicePrices = { ...(current.servicePrices || {}) };
-
-    for (const k of Object.keys(servicePrices)) {
-      if (this.canonicalKey(k) === cKey) {
-        servicePrices[k] = price;
-      }
-    }
-    servicePrices[key] = price;
+    const servicePrices = { ...(current.servicePrices || {}), [key]: price };
 
     const next: Partial<LaundryCatalogueItem> = { ...current, servicePrices };
 
@@ -1295,17 +1273,7 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
   priceForService(item: LaundryCatalogueItem, service: string): number {
     const key = this.normalizeServiceName(service);
-    const prices = item.servicePrices || {};
-    let dynamicPrice = prices[key];
-    if (dynamicPrice === undefined) {
-      const cKey = this.canonicalKey(service);
-      for (const [k, v] of Object.entries(prices)) {
-        if (this.canonicalKey(k) === cKey && Number(v) > 0) {
-          dynamicPrice = v;
-          break;
-        }
-      }
-    }
+    const dynamicPrice = item.servicePrices?.[key];
     if (dynamicPrice !== undefined) return Number(dynamicPrice || 0);
 
     const base = this.serviceBase(service);
@@ -1449,10 +1417,6 @@ export class LaundryComponent implements OnInit, OnDestroy {
 
   private normalizeServiceName(service: string): string {
     return String(service || '').trim().replace(/\s+/g, ' ').toLowerCase();
-  }
-
-  private canonicalKey(service: string): string {
-    return String(service || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
   private defaultLaundryCategory(): string {

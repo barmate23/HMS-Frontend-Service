@@ -43,4 +43,5 @@ Thumbs.db
 .codex/
 .codex-logs/
 *.log
+bulk_reservations.*
 

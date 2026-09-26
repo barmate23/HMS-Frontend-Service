@@ -1488,13 +1488,12 @@
           <h4 style="margin:0;font-size:12px;font-weight:800;color:#0f172a;text-transform:uppercase;">Bill of Materials ({{ selectedRecipeForView()?.ingredients?.length || 0 }} Ingredients)</h4>
         </div>
         <div class="table-container" style="max-height:280px;overflow-y:auto;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#94a3b8 #f1f5f9;">
-          <table class="premium-table" style="min-width: 820px; width: 100%;">
+          <table class="premium-table" style="min-width: 900px; width: 100%;">
             <thead>
               <tr>
-                <th style="min-width: 80px;">CODE</th>
-                <th style="min-width: 120px;">INGREDIENT</th>
-                <th style="min-width: 155px;">CATEGORY</th>
-                <th style="min-width: 90px;">NET QTY</th>
+                <th style="width: 80px;">CODE</th>
+                <th style="width: 120px;">INGREDIENT</th>
+                <th style="width: 90px;">NET QTY</th>
                 <th style="min-width: 75px;">WASTE %</th>
                 <th style="min-width: 110px;">GROSS QTY</th>
                 <th style="min-width: 105px;">UNIT COST</th>
@@ -1505,7 +1504,6 @@
               <tr *ngFor="let ing of selectedRecipeForView()?.ingredients">
                 <td><code>{{ ing.ingredientCode }}</code></td>
                 <td><strong>{{ ing.ingredientName }}</strong></td>
-                <td style="min-width: 155px; white-space: nowrap;"><span class="soft-pill" style="white-space: nowrap; max-width: none; flex-shrink: 0; font-size: 9.5px; padding: 4px 10px;">{{ getCategoryLabel(ing.category) }}</span></td>
                 <td>{{ ing.netQuantity }} {{ ing.unit }}</td>
                 <td>{{ ing.wastePercent }}%</td>
                 <td>{{ ing.grossQuantity | number:'1.1-2' }} {{ ing.unit }}</td>

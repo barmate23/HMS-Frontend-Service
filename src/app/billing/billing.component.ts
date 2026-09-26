@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { NavigationEnd, Router } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 import {
   GrnPayload,
@@ -307,6 +307,7 @@ export class BillingComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly router: Router,
+    private readonly route: ActivatedRoute,
     private readonly purchaseService: PurchaseService,
     private readonly billingService: BillingService
   ) {}
@@ -316,6 +317,14 @@ export class BillingComponent implements OnInit, OnDestroy {
     this.routerSub = this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(event => this.updateTabFromUrl((event as NavigationEnd).urlAfterRedirects));
+
+    this.route.queryParams.subscribe(params => {
+      const q = params['search'] || params['reservationNo'] || params['room'];
+      if (q) {
+        this.search.set(q);
+      }
+    });
+
     this.syncPaymentAmount();
     this.loadVendorBills();
     this.loadGrns();
@@ -337,7 +346,14 @@ export class BillingComponent implements OnInit, OnDestroy {
           this.folios.set(apiFolios);
 
           if (this.folios().length) {
-            const firstFolio = this.folios()[0];
+            const q = this.search().toLowerCase().trim();
+            const matched = q ? this.folios().find(f =>
+              f.folioNo.toLowerCase().includes(q) ||
+              f.reservationNo.toLowerCase().includes(q) ||
+              f.room.toLowerCase().includes(q) ||
+              f.guest.toLowerCase().includes(q)
+            ) : null;
+            const firstFolio = matched || this.folios()[0];
             this.selectedFolioId.set(firstFolio.id);
             this.syncPaymentAmount();
             this.selectFolio(firstFolio.id);

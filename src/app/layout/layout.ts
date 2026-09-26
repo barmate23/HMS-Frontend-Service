@@ -246,6 +246,19 @@ export class Layout implements OnInit {
       ]
     },
     {
+      label: 'Night Audit',
+      icon: 'nights_stay',
+      color: '#7C3AED',
+      expanded: false,
+      children: [
+        { label: 'Dashboard',          icon: 'dashboard',       route: '/night-audit/dashboard', color: '#7C3AED' },
+        { label: 'Pre-Audit Checks',   icon: 'checklist',       route: '/night-audit/checklist', color: '#2563EB' },
+        { label: 'Folio Charges',      icon: 'receipt_long',    route: '/night-audit/charges',   color: '#D97706' },
+        { label: 'No-Show Processing', icon: 'no_meeting_room', route: '/night-audit/no-shows',  color: '#DC2626' },
+        { label: 'Audit Reports',      icon: 'summarize',       route: '/night-audit/reports',   color: '#059669' }
+      ]
+    },
+    {
       label: 'Laundry',
       icon: 'local_laundry_service',
       color: '#06B6D4',

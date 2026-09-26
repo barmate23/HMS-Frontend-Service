@@ -172,6 +172,7 @@ export interface GanttChartItem {
   bookingId: number;
   reservationId: number;
   reservationRef: string;
+  confirmationNumber?: string;
   roomId: number;
   roomNumber: string;
   roomTypeName: string;

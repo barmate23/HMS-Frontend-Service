@@ -1,19 +1,36 @@
 <section class="fo-dashboard-shell">
+  <!-- ─── Top Command Header ────────────────────────────────────── -->
   <div class="fo-command">
-    <div>
+    <div class="command-title-wrap">
       <span class="command-eyebrow">Front Office Command</span>
       <h1>Live Room Dashboard</h1>
-      <p>Current room position, floor-wise occupancy and booking details.</p>
+      <div class="command-meta">
+        <span class="business-date-chip">
+          <span class="material-icons-round">calendar_today</span>
+          Business Date: <strong>{{ dashboard()?.businessDate || '2026-09-26' }}</strong>
+        </span>
+        <span class="total-rooms-chip">
+          <span class="material-icons-round">apartment</span>
+          <strong>{{ summary().totalRooms }}</strong> Total Inventory Rooms
+        </span>
+      </div>
     </div>
-    <button type="button" (click)="loadDashboard()" [disabled]="isLoading()">
-      <span class="material-icons-round">sync</span>
-      Refresh
-    </button>
+    <div class="command-actions">
+      <button type="button" class="btn-refresh" (click)="loadDashboard()" [disabled]="isLoading()">
+        <span class="material-icons-round" [class.spin]="isLoading()">sync</span>
+        Refresh
+      </button>
+      <a routerLink="/new-booking" class="btn-new-booking">
+        <span class="material-icons-round">add</span>
+        New Booking
+      </a>
+    </div>
   </div>
 
+  <!-- State Alerts -->
   <div class="fo-state loading" *ngIf="isLoading()">
     <span class="material-icons-round spin">sync</span>
-    Loading dashboard...
+    Loading real-time room dashboard & category metrics...
   </div>
   <div class="fo-state error" *ngIf="error() && !isLoading()">
     <span class="material-icons-round">error_outline</span>
@@ -21,167 +38,565 @@
     <button type="button" (click)="loadDashboard()">Retry</button>
   </div>
 
-  <div class="kpi-grid" *ngIf="dashboard() && !isLoading()">
-    <article class="kpi-card total">
-      <span class="material-icons-round">hotel</span>
-      <div><strong>{{ summary().totalRooms }}</strong><small>Total Rooms</small></div>
-    </article>
-    <article class="kpi-card booking">
-      <span class="material-icons-round">event_available</span>
-      <div><strong>{{ summary().totalBookings }}</strong><small>Total Bookings</small></div>
-    </article>
-    <article class="kpi-card available">
-      <span class="material-icons-round">meeting_room</span>
-      <div><strong>{{ summary().availableRooms }}</strong><small>Available</small></div>
-    </article>
-    <article class="kpi-card occupied">
-      <span class="material-icons-round">bed</span>
-      <div><strong>{{ summary().occupiedRooms }}</strong><small>Occupied</small></div>
-    </article>
-    <article class="kpi-card booking">
-      <span class="material-icons-round">event_available</span>
-      <div><strong>{{ summary().bookedRooms }}</strong><small>Booked</small></div>
-    </article>
-    <article class="kpi-card maintenance">
-      <span class="material-icons-round">build_circle</span>
-      <div><strong>{{ summary().underMaintenanceRooms }}</strong><small>Maintenance</small></div>
-    </article>
-  </div>
-
-  <section class="floor-board" *ngIf="dashboard() && !isLoading()">
-    <header>
-      <div>
-        <h2>Floor Wise Room Map</h2>
-        <p>Room cards show the current booking state for the selected floor.</p>
-      </div>
-      <div class="board-actions">
-        <button type="button" class="expand-btn" (click)="openExpandedMap()">
-          <span class="material-icons-round">open_in_full</span>
-          Expand View
-        </button>
-        <a routerLink="/new-booking"><span class="material-icons-round">add</span>New Booking</a>
-      </div>
-    </header>
-
-    <div class="floor-tabs" *ngIf="floors().length">
-      <button
-        type="button"
-        *ngFor="let floor of floors()"
-        [class.active]="activeFloor()?.floorId === floor.floorId"
-        (click)="selectFloor(floor)">
-        <strong>{{ floor.floorName }}</strong>
-        <span>{{ floor.totalRooms }} rooms</span>
-        <small>{{ floor.availableRooms }} avl • {{ floor.occupiedRooms }} occ • {{ floor.bookedRooms }} booked</small>
-      </button>
-    </div>
-
-    <div class="legend">
-      <span><i class="available"></i>Available</span>
-      <span><i class="occupied"></i>Occupied</span>
-      <span><i class="booked"></i>Booked</span>
-      <span><i class="blocked"></i>Blocked</span>
-      <span><i class="maintenance"></i>Maintenance</span>
-    </div>
-
-    <div class="room-map" *ngIf="roomCards().length; else emptyRooms">
-      <article class="room-card" *ngFor="let room of roomCards()" [ngClass]="statusClass(room.displayStatus)">
-        <div class="room-card-top">
-          <strong>{{ room.roomNumber }}</strong>
-          <span>{{ room.roomType || '-' }}</span>
+  <ng-container *ngIf="dashboard() && !isLoading()">
+    <!-- ─── KPI Metric Cards ───────────────────────────────────── -->
+    <div class="kpi-grid">
+      <article class="kpi-card total">
+        <div class="kpi-icon-wrap total">
+          <span class="material-icons-round">hotel</span>
         </div>
-        <em>{{ room.displayStatus }}</em>
-        <div class="room-meta">
-          <span><i class="material-icons-round">group</i>{{ guestCount(room) }}</span>
-          <span><i class="material-icons-round">cleaning_services</i>{{ room.housekeepingStatus || '-' }}</span>
+        <div class="kpi-content">
+          <strong>{{ summary().totalRooms }}</strong>
+          <small>Total Rooms</small>
         </div>
-        <div class="guest-line" *ngIf="room.booking">
-          <b>{{ room.booking.guestName || 'Guest' }}</b>
-          <small>{{ room.booking.reservationRef }} • {{ room.booking.checkInDate }} to {{ room.booking.checkOutDate }}</small>
+      </article>
+
+      <article class="kpi-card available" [class.selected]="statusFilter() === 'AVAILABLE'" (click)="setStatusFilter(statusFilter() === 'AVAILABLE' ? 'ALL' : 'AVAILABLE')" title="Filter by Available Rooms">
+        <div class="kpi-icon-wrap available">
+          <span class="material-icons-round">meeting_room</span>
         </div>
-        <button type="button" (click)="viewRoom(room)">
-          <span class="material-icons-round">visibility</span>
-          View
-        </button>
+        <div class="kpi-content">
+          <strong>{{ summary().availableRooms }}</strong>
+          <small>Available Rooms</small>
+        </div>
+        <span class="kpi-badge available">{{ summary().totalRooms ? ((summary().availableRooms / summary().totalRooms) * 100 | number:'1.0-0') : 0 }}%</span>
+      </article>
+
+      <article class="kpi-card booked" [class.selected]="statusFilter() === 'BOOKED'" (click)="setStatusFilter(statusFilter() === 'BOOKED' ? 'ALL' : 'BOOKED')" title="Filter by Booked Rooms">
+        <div class="kpi-icon-wrap booked">
+          <span class="material-icons-round">event_available</span>
+        </div>
+        <div class="kpi-content">
+          <strong>{{ summary().bookedRooms }}</strong>
+          <small>Booked Rooms</small>
+        </div>
+        <span class="kpi-badge booked" *ngIf="summary().bookedRooms > 0">Active</span>
+      </article>
+
+      <article class="kpi-card occupied" [class.selected]="statusFilter() === 'OCCUPIED'" (click)="setStatusFilter(statusFilter() === 'OCCUPIED' ? 'ALL' : 'OCCUPIED')" title="Filter by Occupied Rooms">
+        <div class="kpi-icon-wrap occupied">
+          <span class="material-icons-round">bed</span>
+        </div>
+        <div class="kpi-content">
+          <strong>{{ summary().occupiedRooms }}</strong>
+          <small>Occupied Rooms</small>
+        </div>
+      </article>
+
+      <article class="kpi-card total-bookings">
+        <div class="kpi-icon-wrap total-bookings">
+          <span class="material-icons-round">receipt_long</span>
+        </div>
+        <div class="kpi-content">
+          <strong>{{ summary().totalBookings }}</strong>
+          <small>Total Bookings</small>
+        </div>
+      </article>
+
+      <article class="kpi-card maintenance" [class.selected]="statusFilter() === 'MAINTENANCE'" (click)="setStatusFilter(statusFilter() === 'MAINTENANCE' ? 'ALL' : 'MAINTENANCE')" title="Filter by Maintenance">
+        <div class="kpi-icon-wrap maintenance">
+          <span class="material-icons-round">build_circle</span>
+        </div>
+        <div class="kpi-content">
+          <strong>{{ summary().underMaintenanceRooms }}</strong>
+          <small>Maintenance</small>
+        </div>
       </article>
     </div>
 
-    <ng-template #emptyRooms>
-      <div class="empty-state">
-        <span class="material-icons-round">meeting_room</span>
-        No rooms found for this floor.
-      </div>
-    </ng-template>
-  </section>
-</section>
-
-<div class="map-expand-backdrop" *ngIf="isMapExpanded()" (click)="closeExpandedMap()">
-  <section class="map-expand-modal" (click)="$event.stopPropagation()">
-    <header>
-      <div>
-        <span class="material-icons-round">map</span>
-        <div>
-          <h2>Floor Wise Room Map</h2>
-          <p>Expanded room board for front office operations.</p>
+    <!-- ─── Room Category Breakdown Strip ───────────────────────── -->
+    <div class="category-breakdown-section">
+      <div class="category-section-header">
+        <div class="cat-sec-title">
+          <span class="material-icons-round">category</span>
+          <strong>Room Categories Capacity & Status</strong>
+          <small>Breakdown by Room Type (Deluxe, Luxury, etc.)</small>
+        </div>
+        <div class="cat-sec-pills">
+          <button type="button" class="cat-pill" [class.active]="selectedCategory() === 'ALL'" (click)="selectCategory('ALL')">
+            All Categories ({{ summary().totalRooms }})
+          </button>
+          <button type="button" class="cat-pill"
+                  *ngFor="let cat of categories()"
+                  [class.active]="selectedCategory() === cat.name"
+                  [ngClass]="'pill-' + cat.theme"
+                  (click)="selectCategory(selectedCategory() === cat.name ? 'ALL' : cat.name)">
+            <span class="material-icons-round">{{ cat.icon }}</span>
+            <span>{{ cat.name }} ({{ cat.total }})</span>
+            <span class="cat-stat-chip" *ngIf="cat.booked > 0">{{ cat.booked }} Booked</span>
+            <span class="cat-stat-chip occ" *ngIf="cat.occupied > 0">{{ cat.occupied }} Occ</span>
+          </button>
         </div>
       </div>
-      <button type="button" (click)="closeExpandedMap()">
-        <span class="material-icons-round">close</span>
-      </button>
-    </header>
 
-    <div class="map-expand-body">
-      <div class="floor-tabs expanded-tabs" *ngIf="floors().length">
+      <!-- Category Cards Grid -->
+      <div class="category-cards-grid">
+        <div class="cat-card" *ngFor="let cat of categories()"
+             [ngClass]="['theme-' + cat.theme, selectedCategory() === cat.name ? 'is-selected' : '']"
+             (click)="selectCategory(selectedCategory() === cat.name ? 'ALL' : cat.name)"
+             [title]="'Click to filter by ' + cat.name">
+          <div class="cat-card-header">
+            <div class="cat-icon-name">
+              <span class="material-icons-round cat-hero-icon">{{ cat.icon }}</span>
+              <div>
+                <strong class="cat-hero-name">{{ cat.name }}</strong>
+                <span class="cat-hero-sub">{{ cat.total }} Total Rooms</span>
+              </div>
+            </div>
+            <div class="cat-occ-pill">{{ cat.occupancyPct }}% Occ</div>
+          </div>
+
+          <!-- Capacity Counts -->
+          <div class="cat-counts-row">
+            <span class="count-item avl">
+              <i class="dot dot-avl"></i>
+              <b>{{ cat.available }}</b> Available
+            </span>
+            <span class="count-item bkd" [class.has-count]="cat.booked > 0">
+              <i class="dot dot-bkd"></i>
+              <b>{{ cat.booked }}</b> Booked
+            </span>
+            <span class="count-item occ" [class.has-count]="cat.occupied > 0">
+              <i class="dot dot-occ"></i>
+              <b>{{ cat.occupied }}</b> Occupied
+            </span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="cat-progress-track">
+            <div class="cat-bar seg-avl" [style.width.%]="cat.total ? (cat.available / cat.total * 100) : 0" title="Available"></div>
+            <div class="cat-bar seg-bkd" [style.width.%]="cat.total ? (cat.booked / cat.total * 100) : 0" title="Booked"></div>
+            <div class="cat-bar seg-occ" [style.width.%]="cat.total ? (cat.occupied / cat.total * 100) : 0" title="Occupied"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Interactive Status Filter & Search Bar ─────────────── -->
+    <div class="status-summary-bar">
+      <div class="status-filters">
+        <span class="filter-label">Quick Status:</span>
+        <button type="button" class="status-filter-btn" [class.active]="statusFilter() === 'ALL'" (click)="setStatusFilter('ALL')">
+          All Rooms ({{ statusCounts().total }})
+        </button>
+        <button type="button" class="status-filter-btn avl" [class.active]="statusFilter() === 'AVAILABLE'" (click)="setStatusFilter('AVAILABLE')">
+          <i class="dot dot-avl"></i>
+          {{ statusCounts().available }} Available
+        </button>
+        <button type="button" class="status-filter-btn bkd" [class.active]="statusFilter() === 'BOOKED'" (click)="setStatusFilter('BOOKED')">
+          <i class="dot dot-bkd"></i>
+          {{ statusCounts().booked }} Booked
+        </button>
+        <button type="button" class="status-filter-btn occ" [class.active]="statusFilter() === 'OCCUPIED'" (click)="setStatusFilter('OCCUPIED')">
+          <i class="dot dot-occ"></i>
+          {{ statusCounts().occupied }} Occupied
+        </button>
+        <button type="button" class="status-filter-btn mnt" *ngIf="statusCounts().maintenance > 0" [class.active]="statusFilter() === 'MAINTENANCE'" (click)="setStatusFilter('MAINTENANCE')">
+          <i class="dot dot-mnt"></i>
+          {{ statusCounts().maintenance }} Maintenance
+        </button>
+      </div>
+
+      <!-- Search in Room Board -->
+      <div class="room-search-box">
+        <span class="material-icons-round">search</span>
+        <input type="text" [(ngModel)]="searchQuery" placeholder="Search room, guest, ref, floor...">
+        <button type="button" class="clear-search" *ngIf="searchQuery()" (click)="searchQuery.set('')">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ─── Main Room Board ────────────────────────────────────── -->
+    <section class="floor-board">
+      <header>
+        <div class="board-header-left">
+          <h2>Floor & Room Grid</h2>
+          <span class="active-filter-tag" *ngIf="statusFilter() !== 'ALL' || selectedCategory() !== 'ALL' || selectedFloorId() !== null">
+            Showing {{ filteredRooms().length }} of {{ allRooms().length }} Rooms
+          </span>
+        </div>
+
+        <div class="board-actions">
+          <!-- View Grouping Toggle -->
+          <div class="grouping-toggle">
+            <button type="button" [class.active]="viewGrouping() === 'category'" (click)="setViewGrouping('category')" title="Group rooms by Room Type">
+              <span class="material-icons-round">category</span>
+              By Category
+            </button>
+            <button type="button" [class.active]="viewGrouping() === 'floor'" (click)="setViewGrouping('floor')" title="Group rooms by Floor">
+              <span class="material-icons-round">layers</span>
+              By Floor
+            </button>
+          </div>
+
+          <button type="button" class="expand-btn" (click)="openExpandedMap()">
+            <span class="material-icons-round">open_in_full</span>
+            Expand View
+          </button>
+        </div>
+      </header>
+
+      <!-- Floor Selection Tabs -->
+      <div class="floor-tabs" *ngIf="floors().length">
         <button
           type="button"
+          class="floor-tab-btn"
+          [class.active]="selectedFloorId() === null"
+          (click)="selectFloor(null)">
+          <strong>All Floors</strong>
+          <span>{{ summary().totalRooms }} total rooms</span>
+          <small>{{ summary().availableRooms }} avl • {{ summary().occupiedRooms }} occ • {{ summary().bookedRooms }} booked</small>
+        </button>
+        <button
+          type="button"
+          class="floor-tab-btn"
           *ngFor="let floor of floors()"
-          [class.active]="activeFloor()?.floorId === floor.floorId"
-          (click)="selectFloor(floor)">
+          [class.active]="selectedFloorId() === floor.floorId"
+          (click)="selectFloor(floor.floorId)">
           <strong>{{ floor.floorName }}</strong>
           <span>{{ floor.totalRooms }} rooms</span>
           <small>{{ floor.availableRooms }} avl • {{ floor.occupiedRooms }} occ • {{ floor.bookedRooms }} booked</small>
         </button>
       </div>
 
-      <div class="legend">
-        <span><i class="available"></i>Available</span>
-        <span><i class="occupied"></i>Occupied</span>
-        <span><i class="booked"></i>Booked</span>
-        <span><i class="blocked"></i>Blocked</span>
-        <span><i class="maintenance"></i>Maintenance</span>
-      </div>
+      <!-- ─── ROOM CARDS DISPLAY ─── -->
 
-      <div class="room-map expanded-room-map" *ngIf="roomCards().length; else expandedEmptyRooms">
-        <article class="room-card" *ngFor="let room of roomCards()" [ngClass]="statusClass(room.displayStatus)">
-          <div class="room-card-top">
-            <strong>{{ room.roomNumber }}</strong>
-            <span>{{ room.roomType || '-' }}</span>
+      <!-- Grouped by Category View -->
+      <div class="category-grouped-container" *ngIf="viewGrouping() === 'category'">
+        <div class="category-group-block" *ngFor="let group of categoryGroups()">
+          <div class="category-group-header" [ngClass]="'theme-' + group.theme">
+            <div class="cat-hdr-left">
+              <span class="material-icons-round cat-icon">{{ group.icon }}</span>
+              <strong class="cat-title">{{ group.categoryName }} Rooms</strong>
+              <span class="cat-pill-count">{{ group.totalRooms }} Rooms</span>
+            </div>
+            <div class="cat-hdr-right">
+              <span class="stat-pill avl">{{ group.availableRooms }} Available</span>
+              <span class="stat-pill bkd" *ngIf="group.bookedRooms > 0">{{ group.bookedRooms }} Booked</span>
+              <span class="stat-pill occ" *ngIf="group.occupiedRooms > 0">{{ group.occupiedRooms }} Occupied</span>
+            </div>
           </div>
-          <em>{{ room.displayStatus }}</em>
-          <div class="room-meta">
-            <span><i class="material-icons-round">group</i>{{ guestCount(room) }}</span>
-            <span><i class="material-icons-round">cleaning_services</i>{{ room.housekeepingStatus || '-' }}</span>
-          </div>
-          <div class="guest-line" *ngIf="room.booking">
-            <b>{{ room.booking.guestName || 'Guest' }}</b>
-            <small>{{ room.booking.reservationRef }} • {{ room.booking.checkInDate }} to {{ room.booking.checkOutDate }}</small>
-          </div>
-          <button type="button" (click)="viewRoom(room)">
-            <span class="material-icons-round">visibility</span>
-            View
-          </button>
-        </article>
-      </div>
 
-      <ng-template #expandedEmptyRooms>
-        <div class="empty-state">
-          <span class="material-icons-round">meeting_room</span>
-          No rooms found for this floor.
+          <div class="room-map">
+            <article class="room-card" *ngFor="let room of group.rooms" [ngClass]="statusClass(room.displayStatus)">
+              <!-- Card Top -->
+              <div class="room-card-top">
+                <div class="room-identity">
+                  <strong class="room-number">{{ room.roomNumber }}</strong>
+                  <span class="floor-tag">{{ room.floorName }}</span>
+                </div>
+                <div class="room-status-badge" [ngClass]="statusClass(room.displayStatus)">
+                  <i class="status-pulse-dot"></i>
+                  {{ room.displayStatus }}
+                </div>
+              </div>
+
+              <!-- Available Room Body -->
+              <div class="available-card-body" *ngIf="!room.booking">
+                <div class="avail-badge-wrap">
+                  <span class="material-icons-round avail-icon">check_circle</span>
+                  <div class="avail-text">
+                    <strong>Vacant & Available</strong>
+                    <small>{{ room.roomType }} • Ready for guest</small>
+                  </div>
+                </div>
+                <div class="room-amenity-meta">
+                  <span><i class="material-icons-round">group</i>{{ guestCount(room) }}</span>
+                  <span><i class="material-icons-round">cleaning_services</i>{{ room.housekeepingStatus || 'Clean' }}</span>
+                </div>
+              </div>
+
+              <!-- Booked / Occupied Room Body -->
+              <div class="booking-card-body" *ngIf="room.booking as booking">
+                <!-- Guest Line -->
+                <div class="booking-guest-row">
+                  <div class="booking-avatar">
+                    <span class="material-icons-round">person</span>
+                  </div>
+                  <div class="booking-guest-info">
+                    <strong class="booking-guest-name">{{ booking.guestName }}</strong>
+                    <span class="booking-contact">
+                      <span *ngIf="booking.guestPhone">📞 {{ booking.guestPhone }}</span>
+                      <span *ngIf="booking.guestEmail" class="email">✉ {{ booking.guestEmail }}</span>
+                    </span>
+                  </div>
+                  <span class="vip-pill" *ngIf="booking.vip">VIP</span>
+                </div>
+
+                <!-- Stay Details -->
+                <div class="booking-stay-row">
+                  <div class="stay-dates">
+                    <span class="material-icons-round stay-icon">calendar_today</span>
+                    <span>{{ formatDateShort(booking.checkInDate) }} - {{ formatDateShort(booking.checkOutDate) }}</span>
+                  </div>
+                  <span class="stay-nights">{{ booking.nights }}N</span>
+                  <span class="stay-pax">{{ booking.adults || 1 }}A{{ booking.children ? ', ' + booking.children + 'C' : '' }}</span>
+                </div>
+
+                <!-- Rate & Financial Pill -->
+                <div class="booking-finance-row">
+                  <div class="rate-plan-tag" [title]="booking.ratePlanName">
+                    <span class="material-icons-round">restaurant</span>
+                    <span class="plan-name">{{ booking.ratePlanName || 'Standard Rate' }}</span>
+                  </div>
+                  <div class="amount-tag">
+                    <strong>{{ formatMoney(booking.totalAmount) }}</strong>
+                    <small [class.paid]="(booking.paidAmount || 0) >= (booking.totalAmount || 0)">
+                      {{ (booking.paidAmount || 0) >= (booking.totalAmount || 0) ? 'PAID' : 'UNPAID' }}
+                    </small>
+                  </div>
+                </div>
+
+                <!-- Ref & Status -->
+                <div class="booking-ref-row">
+                  <span class="res-ref">Ref: <strong>{{ booking.reservationRef }}</strong></span>
+                  <span class="status-chip" [ngClass]="statusClass(booking.bookingStatus)">{{ booking.bookingStatus || 'Confirmed' }}</span>
+                </div>
+              </div>
+
+              <!-- Card Bottom Actions -->
+              <div class="room-card-actions">
+                <button type="button" class="btn-card-action folio" (click)="openFolio(room, $event)" *ngIf="room.booking" title="View Folio & Billing for this booking">
+                  <span class="material-icons-round">receipt_long</span>
+                  Folio
+                </button>
+                <button type="button" class="btn-card-action view" (click)="viewRoom(room)" title="View Room Details">
+                  <span class="material-icons-round">visibility</span>
+                  Details
+                </button>
+                <a [routerLink]="['/new-booking']" [queryParams]="{ roomId: room.roomId, roomNumber: room.roomNumber, roomType: room.roomType }"
+                   class="btn-card-action book" *ngIf="!room.booking && room.displayStatus === 'AVAILABLE'" title="Create New Booking for room {{ room.roomNumber }}">
+                  <span class="material-icons-round">add</span>
+                  Book
+                </a>
+              </div>
+            </article>
+          </div>
         </div>
-      </ng-template>
+
+        <div class="empty-state" *ngIf="categoryGroups().length === 0">
+          <span class="material-icons-round">meeting_room</span>
+          No rooms match the selected filters.
+        </div>
+      </div>
+
+      <!-- Flat / Floor View -->
+      <div class="flat-room-map-container" *ngIf="viewGrouping() === 'floor'">
+        <div class="room-map" *ngIf="filteredRooms().length; else emptyRooms">
+          <article class="room-card" *ngFor="let room of filteredRooms()" [ngClass]="statusClass(room.displayStatus)">
+            <!-- Card Top -->
+            <div class="room-card-top">
+              <div class="room-identity">
+                <strong class="room-number">{{ room.roomNumber }}</strong>
+                <span class="cat-pill-type">{{ room.roomType }}</span>
+                <span class="floor-tag">{{ room.floorName }}</span>
+              </div>
+              <div class="room-status-badge" [ngClass]="statusClass(room.displayStatus)">
+                <i class="status-pulse-dot"></i>
+                {{ room.displayStatus }}
+              </div>
+            </div>
+
+            <!-- Available Room Body -->
+            <div class="available-card-body" *ngIf="!room.booking">
+              <div class="avail-badge-wrap">
+                <span class="material-icons-round avail-icon">check_circle</span>
+                <div class="avail-text">
+                  <strong>Vacant & Available</strong>
+                  <small>{{ room.roomType }} • Ready for guest</small>
+                </div>
+              </div>
+              <div class="room-amenity-meta">
+                <span><i class="material-icons-round">group</i>{{ guestCount(room) }}</span>
+                <span><i class="material-icons-round">cleaning_services</i>{{ room.housekeepingStatus || 'Clean' }}</span>
+              </div>
+            </div>
+
+            <!-- Booked / Occupied Room Body -->
+            <div class="booking-card-body" *ngIf="room.booking as booking">
+              <div class="booking-guest-row">
+                <div class="booking-avatar">
+                  <span class="material-icons-round">person</span>
+                </div>
+                <div class="booking-guest-info">
+                  <strong class="booking-guest-name">{{ booking.guestName }}</strong>
+                  <span class="booking-contact">
+                    <span *ngIf="booking.guestPhone">📞 {{ booking.guestPhone }}</span>
+                    <span *ngIf="booking.guestEmail" class="email">✉ {{ booking.guestEmail }}</span>
+                  </span>
+                </div>
+                <span class="vip-pill" *ngIf="booking.vip">VIP</span>
+              </div>
+
+              <div class="booking-stay-row">
+                <div class="stay-dates">
+                  <span class="material-icons-round stay-icon">calendar_today</span>
+                  <span>{{ formatDateShort(booking.checkInDate) }} - {{ formatDateShort(booking.checkOutDate) }}</span>
+                </div>
+                <span class="stay-nights">{{ booking.nights }}N</span>
+                <span class="stay-pax">{{ booking.adults || 1 }}A{{ booking.children ? ', ' + booking.children + 'C' : '' }}</span>
+              </div>
+
+              <div class="booking-finance-row">
+                <div class="rate-plan-tag" [title]="booking.ratePlanName">
+                  <span class="material-icons-round">restaurant</span>
+                  <span class="plan-name">{{ booking.ratePlanName || 'Standard Rate' }}</span>
+                </div>
+                <div class="amount-tag">
+                  <strong>{{ formatMoney(booking.totalAmount) }}</strong>
+                  <small [class.paid]="(booking.paidAmount || 0) >= (booking.totalAmount || 0)">
+                    {{ (booking.paidAmount || 0) >= (booking.totalAmount || 0) ? 'PAID' : 'UNPAID' }}
+                  </small>
+                </div>
+              </div>
+
+              <div class="booking-ref-row">
+                <span class="res-ref">Ref: <strong>{{ booking.reservationRef }}</strong></span>
+                <span class="status-chip" [ngClass]="statusClass(booking.bookingStatus)">{{ booking.bookingStatus || 'Confirmed' }}</span>
+              </div>
+            </div>
+
+            <!-- Card Bottom Actions -->
+            <div class="room-card-actions">
+              <button type="button" class="btn-card-action folio" (click)="openFolio(room, $event)" *ngIf="room.booking" title="View Folio & Billing for this booking">
+                <span class="material-icons-round">receipt_long</span>
+                Folio
+              </button>
+              <button type="button" class="btn-card-action view" (click)="viewRoom(room)" title="View Room Details">
+                <span class="material-icons-round">visibility</span>
+                Details
+              </button>
+              <a [routerLink]="['/new-booking']" [queryParams]="{ roomId: room.roomId, roomNumber: room.roomNumber, roomType: room.roomType }"
+                 class="btn-card-action book" *ngIf="!room.booking && room.displayStatus === 'AVAILABLE'" title="Create New Booking for room {{ room.roomNumber }}">
+                <span class="material-icons-round">add</span>
+                Book
+              </a>
+            </div>
+          </article>
+        </div>
+
+        <ng-template #emptyRooms>
+          <div class="empty-state">
+            <span class="material-icons-round">meeting_room</span>
+            No rooms found for the selected filters.
+          </div>
+        </ng-template>
+      </div>
+    </section>
+  </ng-container>
+</section>
+
+<!-- ─── Expanded Map Modal ─────────────────────────────────────── -->
+<div class="map-expand-backdrop" *ngIf="isMapExpanded()" (click)="closeExpandedMap()">
+  <section class="map-expand-modal" (click)="$event.stopPropagation()">
+    <header>
+      <div>
+        <span class="material-icons-round">map</span>
+        <div>
+          <h2>Expanded Live Room Board</h2>
+          <p>Full-screen front office room board categorized by room type.</p>
+        </div>
+      </div>
+      <button type="button" (click)="closeExpandedMap()"><span class="material-icons-round">close</span></button>
+    </header>
+
+    <div class="map-expand-body">
+      <!-- Category Filter Pills in Modal -->
+      <div class="modal-category-strip">
+        <button type="button" class="cat-pill" [class.active]="selectedCategory() === 'ALL'" (click)="selectCategory('ALL')">
+          All Categories ({{ summary().totalRooms }})
+        </button>
+        <button type="button" class="cat-pill"
+                *ngFor="let cat of categories()"
+                [class.active]="selectedCategory() === cat.name"
+                [ngClass]="'pill-' + cat.theme"
+                (click)="selectCategory(selectedCategory() === cat.name ? 'ALL' : cat.name)">
+          <span class="material-icons-round">{{ cat.icon }}</span>
+          <span>{{ cat.name }} ({{ cat.total }})</span>
+        </button>
+      </div>
+
+      <div class="category-grouped-container">
+        <div class="category-group-block" *ngFor="let group of categoryGroups()">
+          <div class="category-group-header" [ngClass]="'theme-' + group.theme">
+            <div class="cat-hdr-left">
+              <span class="material-icons-round cat-icon">{{ group.icon }}</span>
+              <strong class="cat-title">{{ group.categoryName }} Rooms</strong>
+              <span class="cat-pill-count">{{ group.totalRooms }} Rooms</span>
+            </div>
+            <div class="cat-hdr-right">
+              <span class="stat-pill avl">{{ group.availableRooms }} Available</span>
+              <span class="stat-pill bkd" *ngIf="group.bookedRooms > 0">{{ group.bookedRooms }} Booked</span>
+              <span class="stat-pill occ" *ngIf="group.occupiedRooms > 0">{{ group.occupiedRooms }} Occupied</span>
+            </div>
+          </div>
+
+          <div class="room-map expanded-room-map">
+            <article class="room-card" *ngFor="let room of group.rooms" [ngClass]="statusClass(room.displayStatus)">
+              <div class="room-card-top">
+                <div class="room-identity">
+                  <strong class="room-number">{{ room.roomNumber }}</strong>
+                  <span class="floor-tag">{{ room.floorName }}</span>
+                </div>
+                <div class="room-status-badge" [ngClass]="statusClass(room.displayStatus)">
+                  <i class="status-pulse-dot"></i>
+                  {{ room.displayStatus }}
+                </div>
+              </div>
+
+              <!-- Available Room Body -->
+              <div class="available-card-body" *ngIf="!room.booking">
+                <div class="avail-badge-wrap">
+                  <span class="material-icons-round avail-icon">check_circle</span>
+                  <div class="avail-text">
+                    <strong>Vacant & Available</strong>
+                    <small>{{ room.roomType }} • Ready for guest</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Booking Body -->
+              <div class="booking-card-body" *ngIf="room.booking as booking">
+                <div class="booking-guest-row">
+                  <div class="booking-avatar"><span class="material-icons-round">person</span></div>
+                  <div class="booking-guest-info">
+                    <strong class="booking-guest-name">{{ booking.guestName }}</strong>
+                    <span class="booking-contact">📞 {{ booking.guestPhone || '-' }}</span>
+                  </div>
+                </div>
+                <div class="booking-stay-row">
+                  <div class="stay-dates">
+                    <span class="material-icons-round stay-icon">calendar_today</span>
+                    <span>{{ formatDateShort(booking.checkInDate) }} - {{ formatDateShort(booking.checkOutDate) }}</span>
+                  </div>
+                  <span class="stay-nights">{{ booking.nights }}N</span>
+                </div>
+                <div class="booking-finance-row">
+                  <span class="plan-name">{{ booking.ratePlanName || 'Rate' }}</span>
+                  <strong>{{ formatMoney(booking.totalAmount) }}</strong>
+                </div>
+              </div>
+
+              <div class="room-card-actions">
+                <button type="button" class="btn-card-action folio" (click)="openFolio(room, $event)" *ngIf="room.booking">
+                  <span class="material-icons-round">receipt_long</span>
+                  Folio
+                </button>
+                <button type="button" class="btn-card-action view" (click)="viewRoom(room)">
+                  <span class="material-icons-round">visibility</span>
+                  Details
+                </button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </div>
 
+<!-- ─── Room Details Modal with Direct Folio Route ────────────── -->
 <div class="detail-backdrop" *ngIf="selectedRoom() as room" (click)="closeRoomDetails()">
   <section class="booking-detail" (click)="$event.stopPropagation()">
     <header>
@@ -192,32 +607,82 @@
           <p>{{ room.floorName }} • {{ room.roomType }} • {{ room.displayStatus }}</p>
         </div>
       </div>
-      <button type="button" (click)="closeRoomDetails()"><span class="material-icons-round">close</span></button>
+      <div class="modal-header-actions">
+        <button type="button" class="btn-modal-folio" (click)="openFolio(room)" *ngIf="room.booking" title="Open Folio Screen">
+          <span class="material-icons-round">receipt_long</span>
+          Open Folio
+        </button>
+        <button type="button" class="close-btn" (click)="closeRoomDetails()"><span class="material-icons-round">close</span></button>
+      </div>
     </header>
 
     <div class="detail-body" *ngIf="room.booking as booking; else noBooking">
       <div class="detail-strip">
-        <div><span>Reservation</span><strong>{{ booking.reservationRef || '-' }}</strong></div>
-        <div><span>Status</span><strong>{{ booking.bookingStatus || booking.reservationStatus || '-' }}</strong></div>
-        <div><span>Total</span><strong>{{ formatMoney(booking.totalAmount) }}</strong></div>
-        <div><span>Paid</span><strong>{{ formatMoney(booking.paidAmount) }}</strong></div>
+        <div><span>Reservation Ref</span><strong>{{ booking.reservationRef || '-' }}</strong></div>
+        <div><span>Booking Status</span><strong>{{ booking.bookingStatus || booking.reservationStatus || '-' }}</strong></div>
+        <div><span>Total Charges</span><strong class="total-amount">{{ formatMoney(booking.totalAmount) }}</strong></div>
+        <div><span>Paid Amount</span><strong class="paid-amount">{{ formatMoney(booking.paidAmount) }}</strong></div>
       </div>
 
       <div class="detail-grid">
-        <article><span>Guest</span><strong>{{ booking.guestName || '-' }}</strong><small>{{ booking.guestPhone || '-' }} • {{ booking.guestEmail || '-' }}</small></article>
-        <article><span>Stay</span><strong>{{ booking.checkInDate }} to {{ booking.checkOutDate }}</strong><small>{{ booking.nights || 0 }} nights • {{ booking.adults || 0 }} adults • {{ booking.children || 0 }} children</small></article>
-        <article><span>Rate Plan</span><strong>{{ booking.ratePlanName || '-' }}</strong><small>Rate {{ formatMoney(booking.ratePerNight) }}</small></article>
-        <article><span>Billing</span><strong>{{ booking.billingName || '-' }}</strong><small>{{ booking.billingMode || '-' }}</small></article>
-        <article><span>Source</span><strong>{{ booking.businessSource || '-' }}</strong><small>{{ booking.marketSegment || '-' }}</small></article>
-        <article><span>Requests</span><strong>{{ booking.specialRequests || '-' }}</strong><small>{{ booking.notes || '' }}</small></article>
+        <article>
+          <span>Primary Guest</span>
+          <strong>{{ booking.guestName || '-' }}</strong>
+          <small>{{ booking.guestPhone || '-' }} • {{ booking.guestEmail || '-' }}</small>
+        </article>
+        <article>
+          <span>Stay Duration</span>
+          <strong>{{ booking.checkInDate }} to {{ booking.checkOutDate }}</strong>
+          <small>{{ booking.nights || 0 }} Nights • {{ booking.adults || 1 }} Adults • {{ booking.children || 0 }} Children</small>
+        </article>
+        <article>
+          <span>Rate Plan</span>
+          <strong>{{ booking.ratePlanName || '-' }}</strong>
+          <small>Nightly Rate {{ formatMoney(booking.ratePerNight) }}</small>
+        </article>
+        <article>
+          <span>Billing Contact</span>
+          <strong>{{ booking.billingName || booking.guestName || '-' }}</strong>
+          <small>{{ booking.billingMode || 'Direct Guest' }}</small>
+        </article>
+        <article>
+          <span>Booking Source</span>
+          <strong>{{ booking.businessSource || 'Direct / Walk-In' }}</strong>
+          <small>{{ booking.marketSegment || 'Hospitality' }}</small>
+        </article>
+        <article>
+          <span>Special Requests / Notes</span>
+          <strong>{{ booking.specialRequests || 'None' }}</strong>
+          <small>{{ booking.notes || 'No extra notes recorded' }}</small>
+        </article>
+      </div>
+
+      <!-- Direct Folio Navigation Banner in Modal -->
+      <div class="modal-folio-banner">
+        <div class="folio-banner-text">
+          <span class="material-icons-round">receipt_long</span>
+          <div>
+            <strong>Guest Folio & Invoicing</strong>
+            <span>View charges, post service items, record payments, and generate tax invoice.</span>
+          </div>
+        </div>
+        <button type="button" class="btn-banner-folio" (click)="openFolio(room)">
+          <span class="material-icons-round">arrow_forward</span>
+          View Full Folio
+        </button>
       </div>
     </div>
 
     <ng-template #noBooking>
       <div class="no-booking">
-        <span class="material-icons-round">event_available</span>
-        <strong>No active booking for this room.</strong>
-        <p>Room is available for the current dashboard date.</p>
+        <span class="material-icons-round">check_circle</span>
+        <strong>Room {{ room.roomNumber }} is currently vacant and available.</strong>
+        <p>No active reservations or check-ins found for this room today.</p>
+        <a [routerLink]="['/new-booking']" [queryParams]="{ roomId: room.roomId, roomNumber: room.roomNumber, roomType: room.roomType }"
+           class="btn-modal-book" (click)="closeRoomDetails()">
+          <span class="material-icons-round">add</span>
+          Create New Booking for Room {{ room.roomNumber }}
+        </a>
       </div>
     </ng-template>
   </section>

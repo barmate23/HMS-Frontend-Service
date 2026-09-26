@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, HostListener, OnInit, OnDestroy, ViewChild, inject } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, OnInit, OnDestroy, ViewChild, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, NavigationEnd } from '@angular/router';
@@ -7,18 +7,28 @@ import { Subscription } from 'rxjs';
 import { FrontOfficeApiService, GanttChartItem, GanttChartData, GanttSummary } from '../../front-office-api.service';
 import { HotelMastersService, Floor, Room } from '../../masters/hotel-masters.service';
 
-interface GanttRow extends GanttChartItem {
+export interface GanttRow extends GanttChartItem {
   barLeftPx: number;
   barWidthPx: number;
   nights: number;
 }
 
-interface RoomLane {
+export interface RoomLane {
   roomId: number;
   roomNumber: string;
   roomTypeName: string;
   roomStatus: string;
   bookings: GanttRow[];
+}
+
+export interface RoomCategoryGroup {
+  categoryName: string;
+  categoryIcon: string;
+  categoryTheme: string;
+  roomCount: number;
+  lanes: RoomLane[];
+  collapsed: boolean;
+  rangeOccupancyPct: number;
 }
 
 @Component({
@@ -29,24 +39,36 @@ interface RoomLane {
   styleUrls: ['./gantt-chart.component.css']
 })
 export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
-  readonly dayColWidthPx = 110;
+  readonly dayColWidthPx = 115;
   startDate = '';
   endDate = '';
   selectedFloorId: number | null = null;
+  selectedCategory = 'ALL';
+  searchFilter = '';
+
   isLoading = false;
   errorMessage = '';
   bookings: GanttRow[] = [];
   roomLanes: RoomLane[] = [];
+  categoryGroups: RoomCategoryGroup[] = [];
   dateColumns: Date[] = [];
   showTodayFocus = false;
   todayLinePct: number | null = null;
   hoveredRoomId: number | null = null;
   pinnedRoomId: number | null = null;
 
+  // Active tooltip booking
+  activeTooltipBooking: GanttRow | null = null;
+  tooltipPos = { x: 0, y: 0 };
+
   // Summary stats from API
   summaryTotalBookings = 0;
   summaryOccupiedRooms = 0;
   summaryCheckedIn = 0;
+
+  // Precomputed Occupancy Caches
+  dailyOccupancyMap = new Map<string, { occupied: number; total: number; pct: number }>();
+  categoryDailyOccupancyMap = new Map<string, Map<string, { occupied: number; total: number; pct: number }>>();
 
   private syncingScroll = false;
   private syncingVerticalScroll = false;
@@ -61,7 +83,16 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private readonly api: FrontOfficeApiService,
     private readonly masters: HotelMastersService
-  ) {}
+  ) {
+    // Automatically rebuild lanes whenever master data completes loading
+    effect(() => {
+      const rooms = this.masters.rooms();
+      const types = this.masters.roomTypes();
+      if (rooms.length > 0) {
+        this.rebuildLanes();
+      }
+    });
+  }
 
   ngOnInit() {
     this.masters.loadAll();
@@ -73,7 +104,7 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadGanttData();
     setTimeout(() => {
       this.rebuildLanes();
-    }, 800);
+    }, 600);
 
     this.routerSub = this.router.events.pipe(
       filter(event => event instanceof NavigationEnd),
@@ -113,12 +144,37 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.summaryCheckedIn;
   }
 
+  get avgRangeOccupancy(): number {
+    if (this.dateColumns.length === 0) return 0;
+    let sum = 0;
+    for (const d of this.dateColumns) {
+      sum += this.getDailyOccupancy(d).pct;
+    }
+    return Math.round(sum / this.dateColumns.length);
+  }
+
+  get totalActiveRoomsCount(): number {
+    return this.roomLanes.length;
+  }
+
   get timelineWidthPx(): number {
     return Math.max(this.dateColumns.length * this.dayColWidthPx, this.dayColWidthPx);
   }
 
   get floors(): Floor[] {
     return this.masters.floors().filter(f => f.isActive);
+  }
+
+  get availableCategoryNames(): string[] {
+    const set = new Set<string>();
+    for (const r of this.masters.rooms()) {
+      const type = this.masters.roomTypesMap().get(r.typeId || r.roomTypeId)?.name;
+      if (type) set.add(type);
+    }
+    for (const b of this.bookings) {
+      if (b.roomTypeName) set.add(b.roomTypeName);
+    }
+    return Array.from(set).sort();
   }
 
   getFloorLabel(f: any): string {
@@ -184,9 +240,29 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
     this.rebuildLanes();
   }
 
+  onCategoryChange() {
+    this.rebuildLanes();
+  }
+
+  onSearchChange() {
+    this.rebuildLanes();
+  }
+
   toggleTodayFocus() {
     this.showTodayFocus = !this.showTodayFocus;
     this.updateTodayFocusPosition();
+  }
+
+  toggleCategoryCollapse(group: RoomCategoryGroup) {
+    group.collapsed = !group.collapsed;
+  }
+
+  expandAllCategories() {
+    this.categoryGroups.forEach(g => g.collapsed = false);
+  }
+
+  collapseAllCategories() {
+    this.categoryGroups.forEach(g => g.collapsed = true);
   }
 
   onHeaderScroll() {
@@ -228,6 +304,18 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
     return date.toLocaleDateString('en-US', { weekday: 'short' });
   }
 
+  isDateToday(date: Date): boolean {
+    const today = new Date();
+    return date.getFullYear() === today.getFullYear() &&
+           date.getMonth() === today.getMonth() &&
+           date.getDate() === today.getDate();
+  }
+
+  isWeekend(date: Date): boolean {
+    const day = date.getDay();
+    return day === 0 || day === 6;
+  }
+
   normalizeStatus(status: string): string {
     return (status || '').replace(/[^A-Za-z]/g, '').toUpperCase();
   }
@@ -260,6 +348,77 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
     return `${sd} - ${ed}`;
   }
 
+  // ─── Occupancy Calculations ───────────────────────────────────
+
+  isBookingActiveOnDate(b: GanttRow | GanttChartItem, dateStr: string): boolean {
+    if (b.checkInDate === b.checkOutDate) {
+      return dateStr === b.checkInDate;
+    }
+    return dateStr >= b.checkInDate && dateStr < b.checkOutDate;
+  }
+
+  getDailyOccupancy(date: Date): { occupied: number; total: number; pct: number } {
+    const dateStr = this.toInputDate(date);
+    return this.dailyOccupancyMap.get(dateStr) || { occupied: 0, total: this.roomLanes.length, pct: 0 };
+  }
+
+  getCategoryOccupancy(group: RoomCategoryGroup, date: Date): { occupied: number; total: number; pct: number } {
+    const dateStr = this.toInputDate(date);
+    const catMap = this.categoryDailyOccupancyMap.get(group.categoryName);
+    return catMap?.get(dateStr) || { occupied: 0, total: group.roomCount, pct: 0 };
+  }
+
+  getOccupancyLevelClass(pct: number): string {
+    if (pct === 0) return 'occ-zero';
+    if (pct < 30) return 'occ-low';
+    if (pct < 65) return 'occ-mid';
+    if (pct < 85) return 'occ-high';
+    return 'occ-peak';
+  }
+
+  getCatOccLevel(group: RoomCategoryGroup, date: Date): string {
+    const occ = this.getCategoryOccupancy(group, date);
+    return this.getOccupancyLevelClass(occ.pct);
+  }
+
+  // ─── Booking Color & Presentation ─────────────────────────────
+
+  getBookingBackground(row: GanttRow): string {
+    const status = (row.status || '').toLowerCase();
+    if (status.includes('checkin') || status.includes('checked in')) {
+      return 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)';
+    }
+    if (status.includes('checkout') || status.includes('checked out')) {
+      return 'linear-gradient(135deg, #64748b 0%, #475569 100%)';
+    }
+    if (status.includes('confirm')) {
+      return 'linear-gradient(135deg, #059669 0%, #10b981 100%)';
+    }
+    if (status.includes('reserve') || status.includes('pend')) {
+      return 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)';
+    }
+    if (row.color) {
+      return `linear-gradient(135deg, ${row.color} 0%, ${this.adjustColorBrightness(row.color, -30)} 100%)`;
+    }
+    return 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
+  }
+
+  onBookingHover(row: GanttRow, event: MouseEvent) {
+    this.activeTooltipBooking = row;
+    const target = event.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    this.tooltipPos = {
+      x: Math.min(window.innerWidth - 290, Math.max(16, rect.left + rect.width / 2 - 130)),
+      y: rect.top - 125 > 10 ? rect.top - 130 : rect.bottom + 12
+    };
+  }
+
+  onBookingLeave() {
+    this.activeTooltipBooking = null;
+  }
+
+  // ─── Private Helpers ──────────────────────────────────────────
+
   private toInputDate(date: Date): string {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -285,7 +444,6 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
     const checkOut = new Date(`${item.checkOutDate}T00:00:00`).getTime();
 
     const dayMs = 24 * 60 * 60 * 1000;
-    const rangeDays = Math.max(1, Math.round((end - start) / dayMs) + 1);
     const clampedStart = Math.max(start, checkIn);
     const clampedEnd = Math.min(end + dayMs, checkOut);
     const startOffsetDays = Math.max(0, Math.round((clampedStart - start) / dayMs));
@@ -294,31 +452,156 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
     return {
       ...item,
       barLeftPx: startOffsetDays * this.dayColWidthPx,
-      barWidthPx: Math.max(spanDays * this.dayColWidthPx, 28),
+      barWidthPx: Math.max(spanDays * this.dayColWidthPx - 6, 32),
       nights: Math.max(1, Math.round((checkOut - checkIn) / dayMs))
     };
   }
 
-  private ensureFloorSelected() {
-    if (this.selectedFloorId) return;
-    const first = this.floors[0];
-    if (first) this.selectedFloorId = first.id;
-  }
-
-  private rebuildLanes() {
-    const rooms = this.masters.rooms()
+  rebuildLanes() {
+    const rawRooms = this.masters.rooms()
       .filter(r => r.isActive)
-      .filter(r => !this.selectedFloorId || Number(r.floorId) === Number(this.selectedFloorId))
-      .sort((a, b) => this.roomSort(a, b));
+      .filter(r => !this.selectedFloorId || Number(r.floorId) === Number(this.selectedFloorId));
 
     const roomTypes = this.masters.roomTypesMap();
-    this.roomLanes = rooms.map(room => ({
-      roomId: room.id,
-      roomNumber: room.roomNumber,
-      roomTypeName: roomTypes.get(room.typeId)?.name || 'Room',
-      roomStatus: room.status,
-      bookings: this.bookings.filter(b => b.roomId === room.id)
-    }));
+    const roomMap = new Map<number, RoomLane>();
+
+    for (const room of rawRooms) {
+      const typeName = roomTypes.get(room.typeId || room.roomTypeId)?.name ||
+                       this.bookings.find(b => b.roomId === room.id)?.roomTypeName ||
+                       'Standard';
+      roomMap.set(room.id, {
+        roomId: room.id,
+        roomNumber: room.roomNumber,
+        roomTypeName: typeName,
+        roomStatus: room.status || 'AVAILABLE',
+        bookings: this.bookings.filter(b => b.roomId === room.id)
+      });
+    }
+
+    // Incorporate any rooms present in bookings that are not in room master
+    for (const b of this.bookings) {
+      if (b.roomId && !roomMap.has(b.roomId)) {
+        roomMap.set(b.roomId, {
+          roomId: b.roomId,
+          roomNumber: b.roomNumber,
+          roomTypeName: b.roomTypeName || 'Deluxe',
+          roomStatus: 'OCCUPIED',
+          bookings: this.bookings.filter(x => x.roomId === b.roomId)
+        });
+      }
+    }
+
+    let lanes = Array.from(roomMap.values());
+
+    // Apply search filter
+    if (this.searchFilter.trim()) {
+      const q = this.searchFilter.trim().toLowerCase();
+      lanes = lanes.filter(l =>
+        l.roomNumber.toLowerCase().includes(q) ||
+        l.roomTypeName.toLowerCase().includes(q) ||
+        l.bookings.some(b => b.guestName.toLowerCase().includes(q) || (b.confirmationNumber || '').toLowerCase().includes(q))
+      );
+    }
+
+    // Apply category filter
+    if (this.selectedCategory && this.selectedCategory !== 'ALL') {
+      lanes = lanes.filter(l => l.roomTypeName.toLowerCase() === this.selectedCategory.toLowerCase());
+    }
+
+    lanes.sort((a, b) => this.laneSort(a, b));
+    this.roomLanes = lanes;
+
+    // Group lanes by category
+    const groupMap = new Map<string, RoomLane[]>();
+    for (const lane of lanes) {
+      const cat = lane.roomTypeName || 'Standard';
+      if (!groupMap.has(cat)) {
+        groupMap.set(cat, []);
+      }
+      groupMap.get(cat)!.push(lane);
+    }
+
+    const prevCollapsed = new Map(this.categoryGroups.map(g => [g.categoryName, g.collapsed]));
+
+    this.categoryGroups = Array.from(groupMap.entries()).map(([catName, catLanes]) => {
+      const themeInfo = this.getCategoryThemeInfo(catName);
+      const totalNightsPossible = catLanes.length * Math.max(1, this.dateColumns.length);
+      const occupiedNights = catLanes.reduce((sum, lane) => {
+        return sum + lane.bookings.reduce((bSum, b) => bSum + Math.min(b.nights, this.dateColumns.length), 0);
+      }, 0);
+      const rangeOccupancyPct = totalNightsPossible > 0 ? Math.min(100, Math.round((occupiedNights / totalNightsPossible) * 100)) : 0;
+
+      return {
+        categoryName: catName,
+        categoryIcon: themeInfo.icon,
+        categoryTheme: themeInfo.theme,
+        roomCount: catLanes.length,
+        lanes: catLanes,
+        collapsed: prevCollapsed.get(catName) ?? false,
+        rangeOccupancyPct
+      };
+    });
+
+    // Compute occupancies across all dates
+    this.computeDailyOccupancies();
+  }
+
+  private computeDailyOccupancies() {
+    this.dailyOccupancyMap.clear();
+    this.categoryDailyOccupancyMap.clear();
+
+    const totalRooms = this.roomLanes.length;
+
+    for (const d of this.dateColumns) {
+      const dateStr = this.toInputDate(d);
+      const occupiedRoomIds = new Set<number>();
+
+      for (const b of this.bookings) {
+        if (this.isBookingActiveOnDate(b, dateStr)) {
+          if (this.roomLanes.some(l => l.roomId === b.roomId)) {
+            occupiedRoomIds.add(b.roomId);
+          }
+        }
+      }
+
+      const occupied = occupiedRoomIds.size;
+      const pct = totalRooms > 0 ? Math.round((occupied / totalRooms) * 100) : 0;
+      this.dailyOccupancyMap.set(dateStr, { occupied, total: totalRooms, pct });
+
+      // Compute per category
+      for (const group of this.categoryGroups) {
+        if (!this.categoryDailyOccupancyMap.has(group.categoryName)) {
+          this.categoryDailyOccupancyMap.set(group.categoryName, new Map());
+        }
+        const catOccupied = group.lanes.filter(l =>
+          l.bookings.some(b => this.isBookingActiveOnDate(b, dateStr))
+        ).length;
+        const catTotal = group.roomCount;
+        const catPct = catTotal > 0 ? Math.round((catOccupied / catTotal) * 100) : 0;
+        this.categoryDailyOccupancyMap.get(group.categoryName)!.set(dateStr, {
+          occupied: catOccupied,
+          total: catTotal,
+          pct: catPct
+        });
+      }
+    }
+  }
+
+  private getCategoryThemeInfo(category: string): { icon: string; theme: string } {
+    const c = (category || '').toLowerCase();
+    if (c.includes('deluxe')) return { icon: 'hotel', theme: 'deluxe' };
+    if (c.includes('lux')) return { icon: 'stars', theme: 'luxury' };
+    if (c.includes('suite') || c.includes('exec')) return { icon: 'king_bed', theme: 'suite' };
+    if (c.includes('standard') || c.includes('classic')) return { icon: 'single_bed', theme: 'standard' };
+    if (c.includes('villa') || c.includes('cottage')) return { icon: 'villa', theme: 'villa' };
+    return { icon: 'meeting_room', theme: 'default' };
+  }
+
+  private laneSort(a: RoomLane, b: RoomLane): number {
+    const aNum = Number(a.roomNumber);
+    const bNum = Number(b.roomNumber);
+    if (!Number.isNaN(aNum) && !Number.isNaN(bNum)) return aNum - bNum;
+    return a.roomNumber.localeCompare(b.roomNumber);
   }
 
   private updateTodayFocusPosition() {
@@ -343,11 +626,19 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
     this.todayLinePct = ((offsetDays + 0.5) / totalDays) * 100;
   }
 
-  private roomSort(a: Room, b: Room): number {
-    const aNum = Number(a.roomNumber);
-    const bNum = Number(b.roomNumber);
-    if (!Number.isNaN(aNum) && !Number.isNaN(bNum)) return aNum - bNum;
-    return a.roomNumber.localeCompare(b.roomNumber);
+  private adjustColorBrightness(hex: string, percent: number): string {
+    let cleanHex = hex.replace(/^#/, '');
+    if (cleanHex.length === 3) {
+      cleanHex = cleanHex.split('').map(c => c + c).join('');
+    }
+    const num = parseInt(cleanHex, 16);
+    let r = (num >> 16) + percent;
+    let g = ((num >> 8) & 0x00FF) + percent;
+    let b = (num & 0x0000FF) + percent;
+    r = Math.min(255, Math.max(0, r));
+    g = Math.min(255, Math.max(0, g));
+    b = Math.min(255, Math.max(0, b));
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
   }
 
   private syncTimelineScrollFromBody() {

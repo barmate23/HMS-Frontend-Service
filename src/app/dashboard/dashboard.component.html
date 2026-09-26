@@ -217,7 +217,7 @@
           <div class="room-legend">
             <span><i class="available"></i>Available</span>
             <span><i class="occupied"></i>Occupied</span>
-            <span><i class="blocked"></i>Blocked</span>
+            <span><i class="blocked"></i>Booked</span>
           </div>
           <div class="occupancy-chip">{{ roomKpis().occupancy }}% occupied</div>
         </div>
@@ -273,7 +273,7 @@
           <div class="donut-stat-item blocked">
             <div class="stat-header">
               <span class="stat-indicator"></span>
-              <span class="stat-name">Blocked</span>
+              <span class="stat-name">Booked</span>
               <span class="stat-pct">{{ donutChartData().blockedPct }}%</span>
             </div>
             <div class="stat-count">{{ roomKpis().blocked }} <small>rooms</small></div>
@@ -295,12 +295,12 @@
               <span class="seg occupied" [style.width.%]="floor.total ? (floor.occupied / floor.total * 100) : 0"
                 [title]="floor.occupied + ' occupied'"></span>
               <span class="seg blocked" [style.width.%]="floor.total ? (floor.blocked / floor.total * 100) : 0"
-                [title]="floor.blocked + ' blocked'"></span>
+                [title]="floor.blocked + ' booked'"></span>
             </div>
             <div class="floor-counts">
               <span class="c-avail"><b>{{ floor.available }}</b> avail</span>
               <span class="c-occ"><b>{{ floor.occupied }}</b> occ</span>
-              <span class="c-blk"><b>{{ floor.blocked }}</b> blk</span>
+              <span class="c-blk"><b>{{ floor.blocked }}</b> booked</span>
             </div>
           </div>
           <div class="floor-pct-pill" [class.active-occ]="floorOccupancy(floor) > 0">

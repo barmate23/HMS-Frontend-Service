@@ -3,140 +3,369 @@
     <div class="nav-left">
       <div class="title-group">
         <span class="nav-title">Booking Gantt Chart</span>
-        <span class="nav-subtitle">Room occupancy timeline by selected date range</span>
+        <span class="nav-subtitle">Room occupancy timeline categorized by room type</span>
       </div>
     </div>
     <div class="nav-right">
-      <div class="date-range">
-        <label>
+      <div class="filters-group">
+        <!-- Search Filter -->
+        <div class="search-box">
+          <span class="material-icons-round">search</span>
+          <input type="text" [(ngModel)]="searchFilter" (ngModelChange)="onSearchChange()" placeholder="Search room, guest, ref...">
+          <button type="button" class="clear-btn" *ngIf="searchFilter" (click)="searchFilter = ''; onSearchChange()">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+
+        <!-- Floor Filter -->
+        <label class="filter-label">
           <span>Floor</span>
-          <select [(ngModel)]="selectedFloorId" (ngModelChange)="onFloorChange()" class="floor-select">
+          <select [(ngModel)]="selectedFloorId" (ngModelChange)="onFloorChange()" class="filter-select">
             <option [ngValue]="null">All Floors</option>
             <option *ngFor="let f of floors" [ngValue]="f.id">
               {{ getFloorLabel(f) }}
             </option>
           </select>
         </label>
-        <label>
-          <span>From</span>
-          <input type="date" [(ngModel)]="startDate">
+
+        <!-- Category Filter -->
+        <label class="filter-label">
+          <span>Category</span>
+          <select [(ngModel)]="selectedCategory" (ngModelChange)="onCategoryChange()" class="filter-select">
+            <option value="ALL">All Categories</option>
+            <option *ngFor="let cat of availableCategoryNames" [value]="cat">
+              {{ cat }}
+            </option>
+          </select>
         </label>
-        <label>
-          <span>To</span>
-          <input type="date" [(ngModel)]="endDate">
-        </label>
+
+        <!-- Date Range -->
+        <div class="date-range">
+          <label>
+            <span>From</span>
+            <input type="date" [(ngModel)]="startDate">
+          </label>
+          <label>
+            <span>To</span>
+            <input type="date" [(ngModel)]="endDate">
+          </label>
+        </div>
       </div>
-      <button class="btn-primary" (click)="loadGanttData()">
-        <span class="material-icons-round">sync</span>
-        Apply
-      </button>
-      <button class="btn-outline" [class.active]="showTodayFocus" (click)="toggleTodayFocus()">
-        <span class="material-icons-round">today</span>
-        Focus Now
-      </button>
+
+      <div class="action-buttons">
+        <button class="btn-primary" (click)="loadGanttData()" [disabled]="isLoading">
+          <span class="material-icons-round" [class.spin]="isLoading">sync</span>
+          Apply
+        </button>
+        <button class="btn-outline" [class.active]="showTodayFocus" (click)="toggleTodayFocus()" title="Highlight today on timeline">
+          <span class="material-icons-round">today</span>
+          Today
+        </button>
+        <div class="collapse-controls" *ngIf="categoryGroups.length > 1">
+          <button type="button" class="btn-icon" (click)="expandAllCategories()" title="Expand all categories">
+            <span class="material-icons-round">unfold_more</span>
+          </button>
+          <button type="button" class="btn-icon" (click)="collapseAllCategories()" title="Collapse all categories">
+            <span class="material-icons-round">unfold_less</span>
+          </button>
+        </div>
+      </div>
     </div>
   </nav>
 
   <div class="main-content">
+    <!-- Top KPI Stats Row -->
     <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-icon total"><span class="material-icons-round">event_note</span></div>
+      <div class="stat-card stat-bookings">
+        <div class="stat-icon-wrap bookings">
+          <span class="material-icons-round">event_note</span>
+        </div>
         <div class="stat-details">
           <span class="stat-value">{{ totalBookings }}</span>
           <span class="stat-label">Bookings In Range</span>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon checked-in"><span class="material-icons-round">meeting_room</span></div>
+
+      <div class="stat-card stat-occupied">
+        <div class="stat-icon-wrap occupied">
+          <span class="material-icons-round">hotel</span>
+        </div>
         <div class="stat-details">
           <span class="stat-value">{{ occupiedRooms }}</span>
           <span class="stat-label">Occupied Rooms</span>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon pending"><span class="material-icons-round">login</span></div>
+
+      <div class="stat-card stat-checked-in">
+        <div class="stat-icon-wrap checked-in">
+          <span class="material-icons-round">meeting_room</span>
+        </div>
         <div class="stat-details">
           <span class="stat-value">{{ checkedInBookings }}</span>
           <span class="stat-label">Checked In</span>
         </div>
       </div>
+
+      <div class="stat-card stat-occupancy">
+        <div class="stat-icon-wrap occupancy">
+          <span class="material-icons-round">pie_chart</span>
+        </div>
+        <div class="stat-details">
+          <div class="stat-value-row">
+            <span class="stat-value">{{ avgRangeOccupancy }}%</span>
+            <span class="stat-chip" [ngClass]="getOccupancyLevelClass(avgRangeOccupancy)">
+              {{ avgRangeOccupancy >= 70 ? 'Peak' : (avgRangeOccupancy >= 40 ? 'Moderate' : 'Available') }}
+            </span>
+          </div>
+          <span class="stat-label">Avg Timeline Occupancy</span>
+        </div>
+      </div>
     </div>
 
+    <!-- Main Gantt Chart Card -->
     <div class="modern-card">
       <div class="card-header">
-        <h2 class="card-title">Timeline View</h2>
+        <div class="header-left">
+          <h2 class="card-title">Timeline & Room Categories</h2>
+          <span class="total-rooms-pill">{{ totalActiveRoomsCount }} Rooms across {{ categoryGroups.length }} Categories</span>
+        </div>
+        <div class="header-legend">
+          <span class="legend-item"><i class="legend-dot dot-confirmed"></i>Confirmed</span>
+          <span class="legend-item"><i class="legend-dot dot-checked-in"></i>Checked In</span>
+          <span class="legend-item"><i class="legend-dot dot-reserved"></i>Reserved</span>
+          <span class="legend-item"><i class="legend-dot dot-available"></i>Available</span>
+        </div>
       </div>
 
-      <div class="state" *ngIf="isLoading">Loading Gantt chart...</div>
+      <div class="state" *ngIf="isLoading">
+        <span class="material-icons-round spin">sync</span>
+        Loading Gantt chart & occupancy data...
+      </div>
       <div class="state error" *ngIf="errorMessage">{{ errorMessage }}</div>
 
+      <!-- Gantt Shell -->
       <div class="gantt-shell" *ngIf="!isLoading && !errorMessage">
+        <!-- ─── TOP LEFT HEADER: Columns & Daily Occupancy Title ─── -->
         <div class="left-header">
-          <span>Room</span>
-          <span>Guest</span>
-          <span>Status</span>
+          <div class="left-header-top">
+            <span class="col-room">Room</span>
+            <span class="col-guest">Guest & Reservation</span>
+            <span class="col-status">Status</span>
+          </div>
+          <div class="left-header-occ">
+            <span class="material-icons-round occ-hdr-icon">analytics</span>
+            <div class="occ-hdr-text">
+              <strong>Daily Occupancy</strong>
+              <small>{{ totalActiveRoomsCount }} Total Rooms</small>
+            </div>
+          </div>
         </div>
+
+        <!-- ─── TOP RIGHT HEADER: Dates & Daily Occupancy Row ─── -->
         <div class="timeline-header" #timelineHeaderEl (scroll)="onHeaderScroll()" [style.--day-col-width.px]="dayColWidthPx">
           <div class="today-focus-line" *ngIf="showTodayFocus && todayLinePct !== null" [style.left.%]="todayLinePct"></div>
           <div class="timeline-header-inner" [style.width.px]="timelineWidthPx">
-            <div class="day-col" *ngFor="let d of dateColumns">
-              <span class="day-name">{{ dayName(d) }}</span>
-              <span class="day-date">{{ labelForDate(d) }}</span>
+            <!-- Row 1: Date column headers -->
+            <div class="timeline-dates-row">
+              <div class="day-col" *ngFor="let d of dateColumns"
+                   [class.is-today]="isDateToday(d)"
+                   [class.is-weekend]="isWeekend(d)"
+                   [style.width.px]="dayColWidthPx">
+                <div class="day-name-row">
+                  <span class="day-name">{{ dayName(d) }}</span>
+                  <span class="today-chip" *ngIf="isDateToday(d)">Today</span>
+                </div>
+                <span class="day-date">{{ labelForDate(d) }}</span>
+              </div>
+            </div>
+
+            <!-- Row 2: Occupancy row per date -->
+            <div class="timeline-occ-row">
+              <div class="day-occ-col" *ngFor="let d of dateColumns"
+                   [class.is-today]="isDateToday(d)"
+                   [style.width.px]="dayColWidthPx">
+                <div class="occ-badge" [ngClass]="getOccupancyLevelClass(getDailyOccupancy(d).pct)">
+                  {{ getDailyOccupancy(d).pct }}%
+                </div>
+                <span class="occ-subtext">{{ getDailyOccupancy(d).occupied }}/{{ getDailyOccupancy(d).total }} Occ</span>
+                <div class="occ-track">
+                  <div class="occ-bar-fill"
+                       [style.width.%]="getDailyOccupancy(d).pct"
+                       [ngClass]="getOccupancyLevelClass(getDailyOccupancy(d).pct)"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
+        <!-- ─── LEFT BODY: Categories & Room Details ─── -->
         <div class="left-body" #leftBodyEl (scroll)="onLeftBodyScroll()">
-          <div class="row-meta"
-               *ngFor="let lane of roomLanes"
-               (mouseenter)="onRoomHover(lane.roomId)"
-               (mouseleave)="onRoomHover(null)"
-               (click)="togglePinnedRoom(lane.roomId)">
-            <div class="room-badge">{{ lane.roomNumber }}</div>
-            <div class="guest-block">
-              <div class="guest-top-row">
-                <strong>{{ lane.bookings[0]?.guestName || 'Available' }}</strong>
-              </div>
-              <small>{{ lane.roomTypeName }} • {{ lane.bookings[0]?.reservationRef || lane.roomStatus }}</small>
-              <div class="guest-hint-row">
-                <span class="guest-hint clickable" *ngIf="lane.bookings.length === 1">View List</span>
-                <span class="guest-hint more" *ngIf="lane.bookings.length > 1">+{{ lane.bookings.length - 1 }} More</span>
+          <ng-container *ngFor="let group of categoryGroups">
+            <!-- Category Header Row (Left) -->
+            <div class="category-header-row left"
+                 [ngClass]="'theme-' + group.categoryTheme"
+                 (click)="toggleCategoryCollapse(group)"
+                 [title]="group.collapsed ? 'Click to expand ' + group.categoryName : 'Click to collapse ' + group.categoryName">
+              <div class="cat-left-content">
+                <button type="button" class="collapse-toggle" [attr.aria-label]="group.collapsed ? 'Expand' : 'Collapse'">
+                  <span class="material-icons-round">{{ group.collapsed ? 'chevron_right' : 'expand_more' }}</span>
+                </button>
+                <span class="material-icons-round cat-icon">{{ group.categoryIcon }}</span>
+                <span class="cat-name">{{ group.categoryName }}</span>
+                <span class="cat-room-count">{{ group.roomCount }} {{ group.roomCount === 1 ? 'Room' : 'Rooms' }}</span>
+                <span class="cat-range-occ" [title]="'Range occupancy for ' + group.categoryName">
+                  {{ group.rangeOccupancyPct }}% Occ
+                </span>
               </div>
             </div>
-            <span class="status-pill" [ngClass]="statusClass(lane.bookings[0]?.status || lane.roomStatus)">{{ lane.bookings[0]?.status || lane.roomStatus }}</span>
 
-            <div class="guest-mini-list" *ngIf="isGuestListVisible(lane.roomId)">
-              <div class="mini-header">
-                <strong>Room {{ lane.roomNumber }} Bookings</strong>
-                <span>{{ lane.bookings.length }}</span>
+            <!-- Room Rows under Category (Left) -->
+            <ng-container *ngIf="!group.collapsed">
+              <div class="row-meta"
+                   *ngFor="let lane of group.lanes"
+                   (mouseenter)="onRoomHover(lane.roomId)"
+                   (mouseleave)="onRoomHover(null)"
+                   (click)="togglePinnedRoom(lane.roomId)">
+                <div class="room-col">
+                  <div class="room-badge">{{ lane.roomNumber }}</div>
+                  <span class="room-status-indicator" [ngClass]="lane.bookings.length > 0 ? 'status-occupied' : 'status-vacant'"
+                        [title]="lane.bookings.length > 0 ? 'Occupied' : 'Vacant'"></span>
+                </div>
+
+                <div class="guest-block">
+                  <div class="guest-top-row">
+                    <strong class="guest-title" [class.is-available]="lane.bookings.length === 0">
+                      {{ lane.bookings.length > 0 ? lane.bookings[0].guestName : 'Available' }}
+                    </strong>
+                    <span class="cat-tag" [ngClass]="'tag-' + group.categoryTheme">{{ lane.roomTypeName }}</span>
+                  </div>
+                  <small class="guest-sub">
+                    {{ lane.bookings.length > 0 ? (lane.bookings[0].confirmationNumber || lane.bookings[0].reservationRef) : lane.roomStatus }}
+                  </small>
+                  <div class="guest-hint-row">
+                    <span class="guest-hint clickable" *ngIf="lane.bookings.length === 1">View List</span>
+                    <span class="guest-hint more" *ngIf="lane.bookings.length > 1">+{{ lane.bookings.length - 1 }} More</span>
+                  </div>
+                </div>
+
+                <div class="status-col">
+                  <span class="status-pill" [ngClass]="statusClass(lane.bookings.length > 0 ? lane.bookings[0].status : lane.roomStatus)">
+                    {{ lane.bookings.length > 0 ? lane.bookings[0].status : lane.roomStatus }}
+                  </span>
+                </div>
+
+                <!-- Guest Mini List Dropdown -->
+                <div class="guest-mini-list" *ngIf="isGuestListVisible(lane.roomId)">
+                  <div class="mini-header">
+                    <strong>Room {{ lane.roomNumber }} • {{ lane.roomTypeName }}</strong>
+                    <span class="badge-count">{{ lane.bookings.length }} Bookings</span>
+                  </div>
+                  <div class="mini-item" *ngFor="let b of lane.bookings">
+                    <div class="mini-name-row">
+                      <span class="name">{{ b.guestName }}</span>
+                      <span class="mini-status-pill" [ngClass]="statusClass(b.status)">{{ b.status }}</span>
+                    </div>
+                    <div class="meta">{{ formatRange(b.checkInDate, b.checkOutDate) }} ({{ b.nights }}N)</div>
+                    <div class="ref">{{ b.confirmationNumber || b.reservationRef }}</div>
+                  </div>
+                  <div class="mini-empty" *ngIf="lane.bookings.length === 0">
+                    <span class="material-icons-round">check_circle</span>
+                    Room is completely available for this date range.
+                  </div>
+                </div>
               </div>
-              <div class="mini-item" *ngFor="let b of lane.bookings">
-                <div class="name">{{ b.guestName }}</div>
-                <div class="meta">{{ formatRange(b.checkInDate, b.checkOutDate) }} • {{ b.reservationRef }}</div>
-              </div>
-              <div class="mini-empty" *ngIf="lane.bookings.length === 0">No bookings in selected range.</div>
-            </div>
+            </ng-container>
+          </ng-container>
+
+          <div class="empty-row" *ngIf="categoryGroups.length === 0">
+            <span class="material-icons-round">hotel_class</span>
+            No rooms found matching the current filters.
           </div>
-          <div class="empty-row" *ngIf="roomLanes.length === 0">No rooms found for selected floor.</div>
         </div>
 
+        <!-- ─── RIGHT BODY: Categories & Booking Bars Timeline ─── -->
         <div class="timeline-body" #timelineBodyEl (scroll)="onTimelineBodyScroll()" [style.--day-col-width.px]="dayColWidthPx">
           <div class="today-focus-line body" *ngIf="showTodayFocus && todayLinePct !== null" [style.left.%]="todayLinePct"></div>
           <div class="timeline-body-inner" [style.width.px]="timelineWidthPx">
-            <div class="timeline-row" *ngFor="let lane of roomLanes">
-              <div class="grid-lines">
-                <span *ngFor="let d of dateColumns"></span>
+            <ng-container *ngFor="let group of categoryGroups">
+              <!-- Category Header Row (Timeline) -->
+              <div class="category-header-row timeline"
+                   [ngClass]="'theme-' + group.categoryTheme"
+                   (click)="toggleCategoryCollapse(group)">
+                <div class="grid-lines">
+                  <span *ngFor="let d of dateColumns" [class.is-weekend]="isWeekend(d)"></span>
+                </div>
+                <div class="cat-timeline-cells">
+                  <div class="cat-date-cell" *ngFor="let d of dateColumns" [style.width.px]="dayColWidthPx"
+                       [title]="group.categoryName + ' occupancy on ' + labelForDate(d) + ': ' + getCategoryOccupancy(group, d).occupied + '/' + group.roomCount + ' rooms (' + getCategoryOccupancy(group, d).pct + '%)'">
+                    <span class="cat-occ-pill" [ngClass]="getCatOccLevel(group, d)">
+                      {{ getCategoryOccupancy(group, d).pct }}%
+                    </span>
+                    <small class="cat-occ-ratio">{{ getCategoryOccupancy(group, d).occupied }}/{{ group.roomCount }}</small>
+                  </div>
+                </div>
               </div>
-              <div class="booking-bar"
-                   *ngFor="let row of lane.bookings"
-                   [style.left.px]="row.barLeftPx"
-                   [style.width.px]="row.barWidthPx"
-                   [style.background]="row.color || ''">
-                <span>{{ row.guestName }} • {{ row.nights }}N</span>
-              </div>
-            </div>
+
+              <!-- Room Timeline Rows under Category -->
+              <ng-container *ngIf="!group.collapsed">
+                <div class="timeline-row" *ngFor="let lane of group.lanes">
+                  <div class="grid-lines">
+                    <span *ngFor="let d of dateColumns" [class.is-weekend]="isWeekend(d)"></span>
+                  </div>
+
+                  <!-- Booking Bars -->
+                  <div class="booking-bar"
+                       *ngFor="let row of lane.bookings"
+                       [style.left.px]="row.barLeftPx"
+                       [style.width.px]="row.barWidthPx"
+                       [style.background]="getBookingBackground(row)"
+                       (mouseenter)="onBookingHover(row, $event)"
+                       (mouseleave)="onBookingLeave()">
+                    <div class="bar-content">
+                      <span class="bar-avatar"><i class="material-icons-round">person</i></span>
+                      <strong class="bar-name">{{ row.guestName }}</strong>
+                      <span class="bar-pill nights">{{ row.nights }}N</span>
+                      <span class="bar-pill ref" *ngIf="row.barWidthPx > 175">{{ row.confirmationNumber || row.reservationRef }}</span>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+            </ng-container>
+
+            <div class="empty-row" *ngIf="categoryGroups.length === 0"></div>
           </div>
-          <div class="empty-row" *ngIf="roomLanes.length === 0"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Detail Tooltip for Booking Bars -->
+  <div class="floating-booking-tooltip"
+       *ngIf="activeTooltipBooking"
+       [style.left.px]="tooltipPos.x"
+       [style.top.px]="tooltipPos.y">
+    <div class="tooltip-card">
+      <div class="tooltip-header">
+        <div class="guest-title-wrap">
+          <span class="material-icons-round">account_circle</span>
+          <strong>{{ activeTooltipBooking.guestName }}</strong>
+        </div>
+        <span class="tooltip-status-badge" [ngClass]="statusClass(activeTooltipBooking.status)">
+          {{ activeTooltipBooking.status }}
+        </span>
+      </div>
+      <div class="tooltip-body">
+        <div class="tooltip-item">
+          <span class="lbl">Room:</span>
+          <span class="val">Room <strong>{{ activeTooltipBooking.roomNumber }}</strong> ({{ activeTooltipBooking.roomTypeName }})</span>
+        </div>
+        <div class="tooltip-item">
+          <span class="lbl">Stay:</span>
+          <span class="val">{{ formatRange(activeTooltipBooking.checkInDate, activeTooltipBooking.checkOutDate) }} • <strong>{{ activeTooltipBooking.nights }} Nights</strong></span>
+        </div>
+        <div class="tooltip-item">
+          <span class="lbl">Confirmation:</span>
+          <span class="val mono">{{ activeTooltipBooking.confirmationNumber || activeTooltipBooking.reservationRef }}</span>
         </div>
       </div>
     </div>

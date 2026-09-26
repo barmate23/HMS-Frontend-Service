@@ -9,8 +9,14 @@ let refreshRequest$: Observable<boolean> | null = null;
 /** Returns true if the response body signals an expired/invalid token (HTTP 200 with error payload). */
 function isUnauthorizedBody(body: any): boolean {
   if (!body || typeof body !== 'object') return false;
+  
+  const str = JSON.stringify(body).toLowerCase();
+  if (str.includes('token is expired') || str.includes('expired token') || str.includes('jwt expired') || str.includes('token expired')) {
+    return true;
+  }
+
   if (body.success === false) {
-    const code    = String(body.error?.code      || '').toUpperCase();
+    const code    = String(body.error?.code      || body.errorCode || '').toUpperCase();
     const msg     = String(body.message          || body.error?.message || '').toLowerCase();
     const details = String(body.error?.details   || '').toLowerCase();
     return (
@@ -25,6 +31,12 @@ function isUnauthorizedBody(body: any): boolean {
 /** Returns true for any HTTP-level or body-level unauthorized signal. */
 function isUnauthorizedError(error: any): boolean {
   if (error?.status === 401 || error?.status === 403) return true;
+  
+  const errStr = JSON.stringify(error).toLowerCase();
+  if (errStr.includes('token is expired') || errStr.includes('jwt expired') || errStr.includes('expired token') || errStr.includes('token expired')) {
+      return true;
+  }
+
   return isUnauthorizedBody(error?.error);
 }
 

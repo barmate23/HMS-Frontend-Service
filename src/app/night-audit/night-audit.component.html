@@ -1,0 +1,559 @@
+<div class="na-container">
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       COMPACT NAV BAR
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="compact-nav">
+    <div class="tabs-container">
+      <button class="tab-btn" [class.active]="activeTab() === 'dashboard'" (click)="selectTab('dashboard')">
+        <span class="material-icons-round" style="color:#7C3AED;">nights_stay</span>
+        Dashboard
+      </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'checklist'" (click)="selectTab('checklist')">
+        <span class="material-icons-round" style="color:#2563EB;">checklist</span>
+        Pre-Audit Checks
+        <span class="badge" *ngIf="na.checklistProgress().requiredVerified < na.checklistProgress().requiredTotal">
+          {{ na.checklistProgress().requiredTotal - na.checklistProgress().requiredVerified }}
+        </span>
+      </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'charges'" (click)="selectTab('charges')">
+        <span class="material-icons-round" style="color:#D97706;">receipt_long</span>
+        Folio Charges
+        <span class="badge" *ngIf="na.pendingChargesCount() > 0">{{ na.pendingChargesCount() }}</span>
+      </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'no-shows'" (click)="selectTab('no-shows')">
+        <span class="material-icons-round" style="color:#DC2626;">no_meeting_room</span>
+        No-Shows
+        <span class="badge" *ngIf="na.pendingNoShowsCount() > 0">{{ na.pendingNoShowsCount() }}</span>
+      </button>
+      <button class="tab-btn" [class.active]="activeTab() === 'reports'" (click)="selectTab('reports')">
+        <span class="material-icons-round" style="color:#059669;">summarize</span>
+        Audit Reports
+      </button>
+    </div>
+
+    <div class="nav-right">
+      <!-- Audit Status Badge -->
+      <div class="audit-status-badge" [class]="'status-' + na.auditStatus().toLowerCase()">
+        <span class="status-dot"></span>
+        {{ na.auditStatus() === 'OPEN' ? 'Audit Open' : na.auditStatus() === 'IN_PROGRESS' ? 'In Progress' : 'Completed' }}
+      </div>
+      <!-- Business Date -->
+      <div class="biz-date-chip">
+        <span class="material-icons-round">today</span>
+        {{ formatDate(na.businessDate()) }}
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       VIEW CONTENT
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="view-content">
+
+    <!-- ─────────────────────────────────────────────────────────────
+         TAB: DASHBOARD
+         ───────────────────────────────────────────────────────────── -->
+    <div class="tab-panel" *ngIf="activeTab() === 'dashboard'">
+
+      <!-- Hero Banner -->
+      <div class="na-hero">
+        <div class="hero-glow"></div>
+        <div class="hero-content">
+          <div class="hero-left">
+            <div class="hero-eyebrow">
+              <span class="material-icons-round">nights_stay</span>
+              Night Audit Module
+            </div>
+            <h1 class="hero-title">Business Date: {{ formatDate(na.businessDate()) }}</h1>
+            <p class="hero-sub">End-of-day financial reconciliation and date rollover for your hotel.</p>
+          </div>
+          <div class="hero-right">
+            <button class="btn-begin-audit"
+              *ngIf="na.auditStatus() === 'OPEN'"
+              (click)="startAudit()">
+              <span class="material-icons-round">play_circle</span>
+              Begin Night Audit
+            </button>
+            <button class="btn-roll-date"
+              *ngIf="na.auditStatus() === 'IN_PROGRESS' && na.canRollDate()"
+              (click)="openRollDateModal()">
+              <span class="material-icons-round">skip_next</span>
+              Roll Business Date
+            </button>
+            <div class="audit-progress-hint" *ngIf="na.auditStatus() === 'IN_PROGRESS' && !na.canRollDate()">
+              <span class="material-icons-round">info</span>
+              Complete all steps to enable date rollover
+            </div>
+            <div class="audit-complete-badge" *ngIf="na.auditStatus() === 'COMPLETED'">
+              <span class="material-icons-round">check_circle</span>
+              Audit Completed
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Bar (IN_PROGRESS only) -->
+        <div class="audit-progress-bar-wrap" *ngIf="na.auditStatus() === 'IN_PROGRESS'">
+          <div class="audit-progress-steps">
+            <div class="progress-step" [class.done]="na.checklistProgress().allRequiredDone">
+              <span class="material-icons-round">{{ na.checklistProgress().allRequiredDone ? 'check_circle' : 'radio_button_unchecked' }}</span>
+              Pre-Audit Checks
+            </div>
+            <div class="progress-connector"></div>
+            <div class="progress-step" [class.done]="na.allChargesPosted()">
+              <span class="material-icons-round">{{ na.allChargesPosted() ? 'check_circle' : 'radio_button_unchecked' }}</span>
+              Folio Charges
+            </div>
+            <div class="progress-connector"></div>
+            <div class="progress-step" [class.done]="na.allNoShowsProcessed()">
+              <span class="material-icons-round">{{ na.allNoShowsProcessed() ? 'check_circle' : 'radio_button_unchecked' }}</span>
+              No-Shows
+            </div>
+            <div class="progress-connector"></div>
+            <div class="progress-step" [class.done]="allReportsGenerated()">
+              <span class="material-icons-round">{{ allReportsGenerated() ? 'check_circle' : 'radio_button_unchecked' }}</span>
+              Reports
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Strip -->
+      <div class="na-kpi-grid">
+        <div class="na-kpi-card">
+          <div class="kpi-icon-box violet"><span class="material-icons-round">hotel</span></div>
+          <div class="kpi-details">
+            <span class="kpi-value">{{ na.guestCharges().length }}</span>
+            <span class="kpi-label">In-House Guests</span>
+          </div>
+        </div>
+        <div class="na-kpi-card">
+          <div class="kpi-icon-box amber"><span class="material-icons-round">pending_actions</span></div>
+          <div class="kpi-details">
+            <span class="kpi-value">{{ na.pendingChargesCount() }}</span>
+            <span class="kpi-label">Pending Charges</span>
+          </div>
+        </div>
+        <div class="na-kpi-card">
+          <div class="kpi-icon-box rose"><span class="material-icons-round">no_meeting_room</span></div>
+          <div class="kpi-details">
+            <span class="kpi-value">{{ na.pendingNoShowsCount() }}</span>
+            <span class="kpi-label">Pending No-Shows</span>
+          </div>
+        </div>
+        <div class="na-kpi-card">
+          <div class="kpi-icon-box green"><span class="material-icons-round">currency_rupee</span></div>
+          <div class="kpi-details">
+            <span class="kpi-value">{{ formatCurrency(na.totalChargeAmount()) }}</span>
+            <span class="kpi-label">Tonight's Charges</span>
+          </div>
+        </div>
+        <div class="na-kpi-card">
+          <div class="kpi-icon-box blue"><span class="material-icons-round">checklist</span></div>
+          <div class="kpi-details">
+            <span class="kpi-value">{{ na.checklistProgress().requiredVerified }}/{{ na.checklistProgress().requiredTotal }}</span>
+            <span class="kpi-label">Checks Completed</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Previous Audit Log -->
+      <div class="na-section-card">
+        <div class="section-header">
+          <div>
+            <h3>Recent Audit History</h3>
+            <p>Last {{ na.auditLogs().length }} completed business day audits</p>
+          </div>
+          <span class="total-badge">{{ na.auditLogs().length }} Records</span>
+        </div>
+        <div class="table-container">
+          <table class="premium-table">
+            <thead>
+              <tr>
+                <th>Business Date</th>
+                <th>Audited By</th>
+                <th>Started</th>
+                <th>Completed</th>
+                <th>In-House</th>
+                <th>Charges Posted</th>
+                <th>No-Shows</th>
+                <th>Total Revenue</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let log of na.auditLogs()">
+                <td><strong>{{ formatDate(log.businessDate) }}</strong></td>
+                <td>{{ log.auditedBy }}</td>
+                <td>{{ formatTime(log.startedAt) }}</td>
+                <td>{{ formatTime(log.completedAt) }}</td>
+                <td>{{ log.inHouseCount }}</td>
+                <td>{{ log.chargesPosted }}</td>
+                <td>{{ log.noShowsProcessed }}</td>
+                <td><strong>{{ formatCurrency(log.totalRevenue) }}</strong></td>
+                <td>
+                  <span class="pill-badge" [class.success]="log.status === 'COMPLETED'" [class.danger]="log.status === 'FAILED'">
+                    {{ log.status }}
+                  </span>
+                </td>
+              </tr>
+              <tr *ngIf="na.auditLogs().length === 0">
+                <td colspan="9" class="empty-state">No audit records found.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         TAB: PRE-AUDIT CHECKLIST
+         ───────────────────────────────────────────────────────────── -->
+    <div class="tab-panel" *ngIf="activeTab() === 'checklist'">
+      <div class="panel-header">
+        <div>
+          <h2>Pre-Audit Checklist</h2>
+          <p>Verify all required steps before posting charges and rolling the business date.</p>
+        </div>
+        <div class="header-right">
+          <div class="progress-ring-wrap">
+            <svg viewBox="0 0 36 36" class="progress-ring">
+              <circle class="ring-bg" cx="18" cy="18" r="15.9"></circle>
+              <circle class="ring-fill" cx="18" cy="18" r="15.9"
+                [style.strokeDashoffset]="100 - na.checklistProgress().percent">
+              </circle>
+            </svg>
+            <span class="ring-label">{{ na.checklistProgress().percent }}%</span>
+          </div>
+          <button class="btn-primary" [disabled]="!na.checklistProgress().allRequiredDone" (click)="proceedToCharges()">
+            <span class="material-icons-round">arrow_forward</span>
+            Proceed to Charges
+          </button>
+        </div>
+      </div>
+
+      <div class="checklist-grid">
+        <div class="checklist-item" *ngFor="let item of na.checklistItems()"
+          [class.verified]="item.status === 'VERIFIED'"
+          [class.skipped]="item.status === 'SKIPPED'"
+          [class.required]="item.required">
+
+          <div class="check-toggle" (click)="toggleChecklistItem(item.id, item.status)">
+            <span class="material-icons-round check-icon">
+              {{ item.status === 'VERIFIED' ? 'check_circle' : item.status === 'SKIPPED' ? 'cancel' : 'radio_button_unchecked' }}
+            </span>
+          </div>
+
+          <div class="check-body">
+            <div class="check-header-row">
+              <div class="check-icon-wrap">
+                <span class="material-icons-round">{{ item.icon }}</span>
+              </div>
+              <div class="check-title-block">
+                <strong>{{ item.title }}</strong>
+                <span class="required-tag" *ngIf="item.required">Required</span>
+              </div>
+              <div class="check-status-wrap">
+                <span class="check-status-pill" [class]="'cs-' + item.status.toLowerCase()">{{ item.status }}</span>
+              </div>
+            </div>
+            <p class="check-desc">{{ item.description }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         TAB: FOLIO CHARGES
+         ───────────────────────────────────────────────────────────── -->
+    <div class="tab-panel" *ngIf="activeTab() === 'charges'">
+      <div class="panel-header">
+        <div>
+          <h2>Folio Charges</h2>
+          <p>Post room + tax charges to all in-house guest folios for {{ formatDate(na.businessDate()) }}.</p>
+        </div>
+        <div class="header-right">
+          <div class="search-box">
+            <span class="material-icons-round">search</span>
+            <input type="text" placeholder="Search guest, room, ref..." [ngModel]="chargeSearch()" (ngModelChange)="chargeSearch.set($event)">
+          </div>
+          <button class="btn-primary" [disabled]="na.allChargesPosted()" (click)="postAllCharges()">
+            <span class="material-icons-round">done_all</span>
+            Post All Charges
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Strip -->
+      <div class="charge-summary-strip">
+        <div class="summary-chip violet">
+          <strong>{{ na.guestCharges().length }}</strong>
+          <span>Total Guests</span>
+        </div>
+        <div class="summary-chip amber">
+          <strong>{{ na.pendingChargesCount() }}</strong>
+          <span>Pending</span>
+        </div>
+        <div class="summary-chip green">
+          <strong>{{ na.postedChargesCount() }}</strong>
+          <span>Posted</span>
+        </div>
+        <div class="summary-chip teal">
+          <strong>{{ formatCurrency(na.totalChargeAmount()) }}</strong>
+          <span>Total Amount</span>
+        </div>
+      </div>
+
+      <div class="na-section-card">
+        <div class="table-container">
+          <table class="premium-table">
+            <thead>
+              <tr>
+                <th>Ref</th>
+                <th>Guest</th>
+                <th>Room</th>
+                <th>Type</th>
+                <th>Check-In</th>
+                <th>Nights</th>
+                <th>Rate/Night</th>
+                <th>Tax</th>
+                <th>Total Charge</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let charge of filteredCharges()" [class.row-posted]="charge.status === 'POSTED'">
+                <td><code>{{ charge.reservationRef }}</code></td>
+                <td>
+                  <div class="guest-cell">
+                    <strong>{{ charge.guestName }}</strong>
+                    <span class="vip-tag" *ngIf="charge.isVip">VIP</span>
+                  </div>
+                </td>
+                <td><strong class="room-chip">{{ charge.roomNumber }}</strong></td>
+                <td>{{ charge.roomType }}</td>
+                <td>{{ formatDate(charge.checkInDate) }}</td>
+                <td>{{ charge.nights }}</td>
+                <td>{{ formatCurrency(charge.ratePerNight) }}</td>
+                <td>{{ formatCurrency(charge.taxAmount) }} <small>({{ charge.taxPercent }}%)</small></td>
+                <td><strong>{{ formatCurrency(charge.totalCharge) }}</strong></td>
+                <td>
+                  <span class="pill-badge" [class.success]="charge.status === 'POSTED'" [class.pending]="charge.status === 'PENDING'" [class.danger]="charge.status === 'FAILED'">
+                    {{ charge.status }}
+                  </span>
+                </td>
+                <td>
+                  <button class="action-btn-post" *ngIf="charge.status === 'PENDING'" (click)="postCharge(charge.bookingId)">
+                    <span class="material-icons-round">check</span>
+                    Post
+                  </button>
+                  <span class="posted-check" *ngIf="charge.status === 'POSTED'">
+                    <span class="material-icons-round">check_circle</span>
+                  </span>
+                </td>
+              </tr>
+              <tr *ngIf="filteredCharges().length === 0">
+                <td colspan="11" class="empty-state">No guest charges found.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         TAB: NO-SHOW PROCESSING
+         ───────────────────────────────────────────────────────────── -->
+    <div class="tab-panel" *ngIf="activeTab() === 'no-shows'">
+      <div class="panel-header">
+        <div>
+          <h2>No-Show Processing</h2>
+          <p>Guests who were expected to check in today but did not arrive. Take action on each reservation.</p>
+        </div>
+        <div class="header-right">
+          <div class="search-box">
+            <span class="material-icons-round">search</span>
+            <input type="text" placeholder="Search guest or ref..." [ngModel]="noShowSearch()" (ngModelChange)="noShowSearch.set($event)">
+          </div>
+        </div>
+      </div>
+
+      <div class="noshow-policy-note">
+        <span class="material-icons-round">info</span>
+        <strong>No-Show Policy:</strong> By default, 1 night room charge applies for no-shows. Waiving a no-show fee requires manager approval. All actions are logged in the audit trail.
+      </div>
+
+      <div class="noshow-cards">
+        <div class="noshow-card" *ngFor="let ns of filteredNoShows()" [class.processed]="ns.action !== 'PENDING'">
+          <div class="noshow-card-header">
+            <div class="noshow-guest-info">
+              <strong>{{ ns.guestName }}</strong>
+              <code>{{ ns.reservationRef }}</code>
+            </div>
+            <span class="pill-badge"
+              [class.pending]="ns.action === 'PENDING'"
+              [class.danger]="ns.action === 'CHARGE'"
+              [class.warning]="ns.action === 'WAIVE'"
+              [class.info]="ns.action === 'WALKED_IN'">
+              {{ getNoShowActionLabel(ns.action) }}
+            </span>
+          </div>
+
+          <div class="noshow-meta">
+            <div class="meta-item">
+              <span class="material-icons-round">bed</span>
+              <span>{{ ns.roomType }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="material-icons-round">calendar_today</span>
+              <span>Check-in: {{ formatDate(ns.checkInDate) }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="material-icons-round">nightlight_round</span>
+              <span>{{ ns.nights }} night(s)</span>
+            </div>
+            <div class="meta-item">
+              <span class="material-icons-round">currency_rupee</span>
+              <span>No-show fee: <strong>{{ formatCurrency(ns.noShowFee) }}</strong></span>
+            </div>
+          </div>
+
+          <div class="noshow-contact">
+            <span *ngIf="ns.phone"><span class="material-icons-round">phone</span> {{ ns.phone }}</span>
+            <span *ngIf="ns.email"><span class="material-icons-round">email</span> {{ ns.email }}</span>
+          </div>
+
+          <div class="noshow-actions" *ngIf="ns.action === 'PENDING'">
+            <button class="na-action-btn danger" (click)="processNoShow(ns.reservationId, 'CHARGE')">
+              <span class="material-icons-round">payments</span>
+              Charge No-Show Fee
+            </button>
+            <button class="na-action-btn warning" (click)="processNoShow(ns.reservationId, 'WAIVE')">
+              <span class="material-icons-round">do_not_disturb</span>
+              Waive Fee
+            </button>
+            <button class="na-action-btn info" (click)="processNoShow(ns.reservationId, 'WALKED_IN')">
+              <span class="material-icons-round">login</span>
+              Late Walk-In
+            </button>
+          </div>
+          <div class="noshow-done" *ngIf="ns.action !== 'PENDING'">
+            <span class="material-icons-round">check_circle</span>
+            Action recorded: <strong>{{ getNoShowActionLabel(ns.action) }}</strong>
+          </div>
+        </div>
+
+        <div class="empty-card" *ngIf="filteredNoShows().length === 0">
+          <span class="material-icons-round">check_circle</span>
+          <p>No unresolved no-show reservations.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         TAB: AUDIT REPORTS
+         ───────────────────────────────────────────────────────────── -->
+    <div class="tab-panel" *ngIf="activeTab() === 'reports'">
+      <div class="panel-header">
+        <div>
+          <h2>Audit Reports</h2>
+          <p>Generate and review all night audit reports for {{ formatDate(na.businessDate()) }}.</p>
+        </div>
+        <div class="header-right">
+          <button class="btn-primary" (click)="generateAllReports()">
+            <span class="material-icons-round">auto_awesome</span>
+            Generate All Reports
+          </button>
+          <button class="btn-roll-date-sm"
+            *ngIf="na.canRollDate()"
+            (click)="openRollDateModal()">
+            <span class="material-icons-round">skip_next</span>
+            Roll Business Date
+          </button>
+        </div>
+      </div>
+
+      <div class="reports-grid">
+        <div class="report-card" *ngFor="let rpt of na.reportCards()" [class.generated]="rpt.generated">
+          <div class="report-icon-wrap" [style.background]="rpt.color + '18'" [style.color]="rpt.color">
+            <span class="material-icons-round">{{ rpt.icon }}</span>
+          </div>
+          <div class="report-body">
+            <strong>{{ rpt.title }}</strong>
+            <p>{{ rpt.description }}</p>
+            <span class="report-time" *ngIf="rpt.generated">Generated at {{ rpt.generatedAt }}</span>
+          </div>
+          <div class="report-actions">
+            <button class="btn-generate" *ngIf="!rpt.generated" (click)="generateReport(rpt.id)"
+              [style.background]="rpt.color + '18'" [style.color]="rpt.color" [style.borderColor]="rpt.color + '40'">
+              <span class="material-icons-round">play_arrow</span>
+              Generate
+            </button>
+            <div class="report-ready" *ngIf="rpt.generated">
+              <button class="btn-view-report">
+                <span class="material-icons-round">visibility</span>
+                View
+              </button>
+              <button class="btn-download-report">
+                <span class="material-icons-round">download</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Roll Date CTA -->
+      <div class="roll-date-cta" *ngIf="na.canRollDate()">
+        <div class="cta-content">
+          <span class="material-icons-round">check_circle</span>
+          <div>
+            <strong>All steps completed!</strong>
+            <p>You are ready to close {{ formatDate(na.businessDate()) }} and roll over to the next business day.</p>
+          </div>
+        </div>
+        <button class="btn-roll-date-lg" (click)="openRollDateModal()">
+          <span class="material-icons-round">skip_next</span>
+          Roll Business Date
+        </button>
+      </div>
+    </div>
+
+  </div><!-- end .view-content -->
+</div><!-- end .na-container -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ROLL DATE CONFIRMATION MODAL
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showRollDateModal()" (click)="closeRollDateModal()">
+  <div class="modal-box roll-modal" (click)="$event.stopPropagation()">
+    <div class="roll-modal-header">
+      <span class="material-icons-round warning-icon">warning_amber</span>
+      <h3>Confirm Business Date Rollover</h3>
+      <button class="modal-close-btn" (click)="closeRollDateModal()">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="roll-modal-body">
+      <p>You are about to close <strong>{{ formatDate(na.businessDate()) }}</strong> and advance the system to the next business day. This action <strong>cannot be undone</strong>.</p>
+      <ul class="roll-summary">
+        <li><span class="material-icons-round">receipt_long</span> {{ na.postedChargesCount() }} folio charges posted</li>
+        <li><span class="material-icons-round">no_meeting_room</span> {{ processedNoShowsCount() }} no-shows processed</li>
+        <li><span class="material-icons-round">checklist</span> {{ na.checklistProgress().requiredVerified }}/{{ na.checklistProgress().requiredTotal }} required checks verified</li>
+      </ul>
+      <div class="confirm-input-wrap">
+        <label>Type <strong>CONFIRM</strong> to proceed:</label>
+        <input type="text" class="confirm-input" placeholder="CONFIRM"
+          [ngModel]="rollDateConfirmText()" (ngModelChange)="rollDateConfirmText.set($event)">
+      </div>
+    </div>
+    <div class="roll-modal-footer">
+      <button class="btn-cancel-roll" (click)="closeRollDateModal()">Cancel</button>
+      <button class="btn-confirm-roll" [disabled]="!canConfirmRoll()" (click)="confirmRollDate()">
+        <span class="material-icons-round">skip_next</span>
+        Roll to Next Day
+      </button>
+    </div>
+  </div>
+</div>

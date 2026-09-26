@@ -207,6 +207,9 @@
                 <button class="action-btn view" title="View Reservation" (click)="viewReservationDetails(res.id)">
                   <span class="material-icons-round">visibility</span>
                 </button>
+                <button class="action-btn edit" title="Edit Reservation" (click)="openEditReservation(res.id)">
+                  <span class="material-icons-round">edit</span>
+                </button>
               </div>
             </td>
           </tr>
@@ -318,9 +321,15 @@
           <p>{{ detailPrimaryRoom(selectedReservationDetails()) }}</p>
         </div>
       </div>
-      <button class="detail-close" (click)="closeReservationDetails()">
-        <span class="material-icons-round">close</span>
-      </button>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" class="detail-edit-btn" *ngIf="selectedReservationDetails()?.id" (click)="openEditReservation(selectedReservationDetails().id)" title="Edit this reservation">
+          <span class="material-icons-round">edit</span>
+          <span>Edit Reservation</span>
+        </button>
+        <button class="detail-close" (click)="closeReservationDetails()">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
     </div>
 
     <div class="detail-loading" *ngIf="isLoadingReservationDetails()">

@@ -77,6 +77,7 @@ export interface Room {
   statusValue?: string;
   hkStatusId?: number;
   hkStatusValue?: string;
+  roomStatus?: string;
   status: 'VACANT' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED' | 'CLEANING' | string;
   maxOccupancy: number;
   telephone: string;
@@ -249,11 +250,15 @@ export class HotelMastersService {
     this.http.get<any>(`${this.baseUrl}/rooms/getAllRooms?page=${page}&size=${size}${searchStr}`).subscribe({
       next: (res: any) => {
         const rawData = res?.data;
-        const roomsArray = this.extractArray<Room>(rawData).map((r: any) => ({
-          ...r,
-          typeId: r.roomTypeId,
-          status: r.statusValue ? r.statusValue.toUpperCase() : 'VACANT'
-        }));
+        const roomsArray = this.extractArray<Room>(rawData).map((r: any) => {
+          const rawStatus = (r.roomStatus || r.status || (r.statusValue && r.statusValue.toUpperCase() !== 'DAILY' ? r.statusValue : 'VACANT')).toUpperCase();
+          return {
+            ...r,
+            typeId: r.roomTypeId,
+            roomStatus: rawStatus,
+            status: rawStatus
+          };
+        });
         this._rooms.set(roomsArray);
 
         // Pagination info is inside res.metadata
@@ -299,11 +304,15 @@ export class HotelMastersService {
         if (results.rooms) {
           const res = results.rooms as any;
           const rawData = res.data;
-          const roomsArray = this.extractArray<Room>(rawData).map((r: any) => ({ 
-            ...r, 
-            typeId: r.roomTypeId,
-            status: r.statusValue ? r.statusValue.toUpperCase() : 'VACANT'
-          }));
+          const roomsArray = this.extractArray<Room>(rawData).map((r: any) => {
+            const rawStatus = (r.roomStatus || r.status || (r.statusValue && r.statusValue.toUpperCase() !== 'DAILY' ? r.statusValue : 'VACANT')).toUpperCase();
+            return {
+              ...r,
+              typeId: r.roomTypeId,
+              roomStatus: rawStatus,
+              status: rawStatus
+            };
+          });
           this._rooms.set(roomsArray);
           this._roomsPage.set(0);
 

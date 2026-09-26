@@ -1030,6 +1030,9 @@
 .status-pill.confirmed { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 .status-pill.checked-in { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
 .status-pill.checked-out { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.status-pill.available, .status-pill.vacant { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+.status-pill.occupied { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.status-pill.maintenance { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
 
 /* ─── Room Mini Dropdown List ─────────────────────────────────── */
 .guest-mini-list {

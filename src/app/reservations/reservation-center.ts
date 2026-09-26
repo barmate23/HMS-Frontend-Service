@@ -478,6 +478,7 @@ export class ReservationCenter implements OnInit, OnDestroy {
   }
 
   openEditReservation(id: string) {
+    this.closeReservationDetails();
     this.router.navigate(['/new-booking'], { queryParams: { reservationId: id } });
   }
 

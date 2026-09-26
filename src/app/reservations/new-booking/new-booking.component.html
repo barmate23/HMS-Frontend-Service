@@ -19,8 +19,22 @@
           </div>
           <div class="card-body">
             <div class="edit-context-bar" *ngIf="isEditMode()">
-              <span class="material-icons-round">{{ isLoadingReservationForEdit() ? 'sync' : 'edit_note' }}</span>
-              <span>{{ isLoadingReservationForEdit() ? 'Loading reservation details...' : 'Editing reservation #' + editReservationId() }}</span>
+              <div class="edit-context-info">
+                <span class="material-icons-round">{{ isLoadingReservationForEdit() ? 'sync' : 'edit_note' }}</span>
+                <span>{{ isLoadingReservationForEdit() ? 'Loading reservation details...' : 'Editing reservation #' + editReservationId() }}</span>
+              </div>
+              <div class="edit-status-picker" *ngIf="!isLoadingReservationForEdit()">
+                <label>Status:</label>
+                <select [ngModel]="editReservationStatus()" (ngModelChange)="onEditStatusChange($event)">
+                  <option *ngFor="let s of reservationStatuses()" [value]="s.code">{{ s.value || s.code }}</option>
+                  <option *ngIf="reservationStatuses().length === 0" value="CONFIRMED">CONFIRMED</option>
+                  <option *ngIf="reservationStatuses().length === 0" value="PENDING">PENDING</option>
+                  <option *ngIf="reservationStatuses().length === 0" value="CHECKED_IN">CHECKED IN</option>
+                  <option *ngIf="reservationStatuses().length === 0" value="CHECKED_OUT">CHECKED OUT</option>
+                  <option *ngIf="reservationStatuses().length === 0" value="CANCELLED">CANCELLED</option>
+                  <option *ngIf="reservationStatuses().length === 0" value="NO_SHOW">NO SHOW</option>
+                </select>
+              </div>
             </div>
             <div class="grid-3">
               <div class="input-group">

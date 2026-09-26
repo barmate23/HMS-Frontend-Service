@@ -129,6 +129,73 @@ export interface GuestRequest {
   isVip?: boolean;
 }
 
+export interface AccompanyingGuestItem {
+  title?: string;
+  fullName: string;
+  gender?: string;
+  dateOfBirth?: string | null;
+  relationship?: string;
+  idProofType?: string;
+  idNumber?: string;
+}
+
+export interface UpdateReservationRequest {
+  guestId?: number;
+  guestDetails?: {
+    title?: string;
+    firstName?: string;
+    lastName?: string;
+    countryCode?: string;
+    phone?: string;
+    email?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    postCode?: string;
+    country?: string;
+    nationality?: string;
+    gender?: string;
+    dateOfBirth?: string;
+    idProofType?: string;
+    idProofNumber?: string;
+    guestNotes?: string;
+    preference?: string;
+    isVip?: boolean;
+  };
+  hotelId: number;
+  checkInDate: string;
+  checkInTime?: string;
+  checkOutDate: string;
+  checkOutTime?: string;
+  numberOfAdults: number;
+  gstPercent?: number;
+  numberOfChildren?: number;
+  reservationStatusId?: number;
+  reservationStatus?: string;
+  roomIds: number[];
+  ratePlanId: number;
+  billingName?: string;
+  billingAddress?: string;
+  billingMode?: string;
+  gstNumber?: string;
+  organisationName?: string;
+  travelAgentName?: string;
+  businessSource?: string;
+  marketSegment?: string;
+  bookingReference?: string;
+  bookingFrom?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postCode?: string;
+  specialRequests?: string;
+  notes?: string;
+  accompanyingGuests?: AccompanyingGuestItem[];
+}
+
 export interface CheckInBookingItem {
   bookingId: number;
   roomId?: number;
@@ -325,5 +392,13 @@ export class FrontOfficeApiService {
 
   deleteGuest(id: number): Observable<ApiResponse<unknown>> {
     return this.http.delete<ApiResponse<unknown>>(`${this.frontOfficeBaseUrl}/guests/deleteGuest/${id}`);
+  }
+
+  getReservationById(id: number | string): Observable<ApiResponse<any>> {
+    return this.http.get<ApiResponse<any>>(`${this.frontOfficeBaseUrl}/frontOffice/getReservationById/${id}`);
+  }
+
+  updateReservation(id: number | string, payload: any): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.frontOfficeBaseUrl}/frontOffice/updateReservation/${id}`, payload);
   }
 }

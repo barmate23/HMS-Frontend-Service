@@ -324,7 +324,10 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
     const normalized = this.normalizeStatus(status);
     if (normalized === 'CHECKEDIN') return 'checked-in';
     if (normalized === 'CHECKEDOUT') return 'checked-out';
-    if (normalized === 'CONFIRMED') return 'confirmed';
+    if (normalized === 'CONFIRMED' || normalized === 'RESERVED') return 'confirmed';
+    if (normalized === 'AVAILABLE' || normalized === 'VACANT') return 'available';
+    if (normalized === 'OCCUPIED') return 'occupied';
+    if (normalized === 'MAINTENANCE') return 'maintenance';
     return 'pending';
   }
 
@@ -469,11 +472,12 @@ export class GanttChartComponent implements OnInit, AfterViewInit, OnDestroy {
       const typeName = roomTypes.get(room.typeId || room.roomTypeId)?.name ||
                        this.bookings.find(b => b.roomId === room.id)?.roomTypeName ||
                        'Standard';
+      const rawStatus = (room as any).roomStatus || room.status || ((room as any).statusValue && (room as any).statusValue.toUpperCase() !== 'DAILY' ? (room as any).statusValue : 'AVAILABLE');
       roomMap.set(room.id, {
         roomId: room.id,
         roomNumber: room.roomNumber,
         roomTypeName: typeName,
-        roomStatus: room.status || 'AVAILABLE',
+        roomStatus: String(rawStatus || 'AVAILABLE').toUpperCase(),
         bookings: this.bookings.filter(b => b.roomId === room.id)
       });
     }

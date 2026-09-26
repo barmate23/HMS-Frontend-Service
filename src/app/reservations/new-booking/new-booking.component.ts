@@ -232,6 +232,8 @@ export class NewBookingComponent implements OnInit {
   reservationSuccess = signal<string | null>(null);
   editReservationId = signal<string | null>(null);
   editReservationStatus = signal<ReservationRequest['reservationStatus']>('CONFIRMED');
+  editReservationStatusId = signal<number | null>(null);
+  reservationStatuses = signal<{ id?: number; code: string; value: string }[]>([]);
   editHotelId = signal<number | null>(null);
   isLoadingReservationForEdit = signal(false);
   touchedFields = signal<Partial<Record<BookingValidationField, boolean>>>({});
@@ -374,6 +376,47 @@ export class NewBookingComponent implements OnInit {
     this.addressService.loadCountries().subscribe();
     this.addressService.loadStates().subscribe();
     this.addressService.loadCities().subscribe();
+    this.loadReservationStatuses();
+  }
+
+  loadReservationStatuses() {
+    this.http.get<any>('/api/hmsService/v1/common/getCommonMaster/RESERVATION_STATUS').subscribe({
+      next: (res) => {
+        const rawList = res?.data || res || [];
+        if (Array.isArray(rawList) && rawList.length > 0) {
+          const mapped = rawList
+            .filter((item: any) => item.isActive !== false && item.is_active !== false)
+            .map((item: any) => ({
+              id: item.id ? Number(item.id) : undefined,
+              code: (item.code || item.value || '').toUpperCase(),
+              value: item.value || item.code
+            }));
+          this.reservationStatuses.set(mapped);
+          if (this.pendingEditDetails && !this.editReservationStatusId()) {
+            this.syncStatusIdFromList();
+          }
+        }
+      },
+      error: (err) => {
+        console.error('[NewBookingComponent] failed to load reservation statuses:', err);
+      }
+    });
+  }
+
+  onEditStatusChange(statusCode: string) {
+    this.editReservationStatus.set(this.mapReservationStatus(statusCode));
+    const found = this.reservationStatuses().find(s => s.code.toUpperCase() === statusCode.toUpperCase() || s.value.toUpperCase() === statusCode.toUpperCase());
+    if (found?.id) {
+      this.editReservationStatusId.set(found.id);
+    }
+  }
+
+  private syncStatusIdFromList() {
+    const currentCode = this.editReservationStatus();
+    const found = this.reservationStatuses().find(s => s.code.toUpperCase() === currentCode.toUpperCase() || s.value.toUpperCase() === currentCode.toUpperCase());
+    if (found?.id) {
+      this.editReservationStatusId.set(found.id);
+    }
   }
 
   loadGstRules() {
@@ -485,6 +528,9 @@ export class NewBookingComponent implements OnInit {
   private setAvailableRoomsForStay(availableRooms: ApiRoom[], typeMap: Map<number, ApiRoomType>) {
     const mappedRooms = availableRooms.map(room => this.mapApiRoom({ ...room, status: 'VACANT' }, typeMap));
     this.availableRoomIds = new Set(mappedRooms.map(room => room.id));
+    for (const r of this.selectedRooms()) {
+      this.availableRoomIds.add(r.id);
+    }
 
     const roomsById = new Map(this.allRooms.map(room => [room.id, room]));
     for (const room of mappedRooms) {
@@ -511,6 +557,9 @@ export class NewBookingComponent implements OnInit {
           .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 
         this.ratePlans = plans.map(plan => this.mapApiRatePlan(plan));
+        if (this.pendingEditDetails?.ratePlanId) {
+          this.selectedPlan.set(String(this.pendingEditDetails.ratePlanId));
+        }
         this.dataRevision.update(value => value + 1);
         this.isRatePlanLoading.set(false);
       },
@@ -671,26 +720,129 @@ export class NewBookingComponent implements OnInit {
 
     const booking = this.firstReservationBooking(details);
     const room = this.upsertRoomFromReservation(details, booking);
-    const guestName = details.guestFullName || details.billingName || '';
     const addressParts = this.parseBillingAddress(details.billingAddress || '');
 
     this.editHotelId.set(Number(details.hotelId || room?.hotelId || 1));
-    this.editReservationStatus.set(this.mapReservationStatus(details.reservationStatus));
+    this.editReservationStatus.set(this.mapReservationStatus(details.reservationStatus || details.status));
 
-    this.guestData.update(data => ({
-      ...data,
-      id: details.guestId ? String(details.guestId) : data.id,
-      fullName: guestName || data.fullName,
-      phone: details.guestPhone || data.phone,
-      email: details.guestEmail || data.email,
-      address1: addressParts.address1 || data.address1,
-      address2: addressParts.address2 || data.address2,
-      city: addressParts.city || data.city,
-      state: addressParts.state || data.state,
-      zip: addressParts.zip || data.zip,
-      vip: Boolean(details.guestIsVip),
-      notes: details.notes || data.notes
-    }));
+    if (details.reservationStatusId) {
+      this.editReservationStatusId.set(Number(details.reservationStatusId));
+    } else if (typeof details.reservationStatus === 'object' && details.reservationStatus?.id) {
+      this.editReservationStatusId.set(Number(details.reservationStatus.id));
+    } else {
+      this.syncStatusIdFromList();
+    }
+
+    const g = details.guestDetails || details.guest || {};
+    
+    // Title mapping
+    const rawTitle = details.guestTitle || g.title || '';
+    const titleMap: Record<string, string> = {
+      'MR': 'Mr.', 'MRS': 'Mrs.', 'MS': 'Ms.', 'MISS': 'Miss', 'DR': 'Dr.', 'PROF': 'Prof.'
+    };
+    const mappedTitle = titleMap[rawTitle.toUpperCase()] || rawTitle || 'Mr.';
+
+    // Name
+    const firstName = details.guestFirstName || g.firstName || '';
+    const lastName = details.guestLastName || g.lastName || '';
+    const fullName = details.guestFullName || (firstName && lastName ? `${firstName} ${lastName}`.trim() : (details.billingName || g.fullName || ''));
+
+    // Country code / Phone
+    const rawCountryCode = details.guestCountryCode || g.countryCode || '+91';
+    let phoneCode = '+91 (India)';
+    if (rawCountryCode.includes('+1') || rawCountryCode === '1') {
+      phoneCode = '+1 (USA)';
+    } else if (rawCountryCode.startsWith('+')) {
+      phoneCode = `${rawCountryCode} (India)`;
+    }
+    const phone = details.guestPhone || g.phone || '';
+    const email = details.guestEmail || g.email || '';
+
+    // Address
+    const address1 = details.guestAddressLine1 || g.addressLine1 || details.addressLine1 || addressParts.address1 || '';
+    const address2 = details.guestAddressLine2 || g.addressLine2 || details.addressLine2 || addressParts.address2 || '';
+    const city = details.guestCity || g.city || details.city || addressParts.city || '';
+    const state = details.guestState || g.state || details.state || addressParts.state || '';
+    const zip = details.guestPostCode || g.postCode || details.postCode || addressParts.zip || '';
+    const country = details.guestCountry || g.country || details.country || 'India';
+    const nationality = details.guestNationality || g.nationality || '';
+
+    // Gender
+    const rawGender = (details.guestGender || g.gender || '').toUpperCase();
+    const gender = rawGender === 'MALE' ? 'Male' : rawGender === 'FEMALE' ? 'Female' : rawGender ? 'Other' : '';
+
+    // DOB
+    const dob = details.guestDateOfBirth || g.dateOfBirth || '';
+
+    // ID proof
+    const rawIdType = (details.guestIdProofType || g.idProofType || '').toUpperCase();
+    let idProof = 'Aadhar Card';
+    if (rawIdType.includes('PASSPORT')) idProof = 'Passport';
+    else if (rawIdType.includes('DRIVING') || rawIdType.includes('LICENSE')) idProof = 'Driving License';
+    else if (rawIdType.includes('PAN')) idProof = 'PAN Card';
+    else if (rawIdType.includes('VOTER')) idProof = 'Voter ID';
+    else if (rawIdType.includes('AADHAR')) idProof = 'Aadhar Card';
+
+    const idNumber = details.guestIdProofNumber || g.idProofNumber || '';
+    const notes = details.notes || details.guestNotes || g.guestNotes || '';
+    const vip = details.guestIsVip !== undefined ? Boolean(details.guestIsVip) : (g.isVip !== undefined ? Boolean(g.isVip) : false);
+
+    this.guestData.set({
+      id: details.guestId ? String(details.guestId) : (g.id ? String(g.id) : ''),
+      title: mappedTitle,
+      firstName,
+      lastName,
+      fullName,
+      phoneCode,
+      phone,
+      email,
+      country,
+      address1,
+      address2,
+      city,
+      state,
+      zip,
+      vip,
+      nationality,
+      gender,
+      dob,
+      idProof,
+      idNumber,
+      notes,
+      visits: 0
+    });
+
+    const tryLoadAddressDropdowns = () => {
+      if (!country) return;
+      const countryObj = this.addressService.countries().find(c => (c.name || '').toLowerCase() === country.toLowerCase());
+      if (countryObj && countryObj.id) {
+        this.addressService.loadStates(countryObj.id).subscribe((statesRes: any) => {
+          const statesList = statesRes?.data || this.addressService.states() || [];
+          if (state) {
+            const stateObj = statesList.find((s: any) => (s.name || '').toLowerCase() === state.toLowerCase());
+            if (stateObj && stateObj.id) {
+              this.addressService.loadCities(stateObj.id).subscribe((citiesRes: any) => {
+                const citiesList = citiesRes?.data || this.addressService.cities() || [];
+                if (city) {
+                  const cityObj = citiesList.find((c: any) => (c.name || '').toLowerCase() === city.toLowerCase());
+                  if (cityObj) {
+                    this.guestData.update(d => ({ ...d, city: cityObj.name }));
+                  }
+                }
+              });
+            }
+          }
+        });
+      }
+    };
+
+    if (this.addressService.countries().length > 0) {
+      tryLoadAddressDropdowns();
+    } else {
+      this.addressService.loadCountries().subscribe(() => {
+        tryLoadAddressDropdowns();
+      });
+    }
 
     this.checkIn.set(details.checkInDate || booking?.checkInDate || '');
     this.checkOut.set(details.checkOutDate || booking?.checkOutDate || '');
@@ -726,6 +878,9 @@ export class NewBookingComponent implements OnInit {
 
     if (selected.length > 0) {
       this.selectedRooms.set(selected);
+      for (const r of selected) {
+        this.availableRoomIds.add(r.id);
+      }
       this.selectedFloor.set(selected[0].floor);
       this.selectedRoomType.set(selected[0].typeId);
     } else {
@@ -793,6 +948,7 @@ export class NewBookingComponent implements OnInit {
     if (!roomId) return null;
 
     const id = String(roomId);
+    this.availableRoomIds.add(id);
     const existing = this.allRooms.find(room => room.id === id);
     if (existing) {
       const availableExisting = { ...existing, status: 'Available' as const };
@@ -801,7 +957,7 @@ export class NewBookingComponent implements OnInit {
     }
 
     const roomTypeName = booking?.roomTypeName || booking?.type || 'Room';
-    const floor = Number(booking?.floorId ?? booking?.floor ?? 1);
+    const floor = this.parseFloorNumber(booking?.floorId ?? booking?.floor) ?? 1;
     const room: Room = {
       id,
       number: booking?.roomNumber || booking?.number || id,
@@ -1539,6 +1695,8 @@ export class NewBookingComponent implements OnInit {
       finalNotes = finalNotes ? `${finalNotes}\n\n[Accompanying Guests: ${membersText}]` : `[Accompanying Guests: ${membersText}]`;
     }
 
+    const guestId = this.getNumericGuestId() ?? (this.pendingEditDetails?.guestId ? Number(this.pendingEditDetails.guestId) : undefined);
+
     const payload: any = {
       hotelId: firstRoom?.hotelId ?? this.editHotelId() ?? 1,
       checkInDate: this.checkIn(),
@@ -1567,6 +1725,34 @@ export class NewBookingComponent implements OnInit {
         idNumber: m.idNumber || ''
       }))
     };
+
+    if (guestId) {
+      payload.guestId = guestId;
+    }
+    if (this.editReservationStatusId()) {
+      payload.reservationStatusId = this.editReservationStatusId();
+    }
+    if (this.pendingEditDetails?.billingMode) {
+      payload.billingMode = this.pendingEditDetails.billingMode;
+    }
+    if (this.pendingEditDetails?.gstNumber) {
+      payload.gstNumber = this.pendingEditDetails.gstNumber;
+    }
+    if (this.pendingEditDetails?.businessSource) {
+      payload.businessSource = this.pendingEditDetails.businessSource;
+    }
+    if (this.pendingEditDetails?.marketSegment) {
+      payload.marketSegment = this.pendingEditDetails.marketSegment;
+    }
+    if (this.pendingEditDetails?.bookingReference) {
+      payload.bookingReference = this.pendingEditDetails.bookingReference;
+    }
+    if (this.pendingEditDetails?.bookingFrom) {
+      payload.bookingFrom = this.pendingEditDetails.bookingFrom;
+    }
+    if (this.pendingEditDetails?.specialRequests) {
+      payload.specialRequests = this.pendingEditDetails.specialRequests;
+    }
 
     return payload;
   }

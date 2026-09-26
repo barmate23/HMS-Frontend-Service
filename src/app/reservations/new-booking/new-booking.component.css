@@ -1981,3 +1981,54 @@ textarea {
   font-size: 14px;
 }
 
+/* Edit Context Bar */
+.edit-context-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.08), rgba(249, 115, 22, 0.04));
+  border: 1px solid rgba(234, 88, 12, 0.25);
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-color, #c2410c);
+}
+
+.edit-context-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-context-info .material-icons-round {
+  font-size: 16px;
+}
+
+.edit-status-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edit-status-picker label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--surface-600);
+}
+
+.edit-status-picker select {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 5px;
+  border: 1px solid rgba(234, 88, 12, 0.3);
+  background: white;
+  color: var(--primary-color);
+  cursor: pointer;
+}
+
+
